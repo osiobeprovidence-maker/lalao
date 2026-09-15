@@ -86,7 +86,7 @@ export const SignUpPage: React.FC = () => {
         return;
       }
       // Success -> navigate to existing onboarding flow
-      navigate('/onboarding/account-type');
+      navigate('/onboarding/name');
     }, 1200);
   };
 

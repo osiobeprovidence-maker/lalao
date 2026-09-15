@@ -48,11 +48,12 @@ import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 
 // Onboarding pages
 import { WelcomePage } from './pages/onboarding/WelcomePage';
-import { AccountTypePage } from './pages/onboarding/AccountTypePage';
+import { NameSetupPage } from './pages/onboarding/NameSetupPage';
 import { ProfileSetupPage } from './pages/onboarding/ProfileSetupPage';
+import { PronounsPage } from './pages/onboarding/PronounsPage';
 import { LocationSetupPage } from './pages/onboarding/LocationSetupPage';
 import { InterestsPage } from './pages/onboarding/InterestsPage';
-import { FollowSuggestionsPage } from './pages/onboarding/FollowSuggestionsPage';
+import { CompletePage } from './pages/onboarding/CompletePage';
 
 const LalaoAppContent: React.FC = () => {
   const {
@@ -210,11 +211,12 @@ export default function App() {
 
       {/* Onboarding routes */}
       <Route path="/onboarding/welcome" element={<WelcomePage />} />
-      <Route path="/onboarding/account-type" element={<AccountTypePage />} />
+      <Route path="/onboarding/name" element={<NameSetupPage />} />
       <Route path="/onboarding/profile" element={<ProfileSetupPage />} />
+      <Route path="/onboarding/pronouns" element={<PronounsPage />} />
       <Route path="/onboarding/location" element={<LocationSetupPage />} />
       <Route path="/onboarding/interests" element={<InterestsPage />} />
-      <Route path="/onboarding/suggestions" element={<FollowSuggestionsPage />} />
+      <Route path="/onboarding/complete" element={<CompletePage />} />
 
       {/* Main app (existing SPA) */}
       <Route path="/app" element={<LalaoApp />} />
