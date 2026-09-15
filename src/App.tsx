@@ -36,6 +36,24 @@ import { MyTicketsModal } from './components/tickets/MyTicketsModal';
 import { WalletModal } from './components/wallet/WalletModal';
 import { Check, Plus } from 'lucide-react';
 
+// Router
+import { Routes, Route, Navigate } from 'react-router-dom';
+
+// Auth pages
+import { LoginPage } from './pages/auth/LoginPage';
+import { SignUpPage } from './pages/auth/SignUpPage';
+import { OTPVerifyPage } from './pages/auth/OTPVerifyPage';
+import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
+
+// Onboarding pages
+import { WelcomePage } from './pages/onboarding/WelcomePage';
+import { AccountTypePage } from './pages/onboarding/AccountTypePage';
+import { ProfileSetupPage } from './pages/onboarding/ProfileSetupPage';
+import { LocationSetupPage } from './pages/onboarding/LocationSetupPage';
+import { InterestsPage } from './pages/onboarding/InterestsPage';
+import { FollowSuggestionsPage } from './pages/onboarding/FollowSuggestionsPage';
+
 const LalaoAppContent: React.FC = () => {
   const {
     activeTab,
@@ -171,10 +189,39 @@ const LalaoAppContent: React.FC = () => {
   );
 };
 
+const LalaoApp: React.FC = () => (
+  <LalaoProvider>
+    <LalaoAppContent />
+  </LalaoProvider>
+);
+
 export default function App() {
   return (
-    <LalaoProvider>
-      <LalaoAppContent />
-    </LalaoProvider>
+    <Routes>
+      {/* Root → welcome */}
+      <Route path="/" element={<Navigate to="/onboarding/welcome" replace />} />
+
+      {/* Auth routes */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignUpPage />} />
+      <Route path="/verify" element={<OTPVerifyPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+      {/* Onboarding routes */}
+      <Route path="/onboarding/welcome" element={<WelcomePage />} />
+      <Route path="/onboarding/account-type" element={<AccountTypePage />} />
+      <Route path="/onboarding/profile" element={<ProfileSetupPage />} />
+      <Route path="/onboarding/location" element={<LocationSetupPage />} />
+      <Route path="/onboarding/interests" element={<InterestsPage />} />
+      <Route path="/onboarding/suggestions" element={<FollowSuggestionsPage />} />
+
+      {/* Main app (existing SPA) */}
+      <Route path="/app" element={<LalaoApp />} />
+      <Route path="/app/*" element={<LalaoApp />} />
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/onboarding/welcome" replace />} />
+    </Routes>
   );
 }
