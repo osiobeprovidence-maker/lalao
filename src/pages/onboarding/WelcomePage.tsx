@@ -137,7 +137,7 @@ export const WelcomePage: React.FC = () => {
 
           <div className="w-full max-w-sm space-y-4">
             <button
-              onClick={() => navigate('/onboarding/account-type')}
+              onClick={() => navigate('/signup')}
               className="w-full py-4 sm:py-5 rounded-2xl bg-white text-[#3823A4] hover:bg-neutral-50 font-black text-lg flex items-center justify-center gap-3 transition-transform active:scale-[0.98] shadow-xl hover:shadow-2xl cursor-pointer"
             >
               <span>Get Started</span>
