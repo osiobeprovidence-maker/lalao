@@ -1,0 +1,135 @@
+Total matches: 134
+src/components/events/TournamentRegisterModal.tsx:127: const isRosterComplete = roster.length >= 5;
+src/components/events/TournamentRegisterModal.tsx:159: if (roster.length < 5) {
+src/components/events/TournamentRegisterModal.tsx:201: if (roster.length < 5) {
+src/components/events/TournamentRegisterModal.tsx:577: Squad Roster ({roster.length} / 5 Players Required)
+src/components/events/TournamentRegisterModal.tsx:697: disabled={isAlreadyInRoster || roster.length >= 5}
+src/components/events/TournamentRegisterModal.tsx:964: {roster.length}/5 Players {isRosterComplete ? '(Ready)' : '(1 person needed)'}
+src/components/events/EventDetailModal.tsx:257: Registered Teams ({event.registeredTeams.length})
+src/components/events/EventDetailModal.tsx:382: Confirmed Squads ({event.registeredTeams.length})
+src/components/events/EventDetailModal.tsx:385: {event.maxTeams ? `${event.maxTeams - event.registeredTeams.length} slots left` : ''}
+src/components/cycles/CycleStoriesTray.tsx:26: const myHasItems = myCycle && myCycle.items && myCycle.items.length > 0;
+src/components/cycles/CycleStoriesTray.tsx:30: (c) => c.user?.id !== currentUser.id && c.id !== 'cycle_user_me' && c.items && c.items.length > 0
+src/components/cycles/CycleDetailModal.tsx:140: {cycle.messages.length > 0 ? (
+src/components/cycles/CycleStoryViewerModal.tsx:72: if (activeStoryIndex < items.length - 1) {
+src/components/cycles/CycleStoryViewerModal.tsx:77: const nextCycle = cycles.slice(currentIndex + 1).find((c) => c.items && c.items.length > 0);
+src/components/cycles/CycleStoryViewerModal.tsx:93: const prevCycles = cycles.slice(0, currentIndex).filter((c) => c.items && c.items.length > 0);
+src/components/cycles/CycleStoryViewerModal.tsx:94: const prevCycle = prevCycles[prevCycles.length - 1];
+src/components/cycles/CycleStoryViewerModal.tsx:96: openCycleStory(prevCycle.id, prevCycle.items.length - 1);
+src/components/cycles/CycleStoryViewerModal.tsx:143: if (!activeCycleId || !activeCycle || items.length === 0 || !currentItem) return null;
+src/components/cycles/CycleStoryViewerModal.tsx:649: if (items.length <= 1) closeCycleStory();
+src/components/cycles/CycleStoryViewerModal.tsx:816: {currentItem.viewers && currentItem.viewers.length > 0 ? (
+src/components/cycles/CycleStoryViewerModal.tsx:895: {currentItem.replies && currentItem.replies.length > 0 ? (
+src/components/tickets/MyTicketsModal.tsx:60: {activeTickets.length} active pass{activeTickets.length === 1 ? '' : 'es'} available
+src/components/tickets/MyTicketsModal.tsx:60: {activeTickets.length} active pass{activeTickets.length === 1 ? '' : 'es'} available
+src/components/tickets/MyTicketsModal.tsx:90: {activeTickets.length > 0 && (
+src/components/tickets/MyTicketsModal.tsx:92: {activeTickets.length}
+src/components/tickets/MyTicketsModal.tsx:116: activeTickets.length === 0 ? (
+src/components/tickets/MyTicketsModal.tsx:196: ) : ticketHistory.length === 0 ? (
+src/components/pages/PageManageProductsModal.tsx:114: Products in Catalog ({products.length})
+src/components/pages/PageManageProductsModal.tsx:118: {products.length > 0 ? (
+src/components/pages/EventAttendeesModal.tsx:108: const checkedInCount = attendees.filter((a) => a.checkedIn).length;
+src/components/pages/EventAttendeesModal.tsx:153: <p className="text-sm font-black text-neutral-950">{attendees.length}</p>
+src/components/pages/EventAttendeesModal.tsx:171: {attendees.length > 0 ? Math.round((checkedInCount / attendees.length) * 100) : 0}%
+src/components/pages/EventAttendeesModal.tsx:171: {attendees.length > 0 ? Math.round((checkedInCount / attendees.length) * 100) : 0}%
+src/components/pages/EventAttendeesModal.tsx:228: {filtered.length === 0 && (
+src/components/pages/PageDetailModal.tsx:189: page.products && page.products.length > 0
+src/components/pages/PageDetailModal.tsx:208: (page.events && page.events.length > 0) ||
+src/components/pages/PageDetailModal.tsx:663: {tab.id === 'shop' && products.length > 0 && (
+src/components/pages/PageDetailModal.tsx:665: {products.length}
+src/components/pages/PageDetailModal.tsx:670: {events.filter((e) => e.pageId === page.id || page.id === 'page_honorofkings').length}
+src/components/pages/PageDetailModal.tsx:706: {pagePosts.length > 0 ? (
+src/components/pages/PageDetailModal.tsx:763: {categories.length > 1 && (
+src/components/pages/PageDetailModal.tsx:783: {filteredProducts.length > 0 ? (
+src/components/pages/PageDetailModal.tsx:960: if (filtered.length === 0) {
+src/components/pages/PageDetailModal.tsx:988: const isFeatured = idx === 0 && (event.isTournament || filtered.length > 2);
+src/components/pages/PageDetailModal.tsx:1047: {HOK_MEDIA_GALLERY.length} Media
+src/components/pages/PageDetailModal.tsx:1078: {pageMediaPosts.length > 0 && (
+src/components/pages/PageDetailModal.tsx:1101: {page.id !== 'page_honorofkings' && pageMediaPosts.length === 0 && (
+src/components/pages/PageDetailModal.tsx:1145: {events.filter((e) => e.pageId === page.id || page.id === 'page_honorofkings').length}
+src/components/pages/CreatePageView.tsx:431: {description.length}/300
+src/components/profile/ProfileView.tsx:55: const myHasItems = myCycle && myCycle.items && myCycle.items.length > 0;
+src/components/profile/ProfileView.tsx:287: {userOrders.length > 0 && (
+src/components/profile/ProfileView.tsx:289: {userOrders.length}
+src/components/profile/ProfileView.tsx:306: See all ({otherUsers.length})
+src/components/profile/ProfileView.tsx:357: userPosts.length > 0 ? (
+src/components/profile/ProfileView.tsx:380: userMediaPosts.length > 0 ? (
+src/components/profile/ProfileView.tsx:401: userReposts.length > 0 ? (
+src/components/profile/ProfileView.tsx:456: Community ({otherUsers.length})
+src/components/profile/ProfileView.tsx:512: {filteredUsers.length > 0 ? (
+src/components/profile/SettingsPageView.tsx:224: <span className="text-[10px] text-neutral-400 font-mono">{bio.length}/180</span>
+src/components/profile/UserProfileModal.tsx:82: const hasActiveCycle = Boolean(userCycle && userCycle.items && userCycle.items.length > 0);
+src/components/profile/UserProfileModal.tsx:580: { id: 'posts', label: 'Posts', count: userPosts.length },
+src/components/profile/UserProfileModal.tsx:581: { id: 'replies', label: 'Replies', count: userReplies.length },
+src/components/profile/UserProfileModal.tsx:582: { id: 'media', label: 'Media', count: userMediaPosts.length },
+src/components/profile/UserProfileModal.tsx:583: { id: 'rallies', label: 'Rallies', count: userRallies.length },
+src/components/profile/UserProfileModal.tsx:623: {filteredPosts.length > 0 ? (
+src/components/profile/UserProfileModal.tsx:766: {filteredReplies.length > 0 ? (
+src/components/profile/UserProfileModal.tsx:838: {filteredMedia.length > 0 ? (
+src/components/profile/UserProfileModal.tsx:938: {userRallies.length > 0 ? (
+src/components/feed/HomeFeed.tsx:315: {filteredPosts.length} {filteredPosts.length === 1 ? 'post' : 'posts'}
+src/components/feed/HomeFeed.tsx:315: {filteredPosts.length} {filteredPosts.length === 1 ? 'post' : 'posts'}
+src/components/feed/HomeFeed.tsx:454: {filteredPosts.length > 0 ? (
+src/components/feed/PostItem.tsx:287: {linkedRally.interestedUsers && linkedRally.interestedUsers.length > 0 && (
+src/components/messages/MessagesView.tsx:128: const myHasItems = myCycle && myCycle.items && myCycle.items.length > 0;
+src/components/messages/MessagesView.tsx:132: (c) => c.user?.id !== currentUser.id && c.id !== 'cycle_user_me' && c.items && c.items.length > 0
+src/components/messages/MessagesView.tsx:338: const lastMsg = conv.messages && conv.messages.length > 0 ? conv.messages[conv.messages.length - 1] : null;
+src/components/messages/MessagesView.tsx:338: const lastMsg = conv.messages && conv.messages.length > 0 ? conv.messages[conv.messages.length - 1] : null;
+src/components/messages/MessagesView.tsx:397: {filteredConversations.length === 0 && (
+src/components/create/PostComposerModal.tsx:288: {text.length}/500
+src/components/shop/CartDrawer.tsx:84: {cart.length > 0 && (
+src/components/shop/CartDrawer.tsx:107: {cart.length === 0 ? (
+src/components/shop/CartDrawer.tsx:172: {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+src/components/shop/CartDrawer.tsx:222: {cart.length > 0 && (
+src/components/shop/CheckoutModal.tsx:201: : `${items.length} item(s) from cart`}
+src/components/shop/CheckoutModal.tsx:241: {it.options && Object.keys(it.options).length > 0 && (
+src/components/shop/CheckoutModal.tsx:354: {item.options && Object.keys(item.options).length > 0 && (
+src/components/shop/ProductDetailScreen.tsx:58: product.images && product.images.length > 0
+src/components/shop/ProductDetailScreen.tsx:95: if (v.options && v.options.length > 0) {
+src/components/shop/ProductDetailScreen.tsx:110: if (v.options && v.options.length > 0) {
+src/components/shop/ProductDetailScreen.tsx:130: if (diff > 40 && activeImageIndex < images.length - 1) {
+src/components/shop/ProductDetailScreen.tsx:141: if (activeImageIndex < images.length - 1) {
+src/components/shop/ProductDetailScreen.tsx:152: setActiveImageIndex(images.length - 1);
+src/components/shop/ProductDetailScreen.tsx:188: Object.keys(selectedVariants).length > 0 ? selectedVariants : undefined,
+src/components/shop/ProductDetailScreen.tsx:354: {images.length > 1 && (
+src/components/shop/ProductDetailScreen.tsx:356: {activeImageIndex + 1} / {images.length}
+src/components/shop/ProductDetailScreen.tsx:361: {images.length > 1 && (
+src/components/shop/ProductDetailScreen.tsx:384: {images.length > 1 && (
+src/components/shop/ProductDetailScreen.tsx:468: {product.variants && product.variants.length > 0 && (
+src/components/shop/ProductDetailScreen.tsx:578: {product.details && product.details.length > 0 && (
+src/components/shop/ProductDetailScreen.tsx:751: {moreProducts.length > 0 && onSelectProduct && (
+src/components/shop/ProductDetailScreen.tsx:850: options: Object.keys(selectedVariants).length > 0 ? selectedVariants : undefined,
+src/components/shop/OrderDetailModal.tsx:326: {item.options && Object.keys(item.options).length > 0 && (
+src/components/shop/ShoppingHistoryScreen.tsx:134: {userOrders.length}
+src/components/shop/ShoppingHistoryScreen.tsx:229: ) : filteredOrders.length === 0 ? (
+src/components/common/NotificationsModal.tsx:348: {(activeFilter === 'all' || activeFilter === 'suggested') && suggestions.length > 0 && (
+src/components/common/NotificationsModal.tsx:355: {suggestions.length} accounts
+src/components/common/NotificationsModal.tsx:442: {todayNotifs.length > 0 && (
+src/components/common/NotificationsModal.tsx:497: {earlierNotifs.length > 0 && (
+src/components/common/NotificationsModal.tsx:551: {notifications.length === 0 && (
+src/components/common/CommentsModal.tsx:188: {filteredComments.length > 0 ? (
+src/components/common/CommentsModal.tsx:273: {comment.replies && comment.replies.length > 0 && (
+src/components/discover/DiscoverView.tsx:262: <span className="text-xs text-neutral-400">({filteredPeople.length})</span>
+src/components/discover/DiscoverView.tsx:266: {filteredPeople.length > 0 ? (
+src/components/discover/DiscoverView.tsx:349: <span className="text-xs text-neutral-400">({filteredPages.length})</span>
+src/components/discover/DiscoverView.tsx:353: {filteredPages.length > 0 ? (
+src/components/discover/DiscoverView.tsx:465: <span className="text-xs text-neutral-400">({filteredCycles.length})</span>
+src/components/discover/DiscoverView.tsx:469: {filteredCycles.length > 0 ? (
+src/components/location/LocationRadiusModal.tsx:68: const postsCount = posts.filter((p) => (p.distanceMeters ?? 0) <= maxMeters).length;
+src/components/location/LocationRadiusModal.tsx:69: const ralliesCount = rallies.filter((r) => (r.distanceMeters ?? 0) <= maxMeters).length;
+src/components/location/LocationRadiusModal.tsx:70: const cyclesCount = cycles.filter((c) => (c.distanceMeters ?? 0) <= maxMeters).length;
+src/components/navigation/MobileDrawer.tsx:335: {userOrders.length > 0 && (
+src/components/navigation/MobileDrawer.tsx:337: {userOrders.length}
+src/components/navigation/DesktopSidebar.tsx:282: {ownedPages.length === 0 && (
+src/components/navigation/DesktopSidebar.tsx:372: {userOrders.length > 0 && (
+src/components/navigation/DesktopSidebar.tsx:374: {userOrders.length}
+src/components/wallet/WalletModal.tsx:319: {savedTeams.length > 0 && (
+src/components/wallet/WalletModal.tsx:325: My Esports Teams ({savedTeams.length})
+src/components/wallet/WalletModal.tsx:402: {filteredTransactions.length === 0 ? (
+src/utils/locationUtils.ts:143: for (let i = 0; i < locationName.length; i++) {
+src/utils/pageCapabilities.ts:144: hasShopStorefront: page.type === 'business' || page.badge === 'BIZ' || (page.products && page.products.length > 0) || false,
+src/context/LalaoContext.tsx:291: if (Array.isArray(parsed) && parsed.length > 0) {
+src/context/LalaoContext.tsx:310: if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.items) {
+src/context/LalaoContext.tsx:642: const activeTicketsCount = activeTickets.length;
+src/context/LalaoContext.tsx:1825: repliesCount: (item.repliesCount || prevReplies.length) + 1,
+src/context/LalaoContext.tsx:1960: const unreadNotifsCount = notifications.filter((n) => !n.isRead).length;
