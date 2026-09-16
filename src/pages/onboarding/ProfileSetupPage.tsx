@@ -2,24 +2,30 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { OnboardingLayout } from './OnboardingLayout';
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 export const ProfileSetupPage: React.FC = () => {
   const navigate = useNavigate();
+  const updateProfile = useMutation(api.users.updateProfile);
   const [bio, setBio] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setIsLoading(false);
-    navigate('/onboarding/pronouns');
+    try {
+      await updateProfile({ bio: bio.trim() || undefined });
+      navigate('/onboarding/pronouns');
+    } catch {
+      // bio is optional — navigate anyway
+      navigate('/onboarding/pronouns');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSkip = () => {
-    navigate('/onboarding/pronouns');
-  };
+  const handleSkip = () => navigate('/onboarding/pronouns');
 
   return (
     <OnboardingLayout 

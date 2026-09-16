@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Loader2, Check } from 'lucide-react';
 import { OnboardingLayout } from './OnboardingLayout';
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 const PRONOUN_OPTIONS = [
   { id: 'he', label: 'He / Him' },
@@ -13,6 +15,7 @@ const PRONOUN_OPTIONS = [
 
 export const PronounsPage: React.FC = () => {
   const navigate = useNavigate();
+  const updatePronouns = useMutation(api.users.updatePronouns);
   const [selected, setSelected] = useState<string | null>(null);
   const [customPronoun, setCustomPronoun] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -31,10 +34,15 @@ export const PronounsPage: React.FC = () => {
 
     setError('');
     setIsLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setIsLoading(false);
-    navigate('/onboarding/location');
+    try {
+      const pronounValue = selected === 'other' ? customPronoun.trim() : selected;
+      await updatePronouns({ pronouns: pronounValue });
+      navigate('/onboarding/location');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

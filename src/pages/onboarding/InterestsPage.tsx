@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { OnboardingLayout } from './OnboardingLayout';
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 const INTERESTS = [
   { id: 'community', label: 'Community' },
@@ -24,6 +26,7 @@ const INTERESTS = [
 
 export const InterestsPage: React.FC = () => {
   const navigate = useNavigate();
+  const updateInterests = useMutation(api.users.updateInterests);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const MIN_REQUIRED = 3;
@@ -42,10 +45,14 @@ export const InterestsPage: React.FC = () => {
   const handleContinue = async () => {
     if (!canContinue) return;
     setIsLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setIsLoading(false);
-    navigate('/onboarding/complete');
+    try {
+      await updateInterests({ interests: Array.from(selected) });
+      navigate('/onboarding/complete');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

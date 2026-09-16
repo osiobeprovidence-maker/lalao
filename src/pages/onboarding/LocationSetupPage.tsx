@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navigation, ArrowRight, Loader2, MapPin } from 'lucide-react';
 import { OnboardingLayout } from './OnboardingLayout';
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 export const LocationSetupPage: React.FC = () => {
   const navigate = useNavigate();
+  const updateLocation = useMutation(api.users.updateLocation);
   const [isDetecting, setIsDetecting] = useState(false);
   const [detectedLocation, setDetectedLocation] = useState<string | null>(null);
   const [manualLocation, setManualLocation] = useState('');
@@ -35,10 +38,15 @@ export const LocationSetupPage: React.FC = () => {
     }
     setError('');
     setIsLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setIsLoading(false);
-    navigate('/onboarding/interests');
+    try {
+      const locName = detectedLocation || manualLocation.trim();
+      await updateLocation({ locationName: locName });
+      navigate('/onboarding/interests');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to update location.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSkip = () => {

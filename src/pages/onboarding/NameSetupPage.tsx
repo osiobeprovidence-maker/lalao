@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { OnboardingLayout } from './OnboardingLayout';
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 export const NameSetupPage: React.FC = () => {
   const navigate = useNavigate();
+  const updateName = useMutation(api.users.updateName);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -19,10 +22,19 @@ export const NameSetupPage: React.FC = () => {
     }
     setError('');
     setIsLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setIsLoading(false);
-    navigate('/onboarding/profile');
+    try {
+      const fullName = `${firstName.trim()} ${lastName.trim()}`;
+      // username: use displayName if provided, else lowercase firstName
+      const username = displayName.trim()
+        ? displayName.trim().toLowerCase().replace(/\s+/g, '_')
+        : firstName.trim().toLowerCase();
+      await updateName({ name: fullName, username });
+      navigate('/onboarding/profile');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

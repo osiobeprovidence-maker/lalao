@@ -38,6 +38,24 @@ import { Check, Plus } from 'lucide-react';
 
 // Router
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth, AuthProvider } from './context/AuthContext';
+
+/**
+ * ProtectedRoute — redirects to /onboarding/welcome when the user is not
+ * authenticated. Shows a spinner while the auth state is being resolved.
+ */
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#1877F2]">
+        <div className="w-8 h-8 rounded-full border-4 border-white/30 border-t-white animate-spin" />
+      </div>
+    );
+  }
+  if (!isAuthenticated) return <Navigate to="/onboarding/welcome" replace />;
+  return <>{children}</>;
+};
 
 // Auth pages
 import { LoginPage } from './pages/auth/LoginPage';
@@ -218,9 +236,9 @@ export default function App() {
       <Route path="/onboarding/interests" element={<InterestsPage />} />
       <Route path="/onboarding/complete" element={<CompletePage />} />
 
-      {/* Main app (existing SPA) */}
-      <Route path="/app" element={<LalaoApp />} />
-      <Route path="/app/*" element={<LalaoApp />} />
+      {/* Main app (existing SPA) — protected: must be authenticated */}
+      <Route path="/app" element={<ProtectedRoute><LalaoApp /></ProtectedRoute>} />
+      <Route path="/app/*" element={<ProtectedRoute><LalaoApp /></ProtectedRoute>} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/onboarding/welcome" replace />} />
