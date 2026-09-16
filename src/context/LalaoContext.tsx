@@ -673,27 +673,23 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Events & Ticketing Ecosystem State
-  const initialOrgEvents: OrgEvent[] = Array.from(
-    new Map(
-      [...HOK_EVENTS].map((e) => [e.id, e])
-    ).values()
-  );
+  const initialOrgEvents: OrgEvent[] = [];
 
   const [events, setEvents] = useState<OrgEvent[]>(() => {
     try {
       const saved = localStorage.getItem('lalao_events');
-      return saved ? JSON.parse(saved) : initialOrgEvents;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return initialOrgEvents;
+      return [];
     }
   });
 
   const [tickets, setTickets] = useState<EventTicket[]>(() => {
     try {
       const saved = localStorage.getItem(`lalao_tickets_${currentUser.id}`);
-      return saved ? JSON.parse(saved) : HOK_SEED_TICKETS;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return HOK_SEED_TICKETS;
+      return [];
     }
   });
 
@@ -765,65 +761,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [savedTeams, setSavedTeams] = useState<PlayerTeam[]>(() => {
     try {
       const saved = localStorage.getItem(`lalao_saved_teams_${currentUser.id}`);
-      return saved
-        ? JSON.parse(saved)
-        : [
-            {
-              id: 'team_dst',
-              name: 'Delta Strikers',
-              tag: 'DST',
-              logo: 'https://images.unsplash.com/photo-1563089145-599997674d42?w=400&auto=format&fit=crop&q=80',
-              captain: {
-                id: currentUser.id,
-                name: currentUser.name,
-                username: currentUser.username,
-                avatar: currentUser.avatar,
-              },
-              players: [
-                {
-                  id: currentUser.id,
-                  name: currentUser.name,
-                  username: currentUser.username,
-                  avatar: currentUser.avatar,
-                  role: 'Mid Lane (Mage)',
-                },
-                {
-                  id: 'user_alex',
-                  name: 'Alexandre Okafor',
-                  username: 'alexokafor',
-                  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80',
-                  role: 'Jungler (Assassin)',
-                },
-                {
-                  id: 'user_tunde',
-                  name: 'Tunde Balogun',
-                  username: 'tundebalogun',
-                  avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
-                  role: 'Clash Lane (Fighter)',
-                },
-                {
-                  id: 'user_amaka',
-                  name: 'Amaka Nwosu',
-                  username: 'amakanwosu',
-                  avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
-                  role: 'Farm Lane (Marksman)',
-                },
-                {
-                  id: 'user_david',
-                  name: 'David Okoye',
-                  username: 'davidokoye',
-                  avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80',
-                  role: 'Roamer (Support / Tank)',
-                },
-              ],
-              createdAt: '2026-09-10T12:00:00Z',
-              stats: {
-                matchesPlayed: 14,
-                wins: 11,
-                winRate: '78.5%',
-              },
-            },
-          ];
+      return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
     }
@@ -857,40 +795,18 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return saved
         ? JSON.parse(saved)
         : {
-            balance: 45000,
+            balance: 0,
             currency: 'NGN',
-            accountNumber: '9048291048',
-            bankName: 'Wema Bank (Lao Line Virtual Account)',
-            transactions: [
-              {
-                id: 'tx_payout_1',
-                type: 'prize_payout',
-                amount: 25000,
-                description: 'Honor of Kings Scrims Season 1 Payout (3rd Place)',
-                reference: 'LLW-HK-82910',
-                status: 'successful',
-                date: '2026-09-12T16:30:00Z',
-                paymentMethod: 'wallet',
-                eventTitle: 'Honor of Kings Weekly Arena Cup',
-              },
-              {
-                id: 'tx_welcome_1',
-                type: 'deposit',
-                amount: 20000,
-                description: 'Lao Line Esports & Gaming Welcome Grant',
-                reference: 'LLW-INIT-10023',
-                status: 'successful',
-                date: '2026-09-08T09:15:00Z',
-                paymentMethod: 'bank_transfer',
-              },
-            ],
+            accountNumber: '',
+            bankName: '',
+            transactions: [],
           };
     } catch {
       return {
-        balance: 45000,
+        balance: 0,
         currency: 'NGN',
-        accountNumber: '9048291048',
-        bankName: 'Wema Bank (Lao Line Virtual Account)',
+        accountNumber: '',
+        bankName: '',
         transactions: [],
       };
     }
