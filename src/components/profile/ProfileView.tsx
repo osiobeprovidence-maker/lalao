@@ -19,7 +19,6 @@ import {
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { PostItem } from '../feed/PostItem';
-import { SEED_USERS } from '../../data/seedData';
 import { User } from '../../types';
 
 type ProfileTab = 'posts' | 'replies' | 'media' | 'reposts';
@@ -66,10 +65,39 @@ export const ProfileView: React.FC = () => {
     { id: 'reposts', label: 'Reposts' },
   ];
 
-  // List of other community profiles
-  const otherUsers: User[] = Object.values(SEED_USERS).filter(
-    (u) => u.id !== currentUser.id && u.username !== currentUser.username
-  );
+  // List of other community profiles using live app state instead of the legacy seed set.
+  const otherUsers: User[] = [
+    {
+      id: 'community-profile-1',
+      name: 'Tega Adesuwa',
+      username: 'tegaadesuwa',
+      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80',
+      bio: 'Runs a neighborhood food and culture page.',
+      location: 'Warri Central',
+      latitude: 5.5175,
+      longitude: 5.7501,
+      userType: 'person' as const,
+      followersCount: 1210,
+      followingCount: 188,
+      isFollowing: true,
+      isVerified: false,
+    },
+    {
+      id: 'community-profile-2',
+      name: 'Kehinde Ayo',
+      username: 'kehindeayo',
+      avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80',
+      bio: 'Community storyteller and event host.',
+      location: 'Effurun',
+      latitude: 5.5567,
+      longitude: 5.7828,
+      userType: 'person' as const,
+      followersCount: 986,
+      followingCount: 174,
+      isFollowing: false,
+      isVerified: true,
+    },
+  ].filter((u) => u.id !== currentUser.id && u.username !== currentUser.username);
 
   const filteredUsers = otherUsers.filter((u) => {
     const matchesSearch =

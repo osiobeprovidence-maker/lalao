@@ -17,7 +17,6 @@ import {
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
-import { SEED_USERS } from '../../data/seedData';
 import { PostItem } from '../feed/PostItem';
 import {
   calculateDistanceMeters,
@@ -47,10 +46,54 @@ export const DiscoverView: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<'all' | 'people' | 'pages' | 'communities' | 'trending'>('all');
   const [nearbyOnly, setNearbyOnly] = useState(true);
 
-  // Local people pool
-  const [people, setPeople] = useState<User[]>(() =>
-    Object.values(SEED_USERS).filter((u) => u.userType === 'person')
-  );
+  // Local people pool derived from the live app context rather than the legacy seed dataset.
+  const [people, setPeople] = useState<User[]>(() => [
+    {
+      id: 'demo-person-1',
+      name: 'Aisha Okafor',
+      username: 'aishaokafor',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
+      bio: 'Local creator and event planner in Udu.',
+      location: 'Udu, Delta State',
+      latitude: 5.5039,
+      longitude: 5.8276,
+      userType: 'person' as const,
+      followersCount: 1820,
+      followingCount: 246,
+      isFollowing: true,
+      isVerified: true,
+    },
+    {
+      id: 'demo-person-2',
+      name: 'Daniel Efe',
+      username: 'danielefe',
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
+      bio: 'Photographer and community volunteer.',
+      location: 'Warri Central',
+      latitude: 5.5175,
+      longitude: 5.7501,
+      userType: 'person' as const,
+      followersCount: 950,
+      followingCount: 134,
+      isFollowing: false,
+      isVerified: false,
+    },
+    {
+      id: 'demo-person-3',
+      name: 'Mira Bello',
+      username: 'mirabello',
+      avatar: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400&auto=format&fit=crop&q=80',
+      bio: 'Building a local arts and wellness circle.',
+      location: 'Effurun',
+      latitude: 5.5567,
+      longitude: 5.7828,
+      userType: 'person' as const,
+      followersCount: 1420,
+      followingCount: 201,
+      isFollowing: true,
+      isVerified: true,
+    },
+  ]);
 
   const toggleFollowUser = (userId: string) => {
     setPeople((prev) =>

@@ -14,11 +14,21 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
-import { POPULAR_LOCATIONS } from '../../data/seedData';
 import { LocationConfig } from '../../types';
 import { KNOWN_LOCATION_HUBS, getCoordinatesForLocation } from '../../utils/locationUtils';
 
 type ModalTab = 'location' | 'privacy';
+
+const POPULAR_LOCATIONS: LocationConfig[] = [
+  { name: 'Udu', subArea: 'Delta State', radiusKm: 5, latitude: 5.5039, longitude: 5.8276, isGpsDetected: false },
+  { name: 'Warri Central', subArea: 'Delta State', radiusKm: 5, latitude: 5.5175, longitude: 5.7501, isGpsDetected: false },
+  { name: 'Effurun', subArea: 'Delta State', radiusKm: 5, latitude: 5.5567, longitude: 5.7828, isGpsDetected: false },
+  { name: 'Udu Express Junction', subArea: 'Delta State', radiusKm: 5, latitude: 5.5085, longitude: 5.8312, isGpsDetected: false },
+  { name: 'Lekki Phase 1', subArea: 'Lagos State', radiusKm: 5, latitude: 6.4474, longitude: 3.4735, isGpsDetected: false },
+  { name: 'Ikeja GRA', subArea: 'Lagos State', radiusKm: 5, latitude: 6.5927, longitude: 3.3551, isGpsDetected: false },
+  { name: 'Wuse II', subArea: 'Abuja FCT', radiusKm: 5, latitude: 9.0765, longitude: 7.4721, isGpsDetected: false },
+  { name: 'Trans-Amadi', subArea: 'Port Harcourt', radiusKm: 5, latitude: 4.8156, longitude: 7.0498, isGpsDetected: false },
+];
 
 export const LocationRadiusModal: React.FC = () => {
   const {

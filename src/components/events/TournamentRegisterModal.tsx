@@ -26,7 +26,6 @@ import {
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
-import { SEED_USERS } from '../../data/seedData';
 import { PlayerTeam } from '../../types';
 
 interface TeammateSlot {
@@ -102,17 +101,17 @@ export const TournamentRegisterModal: React.FC = () => {
       role: 'Jungler (Assassin)',
     },
     {
-      id: SEED_USERS.tunde.id,
-      name: SEED_USERS.tunde.name,
-      username: SEED_USERS.tunde.username,
-      avatar: SEED_USERS.tunde.avatar,
+      id: 'tunde_demo',
+      name: 'Tunde Balogun',
+      username: 'tundebalogun',
+      avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80',
       role: 'Clash Lane (Fighter)',
     },
     {
-      id: SEED_USERS.amaka.id,
-      name: SEED_USERS.amaka.name,
-      username: SEED_USERS.amaka.username,
-      avatar: SEED_USERS.amaka.avatar,
+      id: 'amaka_demo',
+      name: 'Amaka Nwosu',
+      username: 'amakanwosu',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
       role: 'Farm Lane (Marksman)',
     },
   ]);
@@ -133,17 +132,17 @@ export const TournamentRegisterModal: React.FC = () => {
 
   const availableFriends = [
     {
-      id: SEED_USERS.david.id,
-      name: SEED_USERS.david.name,
-      username: SEED_USERS.david.username,
-      avatar: SEED_USERS.david.avatar,
+      id: 'david_demo',
+      name: 'David Morgan',
+      username: 'davidmorgan',
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
       preferredRole: 'Roamer (Support / Tank)',
     },
     {
-      id: SEED_USERS.fatima.id,
-      name: SEED_USERS.fatima.name,
-      username: SEED_USERS.fatima.username,
-      avatar: SEED_USERS.fatima.avatar,
+      id: 'fatima_demo',
+      name: 'Fatima Bello',
+      username: 'fatimabello',
+      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80',
       preferredRole: 'Roamer (Control)',
     },
     {

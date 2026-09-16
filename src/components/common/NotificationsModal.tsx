@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from './Avatar';
-import { SEED_USERS } from '../../data/seedData';
 import { NotificationItem } from '../../types';
 
 interface SuggestedAccount {
@@ -37,9 +36,9 @@ const INITIAL_SUGGESTIONS: SuggestedAccount[] = [
     isVerified: true,
     mutualCount: 3,
     mutualAvatars: [
-      SEED_USERS.fatima.avatar,
-      SEED_USERS.tunde.avatar,
-      SEED_USERS.amaka.avatar,
+      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80',
     ],
   },
   {
@@ -50,9 +49,9 @@ const INITIAL_SUGGESTIONS: SuggestedAccount[] = [
     isVerified: true,
     mutualCount: 3,
     mutualAvatars: [
-      SEED_USERS.subteen.avatar,
-      SEED_USERS.chidi.avatar,
-      SEED_USERS.fatima.avatar,
+      'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80',
     ],
   },
   {
@@ -63,8 +62,8 @@ const INITIAL_SUGGESTIONS: SuggestedAccount[] = [
     isVerified: true,
     mutualCount: 2,
     mutualAvatars: [
-      SEED_USERS.tunde.avatar,
-      SEED_USERS.subteen.avatar,
+      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400&auto=format&fit=crop&q=80',
     ],
   },
   {
@@ -75,8 +74,8 @@ const INITIAL_SUGGESTIONS: SuggestedAccount[] = [
     isVerified: true,
     mutualCount: 2,
     mutualAvatars: [
-      SEED_USERS.chidi.avatar,
-      SEED_USERS.fatima.avatar,
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
     ],
   },
   {
@@ -87,8 +86,8 @@ const INITIAL_SUGGESTIONS: SuggestedAccount[] = [
     isVerified: true,
     mutualCount: 4,
     mutualAvatars: [
-      SEED_USERS.amaka.avatar,
-      SEED_USERS.tunde.avatar,
+      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
     ],
   },
   {
@@ -99,8 +98,8 @@ const INITIAL_SUGGESTIONS: SuggestedAccount[] = [
     isVerified: true,
     mutualCount: 2,
     mutualAvatars: [
-      SEED_USERS.subteen.avatar,
-      SEED_USERS.chidi.avatar,
+      'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80',
     ],
     ringColor: 'ring-2 ring-amber-400 ring-offset-2',
   },
@@ -112,8 +111,8 @@ const INITIAL_SUGGESTIONS: SuggestedAccount[] = [
     isVerified: true,
     mutualCount: 2,
     mutualAvatars: [
-      SEED_USERS.fatima.avatar,
-      SEED_USERS.tunde.avatar,
+      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80',
     ],
   },
 ];

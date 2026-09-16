@@ -17,7 +17,6 @@ import {
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../common/Avatar';
-import { SEED_USERS } from '../../data/seedData';
 
 export const SettingsPageView: React.FC = () => {
   const {
@@ -94,10 +93,62 @@ export const SettingsPageView: React.FC = () => {
     'Deco Road, Warri',
   ];
 
-  const handleSwitchPersona = (seedUserKey: keyof typeof SEED_USERS) => {
-    const user = SEED_USERS[seedUserKey];
+  const demoPersonas = {
+    david: {
+      name: 'David Morgan',
+      username: 'davidmorgan',
+      bio: 'Community builder and local sports organizer.',
+      location: 'Warri Central',
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
+    },
+    amaka: {
+      name: 'Amaka Nwosu',
+      username: 'amakanwosu',
+      bio: 'Creative designer and event host.',
+      location: 'Effurun',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
+    },
+    isbae_u: {
+      name: 'Isbae U',
+      username: 'isbae_u',
+      bio: 'Music and culture curator across Delta.',
+      location: 'Udu, Delta State',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+    },
+    subteen: {
+      name: 'Subteen Wear',
+      username: 'subteenwear',
+      bio: 'Fashion drop and creator community updates.',
+      location: 'Udu Express Junction',
+      avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&auto=format&fit=crop&q=80',
+    },
+    tunde: {
+      name: 'Tunde Balogun',
+      username: 'tundebalogun',
+      bio: 'Local entrepreneur and community connector.',
+      location: 'Udu, Delta State',
+      avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80',
+    },
+    udulions: {
+      name: 'Udu Lions FC',
+      username: 'udulionsfc',
+      bio: 'Community football club and local match updates.',
+      location: 'Udu Township Stadium',
+      avatar: 'https://images.unsplash.com/photo-1547347298-4074fc3086f0?w=400&auto=format&fit=crop&q=80',
+    },
+  } as const;
+
+  const handleSwitchPersona = (personaKey: keyof typeof demoPersonas) => {
+    const user = demoPersonas[personaKey];
     if (user) {
-      setCurrentUser(user);
+      setCurrentUser((prev) => ({
+        ...prev,
+        name: user.name,
+        username: user.username,
+        bio: user.bio,
+        location: user.location,
+        avatar: user.avatar,
+      }));
       setName(user.name);
       setUsername(user.username);
       setBio(user.bio || '');
@@ -470,7 +521,7 @@ export const SettingsPageView: React.FC = () => {
               <button
                 key={p.key}
                 type="button"
-                onClick={() => handleSwitchPersona(p.key as keyof typeof SEED_USERS)}
+                onClick={() => handleSwitchPersona(p.key as keyof typeof demoPersonas)}
                 className="p-2.5 rounded-xl border border-neutral-200 hover:border-[#5E43F3] hover:bg-neutral-50 text-xs font-bold text-neutral-800 transition-colors text-left truncate cursor-pointer"
               >
                 {p.name}
