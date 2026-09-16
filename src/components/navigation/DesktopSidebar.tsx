@@ -14,8 +14,10 @@ import {
   Plus,
   Building2,
   ChevronRight,
+  LogOut,
 } from 'lucide-react';
 import { useLalao, NavTab } from '../../context/LalaoContext';
+import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../common/Avatar';
 
 export const DesktopSidebar: React.FC = () => {
@@ -40,6 +42,7 @@ export const DesktopSidebar: React.FC = () => {
     setCreateFlowType,
     setIsCreateSheetOpen,
   } = useLalao();
+  const { logout } = useAuth();
 
   const unreadMessagesCount = conversations.reduce(
     (acc, conv) => acc + (conv.unreadCount || 0),
@@ -415,6 +418,19 @@ export const DesktopSidebar: React.FC = () => {
             aria-label="Settings"
           >
             <Settings className="w-4 h-4" />
+          </button>
+
+          <button
+            id="btn-desktop-logout"
+            type="button"
+            onClick={async () => {
+              await logout();
+            }}
+            className="p-1.5 rounded-xl text-rose-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+            title="Log Out"
+            aria-label="Log Out"
+          >
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
       </div>

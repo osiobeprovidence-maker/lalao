@@ -12,8 +12,10 @@ import {
   Radio,
   ChevronRight,
   Info,
+  LogOut,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
+import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../common/Avatar';
 import { SEED_USERS } from '../../data/seedData';
 
@@ -29,6 +31,8 @@ export const SettingsPageView: React.FC = () => {
     location,
     setLocation,
   } = useLalao();
+  const { logout } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const [name, setName] = useState(currentUser.name);
   const [username, setUsername] = useState(currentUser.username);
@@ -100,6 +104,19 @@ export const SettingsPageView: React.FC = () => {
       setUserLocation(user.location);
       setAvatar(user.avatar);
       triggerShareToast(`Switched account persona to ${user.name}`);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      setIsEditProfileOpen(false);
+      await logout();
+      triggerShareToast('Logged out successfully');
+    } catch (err: any) {
+      triggerShareToast(err.message || 'Failed to log out');
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
@@ -460,6 +477,26 @@ export const SettingsPageView: React.FC = () => {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* 6. Account Actions */}
+        <div className="space-y-3">
+          <div className="border-b border-neutral-100 pb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+              Account Session
+            </h3>
+          </div>
+
+          <button
+            id="btn-settings-logout"
+            type="button"
+            disabled={isLoggingOut}
+            onClick={handleLogout}
+            className="w-full p-3.5 rounded-2xl border border-rose-200 bg-rose-50/50 hover:bg-rose-100/70 text-rose-600 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+          >
+            <LogOut className="w-4 h-4 stroke-[2.2]" />
+            <span>{isLoggingOut ? 'Logging out...' : 'Log Out from Lalao'}</span>
+          </button>
         </div>
 
         {/* 7. App Info */}
