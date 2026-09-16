@@ -5,14 +5,14 @@ export interface User {
   name: string;
   username: string;
   avatar: string;
-  userType: UserType;
+  userType?: UserType;
   badge?: 'BIZ' | 'ORG' | 'CLUB' | 'COMMUNITY';
   bio?: string;
   location?: string;
   latitude?: number;
   longitude?: number;
-  followersCount: number;
-  followingCount: number;
+  followersCount?: number;
+  followingCount?: number;
   postsCount?: number;
   viewsCount?: number;
   isFollowing?: boolean;
@@ -213,6 +213,7 @@ export interface Page {
   username: string;
   type: 'business' | 'organization' | 'club' | 'community';
   badge: 'BIZ' | 'ORG' | 'CLUB' | 'COMMUNITY';
+  isBusiness?: boolean;
   avatar: string;
   coverImage: string;
   description: string;
@@ -258,6 +259,13 @@ export interface OrgEvent {
   location: string;
   isOnline: boolean;
   registrationStatus: EventRegistrationStatus;
+  isFree?: boolean;
+  entryFee?: number;
+  price?: number;
+  bannerUrl?: string;
+  venue?: string;
+  organizerName?: string;
+  organizerAvatar?: string;
   teamsCount?: number;
   maxTeams?: number;
   registeredTeamsCount?: number;
@@ -305,6 +313,13 @@ export interface EventTicket {
   purchasedAt?: string;
   purchaseDate?: string;
   seat?: string;
+  eventBanner?: string;
+  eventDate?: string;
+  eventTime?: string;
+  tier?: string;
+  qrCode?: string;
+  organizerName?: string;
+  organizerAvatar?: string;
 }
 
 export interface TeamRegistration {

@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import {
   User,
   Post,
@@ -28,19 +30,7 @@ import {
   PageMonetization,
   PageAnalytics,
 } from '../types';
-import {
-  CURRENT_USER,
-  INITIAL_LOCATION,
-  DEFAULT_LOCATION_PRIVACY,
-  SEED_POSTS,
-  SEED_RALLIES,
-  SEED_PAGES,
-  SEED_CYCLES,
-  SEED_CONVERSATIONS,
-  SEED_NOTIFICATIONS,
-  SEED_ORDERS,
-  SEED_USERS,
-} from '../data/seedData';
+
 import { HOK_EVENTS, HOK_SEED_TICKETS, HOK_ORGANIZATION_PAGE } from '../data/honorOfKingsData';
 import {
   calculateDistanceMeters,
@@ -61,6 +51,8 @@ interface LalaoContextType {
   setFeedTab: (tab: FeedTab) => void;
   location: LocationConfig;
   setLocation: (loc: LocationConfig) => void;
+  radiusKm: number;
+  setRadiusKm: (radiusKm: number) => void;
   locationPrivacy: LocationPrivacySettings;
   setLocationPrivacy: React.Dispatch<React.SetStateAction<LocationPrivacySettings>>;
   updateRadius: (radiusKm: number) => void;
@@ -90,7 +82,7 @@ interface LalaoContextType {
   createRally: (rally: { title: string; description: string; location: string; timeDate: string; category: Rally['category'] }) => void;
 
   toggleFollowPage: (pageId: string) => void;
-  createPage: (pageData: { name: string; username: string; category: string; description: string; type: Page['type']; location: string }) => void;
+  createPage: (pageData: { name: string; username: string; category: string; description: string; type: Page['type']; location: string; avatar?: string; coverImage?: string }) => void;
   updatePage: (pageId: string, updatedData: Partial<Page>) => void;
   createPagePost: (pageId: string, postData: { text: string; mediaUrl?: string; mediaType?: 'image' | 'video'; location?: string }) => void;
   createPageEvent: (pageId: string, eventData: Partial<OrgEvent>) => void;
@@ -240,8 +232,101 @@ interface LalaoContextType {
 
 const LalaoContext = createContext<LalaoContextType | undefined>(undefined);
 
+const DEFAULT_LOCATION: LocationConfig = {
+  name: 'Udu',
+  subArea: 'Delta State',
+  radiusKm: 5,
+  latitude: 5.8912,
+  longitude: 5.7532,
+  isGpsDetected: false,
+};
+
+const DEFAULT_LOCATION_PRIVACY: LocationPrivacySettings = {
+  approximateDistance: true,
+  ghostMode: false,
+  showNeighborhoodOnly: true,
+  shareLocationOnPosts: true,
+};
+
+const EMPTY_CURRENT_USER: User = {
+  id: 'local-user',
+  name: 'Guest User',
+  username: 'guestuser',
+  avatar:
+    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80',
+  userType: 'person',
+  followersCount: 0,
+  followingCount: 0,
+  location: 'Lagos, Nigeria',
+};
+
+const EMPTY_POSTS: Post[] = [];
+const EMPTY_RALLIES: Rally[] = [];
+const EMPTY_PAGES: Page[] = [];
+const EMPTY_CYCLES: Cycle[] = [];
+const EMPTY_CONVERSATIONS: Conversation[] = [];
+const EMPTY_NOTIFICATIONS: NotificationItem[] = [];
+const EMPTY_ORDERS: Order[] = [];
+
+const normalizeConvexUser = (user: Record<string, any> | null | undefined): User => {
+  if (!user) return EMPTY_CURRENT_USER;
+
+  return {
+    id: user._id ?? user.id ?? EMPTY_CURRENT_USER.id,
+    name: user.name ?? 'Guest User',
+    username: user.username ?? 'guestuser',
+    avatar: user.avatarUrl ?? EMPTY_CURRENT_USER.avatar,
+    userType: (user.userType ?? 'person') as User['userType'],
+    bio: user.bio ?? undefined,
+    location: user.locationName ?? user.location ?? EMPTY_CURRENT_USER.location,
+    latitude: user.latitude ?? undefined,
+    longitude: user.longitude ?? undefined,
+    followersCount: typeof user.followersCount === 'number' ? user.followersCount : 0,
+    followingCount: typeof user.followingCount === 'number' ? user.followingCount : 0,
+    isFollowing: typeof user.isFollowing === 'boolean' ? user.isFollowing : false,
+    isVerified: typeof user.isVerified === 'boolean' ? user.isVerified : false,
+  };
+};
+
 export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User>(CURRENT_USER);
+  const currentUserQuery = useQuery(api.users.getCurrentUser);
+
+  const [currentUser, setCurrentUser] = useState<User>(() => {
+    try {
+      const saved = localStorage.getItem('lalao_current_user');
+      if (saved) {
+        const parsed = JSON.parse(saved) as User;
+        if (parsed && parsed.id) return parsed;
+      }
+    } catch {
+      // ignore storage issues
+    }
+    return EMPTY_CURRENT_USER;
+  });
+
+  const hydratedCurrentUser = useMemo(
+    () => normalizeConvexUser(currentUserQuery),
+    [currentUserQuery]
+  );
+
+  useEffect(() => {
+    if (currentUserQuery) {
+      setCurrentUser((prev) => ({
+        ...prev,
+        ...hydratedCurrentUser,
+        id: hydratedCurrentUser.id || prev.id,
+      }));
+    }
+  }, [currentUserQuery, hydratedCurrentUser]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('lalao_current_user', JSON.stringify(currentUser));
+    } catch {
+      // ignore storage issues
+    }
+  }, [currentUser]);
+
   const [activeTab, setActiveTab] = useState<NavTab>('home');
   const [feedTab, setFeedTab] = useState<FeedTab>('for_you');
   const [nearbySort, setNearbySort] = useState<'closest' | 'recent'>('closest');
@@ -250,9 +335,9 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [location, setLocation] = useState<LocationConfig>(() => {
     try {
       const saved = localStorage.getItem('lalao_location');
-      return saved ? JSON.parse(saved) : INITIAL_LOCATION;
+      return saved ? JSON.parse(saved) : DEFAULT_LOCATION;
     } catch {
-      return INITIAL_LOCATION;
+      return DEFAULT_LOCATION;
     }
   });
 
@@ -268,18 +353,18 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [posts, setPosts] = useState<Post[]>(() => {
     try {
       const saved = localStorage.getItem('lalao_posts');
-      return saved ? JSON.parse(saved) : SEED_POSTS;
+      return saved ? JSON.parse(saved) : EMPTY_POSTS;
     } catch {
-      return SEED_POSTS;
+      return EMPTY_POSTS;
     }
   });
 
   const [rallies, setRallies] = useState<Rally[]>(() => {
     try {
       const saved = localStorage.getItem('lalao_rallies');
-      return saved ? JSON.parse(saved) : SEED_RALLIES;
+      return saved ? JSON.parse(saved) : EMPTY_RALLIES;
     } catch {
-      return SEED_RALLIES;
+      return EMPTY_RALLIES;
     }
   });
 
@@ -289,16 +374,12 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const map = new Map<string, Page>();
-          SEED_PAGES.forEach((p) => map.set(p.id, p));
-          map.set(HOK_ORGANIZATION_PAGE.id, HOK_ORGANIZATION_PAGE);
-          parsed.forEach((p: Page) => map.set(p.id, p));
-          return Array.from(map.values());
+          return parsed;
         }
       }
-      return SEED_PAGES;
+      return EMPTY_PAGES;
     } catch {
-      return SEED_PAGES;
+      return EMPTY_PAGES;
     }
   });
 
@@ -311,27 +392,27 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           return parsed;
         }
       }
-      return SEED_CYCLES;
+      return EMPTY_CYCLES;
     } catch {
-      return SEED_CYCLES;
+      return EMPTY_CYCLES;
     }
   });
 
   const [conversations, setConversations] = useState<Conversation[]>(() => {
     try {
       const saved = localStorage.getItem('lalao_conversations');
-      return saved ? JSON.parse(saved) : SEED_CONVERSATIONS;
+      return saved ? JSON.parse(saved) : EMPTY_CONVERSATIONS;
     } catch {
-      return SEED_CONVERSATIONS;
+      return EMPTY_CONVERSATIONS;
     }
   });
 
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
     try {
       const saved = localStorage.getItem('lalao_notifications');
-      return saved ? JSON.parse(saved) : SEED_NOTIFICATIONS;
+      return saved ? JSON.parse(saved) : EMPTY_NOTIFICATIONS;
     } catch {
-      return SEED_NOTIFICATIONS;
+      return EMPTY_NOTIFICATIONS;
     }
   });
 
@@ -570,9 +651,9 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [orders, setOrders] = useState<Order[]>(() => {
     try {
       const saved = localStorage.getItem(`lalao_orders_${currentUser.id}`);
-      return saved ? JSON.parse(saved) : SEED_ORDERS;
+      return saved ? JSON.parse(saved) : EMPTY_ORDERS;
     } catch {
-      return SEED_ORDERS;
+      return EMPTY_ORDERS;
     }
   });
 
@@ -594,7 +675,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Events & Ticketing Ecosystem State
   const initialOrgEvents: OrgEvent[] = Array.from(
     new Map(
-      [...HOK_EVENTS, ...SEED_PAGES.flatMap((p) => p.events || [])].map((e) => [e.id, e])
+      [...HOK_EVENTS].map((e) => [e.id, e])
     ).values()
   );
 
@@ -714,24 +795,24 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                   role: 'Jungler (Assassin)',
                 },
                 {
-                  id: SEED_USERS.tunde.id,
-                  name: SEED_USERS.tunde.name,
-                  username: SEED_USERS.tunde.username,
-                  avatar: SEED_USERS.tunde.avatar,
+                  id: 'user_tunde',
+                  name: 'Tunde Balogun',
+                  username: 'tundebalogun',
+                  avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
                   role: 'Clash Lane (Fighter)',
                 },
                 {
-                  id: SEED_USERS.amaka.id,
-                  name: SEED_USERS.amaka.name,
-                  username: SEED_USERS.amaka.username,
-                  avatar: SEED_USERS.amaka.avatar,
+                  id: 'user_amaka',
+                  name: 'Amaka Nwosu',
+                  username: 'amakanwosu',
+                  avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
                   role: 'Farm Lane (Marksman)',
                 },
                 {
-                  id: SEED_USERS.david.id,
-                  name: SEED_USERS.david.name,
-                  username: SEED_USERS.david.username,
-                  avatar: SEED_USERS.david.avatar,
+                  id: 'user_david',
+                  name: 'David Okoye',
+                  username: 'davidokoye',
+                  avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80',
                   role: 'Roamer (Support / Tank)',
                 },
               ],
@@ -1343,6 +1424,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     description,
     type,
     location: pageLoc,
+    avatar,
+    coverImage,
   }: {
     name: string;
     username: string;
@@ -1350,6 +1433,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     description: string;
     type: Page['type'];
     location: string;
+    avatar?: string;
+    coverImage?: string;
   }) => {
     const badgeMap: Record<Page['type'], Page['badge']> = {
       business: 'BIZ',
@@ -1364,8 +1449,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       username: username.replace('@', ''),
       type,
       badge: badgeMap[type],
-      avatar: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&auto=format&fit=crop&q=80',
-      coverImage: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=1200&auto=format&fit=crop&q=80',
+      avatar: avatar || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&auto=format&fit=crop&q=80',
+      coverImage: coverImage || 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=1200&auto=format&fit=crop&q=80',
       description,
       location: pageLoc || `${location.name}, ${location.subArea}`,
       followersCount: 1,
@@ -1589,15 +1674,17 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setCycles((prev) =>
       prev.map((c) => {
         if (c.id === cycleId) {
+          const cycleMembers = c.members ?? [];
           const isMember = !c.isMember;
           const members = isMember
-            ? [...c.members, { ...currentUser, role: 'member' }]
-            : c.members.filter((m) => m.id !== currentUser.id);
+            ? [...cycleMembers, { ...currentUser, role: 'member' as const }]
+            : cycleMembers.filter((m) => m.id !== currentUser.id);
+          const nextCount = (c.memberCount ?? cycleMembers.length) || 0;
 
           return {
             ...c,
             isMember,
-            memberCount: isMember ? c.memberCount + 1 : Math.max(1, c.memberCount - 1),
+            memberCount: isMember ? nextCount + 1 : Math.max(1, nextCount - 1),
             members,
           };
         }
@@ -1970,6 +2057,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setFeedTab,
         location,
         setLocation,
+        radiusKm: location.radiusKm,
+        setRadiusKm: updateRadius,
         locationPrivacy,
         setLocationPrivacy,
         updateRadius,

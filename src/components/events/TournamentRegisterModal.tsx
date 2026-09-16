@@ -291,22 +291,32 @@ export const TournamentRegisterModal: React.FC = () => {
         id: `tkt_team_${Date.now()}`,
         eventId: event.id,
         eventTitle: event.title,
-        eventBanner: event.bannerUrl,
-        eventDate: event.date,
-        eventTime: event.time,
-        venue: event.venue,
-        tier: 'Team Tournament Pass',
+        organizationName: event.organizationName || 'Honor of Kings Esports',
+        organizationAvatar: event.organizationAvatar,
+        userId: currentUser.id,
+        holderName: currentUser.name,
+        ticketType: 'Team Tournament Pass',
         price: entryFee,
         currency: 'NGN',
-        qrCode: `HOK-TOUR-${teamTag}-${Date.now()}`,
+        date: event.date,
+        time: event.time,
+        venue: event.location,
         status: 'active',
-        organizerName: event.organizerName || 'Honor of Kings Esports',
-        organizerAvatar: event.organizerAvatar,
+        qrCodeData: `HOK-TOUR-${teamTag}-${Date.now()}`,
+        qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(`HOK-TOUR-${teamTag}-${Date.now()}`)}`,
+        purchasedAt: new Date().toISOString(),
         purchaseDate: new Date().toLocaleDateString(undefined, {
           month: 'short',
           day: 'numeric',
           year: 'numeric',
         }),
+        eventBanner: event.coverImage,
+        eventDate: event.date,
+        eventTime: event.time,
+        tier: 'Team Tournament Pass',
+        qrCode: `HOK-TOUR-${teamTag}-${Date.now()}`,
+        organizerName: event.organizationName || 'Honor of Kings Esports',
+        organizerAvatar: event.organizationAvatar,
       });
 
       triggerShareToast('Tournament squad registration confirmed!');
@@ -421,7 +431,7 @@ export const TournamentRegisterModal: React.FC = () => {
               {/* Event Mini Banner */}
               <div className="bg-neutral-50 rounded-2xl p-3.5 border border-neutral-200/80 flex items-center gap-3">
                 <img
-                  src={event.bannerUrl}
+                  src={event.coverImage}
                   alt={event.title}
                   className="w-14 h-14 rounded-xl object-cover shrink-0 border border-neutral-200"
                 />
