@@ -13,6 +13,8 @@ import {
   ChevronRight,
   Info,
   LogOut,
+  Building2,
+  Upload,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
@@ -36,8 +38,12 @@ export const SettingsPageView: React.FC = () => {
   const [name, setName] = useState(currentUser.name);
   const [username, setUsername] = useState(currentUser.username);
   const [bio, setBio] = useState(currentUser.bio || '');
-  const [userLocation, setUserLocation] = useState(currentUser.location || 'Warri, Delta State');
-  const [avatar, setAvatar] = useState(currentUser.avatar);
+  const [userLocation, setUserLocation] = useState(currentUser.location || '');
+  const [avatar, setAvatar] = useState(currentUser.avatar || '');
+  const [kycStatus, setKycStatus] = useState<'not_verified' | 'in_progress' | 'verified' | 'requires_attention'>('not_verified');
+  const [withdrawalAccount, setWithdrawalAccount] = useState({ bankName: '', accountNumber: '', accountName: '' });
+  const [isBankFormOpen, setIsBankFormOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,8 +60,6 @@ export const SettingsPageView: React.FC = () => {
   const [publicVisibility, setPublicVisibility] = useState(true);
   const [showActiveStatus, setShowActiveStatus] = useState(true);
 
-  if (!isEditProfileOpen) return null;
-
   const handleClose = () => {
     setIsEditProfileOpen(false);
   };
@@ -70,18 +74,45 @@ export const SettingsPageView: React.FC = () => {
       location: userLocation.trim(),
       avatar,
     }));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('lalao_withdrawal_account', JSON.stringify(withdrawalAccount));
+      localStorage.setItem('lalao_kyc_status', JSON.stringify(kycStatus));
+    }
     setIsEditProfileOpen(false);
     triggerShareToast('Settings & profile saved successfully!');
   };
 
-  const sampleAvatars = [
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&auto=format&fit=crop&q=80',
-  ];
+  useEffect(() => {
+    try {
+      const savedAccount = localStorage.getItem('lalao_withdrawal_account');
+      const savedKyc = localStorage.getItem('lalao_kyc_status');
+      if (savedAccount) setWithdrawalAccount(JSON.parse(savedAccount));
+      if (savedKyc) setKycStatus(JSON.parse(savedKyc));
+    } catch {}
+  }, []);
+
+  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      triggerShareToast('Please choose a valid image file.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      triggerShareToast('Please upload an image under 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      setAvatar(result);
+      triggerShareToast('Profile photo updated.');
+    };
+    reader.readAsDataURL(file);
+  };
 
   const neighborhoodOptions = [
     'Udu, Delta State',
@@ -92,71 +123,6 @@ export const SettingsPageView: React.FC = () => {
     'PTI Road, Effurun',
     'Deco Road, Warri',
   ];
-
-  const demoPersonas = {
-    david: {
-      name: 'David Morgan',
-      username: 'davidmorgan',
-      bio: 'Community builder and local sports organizer.',
-      location: 'Warri Central',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
-    },
-    amaka: {
-      name: 'Amaka Nwosu',
-      username: 'amakanwosu',
-      bio: 'Creative designer and event host.',
-      location: 'Effurun',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
-    },
-    isbae_u: {
-      name: 'Isbae U',
-      username: 'isbae_u',
-      bio: 'Music and culture curator across Delta.',
-      location: 'Udu, Delta State',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
-    },
-    subteen: {
-      name: 'Subteen Wear',
-      username: 'subteenwear',
-      bio: 'Fashion drop and creator community updates.',
-      location: 'Udu Express Junction',
-      avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&auto=format&fit=crop&q=80',
-    },
-    tunde: {
-      name: 'Tunde Balogun',
-      username: 'tundebalogun',
-      bio: 'Local entrepreneur and community connector.',
-      location: 'Udu, Delta State',
-      avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80',
-    },
-    udulions: {
-      name: 'Udu Lions FC',
-      username: 'udulionsfc',
-      bio: 'Community football club and local match updates.',
-      location: 'Udu Township Stadium',
-      avatar: 'https://images.unsplash.com/photo-1547347298-4074fc3086f0?w=400&auto=format&fit=crop&q=80',
-    },
-  } as const;
-
-  const handleSwitchPersona = (personaKey: keyof typeof demoPersonas) => {
-    const user = demoPersonas[personaKey];
-    if (user) {
-      setCurrentUser((prev) => ({
-        ...prev,
-        name: user.name,
-        username: user.username,
-        bio: user.bio,
-        location: user.location,
-        avatar: user.avatar,
-      }));
-      setName(user.name);
-      setUsername(user.username);
-      setBio(user.bio || '');
-      setUserLocation(user.location);
-      setAvatar(user.avatar);
-      triggerShareToast(`Switched account persona to ${user.name}`);
-    }
-  };
 
   const handleLogout = async () => {
     try {
@@ -171,14 +137,22 @@ export const SettingsPageView: React.FC = () => {
     }
   };
 
+  if (!isEditProfileOpen) return null;
+
   return (
     <div
-      ref={containerRef}
-      id="settings-page-screen"
-      className="absolute inset-0 z-40 bg-white flex flex-col min-h-full overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-250"
+      id="settings-page-overlay"
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex justify-end animate-in fade-in duration-200"
+      onClick={handleClose}
     >
-      {/* Top Sticky Header */}
-      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-neutral-100 px-4 py-3 flex items-center justify-between">
+      <div
+        ref={containerRef}
+        id="settings-page-screen"
+        className="bg-white w-full sm:max-w-md md:max-w-lg h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 relative z-10 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Top Sticky Header */}
+        <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-neutral-100 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             id="btn-back-settings"
@@ -205,8 +179,8 @@ export const SettingsPageView: React.FC = () => {
         </button>
       </div>
 
-      {/* Settings Form Body */}
-      <div className="flex-1 max-w-xl mx-auto w-full p-4 sm:p-6 space-y-7 pb-28">
+        {/* Settings Form Body */}
+        <div className="flex-1 max-w-xl mx-auto w-full p-4 sm:p-6 space-y-7 pb-28 overflow-y-auto">
         {/* 1. Profile Identity Section */}
         <div className="space-y-4">
           <div className="flex items-center justify-between border-b border-neutral-100 pb-2">
@@ -216,41 +190,45 @@ export const SettingsPageView: React.FC = () => {
             <span className="text-[11px] text-neutral-400 font-medium">Public Information</span>
           </div>
 
-          {/* Avatar picker */}
+          {/* Avatar uploader */}
           <div className="flex flex-col items-center gap-3 py-2">
-            <div className="relative group cursor-pointer">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="relative group cursor-pointer"
+            >
               <Avatar
                 src={avatar}
-                alt={name}
+                alt={name || 'User'}
                 size="xl"
                 className="w-20 h-20 ring-4 ring-[#5E43F3]/20 shadow-md"
               />
               <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
                 <Camera className="w-6 h-6" />
               </div>
-            </div>
+            </button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarUpload}
+              className="hidden"
+            />
 
             <div className="text-center">
-              <span className="text-xs font-bold text-neutral-800">Change Profile Photo</span>
-              <p className="text-[11px] text-neutral-500 mt-0.5">Select a preset or tap to upload</p>
+              <span className="text-xs font-bold text-neutral-800">Profile photo</span>
+              <p className="text-[11px] text-neutral-500 mt-0.5">Upload your own image from your device</p>
             </div>
 
-            <div className="flex items-center gap-2 mt-1 overflow-x-auto pb-1 max-w-full">
-              {sampleAvatars.map((src, i) => (
-                <img
-                  key={i}
-                  src={src}
-                  alt="Option"
-                  referrerPolicy="no-referrer"
-                  onClick={() => setAvatar(src)}
-                  className={`w-9 h-9 rounded-full object-cover cursor-pointer border-2 transition-all ${
-                    avatar === src
-                      ? 'border-[#5E43F3] scale-110 ring-2 ring-[#5E43F3]/30'
-                      : 'border-transparent opacity-70 hover:opacity-100'
-                  }`}
-                />
-              ))}
-            </div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-2 text-[11px] font-bold text-neutral-700 hover:bg-neutral-100 cursor-pointer"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              {avatar ? 'Change photo' : 'Add profile photo'}
+            </button>
           </div>
 
           {/* Display Name & Handle */}
@@ -499,38 +477,157 @@ export const SettingsPageView: React.FC = () => {
           </div>
         </div>
 
-        {/* 5. Demo Persona Switcher */}
+        {/* 5. KYC / Verification */}
         <div className="space-y-3">
           <div className="border-b border-neutral-100 pb-2">
             <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
-              Switch Demo Persona
+              KYC / Verification
             </h3>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {(
-              [
-                { key: 'david', name: 'David Morgan' },
-                { key: 'amaka', name: 'Amaka Nwosu' },
-                { key: 'isbae_u', name: 'Isbae U' },
-                { key: 'subteen', name: 'Subteen Wear' },
-                { key: 'tunde', name: 'Tunde Balogun' },
-                { key: 'udulions', name: 'Udu Lions FC' },
-              ] as const
-            ).map((p) => (
-              <button
-                key={p.key}
-                type="button"
-                onClick={() => handleSwitchPersona(p.key as keyof typeof demoPersonas)}
-                className="p-2.5 rounded-xl border border-neutral-200 hover:border-[#5E43F3] hover:bg-neutral-50 text-xs font-bold text-neutral-800 transition-colors text-left truncate cursor-pointer"
-              >
-                {p.name}
-              </button>
-            ))}
+          <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-[#5E43F3]" />
+                <span className="text-xs font-bold text-neutral-900">Current status</span>
+              </div>
+              <span className="rounded-full bg-neutral-900 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+                {kycStatus === 'verified' ? 'Verified' : kycStatus === 'in_progress' ? 'In progress' : kycStatus === 'requires_attention' ? 'Requires attention' : 'Not verified'}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setKycStatus('in_progress')}
+              className="w-full rounded-xl bg-[#5E43F3] px-4 py-3 text-xs font-bold text-white hover:bg-[#4E34E0] cursor-pointer"
+            >
+              {kycStatus === 'not_verified' ? 'Start KYC' : 'Continue KYC'}
+            </button>
+
+            <p className="text-[11px] text-neutral-500">
+              Your identity has not been verified yet. This status will update once your verification review is complete.
+            </p>
           </div>
         </div>
 
-        {/* 6. Account Actions */}
+        {/* 6. Withdrawal Account */}
+        <div className="space-y-3">
+          <div className="border-b border-neutral-100 pb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+              Wallet / Withdrawals
+            </h3>
+          </div>
+
+          <div className="rounded-2xl border border-neutral-200 bg-white p-4 space-y-3">
+            {withdrawalAccount.bankName && withdrawalAccount.accountNumber ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-[#5E43F3]" />
+                    <span className="text-xs font-bold text-neutral-900">Withdrawal account</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsBankFormOpen((v) => !v)}
+                    className="text-[11px] font-bold text-[#5E43F3] cursor-pointer"
+                  >
+                    Edit
+                  </button>
+                </div>
+
+                <div className="rounded-xl bg-neutral-50 border border-neutral-200 p-3">
+                  <p className="text-[11px] text-neutral-500">Bank</p>
+                  <p className="mt-1 text-sm font-bold text-neutral-900">{withdrawalAccount.bankName}</p>
+                  <p className="mt-2 text-[11px] text-neutral-500">Account</p>
+                  <p className="mt-1 font-mono text-sm font-bold text-neutral-900">
+                    {withdrawalAccount.accountNumber.replace(/\d(?=\d{4})/g, '•')}
+                  </p>
+                  <p className="mt-2 text-[11px] text-neutral-500">Account name</p>
+                  <p className="mt-1 text-sm text-neutral-800">{withdrawalAccount.accountName || 'Not provided'}</p>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 p-4 text-center">
+                <p className="text-xs font-bold text-neutral-700">No withdrawal account added</p>
+                <p className="mt-1 text-[11px] text-neutral-500">Add your bank details to receive payouts.</p>
+              </div>
+            )}
+
+            {!isBankFormOpen && !withdrawalAccount.bankName && !withdrawalAccount.accountNumber && (
+              <button
+                type="button"
+                onClick={() => setIsBankFormOpen(true)}
+                className="w-full rounded-xl border border-[#5E43F3]/20 bg-[#5E43F3]/5 px-4 py-3 text-xs font-bold text-[#5E43F3] hover:bg-[#5E43F3]/10 cursor-pointer"
+              >
+                Add Bank Account
+              </button>
+            )}
+
+            {isBankFormOpen && (
+              <div className="space-y-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+                <div>
+                  <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-neutral-500">Bank</label>
+                  <input
+                    type="text"
+                    value={withdrawalAccount.bankName}
+                    onChange={(e) => setWithdrawalAccount((prev) => ({ ...prev, bankName: e.target.value }))}
+                    placeholder="Access Bank"
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-xs text-neutral-900 outline-none focus:border-[#5E43F3]"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-neutral-500">Account number</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={withdrawalAccount.accountNumber}
+                    onChange={(e) => setWithdrawalAccount((prev) => ({ ...prev, accountNumber: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
+                    placeholder="0123456789"
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-xs text-neutral-900 outline-none focus:border-[#5E43F3]"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-neutral-500">Account name</label>
+                  <input
+                    type="text"
+                    value={withdrawalAccount.accountName}
+                    onChange={(e) => setWithdrawalAccount((prev) => ({ ...prev, accountName: e.target.value }))}
+                    placeholder="Full name on account"
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-xs text-neutral-900 outline-none focus:border-[#5E43F3]"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (withdrawalAccount.bankName.trim() && withdrawalAccount.accountNumber.trim()) {
+                        setIsBankFormOpen(false);
+                        triggerShareToast('Withdrawal account saved.');
+                      } else {
+                        triggerShareToast('Bank and account number are required.');
+                      }
+                    }}
+                    className="flex-1 rounded-xl bg-[#5E43F3] px-3 py-2.5 text-[11px] font-bold text-white hover:bg-[#4E34E0] cursor-pointer"
+                  >
+                    Save account
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsBankFormOpen(false)}
+                    className="flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-[11px] font-bold text-neutral-700 hover:bg-neutral-100 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 7. Account Actions */}
         <div className="space-y-3">
           <div className="border-b border-neutral-100 pb-2">
             <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
@@ -570,6 +667,7 @@ export const SettingsPageView: React.FC = () => {
             <Check className="w-4 h-4 stroke-[2.5]" />
             <span>Save Settings & Profile</span>
           </button>
+        </div>
         </div>
       </div>
     </div>

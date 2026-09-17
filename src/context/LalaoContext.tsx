@@ -38,7 +38,7 @@ import {
   KNOWN_LOCATION_HUBS,
 } from '../utils/locationUtils';
 
-export type NavTab = 'home' | 'discover' | 'create' | 'messages' | 'profile';
+export type NavTab = 'home' | 'discover' | 'create' | 'messages' | 'notifications' | 'profile';
 export type FeedTab = 'for_you' | 'following' | 'nearby';
 export type CreateOption = 'post' | 'rally' | 'page' | 'cycle' | null;
 
@@ -250,14 +250,14 @@ const DEFAULT_LOCATION_PRIVACY: LocationPrivacySettings = {
 
 const EMPTY_CURRENT_USER: User = {
   id: 'local-user',
-  name: 'Guest User',
-  username: 'guestuser',
-  avatar:
-    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80',
+  name: 'New user',
+  username: 'newuser',
+  avatar: '',
   userType: 'person',
   followersCount: 0,
   followingCount: 0,
-  location: 'Lagos, Nigeria',
+  location: '',
+  bio: '',
 };
 
 const EMPTY_POSTS: Post[] = [];
@@ -273,8 +273,8 @@ const normalizeConvexUser = (user: Record<string, any> | null | undefined): User
 
   return {
     id: user._id ?? user.id ?? EMPTY_CURRENT_USER.id,
-    name: user.name ?? 'Guest User',
-    username: user.username ?? 'guestuser',
+    name: user.name ?? 'New user',
+    username: user.username ?? 'newuser',
     avatar: user.avatarUrl ?? EMPTY_CURRENT_USER.avatar,
     userType: (user.userType ?? 'person') as User['userType'],
     bio: user.bio ?? undefined,
@@ -1958,6 +1958,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setConversations((prev) => [newConv, ...prev]);
       setActiveChatId(newConv.id);
     }
+    setActiveTab('messages');
   };
 
   const unreadNotifsCount = notifications.filter((n) => !n.isRead).length;

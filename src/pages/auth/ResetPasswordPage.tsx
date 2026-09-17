@@ -35,7 +35,7 @@ export const ResetPasswordPage: React.FC = () => {
           <div className="w-9 h-9 rounded-xl bg-[#5E43F3] flex items-center justify-center">
             <Zap className="w-4 h-4 text-white fill-white" />
           </div>
-          <span className="font-black text-xl tracking-tight text-neutral-900">lalao</span>
+          <span className="lalao-wordmark text-xl text-neutral-900">lalao</span>
         </div>
 
         {!done ? (

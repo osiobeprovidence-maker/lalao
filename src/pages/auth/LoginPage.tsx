@@ -48,7 +48,7 @@ export const LoginPage: React.FC = () => {
           <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center border border-white/20">
             <Zap className="w-5 h-5 text-white fill-white" />
           </div>
-          <span className="text-white font-black text-2xl tracking-tight">lalao</span>
+          <span className="lalao-wordmark text-white text-2xl">lalao</span>
         </div>
 
         {/* Hero copy */}
@@ -97,7 +97,7 @@ export const LoginPage: React.FC = () => {
           <div className="w-9 h-9 rounded-xl bg-[#5E43F3] flex items-center justify-center">
             <Zap className="w-4 h-4 text-white fill-white" />
           </div>
-          <span className="font-black text-xl tracking-tight text-neutral-900">lalao</span>
+          <span className="lalao-wordmark text-xl text-neutral-900">lalao</span>
         </div>
 
         <div className="w-full max-w-sm space-y-8">

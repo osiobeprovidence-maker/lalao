@@ -4,7 +4,6 @@ import {
   MapPin,
   Check,
   ShieldCheck,
-  Navigation,
   Compass,
   Sliders,
   Eye,
@@ -187,7 +186,7 @@ export const LocationRadiusModal: React.FC = () => {
                   : 'text-neutral-500 hover:text-neutral-900'
               }`}
             >
-              <Navigation className="w-3.5 h-3.5 text-[#5E43F3]" />
+              <MapPin className="w-3.5 h-3.5 text-[#5E43F3]" />
               <span>Location & Radius</span>
             </button>
             <button
@@ -213,7 +212,7 @@ export const LocationRadiusModal: React.FC = () => {
               <div className="p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100/70 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Navigation className="w-4 h-4 text-[#5E43F3]" />
+                    <MapPin className="w-4 h-4 text-[#5E43F3]" />
                     <span className="text-xs font-bold text-neutral-900">
                       Device GPS & Location
                     </span>
@@ -247,7 +246,7 @@ export const LocationRadiusModal: React.FC = () => {
                     disabled={isDetectingGps}
                     className="py-2 px-3 rounded-xl bg-white border border-indigo-200 hover:border-[#5E43F3] text-xs font-bold text-[#5E43F3] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs hover:bg-indigo-50/40"
                   >
-                    <Navigation className={`w-3.5 h-3.5 ${isDetectingGps ? 'animate-spin' : ''}`} />
+                    <MapPin className={`w-3.5 h-3.5 ${isDetectingGps ? 'animate-spin' : ''}`} />
                     <span>{isDetectingGps ? 'Detecting coordinates...' : 'Use My Current Location'}</span>
                   </button>
 

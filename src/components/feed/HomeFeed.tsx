@@ -19,8 +19,10 @@ import {
 export const HomeFeed: React.FC = () => {
   const {
     posts,
+    pages,
     feedTab,
     setFeedTab,
+    setActiveTab,
     location,
     currentUser,
     setIsCreateSheetOpen,
@@ -133,8 +135,23 @@ export const HomeFeed: React.FC = () => {
     }
   };
 
-  // Filter posts according to feed tab
-  const filteredPosts = posts
+  const joinedCommunityIds = pages
+    .filter((page) => page.isFollowing || page.ownerId === currentUser.id)
+    .map((page) => page.id);
+
+  const hasJoinedCommunities = joinedCommunityIds.length > 0;
+
+  const communityFeedPosts = hasJoinedCommunities
+    ? posts.filter((post) => {
+        if (post.author.id === currentUser.id) return true;
+        if (post.pageRefId && joinedCommunityIds.includes(post.pageRefId)) return true;
+        if (joinedCommunityIds.includes(post.author.id)) return true;
+        return false;
+      })
+    : [];
+
+  // Filter posts according to feed tab and user membership state
+  const filteredPosts = communityFeedPosts
     .filter((post) => {
       if (feedTab === 'following') {
         return post.author.isFollowing || post.author.id === currentUser.id;
@@ -173,7 +190,7 @@ export const HomeFeed: React.FC = () => {
   return (
     <div
       id="home-feed-container"
-      className="min-h-screen bg-white pb-20 relative select-none"
+      className="min-h-screen bg-[#f6f3ee] pb-20 relative select-none"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -182,7 +199,7 @@ export const HomeFeed: React.FC = () => {
       onMouseUp={handleMouseUp}
     >
       {/* Sticky Feed Sub-Tabs with manual refresh indicator */}
-      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-neutral-100 flex items-center justify-around px-2">
+      <div className="sticky top-0 z-20 bg-[#f6f3ee]/95 backdrop-blur-md border-b border-neutral-200/80 flex items-center justify-around px-2">
         {tabs.map((tab) => {
           const isActive = feedTab === tab.id;
           return (
@@ -221,7 +238,7 @@ export const HomeFeed: React.FC = () => {
           height: `${effectiveOffset}px`,
           opacity: effectiveOffset > 4 ? 1 : 0,
         }}
-        className={`w-full overflow-hidden bg-gradient-to-b from-neutral-50 to-white border-b border-neutral-100 flex items-center justify-center transition-[height,opacity] ${
+        className={`w-full overflow-hidden bg-gradient-to-b from-[#f8f5f1] to-[#f6f3ee] border-b border-neutral-200/80 flex items-center justify-center transition-[height,opacity] ${
           isPulling ? 'duration-0' : 'duration-300 ease-out'
         }`}
       >
@@ -262,7 +279,7 @@ export const HomeFeed: React.FC = () => {
       {feedTab === 'nearby' && (
         <div
           id="nearby-feed-scope-bar"
-          className="bg-white border-b border-neutral-100 px-3.5 py-2.5 transition-all shadow-2xs"
+          className="bg-[#f6f3ee] border-b border-neutral-200/80 px-3.5 py-2.5 transition-all shadow-none"
         >
           <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
             {/* Left Controls: Location Button + Radius Drawer Trigger + Custom Button */}
@@ -451,7 +468,29 @@ export const HomeFeed: React.FC = () => {
       )}
 
       {/* Posts Stream */}
-      {filteredPosts.length > 0 ? (
+      {!hasJoinedCommunities ? (
+        <div className="min-h-[62vh] flex items-center justify-center px-6 pb-8 pt-10">
+          <div className="flex max-w-sm flex-col items-center text-center gap-2.5">
+            <div className="w-11 h-11 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center">
+              <Compass className="w-5 h-5" />
+            </div>
+            <h3 className="font-bold text-neutral-900 text-sm leading-snug">
+              You haven&apos;t joined a community yet.
+            </h3>
+            <p className="text-[11px] text-neutral-500 leading-relaxed">
+              Discover communities to find people and conversations that interest you.
+            </p>
+            <div className="pt-1 flex flex-wrap items-center justify-center gap-2">
+              <button
+                onClick={() => setActiveTab('discover')}
+                className="px-3.5 py-2 rounded-full bg-[#5E43F3] text-[11px] font-bold text-white hover:bg-[#4E34E0] cursor-pointer"
+              >
+                Discover Communities
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : filteredPosts.length > 0 ? (
         <div className="divide-y divide-neutral-100">
           {filteredPosts.map((post) => (
             <PostItem key={post.id} post={post} />
@@ -459,32 +498,34 @@ export const HomeFeed: React.FC = () => {
         </div>
       ) : (
         /* Empty State */
-        <div className="p-8 text-center space-y-3">
-          <div className="w-12 h-12 rounded-full bg-neutral-100 text-neutral-400 mx-auto flex items-center justify-center">
-            <Compass className="w-6 h-6" />
-          </div>
-          <h3 className="font-bold text-neutral-900 text-base">
-            No posts found within {location.radiusKm} km of {location.name}
-          </h3>
-          <p className="text-xs text-neutral-500 max-w-xs mx-auto leading-relaxed">
-            Try expanding your discovery radius to 10 km or 25 km, or share the first update from this neighborhood.
-          </p>
-          <div className="pt-2 flex justify-center gap-2">
-            <button
-              onClick={() => updateRadius(Math.min(50, (location.radiusKm || 5) * 2))}
-              className="px-4 py-2 rounded-full border border-neutral-300 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 cursor-pointer"
-            >
-              Expand Radius ({Math.min(50, (location.radiusKm || 5) * 2)} km)
-            </button>
-            <button
-              onClick={() => {
-                setCreateFlowType('post');
-                setIsCreateSheetOpen(true);
-              }}
-              className="px-4 py-2 rounded-full bg-[#5E43F3] text-white text-xs font-bold hover:bg-[#4E34E0] cursor-pointer"
-            >
-              Create Post
-            </button>
+        <div className="min-h-[62vh] flex items-center justify-center px-6 pb-8 pt-10">
+          <div className="flex max-w-sm flex-col items-center text-center gap-2.5">
+            <div className="w-11 h-11 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center">
+              <Compass className="w-5 h-5" />
+            </div>
+            <h3 className="font-bold text-neutral-900 text-sm leading-snug">
+              No posts found within {location.radiusKm} km of {location.name}
+            </h3>
+            <p className="text-[11px] text-neutral-500 leading-relaxed">
+              Try expanding your discovery radius to 10 km or 25 km, or share the first update from this neighborhood.
+            </p>
+            <div className="pt-1 flex flex-wrap items-center justify-center gap-2">
+              <button
+                onClick={() => updateRadius(Math.min(50, (location.radiusKm || 5) * 2))}
+                className="px-3.5 py-2 rounded-full border border-neutral-300 text-[11px] font-semibold text-neutral-700 hover:bg-neutral-100 cursor-pointer"
+              >
+                Expand Radius ({Math.min(50, (location.radiusKm || 5) * 2)} km)
+              </button>
+              <button
+                onClick={() => {
+                  setCreateFlowType('post');
+                  setIsCreateSheetOpen(true);
+                }}
+                className="px-3.5 py-2 rounded-full bg-[#5E43F3] text-[11px] font-bold text-white hover:bg-[#4E34E0] cursor-pointer"
+              >
+                Create Post
+              </button>
+            </div>
           </div>
         </div>
       )}

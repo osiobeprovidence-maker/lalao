@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Compass, Plus, MessageCircle, User } from 'lucide-react';
+import { Home, Heart, Plus, MessageCircle, User } from 'lucide-react';
 import { useLalao, NavTab } from '../../context/LalaoContext';
 
 export const BottomNav: React.FC = () => {
@@ -7,16 +7,16 @@ export const BottomNav: React.FC = () => {
 
   const navItems: { id: NavTab; label: string; icon: typeof Home }[] = [
     { id: 'home', label: 'Home', icon: Home },
-    { id: 'discover', label: 'Discover', icon: Compass },
-    { id: 'create', label: 'Create', icon: Plus },
     { id: 'messages', label: 'Messages', icon: MessageCircle },
+    { id: 'create', label: 'Create', icon: Plus },
+    { id: 'notifications', label: 'Likes', icon: Heart },
     { id: 'profile', label: 'Profile', icon: User },
   ];
 
   return (
     <nav
       id="lalao-bottom-nav"
-      className="sticky bottom-0 z-30 bg-white/95 backdrop-blur-lg border-t border-neutral-100 px-6 py-2 flex items-center justify-between"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-neutral-100 bg-white/95 px-6 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.06)] backdrop-blur-lg flex items-center justify-between"
     >
       {navItems.map((item) => {
         const isCenter = item.id === 'create';

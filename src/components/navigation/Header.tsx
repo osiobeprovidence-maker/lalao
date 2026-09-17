@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Heart, Menu } from 'lucide-react';
+import { Menu, Search } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { MobileDrawer } from './MobileDrawer';
 
 export const Header: React.FC = () => {
   const {
-    setIsNotificationsOpen,
-    unreadNotifsCount,
+    setActiveTab,
   } = useLalao();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -15,48 +14,35 @@ export const Header: React.FC = () => {
     <>
       <header
         id="lalao-header"
-        className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-neutral-100 px-4 py-2.5 flex items-center justify-between transition-all"
+        className="sticky top-0 z-30 border-b border-neutral-200/80 bg-white/95 px-4 py-2.5 backdrop-blur-md transition-all"
       >
-        {/* Left: Mobile Hamburger Menu */}
-        <div className="flex items-center justify-start">
+        <div className="relative flex items-center justify-between gap-3">
           <button
             id="btn-mobile-menu-open"
             onClick={() => setIsMobileMenuOpen(true)}
-            className="p-1.5 rounded-full text-neutral-800 hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer"
+            className="relative z-10 rounded-full p-2 text-neutral-800 transition hover:bg-neutral-100 active:scale-95"
             title="Menu"
             aria-label="Open navigation menu"
           >
-            <Menu className="w-5 h-5 stroke-[2]" />
+            <Menu className="h-5 w-5 stroke-[2.2]" />
           </button>
-        </div>
 
-        {/* Lalao Brand Logo - Centered */}
-        <div className="flex items-center justify-center select-none flex-1 text-center">
-          <span className="text-xl font-black tracking-tight text-neutral-950 font-sans">
-            lalao
-          </span>
-        </div>
+          <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none">
+            <span className="lalao-wordmark text-xl text-neutral-950">lalao</span>
+          </div>
 
-        {/* Right controls: Notifications */}
-        <div className="flex items-center justify-end">
           <button
-            id="btn-notifications-open"
-            onClick={() => setIsNotificationsOpen(true)}
-            className="relative p-1.5 rounded-full text-neutral-800 hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer"
-            title="Notifications & Activity"
+            id="btn-explore-open"
+            onClick={() => setActiveTab('discover')}
+            className="relative z-10 rounded-full p-2 text-neutral-800 transition hover:bg-neutral-100 active:scale-95"
+            title="Explore"
+            aria-label="Open explore"
           >
-            <Heart className="w-5 h-5 stroke-[1.8]" />
-            {unreadNotifsCount > 0 && (
-              <span
-                id="badge-unread-notif"
-                className="absolute top-1 right-1 w-2 h-2 bg-[#5E43F3] rounded-full ring-2 ring-white"
-              />
-            )}
+            <Search className="h-5 w-5 stroke-[2.2]" />
           </button>
         </div>
       </header>
 
-      {/* Mobile Side Navigation Drawer */}
       <MobileDrawer isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
     </>
   );

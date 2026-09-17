@@ -6,13 +6,12 @@ import {
   TrendingUp,
   Users,
   Building,
-  ShieldCheck,
-  Flame,
   EyeOff,
   Filter,
   SlidersHorizontal,
   Compass,
   Heart,
+  Play,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
@@ -36,64 +35,16 @@ export const DiscoverView: React.FC = () => {
     setActivePageId,
     setActiveUserProfile,
     posts,
-    cycles,
-    openCycleStory,
     setIsNotificationsOpen,
     unreadNotifsCount,
   } = useLalao();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'all' | 'people' | 'pages' | 'communities' | 'trending'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'people' | 'pages' | 'video' | 'trending'>('all');
   const [nearbyOnly, setNearbyOnly] = useState(true);
 
-  // Local people pool derived from the live app context rather than the legacy seed dataset.
-  const [people, setPeople] = useState<User[]>(() => [
-    {
-      id: 'demo-person-1',
-      name: 'Aisha Okafor',
-      username: 'aishaokafor',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
-      bio: 'Local creator and event planner in Udu.',
-      location: 'Udu, Delta State',
-      latitude: 5.5039,
-      longitude: 5.8276,
-      userType: 'person' as const,
-      followersCount: 1820,
-      followingCount: 246,
-      isFollowing: true,
-      isVerified: true,
-    },
-    {
-      id: 'demo-person-2',
-      name: 'Daniel Efe',
-      username: 'danielefe',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
-      bio: 'Photographer and community volunteer.',
-      location: 'Warri Central',
-      latitude: 5.5175,
-      longitude: 5.7501,
-      userType: 'person' as const,
-      followersCount: 950,
-      followingCount: 134,
-      isFollowing: false,
-      isVerified: false,
-    },
-    {
-      id: 'demo-person-3',
-      name: 'Mira Bello',
-      username: 'mirabello',
-      avatar: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400&auto=format&fit=crop&q=80',
-      bio: 'Building a local arts and wellness circle.',
-      location: 'Effurun',
-      latitude: 5.5567,
-      longitude: 5.7828,
-      userType: 'person' as const,
-      followersCount: 1420,
-      followingCount: 201,
-      isFollowing: true,
-      isVerified: true,
-    },
-  ]);
+  // Real app data only. Empty until the app has actual nearby user records to display.
+  const [people, setPeople] = useState<User[]>([]);
 
   const toggleFollowUser = (userId: string) => {
     setPeople((prev) =>
@@ -172,26 +123,23 @@ export const DiscoverView: React.FC = () => {
       .sort((a, b) => a.distanceMeters - b.distanceMeters);
   }, [peopleWithDistance, searchQuery, nearbyOnly, maxRadiusMeters]);
 
-  const filteredCycles = useMemo(() => {
-    return cycles
-      .filter((c) => {
-        const matchesSearch =
-          c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          c.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          c.location.toLowerCase().includes(searchQuery.toLowerCase());
-        if (!matchesSearch) return false;
-        if (nearbyOnly && c.distanceMeters !== undefined) {
-          return c.distanceMeters <= maxRadiusMeters;
-        }
-        return true;
-      })
-      .sort((a, b) => (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0));
-  }, [cycles, searchQuery, nearbyOnly, maxRadiusMeters]);
+  const nearbyPosts = useMemo(() => {
+    return posts
+      .filter((post) => post.distanceMeters <= maxRadiusMeters)
+      .sort((a, b) => a.distanceMeters - b.distanceMeters)
+      .slice(0, 2);
+  }, [posts, maxRadiusMeters]);
+
+  const videoPosts = useMemo(() => {
+    return posts.filter(
+      (post) => post.mediaType === 'video' && post.distanceMeters <= maxRadiusMeters
+    );
+  }, [posts, maxRadiusMeters]);
 
   return (
-    <div id="discover-view-container" className="min-h-screen bg-white pb-24">
+    <div id="discover-view-container" className="min-h-screen bg-[#f6f3ee] pb-24">
       {/* Top Search Header */}
-      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-neutral-100 px-4 py-2.5 space-y-2">
+      <div className="sticky top-0 z-20 bg-[#f6f3ee]/95 backdrop-blur-md border-b border-neutral-200/80 px-4 py-2.5 space-y-2">
         <div className="flex items-center gap-1.5">
           <div className="relative flex-1 flex items-center">
             <Search className="w-4 h-4 text-neutral-400 absolute left-3 pointer-events-none" />
@@ -232,8 +180,8 @@ export const DiscoverView: React.FC = () => {
             [
               { id: 'all', label: 'All' },
               { id: 'people', label: 'People' },
-              { id: 'pages', label: 'Pages & Biz' },
-              { id: 'communities', label: 'Cycles' },
+              { id: 'pages', label: 'Pages & Businesses' },
+              { id: 'video', label: 'Video' },
               { id: 'trending', label: 'Trending' },
             ] as const
           ).map((f) => (
@@ -307,7 +255,7 @@ export const DiscoverView: React.FC = () => {
             </div>
 
             {filteredPeople.length > 0 ? (
-              <div className="divide-y divide-neutral-100 rounded-2xl border border-neutral-100 overflow-hidden bg-white">
+              <div className="divide-y divide-neutral-200/80">
                 {filteredPeople.map((user) => {
                   const distFormatted = formatDistance(
                     user.distanceMeters,
@@ -318,7 +266,7 @@ export const DiscoverView: React.FC = () => {
                   return (
                     <div
                       key={user.id}
-                      className="p-3 flex items-center justify-between hover:bg-neutral-50/70 transition-colors"
+                      className="py-3.5 flex items-center justify-between gap-3"
                     >
                       <div
                         onClick={() => setActiveUserProfile(user)}
@@ -394,7 +342,7 @@ export const DiscoverView: React.FC = () => {
             </div>
 
             {filteredPages.length > 0 ? (
-              <div className="space-y-3">
+              <div className="divide-y divide-neutral-200/80">
                 {filteredPages.map((page) => {
                   const distFormatted = page.distanceMeters !== undefined
                     ? formatDistance(page.distanceMeters, locationPrivacy?.approximateDistance)
@@ -406,75 +354,43 @@ export const DiscoverView: React.FC = () => {
                   return (
                     <div
                       key={page.id}
-                      className="rounded-2xl border border-neutral-100 overflow-hidden bg-white shadow-xs hover:border-neutral-200 transition-all"
+                      className="py-3.5 flex items-center justify-between gap-3"
                     >
-                      {/* Mini Cover */}
                       <div
                         onClick={() => setActivePageId(page.id)}
-                        className="h-20 w-full relative bg-neutral-200 cursor-pointer"
+                        className="flex items-center gap-2.5 min-w-0 cursor-pointer"
                       >
-                        <img
-                          src={page.coverImage}
-                          alt={page.name}
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover"
+                        <Avatar
+                          src={page?.avatar}
+                          alt={page?.name || 'Page'}
+                          size="md"
                         />
-                        <div className="absolute top-2 right-2">
-                          <Badge type={page.badge} />
-                        </div>
-                      </div>
-
-                      {/* Body */}
-                      <div className="p-3.5">
-                        <div className="flex items-start justify-between">
-                          <div
-                            onClick={() => setActivePageId(page.id)}
-                            className="flex items-center gap-2.5 cursor-pointer -mt-7"
-                          >
-                            <Avatar
-                              src={page?.avatar}
-                              alt={page?.name || 'Page'}
-                              size="md"
-                              className="ring-4 ring-white shadow-sm"
-                            />
-                            <div className="pt-5">
-                              <h3 className="font-bold text-sm text-neutral-900">{page.name}</h3>
-                              <p className="text-xs text-neutral-400">@{page.username}</p>
-                            </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <h3 className="font-bold text-sm text-neutral-900 truncate">{page.name}</h3>
+                            {page.badge && <Badge type={page.badge} />}
                           </div>
-
-                          <button
-                            id={`btn-follow-page-${page.id}`}
-                            onClick={() => toggleFollowPage(page.id)}
-                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                              page.isFollowing
-                                ? 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
-                                : 'bg-[#5E43F3] text-white hover:bg-[#4E34E0]'
-                            }`}
-                          >
-                            {page.isFollowing ? 'Following' : 'Follow'}
-                          </button>
-                        </div>
-
-                        <p className="text-xs text-neutral-600 mt-2 line-clamp-2 leading-relaxed">
-                          {page.description}
-                        </p>
-
-                        <div className="flex items-center gap-3 text-xs text-neutral-500 mt-2.5 pt-2 border-t border-neutral-50 flex-wrap">
-                          <span className="flex items-center gap-1 font-medium text-neutral-700">
+                          <p className="text-xs text-neutral-400 truncate">@{page.username}</p>
+                          <div className="flex items-center gap-1.5 text-[11px] text-neutral-500 mt-0.5 flex-wrap">
                             {prox && <span className={`w-1.5 h-1.5 rounded-full ${prox.dotColor}`} />}
                             <MapPin className="w-3 h-3 text-[#5E43F3]" />
-                            {page.location}
-                            {distFormatted && (
-                              <span className="text-neutral-500 font-normal"> · {distFormatted}</span>
-                            )}
-                          </span>
-                          <span>·</span>
-                          <span className="font-semibold text-neutral-700">
-                            {page.followersCount.toLocaleString()} followers
-                          </span>
+                            <span>{page.location}</span>
+                            {distFormatted && <span>· {distFormatted}</span>}
+                          </div>
                         </div>
                       </div>
+
+                      <button
+                        id={`btn-follow-page-${page.id}`}
+                        onClick={() => toggleFollowPage(page.id)}
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                          page.isFollowing
+                            ? 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
+                            : 'bg-[#5E43F3] text-white hover:bg-[#4E34E0]'
+                        }`}
+                      >
+                        {page.isFollowing ? 'Following' : 'Follow'}
+                      </button>
                     </div>
                   );
                 })}
@@ -496,78 +412,44 @@ export const DiscoverView: React.FC = () => {
           </section>
         )}
 
-        {/* Communities & Cycles */}
-        {(activeFilter === 'all' || activeFilter === 'communities') && (
+        {/* Video Section */}
+        {(activeFilter === 'all' || activeFilter === 'video') && videoPosts.length > 0 && (
           <section className="px-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-[#5E43F3]" />
+                <Play className="w-4 h-4 text-[#5E43F3]" />
                 <h2 className="text-sm font-bold text-neutral-900 tracking-tight">
-                  Active Local Cycles
+                  Video
                 </h2>
-                <span className="text-xs text-neutral-400">({filteredCycles.length})</span>
+                <span className="text-xs text-neutral-400">({videoPosts.length})</span>
               </div>
             </div>
 
-            {filteredCycles.length > 0 ? (
-              <div className="grid grid-cols-1 gap-2.5">
-                {filteredCycles.map((cycle) => {
-                  const distFormatted = cycle.distanceMeters !== undefined
-                    ? formatDistance(cycle.distanceMeters, locationPrivacy?.approximateDistance)
-                    : null;
-                  const prox = cycle.distanceMeters !== undefined
-                    ? getProximityCategory(cycle.distanceMeters)
-                    : null;
-
-                  return (
-                    <div
-                      key={cycle.id}
-                      className="p-3.5 rounded-2xl border border-neutral-100 bg-white hover:border-neutral-200 flex items-center justify-between gap-3"
-                    >
-                      <div
-                        onClick={() => openCycleStory(cycle.id, 0)}
-                        className="flex items-center gap-3 cursor-pointer min-w-0"
-                      >
-                        <div className="relative p-[2px] rounded-full bg-gradient-to-tr from-[#5E43F3] via-fuchsia-500 to-amber-400 shrink-0">
-                          <div className="bg-white p-[1px] rounded-full">
-                            <Avatar src={cycle.user?.avatar || cycle.avatar} alt={cycle.user?.name || cycle.name || 'User'} size="md" />
-                          </div>
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="font-bold text-sm text-neutral-900 truncate">{cycle.user?.name || cycle.name}</h4>
-                          <p className="text-xs text-neutral-500 truncate">{cycle.description || `${cycle.items?.length || 0} status updates`}</p>
-                          <div className="flex items-center gap-1 text-[11px] text-neutral-500 mt-0.5">
-                            <span className="font-semibold text-[#5E43F3]">{cycle.items?.length || 0} updates</span>
-                            <span>·</span>
-                            <span>Active 24h</span>
-                          </div>
-                        </div>
+            <div className="divide-y divide-neutral-200/80">
+              {videoPosts.map((post) => (
+                <div key={post.id} className="py-3 flex items-center gap-3">
+                  <div className="relative h-16 w-24 rounded-xl overflow-hidden bg-neutral-200 shrink-0">
+                    <div className="absolute inset-0 bg-gradient-to-br from-neutral-300 via-neutral-200 to-neutral-100" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-full bg-white/80 flex items-center justify-center shadow-sm">
+                        <Play className="w-3.5 h-3.5 text-[#5E43F3] fill-current" />
                       </div>
-
-                      <button
-                        onClick={() => openCycleStory(cycle.id, 0)}
-                        className="px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 bg-[#5E43F3] text-white hover:bg-[#4E34E0] transition-colors cursor-pointer shadow-2xs"
-                      >
-                        Watch Status
-                      </button>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="p-5 rounded-2xl bg-neutral-50 text-center border border-neutral-100 space-y-2">
-                <p className="text-xs text-neutral-600">
-                  No local cycles within {location.radiusKm} km of {location.name}.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setNearbyOnly(false)}
-                  className="text-xs font-bold text-[#5E43F3] hover:underline cursor-pointer"
-                >
-                  Show all cycles
-                </button>
-              </div>
-            )}
+                    {post.mediaUrl && (
+                      <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 text-[9px] font-bold text-white">
+                        {post.mediaType === 'video' ? 'Video' : 'Post'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-neutral-900 line-clamp-2">{post.text}</p>
+                    <p className="text-[11px] text-neutral-500 mt-1">
+                      {post.likesCount} likes · {post.commentsCount} comments
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </section>
         )}
 
@@ -576,18 +458,25 @@ export const DiscoverView: React.FC = () => {
           <section className="pt-2">
             <div className="px-4 mb-2 flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <Flame className="w-4 h-4 text-amber-500" />
+                <TrendingUp className="w-4 h-4 text-[#5E43F3]" />
                 <h2 className="text-sm font-bold text-neutral-900 tracking-tight">
                   Popular Posts Nearby
                 </h2>
               </div>
               <span className="text-xs text-neutral-400">Within {location.radiusKm} km</span>
             </div>
-            <div className="divide-y divide-neutral-100">
-              {posts.slice(0, 2).map((post) => (
-                <PostItem key={post.id} post={post} />
-              ))}
-            </div>
+
+            {nearbyPosts.length > 0 ? (
+              <div className="divide-y divide-neutral-100">
+                {nearbyPosts.map((post) => (
+                  <PostItem key={post.id} post={post} />
+                ))}
+              </div>
+            ) : (
+              <div className="mx-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-center text-xs text-neutral-600">
+                No popular posts nearby yet. Try changing your location radius or check back later.
+              </div>
+            )}
           </section>
         )}
       </div>

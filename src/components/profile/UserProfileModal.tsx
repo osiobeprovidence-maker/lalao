@@ -246,11 +246,17 @@ export const UserProfileModal: React.FC = () => {
 
   return (
     <div
-      ref={containerRef}
-      id="user-profile-screen"
-      className="absolute inset-0 z-40 bg-white flex flex-col min-h-full overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-250"
+      id="user-profile-overlay"
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex justify-end animate-in fade-in duration-200"
+      onClick={() => setActiveUserProfile(null)}
     >
-      <div className="w-full flex-1 flex flex-col bg-white">
+      <div
+        ref={containerRef}
+        id="user-profile-screen"
+        className="bg-white w-full sm:max-w-md md:max-w-lg h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 relative z-10 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="w-full flex-1 flex flex-col bg-white">
         {/* Sticky Top Header Bar */}
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-neutral-100 px-4 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
@@ -1094,6 +1100,7 @@ export const UserProfileModal: React.FC = () => {
             />
           </div>
         )}
+        </div>
       </div>
     </div>
   );

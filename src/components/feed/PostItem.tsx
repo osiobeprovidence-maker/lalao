@@ -141,7 +141,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
   return (
     <article
       id={`feed-item-${itemId}`}
-      className="p-4 bg-white border-b border-neutral-100 hover:bg-neutral-50/40 transition-colors"
+      className="p-4 bg-transparent border-b border-neutral-200/70 hover:bg-neutral-100/30 transition-colors"
     >
       <div className="flex items-start gap-3">
         {/* Avatar */}

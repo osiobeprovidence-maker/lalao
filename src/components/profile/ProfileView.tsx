@@ -13,8 +13,6 @@ import {
   X,
   CheckCircle2,
   ChevronRight,
-  ShoppingBag,
-  Wallet,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
@@ -34,16 +32,13 @@ export const ProfileView: React.FC = () => {
     triggerShareToast,
     setIsEditProfileOpen,
     setIsNotificationsOpen,
+    setActiveTab,
     unreadNotifsCount,
     setActiveUserProfile,
     toggleFollowUser,
-    setIsShoppingHistoryOpen,
-    userOrders,
-    wallet,
-    setIsWalletModalOpen,
   } = useLalao();
 
-  const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
+  const [profileTab, setProfileTab] = useState<ProfileTab>('posts');
   const [isConnectionsOpen, setIsConnectionsOpen] = useState(false);
   const [connectionTab, setConnectionTab] = useState<ConnectionTab>('community');
   const [searchQuery, setSearchQuery] = useState('');
@@ -65,39 +60,7 @@ export const ProfileView: React.FC = () => {
     { id: 'reposts', label: 'Reposts' },
   ];
 
-  // List of other community profiles using live app state instead of the legacy seed set.
-  const otherUsers: User[] = [
-    {
-      id: 'community-profile-1',
-      name: 'Tega Adesuwa',
-      username: 'tegaadesuwa',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80',
-      bio: 'Runs a neighborhood food and culture page.',
-      location: 'Warri Central',
-      latitude: 5.5175,
-      longitude: 5.7501,
-      userType: 'person' as const,
-      followersCount: 1210,
-      followingCount: 188,
-      isFollowing: true,
-      isVerified: false,
-    },
-    {
-      id: 'community-profile-2',
-      name: 'Kehinde Ayo',
-      username: 'kehindeayo',
-      avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80',
-      bio: 'Community storyteller and event host.',
-      location: 'Effurun',
-      latitude: 5.5567,
-      longitude: 5.7828,
-      userType: 'person' as const,
-      followersCount: 986,
-      followingCount: 174,
-      isFollowing: false,
-      isVerified: true,
-    },
-  ].filter((u) => u.id !== currentUser.id && u.username !== currentUser.username);
+  const otherUsers: User[] = [];
 
   const filteredUsers = otherUsers.filter((u) => {
     const matchesSearch =
@@ -117,9 +80,9 @@ export const ProfileView: React.FC = () => {
   };
 
   return (
-    <div id="profile-view-container" className="min-h-screen bg-white pb-24">
+    <div id="profile-view-container" className="min-h-screen bg-[#f6f3ee] pb-24">
       {/* Top Header */}
-      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-neutral-100 px-4 py-2.5 flex items-center justify-between">
+      <div className="sticky top-0 z-20 bg-[#f6f3ee]/95 backdrop-blur-md border-b border-neutral-200/80 px-4 py-2.5 flex items-center justify-between">
         <h1 className="text-xl font-black tracking-tight text-neutral-950 font-sans">
           Profile
         </h1>
@@ -141,7 +104,10 @@ export const ProfileView: React.FC = () => {
           {/* Notifications Button */}
           <button
             id="btn-profile-notifications"
-            onClick={() => setIsNotificationsOpen(true)}
+            onClick={() => {
+              setIsNotificationsOpen(false);
+              setActiveTab('notifications');
+            }}
             className="relative p-2 rounded-full text-neutral-800 hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer"
             title="Notifications & Activity"
           >
@@ -223,19 +189,19 @@ export const ProfileView: React.FC = () => {
 
         {/* Bio */}
         <p className="text-xs text-neutral-800 leading-relaxed">
-          {currentUser.bio || 'Exploring and sharing local vibes in Warri.'}
+          {currentUser.bio || 'No bio yet. Add a few details to introduce yourself.'}
         </p>
 
         {/* Location & Metadata */}
         <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500">
           <div className="flex items-center gap-1">
             <MapPin className="w-3.5 h-3.5 text-[#5E43F3]" />
-            <span>{currentUser.location}</span>
+            <span>{currentUser.location || 'Location not added yet'}</span>
           </div>
           <span>·</span>
           <div className="flex items-center gap-1">
             <Calendar className="w-3.5 h-3.5 text-neutral-400" />
-            <span>Joined September 2026</span>
+            <span>Profile ready</span>
           </div>
         </div>
 
@@ -285,45 +251,10 @@ export const ProfileView: React.FC = () => {
           </button>
         </div>
 
-        {/* Quick Links: Wallet & Shopping Orders */}
-        <div className="pt-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <button
-            id="btn-profile-wallet"
-            type="button"
-            onClick={() => setIsWalletModalOpen(true)}
-            className="w-full py-2.5 px-3.5 rounded-xl bg-violet-50/70 hover:bg-violet-100/80 border border-violet-200/80 text-neutral-900 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-[#5E43F3]" />
-              <span>Gamer Wallet</span>
-            </div>
-            <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-[#5E43F3] text-white">
-              ₦{wallet.balance.toLocaleString()}
-            </span>
-          </button>
-
-          <button
-            id="btn-profile-shopping-history"
-            type="button"
-            onClick={() => setIsShoppingHistoryOpen(true)}
-            className="w-full py-2.5 px-3.5 rounded-xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 text-neutral-800 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <ShoppingBag className="w-4 h-4 text-[#5E43F3]" />
-              <span>Orders & Receipts</span>
-            </div>
-            {userOrders.length > 0 && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-200 text-neutral-700 font-semibold">
-                {userOrders.length}
-              </span>
-            )}
-          </button>
-        </div>
-
         {/* Community Profiles Carousel */}
         <div className="pt-2 border-t border-neutral-100">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-neutral-900">Community Profiles</span>
+            <span className="text-xs font-bold text-neutral-900">Community</span>
             <button
               onClick={() => {
                 setConnectionTab('community');
@@ -331,29 +262,11 @@ export const ProfileView: React.FC = () => {
               }}
               className="text-[11px] font-bold text-[#5E43F3] hover:underline cursor-pointer"
             >
-              See all ({otherUsers.length})
+              Explore
             </button>
           </div>
-          <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-none">
-            {otherUsers.slice(0, 8).map((user) => (
-              <button
-                key={user.id}
-                type="button"
-                onClick={() => handleOpenUserProfile(user)}
-                className="flex flex-col items-center gap-1.5 shrink-0 w-18 text-center group cursor-pointer"
-                title={`View ${user.name}'s profile`}
-              >
-                <div className="relative p-[1.5px] rounded-full border border-neutral-200 group-hover:border-[#5E43F3] transition-colors">
-                  <Avatar src={user.avatar} alt={user.name} size="md" className="w-12 h-12" />
-                  {user.isVerified && (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[#5E43F3] fill-white absolute bottom-0 right-0" />
-                  )}
-                </div>
-                <span className="text-[11px] font-semibold text-neutral-900 truncate w-full group-hover:text-[#5E43F3]">
-                  {user.name.split(' ')[0]}
-                </span>
-              </button>
-            ))}
+          <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-4 text-center text-[11px] text-neutral-500">
+            You haven&apos;t joined any communities yet.
           </div>
         </div>
       </div>
@@ -361,11 +274,11 @@ export const ProfileView: React.FC = () => {
       {/* Tabs */}
       <div className="border-b border-neutral-100 flex items-center justify-around px-2 mt-2">
         {tabs.map((tab) => {
-          const isActive = activeTab === tab.id;
+          const isActive = profileTab === tab.id;
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => setProfileTab(tab.id)}
               className={`flex-1 py-3 text-center text-xs font-bold transition-all relative cursor-pointer ${
                 isActive ? 'text-neutral-950' : 'text-neutral-400 hover:text-neutral-600'
               }`}
@@ -381,7 +294,7 @@ export const ProfileView: React.FC = () => {
 
       {/* Tab Contents */}
       <div className="divide-y divide-neutral-100">
-        {activeTab === 'posts' && (
+        {profileTab === 'posts' && (
           userPosts.length > 0 ? (
             userPosts.map((post) => <PostItem key={post.id} post={post} />)
           ) : (
@@ -391,7 +304,7 @@ export const ProfileView: React.FC = () => {
           )
         )}
 
-        {activeTab === 'replies' && (
+        {profileTab === 'replies' && (
           <div className="p-4 space-y-3">
             <div className="p-3.5 rounded-2xl bg-neutral-50 border border-neutral-100 text-xs space-y-1">
               <p className="font-bold text-neutral-800">
@@ -404,7 +317,7 @@ export const ProfileView: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'media' && (
+        {profileTab === 'media' && (
           userMediaPosts.length > 0 ? (
             <div className="grid grid-cols-2 gap-2 p-3">
               {userMediaPosts.map((p) => (
@@ -425,7 +338,7 @@ export const ProfileView: React.FC = () => {
           )
         )}
 
-        {activeTab === 'reposts' && (
+        {profileTab === 'reposts' && (
           userReposts.length > 0 ? (
             userReposts.map((post) => <PostItem key={post.id} post={post} />)
           ) : (
@@ -436,43 +349,48 @@ export const ProfileView: React.FC = () => {
         )}
       </div>
 
-      {/* COMMUNITY CONNECTIONS & PROFILES MODAL */}
       {isConnectionsOpen && (
         <div
-          id="modal-connections-backdrop"
+          id="community-page-overlay"
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex justify-end animate-in fade-in duration-200"
           onClick={() => setIsConnectionsOpen(false)}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4 animate-in fade-in"
         >
           <div
-            id="modal-connections-card"
+            id="community-page-screen"
+            className="bg-white w-full sm:max-w-md md:max-w-lg h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 relative z-10 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md bg-white sm:rounded-3xl h-full sm:h-[85vh] sm:max-h-[680px] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95"
           >
-            {/* Header */}
-            <div className="p-4 border-b border-neutral-100 flex items-center justify-between shrink-0">
-              <div>
-                <h3 className="text-base font-bold text-neutral-950">
-                  {connectionTab === 'community'
-                    ? 'Community Profiles'
-                    : connectionTab === 'followers'
-                    ? 'Followers'
-                    : 'Following'}
-                </h3>
-                <p className="text-xs text-neutral-500">
-                  Tap any profile to view posts, cycles, and connect
-                </p>
-              </div>
+            <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-neutral-100 px-4 py-3 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3">
               <button
-                id="btn-close-connections"
+                id="btn-back-community-page"
+                type="button"
                 onClick={() => setIsConnectionsOpen(false)}
-                className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+                className="p-1.5 -ml-1 rounded-full text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100 transition-colors cursor-pointer"
+                title="Go back"
+                aria-label="Back"
               >
-                <X className="w-5 h-5" />
+                <ChevronRight className="w-5 h-5 rotate-180" />
               </button>
+              <div>
+                <h1 className="font-bold text-base text-neutral-950">Community</h1>
+                <p className="text-[11px] text-neutral-500">Your communities, profiles and connections</p>
+              </div>
             </div>
 
-            {/* Sub-tabs */}
-            <div className="flex border-b border-neutral-100 px-4 shrink-0">
+            <button
+              id="btn-close-community-page"
+              type="button"
+              onClick={() => setIsConnectionsOpen(false)}
+              className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="flex-1 max-w-xl mx-auto w-full p-4 sm:p-6 space-y-5 pb-24 overflow-y-auto">
+            <div className="flex border-b border-neutral-100">
               <button
                 onClick={() => setConnectionTab('community')}
                 className={`py-2.5 px-3 text-xs font-bold transition-all relative cursor-pointer ${
@@ -481,7 +399,7 @@ export const ProfileView: React.FC = () => {
                     : 'text-neutral-500 hover:text-neutral-900'
                 }`}
               >
-                Community ({otherUsers.length})
+                Community (0)
                 {connectionTab === 'community' && (
                   <span className="absolute bottom-0 inset-x-3 h-0.5 bg-[#5E43F3] rounded-full" />
                 )}
@@ -516,9 +434,8 @@ export const ProfileView: React.FC = () => {
               </button>
             </div>
 
-            {/* Search Input */}
-            <div className="p-3 border-b border-neutral-100 shrink-0">
-              <div className="flex items-center gap-2 bg-neutral-100 rounded-xl px-3 py-2">
+            <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
+              <div className="flex items-center gap-2">
                 <Search className="w-4 h-4 text-neutral-400" />
                 <input
                   type="text"
@@ -528,43 +445,41 @@ export const ProfileView: React.FC = () => {
                   className="w-full bg-transparent text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
                 />
                 {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="text-neutral-400 hover:text-neutral-600">
+                  <button onClick={() => setSearchQuery('')} className="text-neutral-400 hover:text-neutral-600 cursor-pointer">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
             </div>
 
-            {/* User List */}
-            <div className="flex-1 overflow-y-auto divide-y divide-neutral-100 p-2">
+            <div className="space-y-2">
               {filteredUsers.length > 0 ? (
                 filteredUsers.map((user) => (
                   <div
                     key={user.id}
-                    className="p-3 flex items-center justify-between hover:bg-neutral-50 rounded-2xl transition-colors gap-3"
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white p-3 transition-colors hover:bg-neutral-50"
                   >
                     <button
                       type="button"
                       onClick={() => handleOpenUserProfile(user)}
-                      className="flex items-center gap-3 min-w-0 flex-1 text-left cursor-pointer group"
+                      className="flex min-w-0 flex-1 items-center gap-3 text-left cursor-pointer"
                     >
                       <div className="relative">
                         <Avatar src={user.avatar} alt={user.name} size="md" />
                         {user.isVerified && (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-[#5E43F3] fill-white absolute bottom-0 right-0" />
+                          <CheckCircle2 className="absolute bottom-0 right-0 w-3.5 h-3.5 fill-white text-[#5E43F3]" />
                         )}
                       </div>
+
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-xs sm:text-sm text-neutral-950 truncate group-hover:text-[#5E43F3]">
+                          <span className="truncate text-xs sm:text-sm font-bold text-neutral-950">
                             {user.name}
                           </span>
                         </div>
-                        <span className="text-[11px] text-neutral-400 truncate block">
-                          @{user.username} · {user.location}
-                        </span>
+                        <span className="block truncate text-[11px] text-neutral-400">@{user.username} · {user.location}</span>
                         {user.bio && (
-                          <p className="text-[11px] text-neutral-600 line-clamp-1 mt-0.5 font-normal">
+                          <p className="mt-0.5 line-clamp-1 text-[11px] font-normal text-neutral-600">
                             {user.bio}
                           </p>
                         )}
@@ -575,7 +490,7 @@ export const ProfileView: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => toggleFollowUser(user.id)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                        className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
                           user.isFollowing
                             ? 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
                             : 'bg-[#5E43F3] text-white hover:bg-[#4E34E0]'
@@ -587,8 +502,9 @@ export const ProfileView: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleOpenUserProfile(user)}
-                        className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
+                        className="rounded-full p-1.5 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 cursor-pointer"
                         title="View Profile"
+                        aria-label="View profile"
                       >
                         <ChevronRight className="w-4 h-4" />
                       </button>
@@ -596,13 +512,22 @@ export const ProfileView: React.FC = () => {
                   </div>
                 ))
               ) : (
-                <div className="p-8 text-center text-xs text-neutral-400">
-                  No creators match your search. Try a different search query.
+                <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-8 text-center text-xs text-neutral-500">
+                  <p className="font-bold text-neutral-700">You haven&apos;t joined any communities yet.</p>
+                  <p className="mt-1 text-neutral-500">Discover communities and people around you to get started.</p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('discover')}
+                    className="mt-3 inline-flex rounded-full bg-[#5E43F3] px-3 py-2 text-[11px] font-bold text-white cursor-pointer"
+                  >
+                    Explore Communities
+                  </button>
                 </div>
               )}
             </div>
           </div>
         </div>
+      </div>
       )}
     </div>
   );

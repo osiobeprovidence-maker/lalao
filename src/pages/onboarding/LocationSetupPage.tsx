@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Navigation, ArrowRight, Loader2, MapPin } from 'lucide-react';
+import { ArrowRight, Loader2, MapPin } from 'lucide-react';
 import { OnboardingLayout } from './OnboardingLayout';
 import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
@@ -85,7 +85,7 @@ export const LocationSetupPage: React.FC = () => {
           {isDetecting ? (
             <Loader2 className="w-5 h-5 animate-spin text-[#3823A4]" />
           ) : (
-            <Navigation className={`w-5 h-5 ${detectedLocation ? 'text-[#3823A4]' : 'text-neutral-500'}`} />
+            <MapPin className={`w-5 h-5 ${detectedLocation ? 'text-[#3823A4]' : 'text-neutral-500'}`} />
           )}
           <span className="font-bold text-base">
             {isDetecting ? 'Detecting location...' : detectedLocation ? detectedLocation : 'Use my current location'}

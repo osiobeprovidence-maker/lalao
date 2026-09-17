@@ -3,7 +3,7 @@ import { X, Image, Video, MapPin, Globe, Users, Check } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 
-export const PostComposerModal: React.FC = () => {
+export const PostComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const {
     currentUser,
     location,
@@ -41,7 +41,11 @@ export const PostComposerModal: React.FC = () => {
 
   const handleClose = () => {
     setCreateFlowType(null);
-    setIsCreateSheetOpen(false);
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      setIsCreateSheetOpen(true);
+    } else {
+      setIsCreateSheetOpen(false);
+    }
     setComposerInitialText('');
   };
 
@@ -80,11 +84,15 @@ export const PostComposerModal: React.FC = () => {
     },
   ];
 
+  const shellClass = embedded
+    ? 'relative w-full min-h-[calc(100vh-5rem)] bg-[#f6f3ee] flex flex-col overflow-y-auto animate-in fade-in duration-200'
+    : 'absolute inset-0 z-40 bg-white flex flex-col min-h-full overflow-y-auto animate-in fade-in slide-in-from-bottom-4 duration-250';
+
   return (
     <div
       ref={containerRef}
       id="post-composer-screen"
-      className="absolute inset-0 z-40 bg-white flex flex-col min-h-full overflow-y-auto animate-in fade-in slide-in-from-bottom-4 duration-250"
+      className={shellClass}
     >
       {/* Sticky Top Header Bar */}
       <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-neutral-100 px-4 py-3 flex items-center justify-between">

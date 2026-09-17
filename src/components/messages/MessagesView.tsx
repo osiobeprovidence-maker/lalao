@@ -14,11 +14,13 @@ import {
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
+import { ChatModal } from './ChatModal';
 
 export const MessagesView: React.FC = () => {
   const {
     conversations,
     cycles,
+    activeChatId,
     setActiveChatId,
     openCycleStory,
     setIsCreateCycleOpen,
@@ -143,10 +145,18 @@ export const MessagesView: React.FC = () => {
   const effectiveOffset = isRefreshing ? 54 : pullDistance;
   const isReadyToRelease = pullDistance >= pullThreshold;
 
+  if (activeChatId) {
+    return (
+      <div className="min-h-screen bg-[#f6f3ee]">
+        <ChatModal />
+      </div>
+    );
+  }
+
   return (
     <div
       id="messages-view-container"
-      className="min-h-screen bg-white pb-24 relative select-none"
+      className="min-h-screen bg-[#f6f3ee] pb-24 relative select-none"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -155,7 +165,7 @@ export const MessagesView: React.FC = () => {
       onMouseUp={handleMouseUp}
     >
       {/* Top Header */}
-      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-neutral-100 px-4 py-2.5 space-y-2">
+      <div className="sticky top-0 z-20 bg-[#f6f3ee]/95 backdrop-blur-md border-b border-neutral-200/80 px-4 py-2.5 space-y-2">
         <div className="flex items-center justify-between">
           <div
             onClick={handleRefresh}
@@ -196,7 +206,7 @@ export const MessagesView: React.FC = () => {
           height: `${effectiveOffset}px`,
           opacity: effectiveOffset > 4 ? 1 : 0,
         }}
-        className={`w-full overflow-hidden bg-gradient-to-b from-neutral-50 to-white border-b border-neutral-100 flex items-center justify-center transition-[height,opacity] ${
+        className={`w-full overflow-hidden bg-gradient-to-b from-[#f8f5f1] to-[#f6f3ee] border-b border-neutral-200/80 flex items-center justify-center transition-[height,opacity] ${
           isPulling ? 'duration-0' : 'duration-300 ease-out'
         }`}
       >

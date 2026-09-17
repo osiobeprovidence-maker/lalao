@@ -9,7 +9,7 @@ import {
   Check,
   CheckCheck,
   Sparkles,
-  ExternalLink,
+  MoreHorizontal,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
@@ -274,121 +274,85 @@ export const ChatModal: React.FC = () => {
   return (
     <div
       id="chat-screen"
-      className="absolute inset-0 z-40 bg-white flex flex-col min-h-full overflow-hidden animate-in fade-in slide-in-from-right-4 duration-250"
+      className="w-full min-h-screen bg-[#f6f3ee] flex justify-center overflow-hidden animate-in fade-in duration-200"
     >
-      <div className="w-full max-w-xl mx-auto flex-1 flex flex-col bg-white overflow-hidden">
-        {/* Top Header Bar (matches inspiration screenshot) */}
-        <div className="pt-3 pb-2.5 px-3.5 bg-white border-b border-neutral-100 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <button
-              id="btn-chat-back"
-              type="button"
-              onClick={() => setActiveChatId(null)}
-              className="p-1 -ml-1 text-neutral-950 hover:text-neutral-700 active:scale-95 transition-transform cursor-pointer"
-              aria-label="Back to messages"
-            >
-              <ArrowLeft className="w-6 h-6 stroke-[2.2]" />
-            </button>
+      <div className="w-full max-w-[960px] min-h-screen bg-[#f6f3ee] flex flex-col border-x border-neutral-200/80">
+        <header className="shrink-0 border-b border-neutral-200/80 bg-[#f6f3ee]/95 backdrop-blur-md px-3 sm:px-4 py-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <button
+                id="btn-chat-back"
+                type="button"
+                onClick={() => setActiveChatId(null)}
+                className="p-1.5 -ml-1 rounded-full text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer"
+                aria-label="Back to messages"
+              >
+                <ArrowLeft className="w-5 h-5 stroke-[2.2]" />
+              </button>
 
-            {/* Small Contact Avatar */}
-            <div
-              onClick={handleViewCommunity}
-              className="cursor-pointer shrink-0"
-              title="View profile"
-            >
-              <img
-                src={conv.participant.avatar}
-                alt={conv.participant.name}
-                className="w-9 h-9 rounded-full object-cover ring-1 ring-black/5"
-              />
+              <button
+                type="button"
+                onClick={handleViewCommunity}
+                className="flex min-w-0 items-center gap-2.5 text-left cursor-pointer"
+                title="View profile"
+              >
+                <div className="shrink-0">
+                  <Avatar
+                    src={conv.participant.avatar || undefined}
+                    alt={conv.participant.name}
+                    size="sm"
+                    className="w-9 h-9"
+                  />
+                </div>
+
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate text-sm font-bold text-neutral-950">
+                      {conv.participant.name}
+                    </span>
+                    {isVerified && <VerifiedBadge />}
+                  </div>
+                  <span className="block truncate text-[11px] text-neutral-500">
+                    @{conv.participant.username}
+                  </span>
+                </div>
+              </button>
             </div>
 
-            {/* Contact Name & Username */}
-            <div className="min-w-0 cursor-pointer" onClick={handleViewCommunity}>
-              <div className="flex items-center gap-1">
-                <span className="font-bold text-sm text-neutral-950 truncate">
-                  {conv.participant.name}
-                </span>
-                {isVerified && <VerifiedBadge />}
-              </div>
-              <span className="text-xs text-neutral-500 truncate block -mt-0.5">
-                {conv.participant.username}
-              </span>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => triggerShareToast('Voice calls coming in v0.2')}
+                className="rounded-full p-2 text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950 transition-colors cursor-pointer"
+                title="Voice call"
+                aria-label="Voice call"
+              >
+                <Phone className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                className="rounded-full p-2 text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950 transition-colors cursor-pointer"
+                title="More actions"
+                aria-label="More actions"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
             </div>
           </div>
+        </header>
 
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              onClick={() => triggerShareToast('Voice calls coming in v0.2')}
-              className="p-2 rounded-full text-neutral-600 hover:text-neutral-950 hover:bg-neutral-100 transition-colors cursor-pointer"
-              title="Voice call"
-            >
-              <Phone className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Chat Body (Scrollable) */}
         <div
           ref={chatScrollRef}
-          className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-white min-h-0"
+          className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 space-y-4 bg-[#f6f3ee] min-h-0"
         >
-          {/* Central Profile Hero Card (exact replica of inspo screenshot) */}
-          <div className="pt-3 pb-6 flex flex-col items-center text-center">
-            {/* Big Circular Avatar */}
-            <div
-              onClick={handleViewCommunity}
-              className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden shadow-sm ring-1 ring-black/5 cursor-pointer hover:opacity-95 transition-opacity"
-            >
-              <img
-                src={conv.participant.avatar}
-                alt={conv.participant.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-
-            {/* Full Name + Verified Badge */}
-            <div className="flex items-center justify-center gap-1.5 mt-3.5">
-              <h2 className="text-xl sm:text-2xl font-bold text-neutral-950 tracking-tight">
-                {conv.participant.name}
-              </h2>
-              {isVerified && <VerifiedBadge size="md" />}
-            </div>
-
-            {/* Username Handle */}
-            <p className="text-sm font-semibold text-neutral-800 mt-0.5">
-              {conv.participant.username}
+          <div className="rounded-2xl border border-neutral-200/80 bg-white/70 px-3 py-2 text-center shadow-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+              {conv.participant.name}
             </p>
-
-            {/* Stats Row */}
-            <p className="text-xs text-neutral-500 mt-1 font-normal">
-              {followersStr} followers · {postsStr} posts
+            <p className="mt-1 text-xs text-neutral-600">
+              {followersStr} followers · {postsStr} posts · {mutualFollowStr}
             </p>
-
-            {/* Relationship Line 1 */}
-            <p className="text-xs text-neutral-500 mt-0.5 font-normal">
-              {conv.participant.isFollowing
-                ? 'You follow each other on Lalao'
-                : "You don't follow each other on Instagram"}
-            </p>
-
-            {/* Relationship Line 2 */}
-            <p className="text-xs text-neutral-500 mt-0.5 font-normal">
-              {mutualFollowStr}
-            </p>
-
-            {/* View Community Button */}
-            <button
-              id="btn-view-community"
-              type="button"
-              onClick={handleViewCommunity}
-              className="mt-4 px-6 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 active:scale-98 text-neutral-900 font-bold text-sm tracking-tight transition-all cursor-pointer shadow-2xs"
-            >
-              View community
-            </button>
           </div>
 
-          {/* Messages Stream */}
           {conv.messages.map((msg: DirectMessage) => {
             if (msg.isSticker && msg.stickerId) {
               const matchedSticker = STICKERS.find((s) => s.id === msg.stickerId);
@@ -461,17 +425,16 @@ export const ChatModal: React.FC = () => {
         {showStickerTray && (
           <div
             id="sticker-tray"
-            className="px-4 pt-3 pb-2 bg-white border-t border-neutral-100 shrink-0 animate-in fade-in slide-in-from-bottom-2 duration-150"
+            className="border-t border-neutral-200/80 bg-[#f7f4f0] px-4 pt-3 pb-2 shrink-0 animate-in fade-in slide-in-from-bottom-2 duration-150"
           >
-            {/* Header with dismiss button */}
-            <div className="flex items-center justify-between mb-3 text-neutral-500">
-              <span className="text-xs font-medium text-neutral-600">
+            <div className="mb-3 flex items-center justify-between text-neutral-500">
+              <span className="text-xs font-semibold text-neutral-600">
                 Say hello by sending a sticker
               </span>
               <button
                 type="button"
                 onClick={() => setShowStickerTray(false)}
-                className="p-1 -mr-1 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+                className="p-1 -mr-1 rounded-full text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700 transition-colors cursor-pointer"
                 title="Dismiss sticker tray"
                 aria-label="Dismiss stickers"
               >
@@ -479,14 +442,13 @@ export const ChatModal: React.FC = () => {
               </button>
             </div>
 
-            {/* Sticker row */}
             <div className="flex items-center justify-around gap-2 px-1 py-1">
               {STICKERS.map((stk) => (
                 <button
                   key={stk.id}
                   type="button"
                   onClick={() => handleSendSticker(stk)}
-                  className="p-1 rounded-xl hover:bg-neutral-50 active:scale-110 transition-transform cursor-pointer flex items-center justify-center"
+                  className="flex items-center justify-center rounded-xl p-1 transition-transform hover:bg-white active:scale-110 cursor-pointer"
                   title={`Send ${stk.name} sticker`}
                 >
                   {stk.render()}
@@ -496,26 +458,25 @@ export const ChatModal: React.FC = () => {
           </div>
         )}
 
-        {/* Input Bar (matches screenshot with "Try /silent 🤫" & soft blue send button) */}
-        <div className="p-3 bg-white border-t border-neutral-100 shrink-0">
+        <div className="border-t border-neutral-200/80 bg-[#f7f4f0] p-3 shrink-0">
           <form onSubmit={handleSend} className="flex items-center gap-2">
-            <div className="flex-1 relative flex items-center">
+            <div className="relative flex-1">
               <input
                 id="input-direct-message"
                 type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
-                placeholder="Try /silent 🤫"
-                className="w-full pl-4 pr-16 py-3 rounded-full bg-neutral-100 hover:bg-neutral-200/50 focus:bg-white focus:ring-2 focus:ring-[#8B95F6]/30 focus:border-[#8B95F6] border border-transparent text-sm text-neutral-900 placeholder:text-neutral-500 outline-none transition-all"
+                placeholder="Message"
+                className="w-full rounded-full border border-neutral-200 bg-white pl-4 pr-16 py-3 text-sm text-neutral-900 placeholder:text-neutral-500 outline-none transition-all focus:border-[#5E43F3] focus:ring-2 focus:ring-[#5E43F3]/15"
                 autoFocus
               />
 
-              <div className="absolute right-2.5 flex items-center gap-1 text-neutral-400">
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-neutral-400">
                 {!showStickerTray && (
                   <button
                     type="button"
                     onClick={() => setShowStickerTray(true)}
-                    className="p-1.5 rounded-full hover:text-neutral-700 hover:bg-neutral-200/60 transition-colors cursor-pointer"
+                    className="rounded-full p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors cursor-pointer"
                     title="Show stickers"
                   >
                     <Smile className="w-4 h-4" />
@@ -525,10 +486,10 @@ export const ChatModal: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleMicClick}
-                  className={`p-1.5 rounded-full transition-all cursor-pointer ${
+                  className={`rounded-full p-1.5 transition-all cursor-pointer ${
                     isRecording
                       ? 'bg-rose-500 text-white animate-pulse'
-                      : 'hover:text-neutral-700 hover:bg-neutral-200/60'
+                      : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700'
                   }`}
                   title="Voice Note"
                 >
@@ -537,15 +498,14 @@ export const ChatModal: React.FC = () => {
               </div>
             </div>
 
-            {/* Blue / Lavender Send Pill Button */}
             <button
               id="btn-send-message"
               type="submit"
               disabled={!inputMessage.trim()}
-              className={`w-12 h-11 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-2xs shrink-0 ${
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all cursor-pointer ${
                 inputMessage.trim()
-                  ? 'bg-[#8B95F6] hover:bg-[#7883F0] text-white active:scale-95'
-                  : 'bg-[#A8B2FF]/60 text-white hover:bg-[#8B95F6]'
+                  ? 'bg-[#5E43F3] text-white hover:bg-[#4E34E0] active:scale-95 shadow-md shadow-[#5E43F3]/20'
+                  : 'bg-neutral-200 text-neutral-500'
               }`}
               title="Send message"
             >
@@ -553,8 +513,7 @@ export const ChatModal: React.FC = () => {
             </button>
           </form>
 
-          {/* Home indicator bar at bottom */}
-          <div className="w-32 h-1 bg-neutral-300 rounded-full mx-auto mt-2.5" />
+          <div className="mx-auto mt-2.5 h-1 w-24 rounded-full bg-neutral-300" />
         </div>
       </div>
     </div>
