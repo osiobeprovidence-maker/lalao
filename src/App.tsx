@@ -84,8 +84,54 @@ const LalaoAppContent: React.FC = () => {
     selectedOrderForDetail,
     setSelectedOrderForDetail,
     setIsCreateSheetOpen,
+    posts,
+    pages,
+    currentUser,
   } = useLalao();
   const mainRef = useRef<HTMLElement>(null);
+
+  const followingPosts = posts.filter(
+    (post) => post.author.isFollowing || post.author.id === currentUser.id || (post.pageRefId && pages.some((page) => page.id === post.pageRefId && page.isFollowing))
+  );
+  const savedPosts = posts.filter((post) => post.isReposted || post.isLiked);
+  const likedPosts = posts.filter((post) => post.isLiked);
+
+  const renderListPage = (title: string, subtitle: string, items: Array<{ id: string; title: string; meta: string; accent?: string }>, emptyText: string) => (
+    <div className="mx-auto w-full max-w-[680px] px-4 py-5">
+      <div className="rounded-[28px] border border-neutral-200 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.04)]">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#5E43F3]">Lalao</p>
+            <h1 className="mt-1 text-2xl font-black text-neutral-950">{title}</h1>
+          </div>
+          <div className="rounded-full bg-[#5E43F3]/10 px-2.5 py-1 text-[10px] font-bold text-[#5E43F3]">
+            {items.length}
+          </div>
+        </div>
+        <p className="mb-5 text-sm text-neutral-600">{subtitle}</p>
+
+        {items.length > 0 ? (
+          <div className="space-y-3">
+            {items.map((item) => (
+              <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-[#f9f7f4] p-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-neutral-900">{item.title}</p>
+                  <p className="mt-1 text-[11px] text-neutral-500">{item.meta}</p>
+                </div>
+                <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${item.accent ?? 'bg-neutral-900 text-white'}`}>
+                  {item.title.split(' ')[0] || 'Lalao'}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 p-5 text-center text-sm text-neutral-600">
+            {emptyText}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   useEffect(() => {
     if (mainRef.current) {
@@ -133,6 +179,51 @@ const LalaoAppContent: React.FC = () => {
             {activeTab === 'profile' && (
               <div key="tab-profile" className="animate-in fade-in duration-200 max-w-3xl mx-auto w-full bg-transparent">
                 <ProfileView />
+              </div>
+            )}
+            {activeTab === 'following' && (
+              <div key="tab-following" className="animate-in fade-in duration-200">
+                {renderListPage(
+                  'Following',
+                  'People and communities you keep up with in your local Lalao feed.',
+                  followingPosts.slice(0, 6).map((post) => ({
+                    id: post.id,
+                    title: post.author.name || 'Followed creator',
+                    meta: `${post.location} · ${post.likesCount} likes`,
+                    accent: 'bg-[#5E43F3]/10 text-[#5E43F3]',
+                  })),
+                  'You are not following anyone yet. Tap Follow on people or pages to start building your Lalao circle.'
+                )}
+              </div>
+            )}
+            {activeTab === 'saved' && (
+              <div key="tab-saved" className="animate-in fade-in duration-200">
+                {renderListPage(
+                  'Saved',
+                  'Your saved posts, moments, and things you want to revisit later.',
+                  savedPosts.slice(0, 6).map((post) => ({
+                    id: post.id,
+                    title: post.text || 'Saved post',
+                    meta: `${post.location} · ${post.commentsCount} comments`,
+                    accent: 'bg-amber-100 text-amber-700',
+                  })),
+                  'Nothing saved yet. Save posts and pages you want to keep close by.'
+                )}
+              </div>
+            )}
+            {activeTab === 'liked' && (
+              <div key="tab-liked" className="animate-in fade-in duration-200">
+                {renderListPage(
+                  'Liked',
+                  'Everything you have liked across the Lalao community.',
+                  likedPosts.slice(0, 6).map((post) => ({
+                    id: post.id,
+                    title: post.text || 'Liked post',
+                    meta: `${post.location} · ${post.likesCount} likes`,
+                    accent: 'bg-rose-100 text-rose-700',
+                  })),
+                  'You have not liked anything yet. Tap the heart on posts you love.'
+                )}
               </div>
             )}
           </main>

@@ -458,7 +458,6 @@ export const DiscoverView: React.FC = () => {
           <section className="pt-2">
             <div className="px-4 mb-2 flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <TrendingUp className="w-4 h-4 text-[#5E43F3]" />
                 <h2 className="text-sm font-bold text-neutral-900 tracking-tight">
                   Popular Posts Nearby
                 </h2>

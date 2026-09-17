@@ -33,10 +33,50 @@ const BG_GRADIENTS = [
   { id: 'slate', label: 'Dark Midnight', value: 'from-neutral-800 to-neutral-950' },
 ];
 
-const FONTS_LIST = [
-  { id: 'sans', name: 'Clean Sans', className: 'font-sans' },
-  { id: 'serif', name: 'Editorial Serif', className: 'font-serif' },
-  { id: 'mono', name: 'Mono Code', className: 'font-mono' },
+const FONT_OPTIONS = [
+  { id: 'sans', name: 'Lalao Sans', className: 'font-sans', sample: 'Aa' },
+  { id: 'serif', name: 'Editorial', className: 'font-serif', sample: 'Aa' },
+  { id: 'mono', name: 'Mono', className: 'font-mono', sample: 'Aa' },
+  { id: 'display', name: 'Rounded', className: 'font-black tracking-tight', sample: 'Aa' },
+];
+
+const STICKER_COLLECTIONS = [
+  {
+    id: 'featured',
+    name: 'Featured',
+    stickers: [
+      { id: 'football', asset: '⚽️', label: 'Football', animated: true },
+      { id: 'sparkle', asset: '✨', label: 'Sparkle', animated: false },
+      { id: 'love', asset: '💙', label: 'Love', animated: false },
+      { id: 'fire', asset: '🔥', label: 'Fire', animated: true },
+      { id: 'party', asset: '🎉', label: 'Party', animated: true },
+      { id: 'music', asset: '🎵', label: 'Music', animated: false },
+    ],
+  },
+  {
+    id: 'reactions',
+    name: 'Reactions',
+    stickers: [
+      { id: 'heart', asset: '❤️', label: 'Heart', animated: false },
+      { id: 'clap', asset: '👏', label: 'Clap', animated: false },
+      { id: 'wave', asset: '👋', label: 'Wave', animated: false },
+      { id: 'rocket', asset: '🚀', label: 'Rocket', animated: true },
+      { id: 'star', asset: '⭐', label: 'Star', animated: false },
+      { id: 'laugh', asset: '😂', label: 'Laugh', animated: false },
+    ],
+  },
+  {
+    id: 'local',
+    name: 'Local',
+    stickers: [
+      { id: 'community', asset: '🏘️', label: 'Community', animated: false },
+      { id: 'sunset', asset: '🌅', label: 'Sunset', animated: false },
+      { id: 'city', asset: '🏙️', label: 'City', animated: false },
+      { id: 'food', asset: '🍲', label: 'Food', animated: false },
+      { id: 'market', asset: '🛍️', label: 'Market', animated: false },
+      { id: 'friendship', asset: '🤝', label: 'Friendship', animated: false },
+    ],
+  },
 ];
 
 const MUSIC_TRACKS = [
@@ -45,7 +85,16 @@ const MUSIC_TRACKS = [
   { id: 'track_3', title: 'Acoustic Morning', artist: 'Local Strings', duration: '0:35' },
 ];
 
-const STICKERS_LIST = ['🔥', '🎾', '☕️', '📍', '⚽️', '✨', '🚀', '🎉', '💡', '❤️'];
+type StickerLayer = {
+  id: string;
+  asset: string;
+  label: string;
+  animated: boolean;
+  x: number;
+  y: number;
+  rotation: number;
+  scale: number;
+};
 
 export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onClose }) => {
   const { location, postCycleStory, permissions, setActivePermissionPrompt, triggerShareToast, currentUser } = useLalao();
@@ -56,7 +105,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
   const [textContent, setTextContent] = useState('');
   const [selectedGradient, setSelectedGradient] = useState(BG_GRADIENTS[0].value);
-  const [selectedFont, setSelectedFont] = useState(FONTS_LIST[0].className);
+  const [selectedFont, setSelectedFont] = useState(FONT_OPTIONS[0].className);
   const [selectedAudio, setSelectedAudio] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioError, setAudioError] = useState<string | null>(null);
@@ -64,10 +113,15 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [selectedAudience, setSelectedAudience] = useState<'community' | 'nearby' | 'friends'>('community');
   const [isAudienceSheetOpen, setIsAudienceSheetOpen] = useState(false);
-  const [activeStickers, setActiveStickers] = useState<string[]>([]);
+  const [selectedStickers, setSelectedStickers] = useState<StickerLayer[]>([]);
+  const [activeStickerId, setActiveStickerId] = useState<string | null>(null);
   const [galleryTab, setGalleryTab] = useState<'photos' | 'videos'>('photos');
+  const [stickerLibraryOpen, setStickerLibraryOpen] = useState(false);
+  const [stickerCollection, setStickerCollection] = useState('featured');
+  const [stickerSearch, setStickerSearch] = useState('');
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -145,6 +199,94 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
       setStep('customize');
       triggerShareToast('Video attached to your status.');
     }
+  };
+
+  const addSticker = (sticker: { id: string; asset: string; label: string; animated: boolean }) => {
+    const nextSticker: StickerLayer = {
+      id: `${sticker.id}-${Date.now()}`,
+      asset: sticker.asset,
+      label: sticker.label,
+      animated: sticker.animated,
+      x: 52,
+      y: 52,
+      rotation: 0,
+      scale: 1,
+    };
+
+    setSelectedStickers((prev) => [...prev, nextSticker]);
+    setActiveStickerId(nextSticker.id);
+    setStickerLibraryOpen(false);
+  };
+
+  const selectedStickerCollection = STICKER_COLLECTIONS.find((collection) => collection.id === stickerCollection) ?? STICKER_COLLECTIONS[0];
+  const filteredStickers = selectedStickerCollection.stickers.filter((sticker) =>
+    sticker.label.toLowerCase().includes(stickerSearch.toLowerCase()) ||
+    sticker.asset.toLowerCase().includes(stickerSearch.toLowerCase())
+  );
+
+  const handleStickerPointerDown = (event: React.PointerEvent<HTMLButtonElement>, stickerId: string) => {
+    const previewRect = previewRef.current?.getBoundingClientRect();
+    if (!previewRect) return;
+
+    const sticker = selectedStickers.find((item) => item.id === stickerId);
+    if (!sticker) return;
+
+    const dx = event.clientX - previewRect.left;
+    const dy = event.clientY - previewRect.top;
+
+    const xPercent = ((dx / previewRect.width) * 100);
+    const yPercent = ((dy / previewRect.height) * 100);
+
+    setActiveStickerId(stickerId);
+    (event.currentTarget as HTMLButtonElement).setPointerCapture(event.pointerId);
+
+    const drag = {
+      stickerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: sticker.x,
+      originY: sticker.y,
+      startPercentX: xPercent,
+      startPercentY: yPercent,
+    };
+
+    (event.currentTarget as HTMLButtonElement).dataset.drag = JSON.stringify(drag);
+  };
+
+  const handlePreviewPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const activeElement = event.target as HTMLElement;
+    const dragData = activeElement.closest('button')?.dataset.drag;
+    if (!dragData || !previewRef.current) return;
+
+    const drag = JSON.parse(dragData) as {
+      stickerId: string;
+      startX: number;
+      startY: number;
+      originX: number;
+      originY: number;
+      startPercentX: number;
+      startPercentY: number;
+    };
+
+    const rect = previewRef.current.getBoundingClientRect();
+    const deltaX = ((event.clientX - drag.startX) / rect.width) * 100;
+    const deltaY = ((event.clientY - drag.startY) / rect.height) * 100;
+
+    setSelectedStickers((prev) => prev.map((sticker) => {
+      if (sticker.id !== drag.stickerId) return sticker;
+      return {
+        ...sticker,
+        x: Math.min(94, Math.max(6, drag.originX + deltaX)),
+        y: Math.min(94, Math.max(6, drag.originY + deltaY)),
+      };
+    }));
+  };
+
+  const handlePreviewPointerUp = () => {
+    const buttons = previewRef.current?.querySelectorAll('button');
+    buttons?.forEach((button) => {
+      delete (button as HTMLButtonElement).dataset.drag;
+    });
   };
 
   const handleStartAudioRecording = async () => {
@@ -534,123 +676,227 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
            STEP 4 & 5: CUSTOMIZE BACKGROUND, TEXT, STICKERS & FONTS
            ======================================================== */}
         {step === 'customize' && (
-          <div className="space-y-5 animate-in fade-in">
-            {/* Live Editing Preview Canvas */}
-            <div
-              className={`w-full aspect-[4/5] max-h-[420px] rounded-3xl overflow-hidden relative flex flex-col justify-between p-6 shadow-2xl border border-neutral-800 ${
-                contentType === 'text'
-                  ? `bg-gradient-to-br ${selectedGradient}`
-                  : 'bg-black'
-              }`}
-            >
-              {contentType !== 'text' && (
-                <div className="absolute inset-0 z-0">
-                  {mediaType === 'video' ? (
-                    <video src={selectedMedia} autoPlay loop muted playsInline className="w-full h-full object-cover" />
-                  ) : (
-                    <img src={selectedMedia} alt="Preview" className="w-full h-full object-cover" />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                </div>
-              )}
-
-              {/* Top badges in preview */}
-              <div className="relative z-10 flex items-center justify-between">
-                <span className="px-3 py-1 rounded-full bg-black/40 backdrop-blur-md text-[11px] font-bold text-white border border-white/20">
-                  Live Preview
-                </span>
-                {selectedAudio && (
-                  <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-[#5E43F3]/80 backdrop-blur-md text-[11px] font-bold text-white">
-                    <Music className="w-3 h-3" />
-                    <span>Audio Attached</span>
-                  </span>
+          <div className="space-y-5 animate-in fade-in lg:mx-auto lg:max-w-[1100px] lg:w-full">
+            <div className="lg:grid lg:grid-cols-[minmax(0,1.2fr)_340px] lg:gap-5">
+              <div
+                ref={previewRef}
+                onPointerMove={handlePreviewPointerMove}
+                onPointerUp={handlePreviewPointerUp}
+                onPointerLeave={handlePreviewPointerUp}
+                className={`relative w-full max-w-[420px] lg:max-w-none mx-auto aspect-[4/5] overflow-hidden rounded-[28px] border border-neutral-200 shadow-[0_20px_50px_rgba(15,23,42,0.08)] ${
+                  contentType === 'text' ? `bg-gradient-to-br ${selectedGradient}` : 'bg-neutral-900'
+                }`}
+              >
+                {contentType !== 'text' && (
+                  <div className="absolute inset-0 z-0">
+                    {mediaType === 'video' ? (
+                      <video src={selectedMedia} autoPlay loop muted playsInline className="h-full w-full object-cover" />
+                    ) : (
+                      <img src={selectedMedia} alt="Preview" className="h-full w-full object-cover" />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  </div>
                 )}
-              </div>
 
-              {/* Editable Text Overlay */}
-              <div className="relative z-10 my-auto">
-                <textarea
-                  id="input-story-caption"
-                  value={textContent}
-                  onChange={(e) => setTextContent(e.target.value)}
-                  placeholder="Type your caption or story message..."
-                  rows={3}
-                  className={`w-full bg-transparent text-white text-center font-bold text-lg sm:text-xl placeholder:text-white/70 focus:outline-none resize-none drop-shadow-lg ${selectedFont}`}
-                />
-              </div>
-
-              {/* Stickers Attached */}
-              <div className="relative z-10 flex items-center justify-center gap-2">
-                {activeStickers.map((st, i) => (
-                  <span key={i} className="text-2xl drop-shadow-md animate-bounce">
-                    {st}
+                <div className="relative z-10 flex items-center justify-between px-4 pt-4">
+                  <span className="rounded-full border border-white/20 bg-black/30 px-3 py-1 text-[11px] font-bold text-white backdrop-blur-md">
+                    Live Preview
                   </span>
+                  {selectedAudio && (
+                    <span className="flex items-center gap-1 rounded-full bg-[#5E43F3]/80 px-3 py-1 text-[11px] font-bold text-white backdrop-blur-md">
+                      <Music className="h-3 w-3" />
+                      <span>Audio</span>
+                    </span>
+                  )}
+                </div>
+
+                <div className="relative z-10 my-auto flex min-h-[180px] items-center justify-center px-6 py-8">
+                  <textarea
+                    id="input-story-caption"
+                    value={textContent}
+                    onChange={(e) => setTextContent(e.target.value)}
+                    placeholder="Type your caption or story message..."
+                    rows={3}
+                    className={`w-full bg-transparent text-center font-bold text-lg text-white placeholder:text-white/70 focus:outline-none resize-none drop-shadow-lg ${selectedFont}`}
+                  />
+                </div>
+
+                {selectedStickers.map((sticker) => (
+                  <button
+                    key={sticker.id}
+                    type="button"
+                    onPointerDown={(event) => handleStickerPointerDown(event, sticker.id)}
+                    onClick={() => setActiveStickerId(sticker.id)}
+                    className={`absolute z-20 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-xl border text-3xl shadow-lg transition ${
+                      activeStickerId === sticker.id ? 'border-white/80 bg-black/10' : 'border-transparent bg-transparent'
+                    }`}
+                    style={{
+                      left: `${sticker.x}%`,
+                      top: `${sticker.y}%`,
+                      transform: `translate(-50%, -50%) rotate(${sticker.rotation}deg) scale(${sticker.scale})`,
+                    }}
+                    title={sticker.label}
+                  >
+                    <span className={sticker.animated ? 'animate-pulse' : ''}>{sticker.asset}</span>
+                  </button>
                 ))}
+
+                <div className="absolute inset-x-0 bottom-4 z-10 flex items-center justify-center px-4">
+                  <div className="rounded-full bg-black/30 px-3 py-1 text-[11px] text-white/90 backdrop-blur-md">
+                    {location.name} · 24h Cycle
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 bg-white/80 rounded-[24px] border border-neutral-200 p-4 shadow-sm mt-4 lg:mt-0">
+                {contentType === 'text' && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold uppercase tracking-[0.18em] text-neutral-500">Background</label>
+                    </div>
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+                      {BG_GRADIENTS.map((g) => (
+                        <button
+                          key={g.id}
+                          type="button"
+                          onClick={() => setSelectedGradient(g.value)}
+                          className={`h-9 w-9 shrink-0 rounded-full bg-gradient-to-br ${g.value} transition-transform ${
+                            selectedGradient === g.value ? 'scale-110 ring-2 ring-[#5E43F3]' : 'opacity-80'
+                          }`}
+                        >
+                          {selectedGradient === g.value && <Check className="h-4 w-4 text-white stroke-[3]" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold uppercase tracking-[0.18em] text-neutral-500">Typography</label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {FONT_OPTIONS.map((font) => (
+                      <button
+                        key={font.id}
+                        type="button"
+                        onClick={() => setSelectedFont(font.className)}
+                        className={`rounded-2xl border p-3 text-left transition ${
+                          selectedFont === font.className
+                            ? 'border-[#5E43F3] bg-[#5E43F3]/5 shadow-sm'
+                            : 'border-neutral-200 bg-white hover:border-neutral-300'
+                        }`}
+                      >
+                        <div className={`text-3xl leading-none ${font.className}`}>Aa</div>
+                        <div className="mt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                          {font.name}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-[11px] font-bold uppercase tracking-[0.18em] text-neutral-500">Sticker</label>
+                    <button
+                      type="button"
+                      onClick={() => setStickerLibraryOpen((prev) => !prev)}
+                      className="rounded-full bg-[#5E43F3] px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#4E34E0]"
+                    >
+                      + Add Sticker
+                    </button>
+                  </div>
+
+                  {selectedStickers.length > 0 && (
+                    <div className="space-y-2 rounded-2xl border border-neutral-200 bg-neutral-50 p-2">
+                      {selectedStickers.map((sticker) => (
+                        <div key={sticker.id} className="flex items-center justify-between rounded-xl bg-white px-2 py-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">{sticker.asset}</span>
+                            <span className="text-xs font-medium text-neutral-700">{sticker.label}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedStickers((prev) => prev.map((item) => item.id === sticker.id ? { ...item, rotation: item.rotation + 15 } : item))}
+                              className="text-[10px] font-bold text-neutral-500"
+                            >
+                              Rotate
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedStickers((prev) => prev.filter((item) => item.id !== sticker.id))}
+                              className="text-[10px] font-bold text-rose-500"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Customization Toolbars */}
-            {contentType === 'text' && (
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-neutral-400">Background Theme</label>
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-                  {BG_GRADIENTS.map((g) => (
-                    <button
-                      key={g.id}
-                      type="button"
-                      onClick={() => setSelectedGradient(g.value)}
-                      className={`w-9 h-9 rounded-full bg-gradient-to-br ${g.value} shrink-0 transition-transform flex items-center justify-center cursor-pointer ${
-                        selectedGradient === g.value ? 'ring-2 ring-white scale-110' : 'opacity-80'
-                      }`}
-                    >
-                      {selectedGradient === g.value && <Check className="w-4 h-4 text-white stroke-[3]" />}
-                    </button>
-                  ))}
+            {stickerLibraryOpen && (
+              <div className="rounded-[24px] border border-neutral-200 bg-white/90 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.08)] backdrop-blur-sm">
+                <div className="flex items-center justify-between gap-3 border-b border-neutral-200 pb-3">
+                  <h4 className="text-sm font-bold text-neutral-900">Stickers</h4>
+                  <button
+                    type="button"
+                    onClick={() => setStickerLibraryOpen(false)}
+                    className="rounded-full p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="mt-3">
+                  <div className="relative">
+                    <input
+                      value={stickerSearch}
+                      onChange={(event) => setStickerSearch(event.target.value)}
+                      placeholder="Search stickers..."
+                      className="w-full rounded-full border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-[#5E43F3]"
+                    />
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {STICKER_COLLECTIONS.map((collection) => (
+                      <button
+                        key={collection.id}
+                        type="button"
+                        onClick={() => setStickerCollection(collection.id)}
+                        className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition ${
+                          stickerCollection === collection.id
+                            ? 'bg-[#5E43F3] text-white'
+                            : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                        }`}
+                      >
+                        {collection.name}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-4 gap-3 sm:grid-cols-6">
+                    {filteredStickers.map((sticker) => (
+                      <button
+                        key={sticker.id}
+                        type="button"
+                        onClick={() => addSticker(sticker)}
+                        className="flex flex-col items-center justify-center rounded-2xl border border-neutral-200 bg-neutral-50 p-3 text-center transition hover:border-[#5E43F3] hover:bg-[#F6F3FF]"
+                        title={sticker.label}
+                      >
+                        <span className="text-3xl leading-none">{sticker.asset}</span>
+                        <span className="mt-2 text-[10px] font-semibold text-neutral-600">{sticker.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
-
-            {/* Font Picker */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-neutral-400">Typography Font Style</label>
-              <div className="grid grid-cols-3 gap-2">
-                {FONTS_LIST.map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => setSelectedFont(f.className)}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                      selectedFont === f.className
-                        ? 'bg-[#5E43F3] border-[#5E43F3] text-white'
-                        : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:bg-neutral-800'
-                    }`}
-                  >
-                    {f.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Quick Stickers Picker */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-neutral-400">Add Stickers & Emojis</label>
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-                {STICKERS_LIST.map((st) => (
-                  <button
-                    key={st}
-                    type="button"
-                    onClick={() => {
-                      if (!activeStickers.includes(st)) {
-                        setActiveStickers([...activeStickers, st]);
-                      }
-                    }}
-                    className="p-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xl cursor-pointer"
-                  >
-                    {st}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         )}
 

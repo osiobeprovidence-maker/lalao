@@ -1,8 +1,6 @@
 import React from 'react';
 import {
-  ChevronRight,
   Plus,
-  Settings,
   ShoppingBag,
   Wallet,
   X,
@@ -16,7 +14,6 @@ interface MobileDrawerProps {
 
 export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) => {
   const {
-    setIsEditProfileOpen,
     setIsCreateSheetOpen,
     setCreateFlowType,
     setIsWalletModalOpen,
@@ -26,7 +23,6 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
   if (!isOpen) return null;
 
   const accountItems = [
-    { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'wallet', label: 'Wallet', icon: Wallet },
     { id: 'orders', label: 'Order History', icon: ShoppingBag },
     { id: 'pages', label: 'Add Pages', icon: Plus },
@@ -76,11 +72,6 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
                 key={id}
                 type="button"
                 onClick={() => {
-                  if (id === 'settings') {
-                    setIsEditProfileOpen(true);
-                    onClose();
-                    return;
-                  }
                   if (id === 'wallet') {
                     handleWalletAction();
                     return;
@@ -93,13 +84,12 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
                   setIsCreateSheetOpen(true);
                   onClose();
                 }}
-                className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-left transition hover:bg-neutral-50"
+                className="flex w-full items-center rounded-xl px-3 py-3 text-left transition hover:bg-neutral-50"
               >
                 <div className="flex items-center gap-3">
                   <Icon className="h-4 w-4 text-neutral-600" />
                   <span className="text-sm font-medium text-neutral-700">{label}</span>
                 </div>
-                <ChevronRight className="h-4 w-4 text-neutral-400" />
               </button>
             ))}
           </div>

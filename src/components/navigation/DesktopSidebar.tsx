@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Bell,
   Bookmark,
@@ -8,15 +8,12 @@ import {
   LogOut,
   MessageCircle,
   Plus,
-  ShoppingBag,
   User as UserIcon,
   Users,
-  Wallet,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../common/Avatar';
-import { PLATFORM_MENU_ITEMS } from './platformMenu';
 
 export const DesktopSidebar: React.FC = () => {
   const {
@@ -27,14 +24,10 @@ export const DesktopSidebar: React.FC = () => {
     currentUser,
     location,
     setIsLocationModalOpen,
-    setIsEditProfileOpen,
     setIsCreateSheetOpen,
     setCreateFlowType,
-    setIsWalletModalOpen,
-    setIsShoppingHistoryOpen,
     conversations,
   } = useLalao();
-  const [isPlatformMenuOpen, setIsPlatformMenuOpen] = useState(false);
   const { logout } = useAuth();
 
   const unreadMessagesCount = conversations.reduce(
@@ -105,30 +98,10 @@ export const DesktopSidebar: React.FC = () => {
   ] as const;
 
   const secondaryNav = [
-    { label: 'Following', icon: Users },
-    { label: 'Saved', icon: Bookmark },
-    { label: 'Liked', icon: Heart },
-  ];
-
-  const handlePlatformMenuAction = (itemId: typeof PLATFORM_MENU_ITEMS[number]['id']) => {
-    setIsPlatformMenuOpen(false);
-    if (itemId === 'settings') {
-      setIsEditProfileOpen(true);
-      return;
-    }
-    if (itemId === 'wallet') {
-      setIsWalletModalOpen(true);
-      return;
-    }
-    if (itemId === 'orders') {
-      setIsShoppingHistoryOpen(true);
-      return;
-    }
-    if (itemId === 'pages') {
-      setCreateFlowType('page');
-      setIsCreateSheetOpen(true);
-    }
-  };
+    { id: 'following', label: 'Following', icon: Users },
+    { id: 'saved', label: 'Saved', icon: Bookmark },
+    { id: 'liked', label: 'Liked', icon: Heart },
+  ] as const;
 
   return (
     <aside
@@ -217,16 +190,20 @@ export const DesktopSidebar: React.FC = () => {
             Discover
           </div>
           <div className="space-y-1.5">
-            {secondaryNav.map(({ label, icon: Icon }) => (
+            {secondaryNav.map(({ id, label, icon: Icon }) => (
               <button
-                key={label}
+                key={id}
                 type="button"
                 onClick={() => {
-                  setActiveTab('discover');
+                  setActiveTab(id);
                   const mainEl = document.querySelector('main');
                   if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'instant' });
                 }}
-                className="flex w-full items-center gap-3 rounded-full px-3 py-2 text-left text-neutral-600 transition hover:bg-[#f8f6f3] hover:text-neutral-950 cursor-pointer"
+                className={`flex w-full items-center gap-3 rounded-full px-3 py-2 text-left transition cursor-pointer ${
+                  activeTab === id
+                    ? 'bg-[#5E43F3]/10 text-[#5E43F3]'
+                    : 'text-neutral-600 hover:bg-[#f8f6f3] hover:text-neutral-950'
+                }`}
               >
                 <Icon className="h-4 w-4 stroke-[1.8]" />
                 <span className="text-[14px] font-medium">{label}</span>

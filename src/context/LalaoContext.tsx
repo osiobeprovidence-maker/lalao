@@ -38,7 +38,16 @@ import {
   KNOWN_LOCATION_HUBS,
 } from '../utils/locationUtils';
 
-export type NavTab = 'home' | 'discover' | 'create' | 'messages' | 'notifications' | 'profile';
+export type NavTab =
+  | 'home'
+  | 'discover'
+  | 'create'
+  | 'messages'
+  | 'notifications'
+  | 'profile'
+  | 'following'
+  | 'saved'
+  | 'liked';
 export type FeedTab = 'for_you' | 'following' | 'nearby';
 export type CreateOption = 'post' | 'rally' | 'page' | 'cycle' | null;
 
