@@ -111,11 +111,12 @@ interface LalaoContextType {
   openCycleStory: (cycleId: string, itemIndex?: number) => void;
   closeCycleStory: () => void;
   postCycleStory: (data: {
-    mediaType: 'image' | 'video' | 'text';
+    mediaType: 'image' | 'video' | 'audio' | 'text';
     mediaUrl?: string;
     text?: string;
     backgroundColor?: string;
     caption?: string;
+    audience?: 'community' | 'nearby' | 'friends';
     location?: string;
   }) => void;
   reactToCycleStory: (cycleId: string, itemId: string, emoji: string) => void;
@@ -1716,13 +1717,15 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     text,
     backgroundColor,
     caption,
+    audience,
     location: storyLoc,
   }: {
-    mediaType: 'image' | 'video' | 'text';
+    mediaType: 'image' | 'video' | 'audio' | 'text';
     mediaUrl?: string;
     text?: string;
     backgroundColor?: string;
     caption?: string;
+    audience?: 'community' | 'nearby' | 'friends';
     location?: string;
   }) => {
     const newItem: CycleStoryItem = {
@@ -1732,6 +1735,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       text,
       backgroundColor: backgroundColor || 'from-violet-600 to-indigo-700',
       caption,
+      audience,
       createdAt: 'Just now',
       timeRemaining: '24h left',
       location: storyLoc || location.name,

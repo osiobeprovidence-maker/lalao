@@ -396,11 +396,12 @@ export interface CycleStoryReply {
 export interface CycleStoryItem {
   id: string;
   mediaUrl?: string;
-  mediaType: 'image' | 'video' | 'text';
+  mediaType: 'image' | 'video' | 'audio' | 'text';
   text?: string;
   backgroundColor?: string;
   textColor?: string;
   caption?: string;
+  audience?: 'community' | 'nearby' | 'friends';
   createdAt: string;
   timeRemaining?: string; // e.g. "18h left"
   location: string;

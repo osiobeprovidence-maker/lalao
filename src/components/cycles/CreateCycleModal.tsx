@@ -41,39 +41,6 @@ const BG_GRADIENTS = [
   { id: 'slate', label: 'Dark Midnight', value: 'from-neutral-800 to-neutral-950' },
 ];
 
-const GALLERY_ITEMS = [
-  {
-    type: 'image',
-    url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop&q=80',
-    label: 'Udu Riverside Sunset',
-  },
-  {
-    type: 'image',
-    url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&auto=format&fit=crop&q=80',
-    label: 'Local Cafe & Pastry',
-  },
-  {
-    type: 'image',
-    url: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&auto=format&fit=crop&q=80',
-    label: 'DSC Kickabout Pitch',
-  },
-  {
-    type: 'image',
-    url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80',
-    label: 'Local Banga Kitchen',
-  },
-  {
-    type: 'video',
-    url: 'https://assets.mixkit.co/videos/preview/mixkit-aerial-view-of-city-traffic-at-night-41528-large.mp4',
-    label: 'City Night Traffic',
-  },
-  {
-    type: 'image',
-    url: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=80',
-    label: 'Community Hangout',
-  },
-];
-
 const FONTS_LIST = [
   { id: 'sans', name: 'Clean Sans', className: 'font-sans' },
   { id: 'serif', name: 'Editorial Serif', className: 'font-serif' },
@@ -93,17 +60,28 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
 
   const [step, setStep] = useState<CreateStep>('choose');
   const [contentType, setContentType] = useState<ContentType>('photo');
-  const [selectedMedia, setSelectedMedia] = useState(GALLERY_ITEMS[0].url);
+  const [selectedMedia, setSelectedMedia] = useState<string>('');
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
-  const [textContent, setTextContent] = useState('Good vibes only ✨');
+  const [textContent, setTextContent] = useState('');
   const [selectedGradient, setSelectedGradient] = useState(BG_GRADIENTS[0].value);
   const [selectedFont, setSelectedFont] = useState(FONTS_LIST[0].className);
   const [selectedAudio, setSelectedAudio] = useState<string | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioError, setAudioError] = useState<string | null>(null);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
-  const [activeStickers, setActiveStickers] = useState<string[]>(['✨']);
+  const [selectedAudience, setSelectedAudience] = useState<'community' | 'nearby' | 'friends'>('community');
+  const [isAudienceSheetOpen, setIsAudienceSheetOpen] = useState(false);
+  const [activeStickers, setActiveStickers] = useState<string[]>([]);
   const [galleryTab, setGalleryTab] = useState<'photos' | 'videos'>('photos');
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -125,27 +103,135 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
     }
   };
 
+  const resetAudioRecording = () => {
+    setAudioUrl(null);
+    setAudioError(null);
+    setRecordingSeconds(0);
+    setIsRecordingVoice(false);
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
+    if (audioTimerRef.current) {
+      window.clearInterval(audioTimerRef.current);
+      audioTimerRef.current = null;
+    }
+  };
+
   const handleCameraCapture = () => {
     if (permissions.camera !== 'granted') {
       setActivePermissionPrompt('camera');
       return;
     }
-    setSelectedMedia('https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=80');
-    setMediaType('image');
-    triggerShareToast('Camera snapshot captured!');
-    setStep('customize');
+    photoInputRef.current?.click();
+  };
+
+  const handleVideoCapture = () => {
+    if (permissions.camera !== 'granted') {
+      setActivePermissionPrompt('camera');
+      return;
+    }
+    videoInputRef.current?.click();
+  };
+
+  const handleMediaFileSelected = (file: File | null, kind: 'photo' | 'video') => {
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    if (kind === 'photo') {
+      setSelectedMedia(url);
+      setMediaType('image');
+      setContentType('photo');
+      setStep('customize');
+      triggerShareToast('Photo attached to your status.');
+    } else {
+      setSelectedMedia(url);
+      setMediaType('video');
+      setContentType('video');
+      setStep('customize');
+      triggerShareToast('Video attached to your status.');
+    }
+  };
+
+  const handleStartAudioRecording = async () => {
+    if (permissions.microphone !== 'granted') {
+      setActivePermissionPrompt('microphone');
+      return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setAudioError('Microphone recording is not supported in this browser.');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      audioChunksRef.current = [];
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const nextUrl = URL.createObjectURL(blob);
+        setAudioUrl(nextUrl);
+        setSelectedAudio('Voice note');
+        setAudioError(null);
+        setIsRecordingVoice(false);
+        setRecordingSeconds(0);
+        if (mediaStreamRef.current) {
+          mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+          mediaStreamRef.current = null;
+        }
+        if (audioTimerRef.current) window.clearInterval(audioTimerRef.current);
+        setStep('customize');
+        setContentType('audio');
+        triggerShareToast('Audio recording ready to post.');
+      };
+
+      recorder.start();
+      setAudioError(null);
+      setIsRecordingVoice(true);
+      setRecordingSeconds(0);
+      let elapsed = 0;
+      audioTimerRef.current = window.setInterval(() => {
+        elapsed += 1;
+        setRecordingSeconds(elapsed);
+      }, 1000);
+    } catch (error) {
+      setAudioError('Microphone access was denied or unavailable. Please allow mic access and try again.');
+      setIsRecordingVoice(false);
+    }
+  };
+
+  const handleStopAudioRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecordingVoice(false);
   };
 
   const handlePublish = () => {
+    const finalMediaType: 'image' | 'video' | 'audio' | 'text' =
+      contentType === 'audio' ? 'audio' : contentType === 'text' ? 'text' : mediaType;
+
     postCycleStory({
-      mediaType: contentType === 'text' ? 'text' : mediaType,
+      mediaType: finalMediaType,
       text: contentType === 'text' || textContent ? textContent : undefined,
       backgroundColor: contentType === 'text' ? selectedGradient : undefined,
-      mediaUrl: contentType !== 'text' ? selectedMedia : undefined,
-      caption: textContent,
+      mediaUrl: contentType !== 'text' && contentType !== 'audio' ? selectedMedia : audioUrl || undefined,
+      caption: textContent || undefined,
+      audience: selectedAudience,
       location: location.name,
     });
     triggerShareToast('Status published to your 24h Cycle!');
+    resetAudioRecording();
     onClose();
   };
 
@@ -207,6 +293,31 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
         )}
       </div>
 
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleMediaFileSelected(file, 'photo');
+          e.target.value = '';
+        }}
+      />
+      <input
+        ref={videoInputRef}
+        type="file"
+        accept="video/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleMediaFileSelected(file, 'video');
+          e.target.value = '';
+        }}
+      />
+
       <div className="flex-1 max-w-xl mx-auto w-full p-4 sm:p-6 pb-24 flex flex-col justify-center">
         {/* ========================================================
            STEP 2: CHOOSE WHAT TO POST (Photo, Video, Text, Voice)
@@ -222,62 +333,135 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-2">
-              {/* Photo Card */}
-              <div
-                onClick={() => handleSelectContentType('photo')}
-                className="p-5 rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 active:scale-98 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-3 shadow-xl border border-blue-400/30 group"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white group-hover:scale-110 transition-transform">
-                  <ImageIcon className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-white">Photo</h4>
-                  <p className="text-[11px] text-blue-100/80 mt-0.5">Select gallery or camera</p>
-                </div>
+                <div className="space-y-3 pt-2">
+              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/80 p-3">
+                <label className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-400">Write your status</label>
+                <textarea
+                  value={textContent}
+                  onChange={(e) => setTextContent(e.target.value)}
+                  placeholder="Write your status..."
+                  rows={4}
+                  className="mt-2 w-full resize-none border-0 bg-transparent text-base text-white placeholder:text-neutral-500 focus:outline-none"
+                />
               </div>
 
-              {/* Video Card */}
-              <div
-                onClick={() => handleSelectContentType('video')}
-                className="p-5 rounded-3xl bg-gradient-to-br from-purple-600 to-fuchsia-700 hover:from-purple-500 hover:to-fuchsia-600 active:scale-98 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-3 shadow-xl border border-purple-400/30 group"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white group-hover:scale-110 transition-transform">
-                  <VideoIcon className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-white">Video</h4>
-                  <p className="text-[11px] text-purple-100/80 mt-0.5">Choose video clip</p>
-                </div>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-neutral-800 bg-neutral-900/80 p-3 text-neutral-200 transition hover:border-[#5E43F3] hover:bg-[#5E43F3]/10"
+                >
+                  <ImageIcon className="h-5 w-5 text-[#5E43F3]" />
+                  <span className="text-xs font-semibold">Add Photo</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => videoInputRef.current?.click()}
+                  className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-neutral-800 bg-neutral-900/80 p-3 text-neutral-200 transition hover:border-[#5E43F3] hover:bg-[#5E43F3]/10"
+                >
+                  <VideoIcon className="h-5 w-5 text-[#5E43F3]" />
+                  <span className="text-xs font-semibold">Add Video</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={isRecordingVoice ? handleStopAudioRecording : handleStartAudioRecording}
+                  className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-neutral-800 bg-neutral-900/80 p-3 text-neutral-200 transition hover:border-[#5E43F3] hover:bg-[#5E43F3]/10"
+                >
+                  <Mic className={`h-5 w-5 ${isRecordingVoice ? 'text-rose-500' : 'text-[#5E43F3]'}`} />
+                  <span className="text-xs font-semibold">{isRecordingVoice ? 'Stop' : 'Record'}</span>
+                </button>
               </div>
 
-              {/* Text Card */}
-              <div
-                onClick={() => handleSelectContentType('text')}
-                className="p-5 rounded-3xl bg-gradient-to-br from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 active:scale-98 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-3 shadow-xl border border-emerald-400/30 group"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white group-hover:scale-110 transition-transform">
-                  <Type className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-white">Text Status</h4>
-                  <p className="text-[11px] text-emerald-100/80 mt-0.5">Custom gradient background</p>
-                </div>
-              </div>
+              {audioError && (
+                <div className="rounded-2xl border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-200">{audioError}</div>
+              )}
 
-              {/* Voice Card */}
-              <div
-                onClick={() => handleSelectContentType('voice')}
-                className="p-5 rounded-3xl bg-gradient-to-br from-rose-600 to-pink-700 hover:from-rose-500 hover:to-pink-600 active:scale-98 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-3 shadow-xl border border-rose-400/30 group"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white group-hover:scale-110 transition-transform">
-                  <Mic className="w-6 h-6" />
+              {audioUrl && (
+                <div className="rounded-2xl border border-neutral-800 bg-neutral-900/80 p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">Audio preview</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAudioUrl(null);
+                        setSelectedAudio(null);
+                        setContentType('text');
+                      }}
+                      className="text-xs font-semibold text-neutral-400 hover:text-white"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <audio controls src={audioUrl} className="w-full" />
                 </div>
-                <div>
-                  <h4 className="font-bold text-sm text-white">Voice & Audio</h4>
-                  <p className="text-[11px] text-rose-100/80 mt-0.5">Record voice or add music</p>
+              )}
+
+              {selectedMedia && (
+                <div className="rounded-2xl overflow-hidden border border-neutral-800 bg-neutral-900/80 p-2">
+                  {mediaType === 'video' ? (
+                    <video src={selectedMedia} controls className="h-48 w-full rounded-xl object-cover" />
+                  ) : (
+                    <img src={selectedMedia} alt="Status media" className="h-48 w-full rounded-xl object-cover" />
+                  )}
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMedia('')}
+                      className="text-xs font-semibold text-neutral-400 hover:text-white"
+                    >
+                      Remove media
+                    </button>
+                  </div>
                 </div>
+              )}
+
+              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/80 p-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAudienceSheetOpen((prev) => !prev)}
+                  className="flex w-full items-center justify-between text-left"
+                >
+                  <span className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-400">Audience</span>
+                  <span className="text-sm font-semibold text-white">{selectedAudience}</span>
+                </button>
+                {isAudienceSheetOpen && (
+                  <div className="mt-3 space-y-2">
+                    {(['community', 'nearby', 'friends'] as const).map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => {
+                          setSelectedAudience(option);
+                          setIsAudienceSheetOpen(false);
+                        }}
+                        className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-sm ${selectedAudience === option ? 'border-[#5E43F3] bg-[#5E43F3]/10 text-white' : 'border-neutral-700 bg-neutral-900 text-neutral-300'}`}
+                      >
+                        <span className="capitalize">{option}</span>
+                        {selectedAudience === option && <Check className="h-4 w-4 text-[#5E43F3]" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <button
+                type="button"
+                onClick={() => setStep('preview')}
+                className="rounded-full bg-[#5E43F3] px-4 py-2 text-sm font-bold text-white"
+              >
+                Review status
+              </button>
+              <button
+                type="button"
+                onClick={handlePublish}
+                className="rounded-full bg-white px-4 py-2 text-sm font-bold text-neutral-900"
+              >
+                Post Status
+              </button>
             </div>
 
             <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 text-center">
@@ -293,7 +477,6 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
            ======================================================== */}
         {step === 'gallery' && (
           <div className="space-y-4 animate-in fade-in">
-            {/* Gallery Top Tabs */}
             <div className="flex items-center justify-between">
               <div className="flex p-1 bg-neutral-900 rounded-xl border border-neutral-800">
                 <button
@@ -316,72 +499,47 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
                 </button>
               </div>
 
-              {/* Upload Custom File button */}
               <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-bold text-neutral-300 cursor-pointer">
                 <Upload className="w-3.5 h-3.5 text-[#5E43F3]" />
                 <span>Upload file</span>
                 <input
                   type="file"
-                  accept="image/*,video/*"
+                  accept={galleryTab === 'videos' ? 'video/*' : 'image/*'}
+                  capture={galleryTab === 'videos' ? 'environment' : undefined}
                   onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) {
-                      const r = new FileReader();
-                      r.onload = (evt) => {
-                        if (evt.target?.result) {
-                          setSelectedMedia(evt.target.result as string);
-                          setMediaType(f.type.startsWith('video') ? 'video' : 'image');
-                          setStep('customize');
-                        }
-                      };
-                      r.readAsDataURL(f);
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleMediaFileSelected(file, galleryTab === 'videos' ? 'video' : 'photo');
                     }
+                    e.target.value = '';
                   }}
                   className="hidden"
                 />
               </label>
             </div>
 
-            {/* Gallery Grid including Camera tile first */}
-            <div className="grid grid-cols-3 gap-2.5 pt-2">
-              {/* Camera Snapshot Tile */}
-              <div
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                type="button"
                 onClick={handleCameraCapture}
-                className="aspect-square rounded-2xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors group"
+                className="flex aspect-[4/3] flex-col items-center justify-center gap-2 rounded-2xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 transition-colors cursor-pointer"
               >
-                <div className="w-10 h-10 rounded-full bg-[#5E43F3]/20 flex items-center justify-center text-[#5E43F3] group-hover:scale-110 transition-transform">
-                  <Camera className="w-5 h-5" />
-                </div>
-                <span className="text-[11px] font-bold text-neutral-300">Camera</span>
-              </div>
+                <Camera className="h-6 w-6 text-[#5E43F3]" />
+                <span className="text-xs font-bold">Camera</span>
+              </button>
 
-              {/* Gallery Items */}
-              {GALLERY_ITEMS.filter((item) => (galleryTab === 'photos' ? item.type === 'image' : item.type === 'video')).map(
-                (item, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => {
-                      setSelectedMedia(item.url);
-                      setMediaType(item.type === 'video' ? 'video' : 'image');
-                      setStep('customize');
-                    }}
-                    className={`aspect-square rounded-2xl overflow-hidden relative cursor-pointer border-2 transition-all ${
-                      selectedMedia === item.url ? 'border-[#5E43F3] scale-98 shadow-lg' : 'border-transparent hover:opacity-90'
-                    }`}
-                  >
-                    {item.type === 'video' ? (
-                      <video src={item.url} className="w-full h-full object-cover" muted />
-                    ) : (
-                      <img src={item.url} alt={item.label} className="w-full h-full object-cover" />
-                    )}
-                    {selectedMedia === item.url && (
-                      <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-[#5E43F3] text-white flex items-center justify-center shadow-md">
-                        <Check className="w-3 h-3 stroke-[3]" />
-                      </div>
-                    )}
-                  </div>
-                )
-              )}
+              <button
+                type="button"
+                onClick={handleVideoCapture}
+                className="flex aspect-[4/3] flex-col items-center justify-center gap-2 rounded-2xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 transition-colors cursor-pointer"
+              >
+                <VideoIcon className="h-6 w-6 text-[#5E43F3]" />
+                <span className="text-xs font-bold">Video Camera</span>
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-dashed border-neutral-700 bg-neutral-900/60 p-4 text-center text-xs text-neutral-400">
+              Choose a file from your device, or use the camera option above. No fake gallery content is used.
             </div>
           </div>
         )}
@@ -525,15 +683,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
             <div className="p-5 rounded-3xl bg-neutral-900 border border-neutral-800 flex flex-col items-center justify-center gap-3">
               <button
                 type="button"
-                onClick={() => {
-                  setIsRecordingVoice(!isRecordingVoice);
-                  if (!isRecordingVoice) {
-                    triggerShareToast('Recording voice note...');
-                  } else {
-                    setSelectedAudio('Voice Note (0:12)');
-                    triggerShareToast('Voice note attached!');
-                  }
-                }}
+                onClick={isRecordingVoice ? handleStopAudioRecording : handleStartAudioRecording}
                 className={`w-16 h-16 rounded-full flex items-center justify-center text-white transition-all cursor-pointer shadow-lg ${
                   isRecordingVoice ? 'bg-rose-600 animate-pulse scale-110' : 'bg-[#5E43F3] hover:bg-[#4E34E0]'
                 }`}
@@ -541,9 +691,22 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
                 <Mic className="w-8 h-8" />
               </button>
               <span className="text-xs font-bold text-neutral-300">
-                {isRecordingVoice ? 'Recording... Tap to stop' : 'Tap to record voice message'}
+                {isRecordingVoice ? `Recording... ${recordingSeconds}s` : 'Tap to record voice message'}
               </span>
+              {audioError && (
+                <span className="text-xs text-red-300">{audioError}</span>
+              )}
             </div>
+
+            {audioUrl && (
+              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/80 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">Audio preview</span>
+                  <button type="button" onClick={() => setAudioUrl(null)} className="text-xs font-semibold text-neutral-400 hover:text-white">Remove</button>
+                </div>
+                <audio controls src={audioUrl} className="w-full" />
+              </div>
+            )}
 
             {/* Trending Music Tracks */}
             <div className="space-y-2">
