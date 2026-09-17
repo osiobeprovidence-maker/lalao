@@ -1,26 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   X,
-  Sparkles,
   Image as ImageIcon,
   Video as VideoIcon,
-  Type,
   Mic,
-  Clock,
   Check,
   Upload,
   Camera,
   Music,
-  Smile,
-  Edit3,
-  Sliders,
-  Crop,
   ArrowLeft,
-  Send,
   Share2,
   Volume2,
-  Layers,
   CheckCircle2,
+  Clock,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 
@@ -239,10 +231,10 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
     <div
       ref={containerRef}
       id="create-cycle-fullscreen-wizard"
-      className="fixed inset-0 z-50 bg-neutral-950 flex flex-col min-h-full overflow-y-auto animate-in fade-in duration-200 text-white"
+      className="fixed inset-0 z-50 bg-[#f6f3ee] text-neutral-900 flex flex-col min-h-full overflow-y-auto animate-in fade-in duration-200"
     >
       {/* Top Header */}
-      <div className="sticky top-0 z-30 bg-neutral-950/90 backdrop-blur-md border-b border-neutral-800 px-4 py-3.5 flex items-center justify-between shrink-0">
+      <div className="sticky top-0 z-30 bg-[#f6f3ee]/90 backdrop-blur-md border-b border-neutral-200 px-4 py-3.5 flex items-center justify-between shrink-0">
         <button
           type="button"
           onClick={() => {
@@ -251,15 +243,14 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
             else if (step === 'audio') setStep('customize');
             else if (step === 'preview') setStep('customize');
           }}
-          className="flex items-center gap-1.5 text-xs font-semibold text-neutral-400 hover:text-white transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 text-xs font-semibold text-neutral-600 hover:text-neutral-950 transition-colors cursor-pointer"
         >
           {step !== 'choose' && <ArrowLeft className="w-4 h-4" />}
           <span>{step === 'choose' ? 'Cancel' : 'Back'}</span>
         </button>
 
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-[#5E43F3] to-fuchsia-500 animate-pulse" />
-          <h3 className="font-bold text-sm sm:text-base text-white">
+          <h3 className="font-bold text-sm sm:text-base text-neutral-950">
             {step === 'choose' && 'Create Status'}
             {step === 'gallery' && 'Select from Gallery'}
             {step === 'customize' && 'Customize & Edit'}
@@ -464,11 +455,6 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
               </button>
             </div>
 
-            <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 text-center">
-              <p className="text-xs text-neutral-400">
-                ⚡ Status updates are shared with your community and disappear automatically after 24 hours.
-              </p>
-            </div>
           </div>
         )}
 

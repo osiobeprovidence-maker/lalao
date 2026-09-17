@@ -30,6 +30,10 @@ export const CycleDetailModal: React.FC = () => {
   const cycle = cycles.find((c) => c.id === activeCycleId);
   if (!cycle) return null;
 
+  const cycleMessages = cycle.messages ?? [];
+  const cycleMembers = cycle.members ?? [];
+  const memberCount = cycle.memberCount ?? cycleMembers.length ?? 0;
+
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
@@ -64,7 +68,7 @@ export const CycleDetailModal: React.FC = () => {
             <div className="min-w-0">
               <h3 className="font-bold text-sm text-neutral-900 truncate">{cycle?.name}</h3>
               <p className="text-xs text-neutral-500 truncate">
-                {cycle?.memberCount} members · {cycle?.location}
+                {memberCount} members · {cycle?.location}
               </p>
             </div>
           </div>
@@ -100,7 +104,7 @@ export const CycleDetailModal: React.FC = () => {
               }`}
             >
               <Users className="w-3.5 h-3.5" />
-              Members ({cycle.memberCount})
+              Members ({memberCount})
             </button>
           </div>
 
@@ -137,8 +141,8 @@ export const CycleDetailModal: React.FC = () => {
 
             {/* Messages Feed */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {cycle.messages.length > 0 ? (
-                cycle.messages.map((msg) => (
+              {cycleMessages.length > 0 ? (
+                cycleMessages.map((msg) => (
                   <div
                     key={msg.id}
                     className={`flex items-start gap-2.5 ${
@@ -221,7 +225,7 @@ export const CycleDetailModal: React.FC = () => {
         ) : (
           /* Members Tab */
           <div className="flex-1 overflow-y-auto p-4 divide-y divide-neutral-100">
-            {cycle.members && cycle.members.map((member) => (
+            {cycleMembers.map((member) => (
               <div key={member.id} className="py-2.5 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <Avatar src={member?.avatar} alt={member?.name || 'Member'} size="sm" />

@@ -1,16 +1,7 @@
 @import "tailwindcss";
 
-@font-face {
-  font-family: 'Lalao Sans';
-  src: url('/fonts/lalao-sans.woff2') format('woff2'),
-       url('/fonts/lalao-sans.woff') format('woff');
-  font-weight: 400 800;
-  font-style: normal;
-  font-display: swap;
-}
-
 :root {
-  --font-lalao: 'Lalao Sans', 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+  --font-lalao: 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif;
 }
 
 @layer base {

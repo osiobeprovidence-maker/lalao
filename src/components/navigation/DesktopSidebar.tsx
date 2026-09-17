@@ -8,10 +8,9 @@ import {
   LogOut,
   MessageCircle,
   Plus,
-  Settings,
   ShoppingBag,
-  Sparkles,
   User as UserIcon,
+  Users,
   Wallet,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
@@ -106,7 +105,7 @@ export const DesktopSidebar: React.FC = () => {
   ] as const;
 
   const secondaryNav = [
-    { label: 'Following', icon: Sparkles },
+    { label: 'Following', icon: Users },
     { label: 'Saved', icon: Bookmark },
     { label: 'Liked', icon: Heart },
   ];
@@ -222,6 +221,11 @@ export const DesktopSidebar: React.FC = () => {
               <button
                 key={label}
                 type="button"
+                onClick={() => {
+                  setActiveTab('discover');
+                  const mainEl = document.querySelector('main');
+                  if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'instant' });
+                }}
                 className="flex w-full items-center gap-3 rounded-full px-3 py-2 text-left text-neutral-600 transition hover:bg-[#f8f6f3] hover:text-neutral-950 cursor-pointer"
               >
                 <Icon className="h-4 w-4 stroke-[1.8]" />
@@ -251,15 +255,6 @@ export const DesktopSidebar: React.FC = () => {
           </button>
 
           <div className="mt-2 flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setIsEditProfileOpen(true)}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-500 transition hover:bg-[#f8f6f3] hover:text-neutral-900 cursor-pointer"
-              aria-label="Edit profile"
-              title="Edit profile"
-            >
-              <Settings className="h-4 w-4" />
-            </button>
             <button
               type="button"
               onClick={async () => {
