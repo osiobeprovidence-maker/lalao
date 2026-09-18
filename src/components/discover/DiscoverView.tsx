@@ -11,7 +11,11 @@ import {
   SlidersHorizontal,
   Compass,
   Heart,
+  Flame,
+  UserPlus,
+  Check,
   Play,
+  Plus,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
@@ -41,6 +45,7 @@ export const DiscoverView: React.FC = () => {
     posts,
     setIsNotificationsOpen,
     unreadNotifsCount,
+    toggleFollowUser,
   } = useLalao();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -62,27 +67,8 @@ export const DiscoverView: React.FC = () => {
     filter: activeFilter,
   });
 
-  const [people, setPeople] = useState<User[]>([]);
-
-  useEffect(() => {
-    setPeople(users || []);
-  }, [users]);
-
-  const toggleFollowUser = (userId: string) => {
-    setPeople((prev) =>
-      prev.map((user) => {
-        if (user.id === userId) {
-          const isFollowing = !user.isFollowing;
-          return {
-            ...user,
-            isFollowing,
-            followersCount: isFollowing ? user.followersCount + 1 : user.followersCount - 1,
-          };
-        }
-        return user;
-      })
-    );
-  };
+  // Removed local toggleFollowUser and people state.
+  // Using global toggleFollowUser and users from context.
 
   const trendingTopics = useMemo(() => {
     const topicMap = new Map<string, { count: number; location: string }>();
@@ -120,16 +106,38 @@ export const DiscoverView: React.FC = () => {
   const maxRadiusMeters = location.radiusKm * 1000;
 
   // Compute distance for people
-  const peopleWithDistance = useMemo(() => {
-    return people.map((person) => {
-      const coords =
-        person.latitude && person.longitude
-          ? { lat: person.latitude, lng: person.longitude }
-          : getCoordinatesForLocation(person.location || person.name);
-      const dist = calculateDistanceMeters(userCoords.lat, userCoords.lng, coords.lat, coords.lng);
-      return { ...person, distanceMeters: dist };
-    });
-  }, [people, userCoords]);
+  const nearbyPeople = useMemo(() => {
+    if (!users || !location) return [];
+
+    const userCoords = getCoordinatesForLocation(location.name);
+    if (!userCoords) return [];
+
+    return users
+      .filter((user) => user.id !== currentUser.id)
+      .map((user) => {
+        if (!user.latitude || !user.longitude) return null;
+        const distance = calculateDistanceMeters(
+          userCoords.lat,
+          userCoords.lng,
+          user.latitude,
+          user.longitude
+        );
+        return { ...user, distanceMeters: distance };
+      })
+      .filter((user): user is User & { distanceMeters: number } => user !== null && user.distanceMeters <= maxRadiusMeters)
+      .sort((a, b) => a.distanceMeters - b.distanceMeters);
+  }, [users, location, currentUser.id, maxRadiusMeters]);
+
+  const filteredPeople = useMemo(() => {
+    return nearbyPeople
+      .filter((p) => {
+        if (nearbyOnly) {
+          return p.distanceMeters <= maxRadiusMeters;
+        }
+        return true;
+      })
+      .sort((a, b) => a.distanceMeters - b.distanceMeters);
+  }, [nearbyPeople, nearbyOnly, maxRadiusMeters]);
 
   // Filtered lists based on discovery radius
   const filteredPages = useMemo(() => {
@@ -142,17 +150,6 @@ export const DiscoverView: React.FC = () => {
       })
       .sort((a, b) => (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0));
   }, [pages, nearbyOnly, maxRadiusMeters]);
-
-  const filteredPeople = useMemo(() => {
-    return peopleWithDistance
-      .filter((p) => {
-        if (nearbyOnly) {
-          return p.distanceMeters <= maxRadiusMeters;
-        }
-        return true;
-      })
-      .sort((a, b) => a.distanceMeters - b.distanceMeters);
-  }, [peopleWithDistance, nearbyOnly, maxRadiusMeters]);
 
   const nearbyPosts = useMemo(() => {
     return posts
@@ -293,13 +290,29 @@ export const DiscoverView: React.FC = () => {
                           </div>
                           <button
                             onClick={() => toggleFollowUser(user.id)}
-                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shrink-0 ml-2 ${
-                              user.isFollowing
+                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shrink-0 ml-2 flex items-center gap-1 ${
+                              user.relationship === 'friends'
+                                ? 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
+                                : user.relationship === 'follower'
+                                ? 'bg-[#5E43F3] hover:bg-[#4E34E0] text-white'
+                                : user.isFollowing
                                 ? 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
                                 : 'bg-neutral-950 text-white hover:bg-neutral-800'
                             }`}
                           >
-                            {user.isFollowing ? 'Following' : 'Follow'}
+                            {user.relationship === 'friends' ? (
+                              <>
+                                Friends <Check className="w-3 h-3" />
+                              </>
+                            ) : user.relationship === 'follower' ? (
+                              <>
+                                Follow Back <UserPlus className="w-3 h-3" />
+                              </>
+                            ) : user.isFollowing ? (
+                              'Following'
+                            ) : (
+                              'Follow'
+                            )}
                           </button>
                         </div>
                       ))}
@@ -440,13 +453,29 @@ export const DiscoverView: React.FC = () => {
                           </div>
                           <button
                             onClick={() => toggleFollowUser(user.id)}
-                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shrink-0 ml-2 ${
-                              user.isFollowing
+                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shrink-0 ml-2 flex items-center gap-1 ${
+                              user.relationship === 'friends'
+                                ? 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
+                                : user.relationship === 'follower'
+                                ? 'bg-[#5E43F3] hover:bg-[#4E34E0] text-white'
+                                : user.isFollowing
                                 ? 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
                                 : 'bg-neutral-950 text-white hover:bg-neutral-800'
                             }`}
                           >
-                            {user.isFollowing ? 'Following' : 'Follow'}
+                            {user.relationship === 'friends' ? (
+                              <>
+                                Friends <Check className="w-3 h-3" />
+                              </>
+                            ) : user.relationship === 'follower' ? (
+                              <>
+                                Follow Back <UserPlus className="w-3 h-3" />
+                              </>
+                            ) : user.isFollowing ? (
+                              'Following'
+                            ) : (
+                              'Follow'
+                            )}
                           </button>
                         </div>
                       );

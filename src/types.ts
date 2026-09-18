@@ -16,6 +16,7 @@ export interface User {
   postsCount?: number;
   viewsCount?: number;
   isFollowing?: boolean;
+  relationship?: "none" | "following" | "follower" | "friends";
   isVerified?: boolean;
   mutualInfo?: string;
 }

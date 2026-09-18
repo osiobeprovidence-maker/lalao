@@ -10,6 +10,7 @@ import {
   RotateCw,
   ArrowDown,
   CheckCircle2,
+  UserPlus,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
@@ -20,12 +21,14 @@ export const MessagesView: React.FC = () => {
   const {
     conversations,
     cycles,
+    messageContacts,
     activeChatId,
     setActiveChatId,
     openCycleStory,
     setIsCreateCycleOpen,
     currentUser,
     triggerShareToast,
+    openChatWithUser,
   } = useLalao();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -141,6 +144,14 @@ export const MessagesView: React.FC = () => {
         c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [conversations, searchQuery]);
+
+  const filteredContacts = useMemo(() => {
+    return messageContacts.filter(
+      (c) =>
+        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.username.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [messageContacts, searchQuery]);
 
   const effectiveOffset = isRefreshing ? 54 : pullDistance;
   const isReadyToRelease = pullDistance >= pullThreshold;
@@ -408,6 +419,60 @@ export const MessagesView: React.FC = () => {
             <div className="p-8 text-center text-neutral-400 space-y-2">
               <MessageSquare className="w-8 h-8 mx-auto text-neutral-300" />
               <p className="text-xs font-semibold">No chats found</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Contacts Section */}
+      <div className="pt-3 border-t border-neutral-100">
+        <div className="px-4 mb-1">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-600">
+            Contacts
+          </h2>
+        </div>
+
+        <div className="divide-y divide-neutral-100">
+          {filteredContacts.map((contact) => (
+            <div
+              key={contact.id}
+              onClick={() => openChatWithUser(contact)}
+              className="p-4 flex items-center justify-between hover:bg-neutral-50/70 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <Avatar
+                  src={contact.avatar}
+                  alt={contact.name}
+                  size="md"
+                />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-sm text-neutral-900 truncate">
+                      {contact.name}
+                    </span>
+                    {contact.isVerified && (
+                      <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-[#0095F6] text-white shrink-0">
+                        <Check className="w-2.5 h-2.5 stroke-[3.5]" />
+                      </span>
+                    )}
+                    {contact.badge && <Badge type={contact.badge} />}
+                  </div>
+                  <div className="text-xs text-neutral-500 truncate mt-0.5">
+                    @{contact.username}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0 ml-3">
+                <ChevronRight className="w-4 h-4 text-neutral-300" />
+              </div>
+            </div>
+          ))}
+
+          {filteredContacts.length === 0 && (
+            <div className="p-8 text-center text-neutral-400 space-y-2">
+              <UserPlus className="w-8 h-8 mx-auto text-neutral-300" />
+              <p className="text-xs font-semibold">No contacts found</p>
             </div>
           )}
         </div>

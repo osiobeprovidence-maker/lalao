@@ -79,6 +79,7 @@ interface LalaoContextType {
   pages: Page[];
   cycles: Cycle[];
   conversations: Conversation[];
+  messageContacts: User[];
   notifications: NotificationItem[];
   unreadNotifsCount: number;
   suggestedUsers: User[];
@@ -343,6 +344,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const notificationsQuery = useQuery(api.social.listNotifications);
   const unreadNotifsCountQuery = useQuery(api.social.getUnreadNotificationCount);
   const suggestedUsersQuery = useQuery(api.social.listSuggestedUsers);
+  const messageContactsQuery = useQuery(api.social.getMessageContacts);
   const draftsQuery = useQuery(api.social.listMyDrafts);
 
   const [currentUser, setCurrentUser] = useState<User>(() => {
@@ -372,6 +374,24 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }));
     }
   }, [currentUserQuery, hydratedCurrentUser]);
+
+  useEffect(() => {
+    if (suggestedUsersQuery !== undefined) {
+      setSuggestedUsers(suggestedUsersQuery as User[]);
+    }
+    if (messageContactsQuery !== undefined) {
+      setMessageContacts(messageContactsQuery as User[]);
+    }
+  }, [
+    exploreUsersQuery,
+    feedPostsQuery,
+    pagesQuery,
+    conversationsQuery,
+    notificationsQuery,
+    unreadNotifsCountQuery,
+    suggestedUsersQuery,
+    messageContactsQuery,
+  ]);
 
   useEffect(() => {
     if (exploreUsersQuery) {
@@ -472,9 +492,22 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   const notifications = (notificationsQuery as NotificationItem[]) || [];
-  const unreadNotifsCount = (unreadNotifsCountQuery as number) || 0;
-  const suggestedUsers = (suggestedUsersQuery as User[]) || [];
+  const [unreadNotifsCount, setUnreadNotifsCount] = useState<number>(() => (unreadNotifsCountQuery as number) || 0);
+  const [messageContacts, setMessageContacts] = useState<User[]>([]);
+  const [suggestedUsers, setSuggestedUsers] = useState<User[]>(() => (suggestedUsersQuery as User[]) || []);
   const drafts = (draftsQuery as any[]) || [];
+
+  useEffect(() => {
+    if (unreadNotifsCountQuery !== undefined) {
+      setUnreadNotifsCount((unreadNotifsCountQuery as number) || 0);
+    }
+  }, [unreadNotifsCountQuery]);
+
+  useEffect(() => {
+    if (suggestedUsersQuery !== undefined) {
+      setSuggestedUsers((suggestedUsersQuery as User[]) || []);
+    }
+  }, [suggestedUsersQuery]);
 
   const markAllNotificationsRead = async () => {
     try {
@@ -2247,6 +2280,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         notifications,
         unreadNotifsCount,
         suggestedUsers,
+        messageContacts,
         drafts,
         markAllNotificationsRead,
         saveDraft,

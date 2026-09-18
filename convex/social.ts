@@ -14,6 +14,34 @@ async function getAuthedUser(ctx: any) {
     .unique();
 }
 
+export async function getRelationshipSets(ctx: any, currentUser: any) {
+  const followingIds = new Set<string>();
+  const followerIds = new Set<string>();
+  if (currentUser) {
+    const followsOut = await ctx.db
+      .query("follows")
+      .withIndex("by_follower", (q: any) => q.eq("followerId", currentUser._id))
+      .collect();
+    followsOut.forEach((f: any) => followingIds.add(f.followingId));
+    
+    const followsIn = await ctx.db
+      .query("follows")
+      .withIndex("by_following", (q: any) => q.eq("followingId", currentUser._id))
+      .collect();
+    followsIn.forEach((f: any) => followerIds.add(f.followerId));
+  }
+  return { followingIds, followerIds };
+}
+
+export function resolveRelationship(userId: string, sets: { followingIds: Set<string>, followerIds: Set<string> }): "none" | "following" | "follower" | "friends" {
+  const isFollowing = sets.followingIds.has(userId);
+  const isFollower = sets.followerIds.has(userId);
+  if (isFollowing && isFollower) return "friends";
+  if (isFollowing) return "following";
+  if (isFollower) return "follower";
+  return "none";
+}
+
 /* ─────────────────────────────────────────────────────────────────────────────
    INTERNAL HELPERS
    ───────────────────────────────────────────────────────────────────────────── */
@@ -215,14 +243,7 @@ export const listUsersForExplore = query({
     const currentUser = await getAuthedUser(ctx);
     const allUsers = await ctx.db.query("users").collect();
 
-    let followingIds = new Set<string>();
-    if (currentUser) {
-      const follows = await ctx.db
-        .query("follows")
-        .withIndex("by_follower", (q: any) => q.eq("followerId", currentUser._id))
-        .collect();
-      followingIds = new Set(follows.map((f: any) => f.followingId));
-    }
+    const relSets = await getRelationshipSets(ctx, currentUser);
 
     return allUsers
       .filter((user: any) => !currentUser || user._id !== currentUser._id)
@@ -238,7 +259,8 @@ export const listUsersForExplore = query({
         longitude: user.longitude ?? undefined,
         followersCount: user.followersCount ?? 0,
         followingCount: user.followingCount ?? 0,
-        isFollowing: currentUser ? followingIds.has(user._id) : false,
+        isFollowing: currentUser ? relSets.followingIds.has(user._id) : false,
+        relationship: currentUser ? resolveRelationship(user._id, relSets) : "none",
         isVerified: false,
       }));
   },
@@ -254,12 +276,8 @@ export const listSuggestedUsers = query({
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) return [];
 
-    const follows = await ctx.db
-      .query("follows")
-      .withIndex("by_follower", (q: any) => q.eq("followerId", currentUser._id))
-      .collect();
-
-    const followingIds = new Set<string>(follows.map((f: any) => f.followingId as string));
+    const relSets = await getRelationshipSets(ctx, currentUser);
+    const followingIds = relSets.followingIds;
     followingIds.add(currentUser._id as string);
 
     const allUsers = await ctx.db.query("users").collect();
@@ -289,7 +307,9 @@ export const listSuggestedUsers = query({
         location: user.locationName ?? "",
         followersCount: user.followersCount ?? 0,
         followingCount: user.followingCount ?? 0,
-        isFollowing: false,
+        isFollowing: relSets.followingIds.has(actor._id),
+                relationship: resolveRelationship(actor._id, relSets),
+        relationship: currentUser ? resolveRelationship(user._id, relSets) : "none",
         isVerified: false,
       }));
   },
@@ -349,6 +369,8 @@ export const listConversations = query({
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) return [];
 
+    const relSets = await getRelationshipSets(ctx, currentUser);
+
     const conversations = await ctx.db
       .query("conversations")
       .filter((q: any) =>
@@ -381,7 +403,8 @@ export const listConversations = query({
           userType: otherUser?.userType ?? "person",
           followersCount: otherUser?.followersCount ?? 0,
           followingCount: otherUser?.followingCount ?? 0,
-          isFollowing: false,
+          isFollowing: otherUser ? relSets.followingIds.has(otherUser._id) : false,
+          relationship: otherUser ? resolveRelationship(otherUser._id, relSets) : "none",
         },
         lastMessage: latestMessage?.text ?? "Say hello",
         timestamp: latestMessage
@@ -843,6 +866,8 @@ export const listNotifications = query({
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) return [];
 
+    const relSets = await getRelationshipSets(ctx, currentUser);
+
     const notifs = await ctx.db
       .query("notifications")
       .withIndex("by_recipient", (q: any) => q.eq("recipientId", currentUser._id))
@@ -1007,4 +1032,38 @@ export const deleteDraft = mutation({
     await ctx.db.delete(draftId);
     return { deleted: true };
   },
+});
+
+
+export const getMessageContacts = query({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return [];
+
+    const relSets = await getRelationshipSets(ctx, currentUser);
+    
+    // Friends are the intersection of followingIds and followerIds
+    const friendIds = Array.from(relSets.followingIds).filter(id => relSets.followerIds.has(id));
+
+    const results = [];
+    for (const friendId of friendIds) {
+      const friend = await ctx.db.get(friendId as any);
+      if (friend) {
+        results.push({
+          id: friend._id,
+          name: friend.name ?? "User",
+          username: friend.username ?? "user",
+          avatar: friend.avatarUrl ?? "",
+          userType: friend.userType ?? "person",
+          followersCount: friend.followersCount ?? 0,
+          followingCount: friend.followingCount ?? 0,
+          isFollowing: true,
+          relationship: "friends",
+          isVerified: false,
+        });
+      }
+    }
+    return results;
+  }
 });

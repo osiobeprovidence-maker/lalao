@@ -100,6 +100,35 @@ async function resolvePost(ctx: any, postDoc: any, currentUser: any) {
   };
 }
 
+
+async function getRelationshipSets(ctx: any, currentUser: any) {
+  const followingIds = new Set<string>();
+  const followerIds = new Set<string>();
+  if (currentUser) {
+    const followsOut = await ctx.db
+      .query("follows")
+      .withIndex("by_follower", (q: any) => q.eq("followerId", currentUser._id))
+      .collect();
+    followsOut.forEach((f: any) => followingIds.add(f.followingId));
+    
+    const followsIn = await ctx.db
+      .query("follows")
+      .withIndex("by_following", (q: any) => q.eq("followingId", currentUser._id))
+      .collect();
+    followsIn.forEach((f: any) => followerIds.add(f.followerId));
+  }
+  return { followingIds, followerIds };
+}
+
+function resolveRelationship(userId: string, sets: { followingIds: Set<string>, followerIds: Set<string> }): "none" | "following" | "follower" | "friends" {
+  const isFollowing = sets.followingIds.has(userId);
+  const isFollower = sets.followerIds.has(userId);
+  if (isFollowing && isFollower) return "friends";
+  if (isFollowing) return "following";
+  if (isFollower) return "follower";
+  return "none";
+}
+
 export const globalSearch = query({
   args: {
     query: v.string(),
@@ -107,6 +136,7 @@ export const globalSearch = query({
   },
   handler: async (ctx, args) => {
     const currentUser = await getAuthedUser(ctx);
+    const relSets = await getRelationshipSets(ctx, currentUser);
     const q = args.query.trim();
     if (!q) {
       return { people: [], content: [], pages: [], isEmpty: true };

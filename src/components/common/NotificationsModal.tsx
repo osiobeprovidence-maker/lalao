@@ -416,6 +416,56 @@ export const NotificationsModal: React.FC = () => {
                       {!notif.isRead && (
                         <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0 mt-2 ring-2 ring-rose-200" />
                       )}
+
+                      {/* Action Button (e.g., Follow Back / Friends) */}
+                      {notif.type === 'follow' && (
+                        <div className="shrink-0 ml-1 flex flex-col items-center justify-center">
+                          {notif.actor?.relationship === 'friends' ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (notif.actor) {
+                                  toggleFollowUser(notif.actor.id);
+                                }
+                              }}
+                              className="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all cursor-pointer border border-neutral-300 text-neutral-700 hover:bg-neutral-100 flex items-center gap-1 shadow-xs"
+                            >
+                              Friends <Check className="w-2.5 h-2.5" />
+                            </button>
+                          ) : notif.actor?.relationship === 'follower' ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (notif.actor) {
+                                  toggleFollowUser(notif.actor.id);
+                                }
+                              }}
+                              className="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all cursor-pointer bg-[#5E43F3] text-white hover:bg-[#4E34E0] flex items-center gap-1 shadow-xs"
+                            >
+                              Follow Back <UserPlus className="w-2.5 h-2.5" />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (notif.actor) {
+                                  toggleFollowUser(notif.actor.id);
+                                }
+                              }}
+                              className={`px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                                notif.actor?.isFollowing
+                                  ? 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
+                                  : 'bg-neutral-950 text-white hover:bg-neutral-800'
+                              }`}
+                            >
+                              {notif.actor?.isFollowing ? 'Following' : 'Follow'}
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -470,6 +520,56 @@ export const NotificationsModal: React.FC = () => {
 
                       {!notif.isRead && (
                         <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0 mt-2 ring-2 ring-rose-200" />
+                      )}
+
+                      {/* Action Button (e.g., Follow Back / Friends) */}
+                      {notif.type === 'follow' && (
+                        <div className="shrink-0 ml-1 flex flex-col items-center justify-center">
+                          {notif.actor?.relationship === 'friends' ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (notif.actor) {
+                                  toggleFollowUser(notif.actor.id);
+                                }
+                              }}
+                              className="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all cursor-pointer border border-neutral-300 text-neutral-700 hover:bg-neutral-100 flex items-center gap-1 shadow-xs"
+                            >
+                              Friends <Check className="w-2.5 h-2.5" />
+                            </button>
+                          ) : notif.actor?.relationship === 'follower' ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (notif.actor) {
+                                  toggleFollowUser(notif.actor.id);
+                                }
+                              }}
+                              className="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all cursor-pointer bg-[#5E43F3] text-white hover:bg-[#4E34E0] flex items-center gap-1 shadow-xs"
+                            >
+                              Follow Back <UserPlus className="w-2.5 h-2.5" />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (notif.actor) {
+                                  toggleFollowUser(notif.actor.id);
+                                }
+                              }}
+                              className={`px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                                notif.actor?.isFollowing
+                                  ? 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
+                                  : 'bg-neutral-950 text-white hover:bg-neutral-800'
+                              }`}
+                            >
+                              {notif.actor?.isFollowing ? 'Following' : 'Follow'}
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   ))}
