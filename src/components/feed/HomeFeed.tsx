@@ -32,6 +32,7 @@ export const HomeFeed: React.FC = () => {
     nearbySort,
     setNearbySort,
     triggerShareToast,
+    isFeedLoading,
   } = useLalao();
 
   // Pull to refresh state
@@ -472,7 +473,11 @@ export const HomeFeed: React.FC = () => {
       )}
 
       {/* Posts Stream */}
-      {filteredPosts.length > 0 ? (
+      {isFeedLoading ? (
+        <div className="flex justify-center p-8 pt-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#5E43F3]"></div>
+        </div>
+      ) : filteredPosts.length > 0 ? (
         <div className="divide-y divide-neutral-100">
           {filteredPosts.map((post) => (
             <PostItem key={post.id} post={post} />

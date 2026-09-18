@@ -494,12 +494,30 @@ export type NotificationType = 'follow' | 'like' | 'reply' | 'rally_join' | 'pag
 export interface NotificationItem {
   id: string;
   type: NotificationType;
-  actor: User;
+  actor: User | null;
   text: string;
   timestamp: string;
+  createdAt?: number;
   isRead: boolean;
-  targetExcerpt?: string;
-  targetId?: string;
+  targetExcerpt?: string | null;
+  targetId?: string | null;
+}
+
+export interface Draft {
+  _id: string;
+  _creationTime: number;
+  authorId: string;
+  text: string;
+  mediaUrl?: string;
+  mediaType?: 'image' | 'video';
+  audience?: PostAudience;
+  replyPermission?: PostReplyPermission;
+  gifUrl?: string;
+  pollQuestion?: string;
+  pollOptions?: string[];
+  pageRefId?: string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface LocationPrivacySettings {

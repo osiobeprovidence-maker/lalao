@@ -27,95 +27,7 @@ interface SuggestedAccount {
   ringColor?: string;
 }
 
-const INITIAL_SUGGESTIONS: SuggestedAccount[] = [
-  {
-    id: 'sug_monkele',
-    name: 'Monkèlé',
-    username: 'monkele',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
-    isVerified: true,
-    mutualCount: 3,
-    mutualAvatars: [
-      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80',
-    ],
-  },
-  {
-    id: 'sug_veekee',
-    name: 'VEEKEE ...',
-    username: 'veekee_james',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80',
-    isVerified: true,
-    mutualCount: 3,
-    mutualAvatars: [
-      'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80',
-    ],
-  },
-  {
-    id: 'sug_omosebi',
-    name: 'Omosebi ...',
-    username: 'omosebi_live',
-    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80',
-    isVerified: true,
-    mutualCount: 2,
-    mutualAvatars: [
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400&auto=format&fit=crop&q=80',
-    ],
-  },
-  {
-    id: 'sug_lamine',
-    name: 'lamineya...',
-    username: 'lamine_yamal',
-    avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80',
-    isVerified: true,
-    mutualCount: 2,
-    mutualAvatars: [
-      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
-    ],
-  },
-  {
-    id: 'sug_bigbrother',
-    name: 'Big Brot...',
-    username: 'bigbrothernaija',
-    avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&auto=format&fit=crop&q=80',
-    isVerified: true,
-    mutualCount: 4,
-    mutualAvatars: [
-      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
-    ],
-  },
-  {
-    id: 'sug_ishowspeed',
-    name: 'IShowSp...',
-    username: 'ishowspeed',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
-    isVerified: true,
-    mutualCount: 2,
-    mutualAvatars: [
-      'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80',
-    ],
-    ringColor: 'ring-2 ring-amber-400 ring-offset-2',
-  },
-  {
-    id: 'sug_cristiano',
-    name: 'Cristiano...',
-    username: 'cristiano',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
-    isVerified: true,
-    mutualCount: 2,
-    mutualAvatars: [
-      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80',
-    ],
-  },
-];
+
 
 // Verified Badge (Instagram Blue Checkmark)
 const VerifiedBadge: React.FC = () => (
@@ -133,20 +45,36 @@ export const NotificationsModal: React.FC = () => {
     isNotificationsOpen,
     setIsNotificationsOpen,
     notifications,
-    markNotificationsAsRead,
+    markAllNotificationsRead,
     setActiveUserProfile,
     setActiveCommentsPostId,
     setActiveTab,
     permissions,
     setActivePermissionPrompt,
     triggerShareToast,
+    suggestedUsers,
+    toggleFollowUser,
   } = useLalao();
 
-  const [suggestions, setSuggestions] = useState<SuggestedAccount[]>(INITIAL_SUGGESTIONS);
+  const [suggestions, setSuggestions] = useState<SuggestedAccount[]>([]);
   const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
   const [isFeaturedDismissed, setIsFeaturedDismissed] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'suggested' | 'activity'>('all');
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (suggestedUsers) {
+      setSuggestions(suggestedUsers.map(u => ({
+        id: u.id,
+        name: u.name,
+        username: u.username,
+        avatar: u.avatar || '',
+        isVerified: u.isVerified || false,
+        mutualCount: 2,
+        mutualAvatars: [],
+      })));
+    }
+  }, [suggestedUsers]);
 
   useEffect(() => {
     if (isNotificationsOpen) {
@@ -158,6 +86,7 @@ export const NotificationsModal: React.FC = () => {
   if (!isNotificationsOpen) return null;
 
   const handleToggleFollow = (user: SuggestedAccount) => {
+    toggleFollowUser(user.id);
     const nextState = !followingMap[user.id];
     setFollowingMap((prev) => ({ ...prev, [user.id]: nextState }));
     if (nextState) {

@@ -48,6 +48,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [showOptions, setShowOptions] = useState(false);
+  const [showInlineComments, setShowInlineComments] = useState(false);
 
   // Local state for standalone rally likes
   const [standaloneLiked, setStandaloneLiked] = useState(false);
@@ -116,8 +117,12 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
     }
   };
 
+  const isTextOnly = associatedPost && !associatedPost.mediaUrl && !linkedRally;
+
   const handleComment = () => {
-    if (associatedPost) {
+    if (isTextOnly) {
+      setShowInlineComments((prev) => !prev);
+    } else if (associatedPost) {
       setActiveCommentsPostId(associatedPost.id);
     } else if (linkedRally) {
       triggerShareToast('Opening Rally thread...');
@@ -310,40 +315,45 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
           {post?.mediaUrl && !linkedRally && (
             <div className="mt-3 relative rounded-2xl overflow-hidden bg-neutral-900 border border-neutral-200/80 group">
               {post.mediaType === 'video' ? (
-                <div className="relative aspect-video w-full flex items-center justify-center bg-neutral-900">
-                  <img
-                    src={post.mediaUrl}
-                    alt="Video preview"
-                    referrerPolicy="no-referrer"
-                    className={`w-full h-full object-cover transition-opacity ${
-                      isPlaying ? 'opacity-90' : 'opacity-80'
-                    }`}
-                  />
+                <div className="relative aspect-video w-full flex items-center justify-center bg-neutral-900 overflow-hidden">
+                  {isPlaying ? (
+                    <video
+                      src={post.mediaUrl}
+                      autoPlay
+                      muted={isMuted}
+                      loop
+                      playsInline
+                      className="w-full h-full object-cover cursor-pointer"
+                      onClick={() => setIsPlaying(false)}
+                    />
+                  ) : (
+                    <img
+                      src={post.mediaUrl}
+                      alt="Video preview"
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover opacity-80 cursor-pointer"
+                      onClick={() => setIsPlaying(true)}
+                    />
+                  )}
+                  
                   {/* Video Play Overlay */}
-                  <button
-                    id={`btn-play-video-${post.id}`}
-                    onClick={() => setIsPlaying(!isPlaying)}
-                    className="absolute z-10 w-14 h-14 rounded-full bg-black/60 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/80 hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer"
-                    aria-label={isPlaying ? 'Pause video' : 'Play video'}
-                  >
-                    {isPlaying ? (
-                      <Pause className="w-6 h-6 fill-white" />
-                    ) : (
+                  {!isPlaying && (
+                    <button
+                      id={`btn-play-video-${post.id}`}
+                      onClick={() => setIsPlaying(true)}
+                      className="absolute z-10 w-14 h-14 rounded-full bg-black/60 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/80 hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer"
+                      aria-label="Play video"
+                    >
                       <Play className="w-6 h-6 fill-white ml-0.5" />
-                    )}
-                  </button>
-
-                  {/* Playing pill indicator */}
-                  {isPlaying && (
-                    <div className="absolute bottom-3 left-3 bg-black/70 backdrop-blur-md px-2 py-0.5 rounded text-[11px] font-mono text-white flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-                      <span>0:14 / 1:28</span>
-                    </div>
+                    </button>
                   )}
 
                   <button
-                    onClick={() => setIsMuted(!isMuted)}
-                    className="absolute bottom-3 right-3 p-1.5 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsMuted(!isMuted);
+                    }}
+                    className="absolute bottom-3 right-3 p-1.5 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors cursor-pointer z-10"
                   >
                     {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                   </button>
@@ -452,6 +462,55 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
               </div>
             )}
           </div>
+
+          {/* Inline Comments Section for Text-Only Posts */}
+          {showInlineComments && associatedPost && (
+            <div className="mt-4 pt-3 border-t border-neutral-100 animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Write a reply..."
+                  className="flex-1 bg-neutral-100/70 border border-neutral-200 rounded-full px-3.5 py-2 text-xs text-neutral-900 focus:outline-none focus:border-[#5E43F3] focus:bg-white transition-all"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                      // @ts-ignore
+                      if (typeof window !== 'undefined' && window.addCommentToPost) {
+                        // @ts-ignore
+                        window.addCommentToPost(associatedPost.id, e.currentTarget.value.trim());
+                      }
+                      e.currentTarget.value = '';
+                      triggerShareToast('Reply posted');
+                    }
+                  }}
+                />
+              </div>
+              
+              {associatedPost.comments && associatedPost.comments.length > 0 && (
+                <div className="mt-3 space-y-3">
+                  {associatedPost.comments.slice(0, 3).map((c) => (
+                    <div key={c.id} className="flex gap-2">
+                      <Avatar src={c.author.avatar} size="sm" />
+                      <div className="flex-1 min-w-0">
+                        <div className="bg-neutral-100/70 rounded-2xl px-3.5 py-2 text-xs inline-block max-w-full">
+                          <span className="font-bold text-neutral-900 mr-1.5">{c.author.name}</span>
+                          <span className="text-neutral-700 break-words">{c.text}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {associatedPost.comments.length > 3 && (
+                    <button 
+                      onClick={() => setActiveCommentsPostId(associatedPost.id)}
+                      className="text-xs font-medium text-[#5E43F3] hover:underline pl-10"
+                    >
+                      View all {associatedPost.comments.length} replies
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
     </article>

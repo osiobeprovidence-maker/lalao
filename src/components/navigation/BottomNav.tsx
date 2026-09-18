@@ -3,7 +3,7 @@ import { Home, Heart, Plus, MessageCircle, User } from 'lucide-react';
 import { useLalao, NavTab } from '../../context/LalaoContext';
 
 export const BottomNav: React.FC = () => {
-  const { activeTab, setActiveTab, setIsCreateSheetOpen, setCreateFlowType } = useLalao();
+  const { activeTab, setActiveTab, setIsCreateSheetOpen, setCreateFlowType, unreadNotifsCount } = useLalao();
 
   const navItems: { id: NavTab; label: string; icon: typeof Home }[] = [
     { id: 'home', label: 'Home', icon: Home },
@@ -64,6 +64,9 @@ export const BottomNav: React.FC = () => {
                 isActive ? 'scale-110 stroke-[2.2]' : 'stroke-[1.8]'
               }`}
             />
+            {item.id === 'notifications' && unreadNotifsCount > 0 && (
+              <span className="absolute top-1.5 right-2 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
+            )}
             {isActive && (
               <span className="absolute -bottom-1 w-1.5 h-1.5 rounded-full bg-[#5E43F3]" />
             )}

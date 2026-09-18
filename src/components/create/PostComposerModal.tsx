@@ -31,6 +31,7 @@ export const PostComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded =
     composerInitialText,
     setComposerInitialText,
     pages,
+    setIsLocationModalOpen,
   } = useLalao();
 
   const [text, setText] = useState('');
@@ -46,9 +47,16 @@ export const PostComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded =
   const [isAudienceDropdownOpen, setIsAudienceDropdownOpen] = useState(false);
   const [isReplyDropdownOpen, setIsReplyDropdownOpen] = useState(false);
   const [showMediaPresets, setShowMediaPresets] = useState(false);
+
+  // New features states
+  const [isPollOpen, setIsPollOpen] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState(['', '']);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [isGifPickerOpen, setIsGifPickerOpen] = useState(false);
   const [isDraftsOpen, setIsDraftsOpen] = useState(false);
-  const [drafts, setDrafts] = useState<Array<{ id: string; text: string; mediaUrl?: string; mediaType?: 'image' | 'video'; location: string; audience: PostAudience; replyPermission: PostReplyPermission; createdAt: string }>>([]);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -80,34 +88,43 @@ export const PostComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded =
     return map[replyPermission];
   })();
 
-  const saveDraft = () => {
-    const nextDraft = {
-      id: currentDraftId ?? `draft-${Date.now()}`,
+  const {
+    drafts,
+    saveDraft: saveDraftToConvex,
+    deleteDraft: deleteDraftFromConvex,
+  } = useLalao();
+
+  const saveDraft = async () => {
+    if (!text.trim() && !mediaUrl) return;
+
+    const draftData = {
       text,
       mediaUrl,
       mediaType,
       location: postLocation,
       audience: selectedAudience,
       replyPermission,
-      createdAt: new Date().toLocaleString(),
+      pageRefId: selectedAudience === 'page' ? selectedPageId ?? undefined : undefined,
     };
 
-    const existing = JSON.parse(localStorage.getItem(`lalao-post-drafts-${currentUser.id}`) ?? '[]') as typeof drafts;
-    const updated = [nextDraft, ...existing.filter((draft) => draft.id !== nextDraft.id)].slice(0, 5);
-    localStorage.setItem(`lalao-post-drafts-${currentUser.id}`, JSON.stringify(updated));
-    setDrafts(updated);
-    setCurrentDraftId(nextDraft.id);
-    setIsDraftsOpen(true);
+    if (currentDraftId) {
+      await saveDraftToConvex({ ...draftData, draftId: currentDraftId });
+    } else {
+      const newId = await saveDraftToConvex(draftData);
+      if (newId) setCurrentDraftId(newId);
+    }
   };
 
-  const loadDrafts = () => {
-    const saved = JSON.parse(localStorage.getItem(`lalao-post-drafts-${currentUser.id}`) ?? '[]') as typeof drafts;
-    setDrafts(saved);
+  const handleDraftSelect = (draft: any) => {
+    setText(draft.text || '');
+    setMediaUrl(draft.mediaUrl || '');
+    setMediaType(draft.mediaType || 'image');
+    if (draft.location) setPostLocation(draft.location);
+    if (draft.audience) setSelectedAudience(draft.audience);
+    if (draft.replyPermission) setReplyPermission(draft.replyPermission);
+    setCurrentDraftId(draft._id);
+    setIsDraftsOpen(false);
   };
-
-  useEffect(() => {
-    loadDrafts();
-  }, [currentUser.id]);
 
   useEffect(() => {
     if (createFlowType === 'post') {
@@ -183,15 +200,18 @@ export const PostComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded =
       audience: selectedAudience,
       replyPermission,
       pageRefId: selectedAudience === 'page' ? selectedPageId ?? undefined : undefined,
+      poll: isPollOpen && pollQuestion.trim() ? { question: pollQuestion, options: pollOptions.filter((o) => o.trim() !== '') } : undefined,
     });
 
     if (mediaUrl.startsWith('blob:')) {
       URL.revokeObjectURL(mediaUrl);
     }
 
-    const draftKey = `lalao-post-drafts-${currentUser.id}`;
-    localStorage.removeItem(draftKey);
-    setDrafts([]);
+    if (currentDraftId) {
+      try {
+        await deleteDraftFromConvex(currentDraftId);
+      } catch {}
+    }
     setCurrentDraftId(null);
     setMediaUrl('');
     setSelectedFile(null);
@@ -383,28 +403,55 @@ export const PostComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded =
           </div>
         )}
 
-        {showMediaPresets && (
-          <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-neutral-500">Attachment sample</p>
-            <div className="grid grid-cols-2 gap-2">
-              {sampleMediaPresets.map((item, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => {
-                    setMediaUrl(item.url);
-                    setMediaType(item.type);
-                    setShowMediaPresets(false);
-                  }}
-                  className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white p-2 text-left"
-                >
-                  <img src={item.url} alt={item.title} className="h-10 w-10 rounded-lg object-cover" />
-                  <div className="min-w-0">
-                    <div className="truncate text-[11px] font-bold text-neutral-900">{item.title}</div>
-                    <div className="text-[9px] uppercase tracking-[0.12em] text-neutral-400">{item.type}</div>
-                  </div>
-                </button>
+        {isPollOpen && (
+          <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#5E43F3]">Poll</p>
+              <button type="button" onClick={() => setIsPollOpen(false)} className="text-neutral-400 hover:text-neutral-600">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <input
+              type="text"
+              value={pollQuestion}
+              onChange={(e) => setPollQuestion(e.target.value)}
+              placeholder="Ask a question..."
+              className="mb-3 w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm text-neutral-900 focus:border-[#5E43F3] focus:outline-none"
+            />
+            <div className="space-y-2">
+              {pollOptions.map((opt, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={opt}
+                    onChange={(e) => {
+                      const newOpts = [...pollOptions];
+                      newOpts[i] = e.target.value;
+                      setPollOptions(newOpts);
+                    }}
+                    placeholder={`Option ${i + 1}`}
+                    className="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm text-neutral-900 focus:border-[#5E43F3] focus:outline-none"
+                  />
+                  {pollOptions.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => setPollOptions(pollOptions.filter((_, idx) => idx !== i))}
+                      className="text-rose-500"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               ))}
+              {pollOptions.length < 4 && (
+                <button
+                  type="button"
+                  onClick={() => setPollOptions([...pollOptions, ''])}
+                  className="mt-2 text-[13px] font-medium text-[#5E43F3] hover:underline"
+                >
+                  + Add option
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -474,22 +521,17 @@ export const PostComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded =
 
             <button
               type="button"
-              title="Add camera capture"
-              onClick={() => {
-                if (fileInputRef.current) {
-                  fileInputRef.current.accept = 'image/*,video/*';
-                  fileInputRef.current.capture = 'environment';
-                  fileInputRef.current.click();
-                }
-              }}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 text-amber-500 transition hover:bg-amber-500/5"
+              title="Add poll"
+              onClick={() => setIsPollOpen((prev) => !prev)}
+              className={`flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 transition ${isPollOpen ? 'bg-amber-50 text-amber-600' : 'text-amber-500 hover:bg-amber-500/5'}`}
             >
-              <Camera className="h-4 w-4" />
+              <MessageSquareText className="h-4 w-4" />
             </button>
 
             <button
               type="button"
               title="Location"
+              onClick={() => setIsLocationModalOpen(true)}
               className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 text-emerald-600 transition hover:bg-emerald-500/5"
             >
               <MapPin className="h-4 w-4" />
@@ -497,11 +539,17 @@ export const PostComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded =
 
             <button
               type="button"
-              title="Rally"
+              title="Start a Rally"
+              onClick={() => {
+                handleClose();
+                setCreateFlowType('rally');
+              }}
               className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 text-[#5E43F3] transition hover:bg-indigo-500/5"
             >
               <Hand className="h-4 w-4" />
             </button>
+
+            <div className="flex-1" />
 
             <button
               type="button"

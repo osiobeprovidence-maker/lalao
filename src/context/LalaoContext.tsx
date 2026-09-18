@@ -74,18 +74,25 @@ interface LalaoContextType {
   // Content state
   users: User[];
   posts: Post[];
+  isFeedLoading: boolean;
   rallies: Rally[];
   pages: Page[];
   cycles: Cycle[];
   conversations: Conversation[];
   notifications: NotificationItem[];
   unreadNotifsCount: number;
+  suggestedUsers: User[];
+  drafts: any[]; // using any for simplicity, can type as Draft
+  markAllNotificationsRead: () => void;
+  saveDraft: (draft: any) => Promise<string | undefined>;
+  deleteDraft: (draftId: string) => Promise<void>;
 
   // Actions
   toggleLikePost: (postId: string) => void | Promise<void>;
   toggleRepostPost: (postId: string) => void;
+  toggleFollowUser: (userId: string) => void | Promise<void>;
   addComment: (postId: string, text: string, parentCommentId?: string, replyToUsername?: string) => void | Promise<void>;
-  toggleLikeComment: (postId: string, commentId: string, replyId?: string) => void;
+  toggleLikeComment: (postId: string, commentId: string, replyId?: string) => void | Promise<void>;
   createPost: (post: {
     text: string;
     mediaUrl?: string;
@@ -322,6 +329,16 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
   const addCommentMutation = useMutation(api.social.addCommentToPost);
+  const toggleFollowUserMutation = useMutation(api.social.toggleFollowUser);
+  const markAllNotificationsReadMutation = useMutation(api.social.markAllNotificationsRead);
+  const toggleLikeCommentMutation = useMutation(api.social.toggleLikeComment);
+  const saveDraftMutation = useMutation(api.social.saveDraft);
+  const deleteDraftMutation = useMutation(api.social.deleteDraft);
+
+  const notificationsQuery = useQuery(api.social.listNotifications);
+  const unreadNotifsCountQuery = useQuery(api.social.getUnreadNotificationCount);
+  const suggestedUsersQuery = useQuery(api.social.listSuggestedUsers);
+  const draftsQuery = useQuery(api.social.listMyDrafts);
 
   const [currentUser, setCurrentUser] = useState<User>(() => {
     try {
@@ -449,14 +466,30 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
-  const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
+  const notifications = (notificationsQuery as NotificationItem[]) || [];
+  const unreadNotifsCount = (unreadNotifsCountQuery as number) || 0;
+  const suggestedUsers = (suggestedUsersQuery as User[]) || [];
+  const drafts = (draftsQuery as any[]) || [];
+
+  const markAllNotificationsRead = async () => {
     try {
-      const saved = localStorage.getItem('lalao_notifications');
-      return saved ? JSON.parse(saved) : EMPTY_NOTIFICATIONS;
+      await markAllNotificationsReadMutation();
+    } catch {}
+  };
+
+  const saveDraft = async (draft: any) => {
+    try {
+      return await saveDraftMutation(draft);
     } catch {
-      return EMPTY_NOTIFICATIONS;
+      return undefined;
     }
-  });
+  };
+
+  const deleteDraft = async (draftId: string) => {
+    try {
+      await deleteDraftMutation({ draftId: draftId as any });
+    } catch {}
+  };
 
   // Modal States
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
@@ -1228,7 +1261,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const toggleLikeComment = (postId: string, commentId: string, replyId?: string) => {
+  const toggleLikeComment = async (postId: string, commentId: string, replyId?: string) => {
+    const targetId = replyId || commentId;
     const toggleReplyLike = (replies: CommentReply[] = []): CommentReply[] =>
       replies.map((reply) => {
         if (reply.id === replyId) {
@@ -1263,7 +1297,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             }
           }
 
-          if (comm.id === commentId) {
+          if (comm.id === commentId && !replyId) {
             const isLiked = !comm.isLiked;
             return {
               ...comm,
@@ -1277,6 +1311,10 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return { ...p, comments: updatedComments };
       })
     );
+
+    try {
+      await toggleLikeCommentMutation({ commentId: targetId as any });
+    } catch {}
   };
 
   const createPostMutation = useMutation(api.social.createPost);
@@ -1445,7 +1483,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     );
   };
 
-  const toggleFollowUser = (userId: string) => {
+  const toggleFollowUser = async (userId: string) => {
     let nowFollowing = false;
     let targetUsername = '';
 
@@ -1507,7 +1545,12 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         : Math.max(0, prev.followingCount - 1),
     }));
 
-    triggerShareToast(nowFollowing ? `Following @${targetUsername || 'user'}` : `Unfollowed @${targetUsername || 'user'}`);
+    try {
+      const res = await toggleFollowUserMutation({ targetUserId: userId as any });
+      triggerShareToast(res.following ? `Following @${targetUsername || 'user'}` : `Unfollowed @${targetUsername || 'user'}`);
+    } catch {
+      triggerShareToast("Failed to update follow status.");
+    }
   };
 
   const createPage = ({
@@ -2141,7 +2184,6 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setActiveTab('messages');
   };
 
-  const unreadNotifsCount = notifications.filter((n) => !n.isRead).length;
 
   return (
     <LalaoContext.Provider
@@ -2165,12 +2207,18 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         detectGpsLocation,
         isDetectingGps,
         posts,
+        isFeedLoading: feedPostsQuery === undefined,
         rallies,
         pages,
         cycles,
         conversations,
         notifications,
         unreadNotifsCount,
+        suggestedUsers,
+        drafts,
+        markAllNotificationsRead,
+        saveDraft,
+        deleteDraft,
         toggleLikePost,
         toggleRepostPost,
         addComment,

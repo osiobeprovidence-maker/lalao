@@ -16,12 +16,13 @@ import { NotificationItem } from '../../types';
 export const NotificationsView: React.FC = () => {
   const {
     currentUser,
-    users,
+    suggestedUsers,
     notifications,
-    markNotificationsAsRead,
+    markAllNotificationsRead,
     setActiveUserProfile,
     setActiveCommentsPostId,
     setActiveTab,
+    toggleFollowUser,
     permissions,
     setActivePermissionPrompt,
     triggerShareToast,
@@ -29,20 +30,18 @@ export const NotificationsView: React.FC = () => {
 
   const [activeFilter, setActiveFilter] = useState<'all' | 'suggested' | 'activity'>('all');
 
-  const suggestedUsers = useMemo(() => {
-    if (!users?.length) return [];
+  const now = Date.now();
+  const oneDayMs = 24 * 60 * 60 * 1000;
 
-    return users
-      .filter((user) => user.id !== (currentUser?.id ?? ''))
-      .slice(0, 4);
-  }, [currentUser?.id, users]);
+  const todayNotifs = notifications.filter((n) => {
+    if (n.createdAt) return now - n.createdAt < oneDayMs;
+    return n.timestamp.includes('m ago') || n.timestamp.includes('h ago');
+  });
 
-  const todayNotifs = notifications.filter(
-    (n) => n.timestamp.includes('m ago') || n.timestamp.includes('h ago')
-  );
-  const earlierNotifs = notifications.filter(
-    (n) => !n.timestamp.includes('m ago') && !n.timestamp.includes('h ago')
-  );
+  const earlierNotifs = notifications.filter((n) => {
+    if (n.createdAt) return now - n.createdAt >= oneDayMs;
+    return !n.timestamp.includes('m ago') && !n.timestamp.includes('h ago');
+  });
 
   const getNotifIcon = (type: string) => {
     switch (type) {
@@ -92,7 +91,7 @@ export const NotificationsView: React.FC = () => {
           <h1 className="text-xl font-black tracking-tight text-neutral-950 font-sans">Notifications</h1>
           <button
             type="button"
-            onClick={markNotificationsAsRead}
+            onClick={markAllNotificationsRead}
             className="p-2 rounded-full text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer"
             title="Mark all as read"
             aria-label="Mark all notifications as read"
@@ -165,7 +164,7 @@ export const NotificationsView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      triggerShareToast(`Followed ${user.name}`);
+                      toggleFollowUser(user.id);
                     }}
                     className="px-3 py-1.5 rounded-full bg-[#5E43F3] text-[11px] font-bold text-white hover:bg-[#4E34E0] transition-colors cursor-pointer"
                   >

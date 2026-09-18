@@ -119,7 +119,8 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_follower", ["followerId"])
-    .index("by_following", ["followingId"]),
+    .index("by_following", ["followingId"])
+    .index("by_follower_following", ["followerId", "followingId"]),
 
   pages: defineTable({
     ownerId: v.id("users"),
@@ -162,4 +163,63 @@ export default defineSchema({
   })
     .index("by_conversation", ["conversationId"])
     .index("by_sender", ["senderId"]),
+
+  /**
+   * Real notification events. Created server-side on like / comment / follow / rally_join.
+   * recipientId  = the user who RECEIVES the notification (not the actor)
+   * actorId      = the user who triggered the event
+   */
+  notifications: defineTable({
+    recipientId: v.id("users"),
+    actorId: v.id("users"),
+    type: v.union(
+      v.literal("like"),
+      v.literal("comment"),
+      v.literal("reply"),
+      v.literal("follow"),
+      v.literal("rally_join"),
+    ),
+    postId: v.optional(v.id("posts")),
+    commentId: v.optional(v.id("comments")),
+    targetExcerpt: v.optional(v.string()),
+    isRead: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_recipient", ["recipientId"])
+    .index("by_recipient_read", ["recipientId", "isRead"]),
+
+  /**
+   * Real user drafts — persisted in Convex so they survive device switches.
+   */
+  drafts: defineTable({
+    authorId: v.id("users"),
+    text: v.string(),
+    mediaUrl: v.optional(v.string()),
+    mediaType: v.optional(v.union(v.literal("image"), v.literal("video"))),
+    audience: v.optional(
+      v.union(
+        v.literal("everyone"),
+        v.literal("closeFriends"),
+        v.literal("community"),
+        v.literal("page"),
+      )
+    ),
+    replyPermission: v.optional(
+      v.union(
+        v.literal("everyone"),
+        v.literal("followers"),
+        v.literal("following"),
+        v.literal("friends"),
+        v.literal("closeFriends"),
+        v.literal("sameInterests"),
+      )
+    ),
+    gifUrl: v.optional(v.string()),
+    pollQuestion: v.optional(v.string()),
+    pollOptions: v.optional(v.array(v.string())),
+    pageRefId: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_author", ["authorId"]),
 });
