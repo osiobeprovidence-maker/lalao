@@ -88,6 +88,7 @@ const LalaoAppContent: React.FC = () => {
     posts,
     pages,
     currentUser,
+    activePageId,
   } = useLalao();
   const mainRef = useRef<HTMLElement>(null);
 
@@ -156,6 +157,8 @@ const LalaoAppContent: React.FC = () => {
             ref={mainRef}
             className="relative flex-1 overflow-y-auto bg-[#f6f3ee] pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0 lg:min-h-0"
           >
+            {!activePageId ? (
+              <>
             {activeTab === 'create-post' && (
               <div key="tab-create-post" className="animate-in fade-in duration-200 relative min-h-full w-full overflow-hidden bg-[#f6f3ee]">
                 <div className="absolute inset-0">
@@ -242,6 +245,12 @@ const LalaoAppContent: React.FC = () => {
                 )}
               </div>
             )}
+              </>
+            ) : (
+              <div key="tab-page-detail" className="animate-in fade-in duration-200 w-full bg-transparent min-h-full">
+                <PageDetailModal />
+              </div>
+            )}
           </main>
 
           <div className="lg:hidden">
@@ -257,7 +266,6 @@ const LalaoAppContent: React.FC = () => {
       <RallyComposerModal />
       <CreateCycleModal isOpen={isCreateCycleOpen} onClose={() => setIsCreateCycleOpen(false)} />
       <CycleDetailModal />
-      <PageDetailModal />
       <UserProfileModal />
       <CommentsModal />
       <NotificationsModal />

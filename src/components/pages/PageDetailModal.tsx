@@ -270,7 +270,7 @@ export const PageDetailModal: React.FC = () => {
     <div
       ref={containerRef}
       id="page-detail-screen"
-      className="absolute inset-0 z-40 bg-white overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-250"
+      className="w-full bg-white animate-in fade-in duration-200"
     >
       <div className="w-full min-h-full flex flex-col bg-white pb-24">
         {/* Cover Photo Area with Back Button & Action Controls */}
@@ -587,12 +587,6 @@ export const PageDetailModal: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-black text-neutral-950 tracking-tight">{page.name}</h2>
-              <div
-                className="w-5 h-5 rounded-full bg-[#5E43F3] text-white flex items-center justify-center shrink-0 shadow-xs"
-                title="Verified Page"
-              >
-                <Check className="w-3 h-3 stroke-[3]" />
-              </div>
               <Badge type={page.badge} />
 
               {/* Manager Perspective Indicator */}
