@@ -1,9 +1,10 @@
-﻿import React, { ChangeEvent, useRef, useState } from 'react';
+﻿import React, { ChangeEvent, useRef, useState, useEffect } from 'react';
 import {
   BarChart3,
   Globe,
   Hand,
   Image as ImageIcon,
+  Loader2,
   MapPin,
   Smile,
   Video,
@@ -11,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
+import { uploadFileToStorage } from '../../lib/firebase';
 
 export const CreatePostPage: React.FC = () => {
   const {
@@ -26,11 +28,25 @@ export const CreatePostPage: React.FC = () => {
   const [text, setText] = useState('');
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const mediaInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (mediaUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(mediaUrl);
+      }
+    };
+  }, [mediaUrl]);
 
   const handleClose = () => {
     setText('');
+    if (mediaUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(mediaUrl);
+    }
     setMediaUrl('');
+    setSelectedFile(null);
     setCreateFlowType(null);
     setIsCreateSheetOpen(false);
     setActiveTab('home');
@@ -40,24 +56,50 @@ export const CreatePostPage: React.FC = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    if (mediaUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(mediaUrl);
+    }
+
     const nextUrl = URL.createObjectURL(file);
+    setSelectedFile(file);
     setMediaUrl(nextUrl);
     setMediaType(file.type.startsWith('video/') ? 'video' : 'image');
     event.target.value = '';
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!text.trim() && !mediaUrl) return;
+    if (isUploadingMedia) return;
+
+    let finalMediaUrl = mediaUrl;
+    const fileToUpload = selectedFile ?? mediaInputRef.current?.files?.[0] ?? null;
+
+    if (fileToUpload) {
+      setIsUploadingMedia(true);
+      try {
+        finalMediaUrl = await uploadFileToStorage(fileToUpload, 'posts');
+      } catch {
+        setIsUploadingMedia(false);
+        triggerShareToast('Media upload failed. Please try again.');
+        return;
+      }
+      setIsUploadingMedia(false);
+    }
 
     createPost({
       text: text.trim(),
-      mediaUrl: mediaUrl || undefined,
+      mediaUrl: finalMediaUrl || undefined,
       mediaType,
       location: location.name,
     });
 
     setText('');
+    if (mediaUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(mediaUrl);
+    }
     setMediaUrl('');
+    setSelectedFile(null);
+    mediaInputRef.current && (mediaInputRef.current.value = '');
     setCreateFlowType(null);
     setIsCreateSheetOpen(false);
     setActiveTab('home');
@@ -119,7 +161,13 @@ export const CreatePostPage: React.FC = () => {
               )}
               <button
                 type="button"
-                onClick={() => setMediaUrl('')}
+                onClick={() => {
+                  if (mediaUrl.startsWith('blob:')) {
+                    URL.revokeObjectURL(mediaUrl);
+                  }
+                  setMediaUrl('');
+                  setSelectedFile(null);
+                }}
                 className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-black"
                 aria-label="Remove media"
               >
@@ -177,14 +225,14 @@ export const CreatePostPage: React.FC = () => {
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={!text.trim() && !mediaUrl}
+              disabled={(!text.trim() && !mediaUrl) || isUploadingMedia}
               className={`rounded-full px-4 py-2 text-sm font-bold transition ${
-                text.trim() || mediaUrl
+                (text.trim() || mediaUrl) && !isUploadingMedia
                   ? 'bg-[#5E43F3] text-white shadow-md shadow-[#5E43F3]/20 hover:bg-[#4E34E0]'
                   : 'cursor-not-allowed bg-neutral-200 text-neutral-500'
               }`}
             >
-              Post
+              {isUploadingMedia ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Uploading</span> : 'Post'}
             </button>
           </div>
         </div>

@@ -96,6 +96,7 @@ interface LalaoContextType {
     gifUrl?: string;
     poll?: { question: string; options: string[] };
     rallyRefId?: string;
+    pageRefId?: string;
   }) => void | Promise<void>;
   
   toggleJoinRally: (rallyId: string) => void;
@@ -1124,27 +1125,50 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const trimmed = text.trim();
     const prevPost = posts.find((p) => p.id === postId);
 
+    const appendReplyToCommentTree = (
+      comments: PostComment[],
+      targetId: string,
+      reply: CommentReply
+    ): PostComment[] =>
+      comments.map((comment) => {
+        if (comment.id === targetId) {
+          return {
+            ...comment,
+            replies: [...(comment.replies || []), reply],
+          };
+        }
+
+        if (comment.replies && comment.replies.length > 0) {
+          return {
+            ...comment,
+            replies: appendReplyToCommentTree(
+              comment.replies as unknown as PostComment[],
+              targetId,
+              reply
+            ) as any,
+          };
+        }
+
+        return comment;
+      });
+
     if (parentCommentId) {
       setPosts((prev) =>
         prev.map((p) => {
           if (p.id !== postId) return p;
-          const updatedComments = p.comments.map((comm) => {
-            if (comm.id !== parentCommentId) return comm;
-            const newReply: CommentReply = {
-              id: `rep_${Date.now()}`,
-              author: currentUser,
-              text: trimmed,
-              createdAt: 'Just now',
-              likesCount: 0,
-              isLiked: false,
-              replyToUsername: replyToUsername || comm.author.username,
-              isAuthor: p.author.id === currentUser.id,
-            };
-            return {
-              ...comm,
-              replies: [...(comm.replies || []), newReply],
-            };
-          });
+          const newReply: CommentReply = {
+            id: `rep_${Date.now()}`,
+            author: currentUser,
+            text: trimmed,
+            createdAt: 'Just now',
+            likesCount: 0,
+            isLiked: false,
+            replyToUsername: replyToUsername || 'user',
+            isAuthor: p.author.id === currentUser.id,
+            replies: [],
+          };
+
+          const updatedComments = appendReplyToCommentTree(p.comments, parentCommentId, newReply);
 
           return {
             ...p,
@@ -1205,24 +1229,38 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const toggleLikeComment = (postId: string, commentId: string, replyId?: string) => {
+    const toggleReplyLike = (replies: CommentReply[] = []): CommentReply[] =>
+      replies.map((reply) => {
+        if (reply.id === replyId) {
+          const isLiked = !reply.isLiked;
+          return {
+            ...reply,
+            isLiked,
+            likesCount: isLiked ? reply.likesCount + 1 : Math.max(0, reply.likesCount - 1),
+            replies: toggleReplyLike(reply.replies ?? []),
+          };
+        }
+
+        if (reply.replies && reply.replies.length > 0) {
+          return {
+            ...reply,
+            replies: toggleReplyLike(reply.replies),
+          };
+        }
+
+        return reply;
+      });
+
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id !== postId) return p;
 
         const updatedComments = p.comments.map((comm) => {
-          if (replyId && comm.replies) {
-            const updatedReplies = comm.replies.map((rep) => {
-              if (rep.id === replyId) {
-                const isLiked = !rep.isLiked;
-                return {
-                  ...rep,
-                  isLiked,
-                  likesCount: isLiked ? rep.likesCount + 1 : Math.max(0, rep.likesCount - 1),
-                };
-              }
-              return rep;
-            });
-            return { ...comm, replies: updatedReplies };
+          if (replyId) {
+            const replies = toggleReplyLike(comm.replies ?? []);
+            if (replies !== comm.replies) {
+              return { ...comm, replies };
+            }
           }
 
           if (comm.id === commentId) {
@@ -1253,6 +1291,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     gifUrl,
     poll,
     rallyRefId,
+    pageRefId,
   }: {
     text: string;
     mediaUrl?: string;
@@ -1263,6 +1302,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     gifUrl?: string;
     poll?: { question: string; options: string[] };
     rallyRefId?: string;
+    pageRefId?: string;
   }) => {
     if (!text.trim()) return;
 
@@ -1277,6 +1317,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       pollQuestion: poll?.question,
       pollOptions: poll?.options,
       rallyRefId,
+      pageRefId,
     });
 
     const backendPost = created as Post | null;

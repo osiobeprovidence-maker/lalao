@@ -66,8 +66,24 @@ export default defineSchema({
     likesCount: v.number(),
     commentsCount: v.number(),
     repostsCount: v.number(),
-    audience: v.optional(v.union(v.literal("everyone"), v.literal("friends"), v.literal("closeFriends"))),
-    replyPermission: v.optional(v.union(v.literal("everyone"), v.literal("friends"), v.literal("closeFriends"))),
+    audience: v.optional(
+      v.union(
+        v.literal("everyone"),
+        v.literal("closeFriends"),
+        v.literal("community"),
+        v.literal("page")
+      )
+    ),
+    replyPermission: v.optional(
+      v.union(
+        v.literal("everyone"),
+        v.literal("followers"),
+        v.literal("following"),
+        v.literal("friends"),
+        v.literal("closeFriends"),
+        v.literal("sameInterests")
+      )
+    ),
     gifUrl: v.optional(v.string()),
     pollQuestion: v.optional(v.string()),
     pollOptions: v.optional(v.array(v.string())),

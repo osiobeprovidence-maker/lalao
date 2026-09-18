@@ -29,6 +29,7 @@ export interface CommentReply {
   isLiked?: boolean;
   replyToUsername?: string;
   isAuthor?: boolean;
+  replies?: CommentReply[];
 }
 
 export interface PostComment {
@@ -56,8 +57,14 @@ export interface DevicePermissions {
 
 export type PermissionPromptType = 'location' | 'notifications' | 'camera' | 'microphone' | 'photos' | null;
 
-export type PostAudience = 'everyone' | 'friends' | 'closeFriends';
-export type PostReplyPermission = 'everyone' | 'friends' | 'closeFriends';
+export type PostAudience = 'everyone' | 'closeFriends' | 'community' | 'page';
+export type PostReplyPermission =
+  | 'everyone'
+  | 'followers'
+  | 'following'
+  | 'friends'
+  | 'closeFriends'
+  | 'sameInterests';
 
 export interface Post {
   id: string;

@@ -275,8 +275,24 @@ export const createPost = mutation({
     mediaUrl: v.optional(v.string()),
     mediaType: v.optional(v.union(v.literal("image"), v.literal("video"))),
     location: v.string(),
-    audience: v.optional(v.union(v.literal("everyone"), v.literal("friends"), v.literal("closeFriends"))),
-    replyPermission: v.optional(v.union(v.literal("everyone"), v.literal("friends"), v.literal("closeFriends"))),
+    audience: v.optional(
+      v.union(
+        v.literal("everyone"),
+        v.literal("closeFriends"),
+        v.literal("community"),
+        v.literal("page")
+      )
+    ),
+    replyPermission: v.optional(
+      v.union(
+        v.literal("everyone"),
+        v.literal("followers"),
+        v.literal("following"),
+        v.literal("friends"),
+        v.literal("closeFriends"),
+        v.literal("sameInterests")
+      )
+    ),
     gifUrl: v.optional(v.string()),
     pollQuestion: v.optional(v.string()),
     pollOptions: v.optional(v.array(v.string())),

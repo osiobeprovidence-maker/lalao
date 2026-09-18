@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBv_Cf6i4RvL2pikdVhGb8cHUDKYpjjSRA",
@@ -15,3 +16,13 @@ const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase Auth
 export const auth = getAuth(app);
+
+// Initialize Firebase Storage
+export const storage = getStorage(app);
+
+export const uploadFileToStorage = async (file: File, folder: string) => {
+  const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9_.-]/g, "_")}`;
+  const storageRef = ref(storage, `${folder}/${safeName}`);
+  await uploadBytes(storageRef, file);
+  return getDownloadURL(storageRef);
+};
