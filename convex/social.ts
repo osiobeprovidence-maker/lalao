@@ -502,6 +502,75 @@ export const createPost = mutation({
   },
 });
 
+export const deletePost = mutation({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, { postId }) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const post = await ctx.db.get(postId);
+    if (!post) throw new Error("Post not found");
+
+    if (post.authorId !== currentUser._id) {
+      throw new Error("Not authorized to delete this post");
+    }
+
+    // 1. Delete associated comments and their likes
+    const comments = await ctx.db
+      .query("comments")
+      .withIndex("by_post", (q: any) => q.eq("postId", postId))
+      .collect();
+    
+    for (const comment of comments) {
+      const commentLikes = await ctx.db
+        .query("likes")
+        .withIndex("by_target", (q: any) => q.eq("targetType", "comment").eq("targetId", comment._id))
+        .collect();
+      for (const like of commentLikes) {
+        await ctx.db.delete(like._id);
+      }
+      const replyLikes = await ctx.db
+        .query("likes")
+        .withIndex("by_target", (q: any) => q.eq("targetType", "reply").eq("targetId", comment._id))
+        .collect();
+      for (const like of replyLikes) {
+        await ctx.db.delete(like._id);
+      }
+      await ctx.db.delete(comment._id);
+    }
+
+    // 2. Delete post likes
+    const postLikes = await ctx.db
+      .query("likes")
+      .withIndex("by_target", (q: any) => q.eq("targetType", "post").eq("targetId", postId))
+      .collect();
+    for (const like of postLikes) {
+      await ctx.db.delete(like._id);
+    }
+
+    // 3. Delete notifications referencing this post
+    const notifications = await ctx.db
+      .query("notifications")
+      .filter((q: any) => q.eq(q.field("postId"), postId))
+      .collect();
+    for (const notification of notifications) {
+      await ctx.db.delete(notification._id);
+    }
+
+    // 4. Delete Convex Storage media
+    if (post.mediaStorageId) {
+      await ctx.storage.delete(post.mediaStorageId);
+    }
+
+    // 5. External Media cleanup
+    // TODO: If external media references exist (e.g., Mux video URLs) and aren't in Convex storage,
+    // add external API calls here to clean them up from the provider.
+
+    // 6. Delete the post itself
+    await ctx.db.delete(postId);
+  },
+});
+
 /* ─────────────────────────────────────────────────────────────────────────────
    LIKES
    ───────────────────────────────────────────────────────────────────────────── */

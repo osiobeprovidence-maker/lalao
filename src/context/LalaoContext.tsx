@@ -108,6 +108,7 @@ interface LalaoContextType {
   }) => void | Promise<void>;
   
   generateUploadUrl: () => Promise<string>;
+  deletePost: (postId: string) => Promise<void>;
   
   toggleJoinRally: (rallyId: string) => void;
   joinRally: (rallyId: string) => void;
@@ -1327,6 +1328,19 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const createPostMutation = useMutation(api.social.createPost);
+  const deletePostMutation = useMutation(api.social.deletePost);
+
+  const deletePost = async (postId: string) => {
+    try {
+      await deletePostMutation({ postId: postId as any });
+      // Optimistic UI update can be optional since feedPostsQuery is reactive, 
+      // but doing it makes the UI feel instantly responsive.
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+    } catch (err) {
+      console.error("Failed to delete post:", err);
+      triggerShareToast("Failed to delete post");
+    }
+  };
 
   const createPost = async ({
     text,
@@ -2237,6 +2251,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toggleLikeComment,
         createPost,
         generateUploadUrl,
+        deletePost,
         toggleJoinRally,
         joinRally: toggleJoinRally,
         createRally,

@@ -29,6 +29,7 @@ export interface PostItemProps {
 
 export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, onSelectAuthor }) => {
   const {
+    currentUser,
     toggleLikePost,
     toggleRepostPost,
     setActiveCommentsPostId,
@@ -43,11 +44,13 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
     posts,
     pages,
     locationPrivacy,
+    deletePost,
   } = useLalao();
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [showOptions, setShowOptions] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showInlineComments, setShowInlineComments] = useState(false);
 
   // Local state for standalone rally likes
@@ -70,6 +73,8 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
     followersCount: 0,
     followingCount: 0,
   });
+
+  const isAuthor = currentUser?.id === author.id;
 
   // Location & Proximity
   const locationText = post ? post.location : (linkedRally ? linkedRally.location : 'Delta State');
@@ -237,15 +242,31 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
                     >
                       {isRallyPost ? 'Save Rally' : 'Save post'}
                     </button>
-                    <button
-                      onClick={() => {
-                        triggerShareToast('Thank you for keeping Lalao safe');
-                        setShowOptions(false);
-                      }}
-                      className="w-full text-left px-3.5 py-2 hover:bg-neutral-50 text-rose-600 font-medium cursor-pointer"
-                    >
-                      {isRallyPost ? 'Report Rally' : 'Report post'}
-                    </button>
+                    {isAuthor && post && (
+                      <>
+                        <div className="h-px bg-neutral-100 my-1" />
+                        <button
+                          onClick={() => {
+                            setShowOptions(false);
+                            setShowDeleteModal(true);
+                          }}
+                          className="w-full text-left px-3.5 py-2 hover:bg-neutral-50 text-red-600 font-medium cursor-pointer"
+                        >
+                          Delete post
+                        </button>
+                      </>
+                    )}
+                    {!isAuthor && (
+                      <button
+                        onClick={() => {
+                          triggerShareToast('Thank you for keeping Lalao safe');
+                          setShowOptions(false);
+                        }}
+                        className="w-full text-left px-3.5 py-2 hover:bg-neutral-50 text-rose-600 font-medium cursor-pointer"
+                      >
+                        {isRallyPost ? 'Report Rally' : 'Report post'}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -513,6 +534,36 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
 
         </div>
       </div>
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-[320px] p-6 shadow-xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-neutral-900 mb-2">Delete this post?</h3>
+            <p className="text-[15px] text-neutral-600 mb-6">
+              This can't be undone. The post and all its replies will be permanently removed.
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 px-4 py-2.5 rounded-full font-bold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (post) {
+                    await deletePost(post.id);
+                  }
+                  setShowDeleteModal(false);
+                }}
+                className="flex-1 px-4 py-2.5 rounded-full font-bold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-sm shadow-red-600/20"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </article>
   );
 };
