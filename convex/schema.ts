@@ -52,7 +52,11 @@ export default defineSchema({
   })
     .index("by_token", ["tokenIdentifier"])
     .index("by_email", ["email"])
-    .index("by_username", ["username"]),
+    .index("by_username", ["username"])
+    .searchIndex("search_username", { searchField: "username" })
+    .searchIndex("search_name", { searchField: "name" })
+    .searchIndex("search_email", { searchField: "email" })
+    .searchIndex("search_phone", { searchField: "phone" }),
 
   posts: defineTable({
     authorId: v.id("users"),
@@ -92,7 +96,8 @@ export default defineSchema({
     rallyRefId: v.optional(v.string()),
   })
     .index("by_author", ["authorId"])
-    .index("by_created", ["createdAt"]),
+    .index("by_created", ["createdAt"])
+    .searchIndex("search_text", { searchField: "text" }),
 
   comments: defineTable({
     postId: v.id("posts"),
@@ -139,7 +144,9 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_owner", ["ownerId"])
-    .index("by_username", ["username"]),
+    .index("by_username", ["username"])
+    .searchIndex("search_name", { searchField: "name" })
+    .searchIndex("search_category", { searchField: "category" }),
 
   pageFollowers: defineTable({
     userId: v.id("users"),
