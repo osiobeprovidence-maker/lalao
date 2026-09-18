@@ -177,6 +177,11 @@ const LalaoAppContent: React.FC = () => {
                 <DiscoverView />
               </div>
             )}
+            {activeTab === 'create-page' && (
+              <div key="tab-create-page" className="animate-in fade-in duration-200 max-w-2xl mx-auto w-full bg-transparent pb-24">
+                <CreatePageView />
+              </div>
+            )}
             {activeTab === 'messages' && (
               <div key="tab-messages" className="animate-in fade-in duration-200 max-w-3xl mx-auto w-full bg-transparent">
                 <MessagesView />
@@ -247,7 +252,6 @@ const LalaoAppContent: React.FC = () => {
         <aside className="hidden lg:flex flex-col bg-[#f6f3ee]" aria-label="Secondary content rail" />
       </div>
 
-      <CreatePageView />
       <SettingsPageView />
       <LocationRadiusModal />
       <RallyComposerModal />

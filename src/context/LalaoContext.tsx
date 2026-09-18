@@ -50,7 +50,8 @@ export type NavTab =
   | 'profile'
   | 'following'
   | 'saved'
-  | 'liked';
+  | 'liked'
+  | 'create-page';
 export type FeedTab = 'for_you' | 'following' | 'nearby';
 export type CreateOption = 'post' | 'rally' | 'page' | 'cycle' | null;
 

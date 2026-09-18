@@ -38,6 +38,7 @@ export const DiscoverView: React.FC = () => {
     location,
     locationPrivacy,
     setIsLocationModalOpen,
+    setActiveTab,
     setIsCreateSheetOpen,
     setCreateFlowType,
     pages,
@@ -576,8 +577,7 @@ export const DiscoverView: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => {
-                          setCreateFlowType('page');
-                          setIsCreateSheetOpen(true);
+                          setActiveTab('create-page');
                         }}
                         className="w-full max-w-[220px] mx-auto py-2.5 rounded-xl bg-[#5E43F3] text-white text-xs font-bold hover:bg-[#4E34E0] transition-colors"
                       >
