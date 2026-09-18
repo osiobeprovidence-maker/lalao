@@ -182,7 +182,7 @@ export const listFeedPosts = query({
                   createdAt: formatRelativeTime(reply.createdAt),
                   likesCount: reply.likesCount ?? 0,
                   isLiked: !!replyLike,
-                  replyToUsername: commentAuthorDoc?.username ?? "user",
+                  replyToUsername: (commentAuthorDoc as any)?.username ?? "user",
                 };
               })
             ),
@@ -307,8 +307,7 @@ export const listSuggestedUsers = query({
         location: user.locationName ?? "",
         followersCount: user.followersCount ?? 0,
         followingCount: user.followingCount ?? 0,
-        isFollowing: relSets.followingIds.has(actor._id),
-                relationship: resolveRelationship(actor._id, relSets),
+        isFollowing: relSets.followingIds.has(user._id),
         relationship: currentUser ? resolveRelationship(user._id, relSets) : "none",
         isVerified: false,
       }));
@@ -779,6 +778,24 @@ export const addCommentToPost = mutation({
 /* ─────────────────────────────────────────────────────────────────────────────
    FOLLOWS
    ───────────────────────────────────────────────────────────────────────────── */
+
+export const getRelationship = query({
+  args: { targetUserId: v.id("users") },
+  handler: async (ctx, { targetUserId }) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) {
+      return { isFollowing: false, followsMe: false, isFriend: false, relationship: "none" };
+    }
+    const relSets = await getRelationshipSets(ctx, currentUser);
+    const relationship = resolveRelationship(targetUserId, relSets);
+    return {
+      isFollowing: relSets.followingIds.has(targetUserId),
+      followsMe: relSets.followerIds.has(targetUserId),
+      isFriend: relationship === "friends",
+      relationship,
+    };
+  }
+});
 
 /**
  * Toggle follow/unfollow for a target user.

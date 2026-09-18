@@ -27,6 +27,8 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
 import { Post, Rally } from '../../types';
@@ -63,6 +65,14 @@ export const UserProfileModal: React.FC = () => {
   const [lightboxMedia, setLightboxMedia] = useState<{ url: string; alt?: string } | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const liveRelationship = useQuery(
+    api.social.getRelationship,
+    activeUserProfile ? { targetUserId: activeUserProfile.id as any } : "skip"
+  );
+
+  const displayedRelationship = liveRelationship?.relationship || activeUserProfile?.relationship || 'none';
+  const isFollowing = liveRelationship?.isFollowing ?? activeUserProfile?.isFollowing ?? false;
 
   useEffect(() => {
     if (activeUserProfile) {
@@ -185,7 +195,6 @@ export const UserProfileModal: React.FC = () => {
     return views.toLocaleString();
   };
 
-  const isFollowing = Boolean(activeUserProfile.isFollowing);
 
   // Actions
   const handleFollowToggle = () => {
@@ -536,21 +545,21 @@ export const UserProfileModal: React.FC = () => {
                     id="btn-profile-follow"
                     onClick={handleFollowToggle}
                     className={`flex-1 py-2 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs ${
-                      activeUserProfile.relationship === 'friends'
+                      displayedRelationship === 'friends'
                         ? 'bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border border-neutral-200'
-                        : activeUserProfile.relationship === 'follower'
+                        : displayedRelationship === 'follower'
                         ? 'bg-[#5E43F3] hover:bg-[#4E34E0] text-white'
                         : isFollowing
                         ? 'bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border border-neutral-200'
                         : 'bg-neutral-950 hover:bg-neutral-800 text-white'
                     }`}
                   >
-                    {activeUserProfile.relationship === 'friends' ? (
+                    {displayedRelationship === 'friends' ? (
                       <>
                         <Check className="w-3.5 h-3.5 text-neutral-700" />
                         <span>Friends</span>
                       </>
-                    ) : activeUserProfile.relationship === 'follower' ? (
+                    ) : displayedRelationship === 'follower' ? (
                       <>
                         <UserPlus className="w-3.5 h-3.5 text-white" />
                         <span>Follow Back</span>

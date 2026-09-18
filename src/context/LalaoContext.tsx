@@ -13,6 +13,8 @@ import {
   Conversation,
   DirectMessage,
   NotificationItem,
+  PostAudience,
+  PostReplyPermission,
   LocationConfig,
   LocationPrivacySettings,
   DevicePermissions,
@@ -2224,7 +2226,9 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const markNotificationsAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    try {
+      markAllNotificationsReadMutation();
+    } catch {}
   };
 
   const openChatWithUser = (user: User) => {
