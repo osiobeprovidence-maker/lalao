@@ -328,3 +328,79 @@ export const createPost = mutation({
     };
   },
 });
+
+export const toggleLikePost = mutation({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, { postId }) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const post = await ctx.db.get(postId);
+    if (!post) throw new Error("Post not found");
+
+    const existingLike = await ctx.db
+      .query("likes")
+      .withIndex("by_user_target", (q: any) =>
+        q.eq("userId", currentUser._id).eq("targetType", "post").eq("targetId", postId)
+      )
+      .unique();
+
+    if (existingLike) {
+      await ctx.db.delete(existingLike._id);
+      const nextCount = Math.max(0, (post.likesCount ?? 0) - 1);
+      await ctx.db.patch(postId, { likesCount: nextCount });
+      return { liked: false, likesCount: nextCount };
+    }
+
+    await ctx.db.insert("likes", {
+      userId: currentUser._id,
+      targetType: "post",
+      targetId: postId,
+      createdAt: Date.now(),
+    });
+
+    const nextCount = (post.likesCount ?? 0) + 1;
+    await ctx.db.patch(postId, { likesCount: nextCount });
+    return { liked: true, likesCount: nextCount };
+  },
+});
+
+export const addCommentToPost = mutation({
+  args: {
+    postId: v.id("posts"),
+    text: v.string(),
+    parentCommentId: v.optional(v.id("comments")),
+  },
+  handler: async (ctx, { postId, text, parentCommentId }) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const trimmed = text.trim();
+    if (!trimmed) throw new Error("Comment cannot be empty");
+
+    const post = await ctx.db.get(postId);
+    if (!post) throw new Error("Post not found");
+
+    const commentId = await ctx.db.insert("comments", {
+      postId,
+      authorId: currentUser._id,
+      parentCommentId,
+      text: trimmed,
+      createdAt: Date.now(),
+      likesCount: 0,
+    });
+
+    await ctx.db.patch(postId, {
+      commentsCount: (post.commentsCount ?? 0) + 1,
+    });
+
+    return {
+      id: commentId,
+      authorId: currentUser._id,
+      text: trimmed,
+      createdAt: Date.now(),
+      likesCount: 0,
+      parentCommentId,
+    };
+  },
+});

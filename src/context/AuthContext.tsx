@@ -32,9 +32,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const fetchAccessToken = async ({ forceRefreshToken }: { forceRefreshToken: boolean }) => {
-    if (!user) return null;
+    const currentUser = user ?? auth.currentUser;
+    if (!currentUser) return null;
     try {
-      return await user.getIdToken(forceRefreshToken);
+      return await currentUser.getIdToken(forceRefreshToken);
     } catch (error) {
       return null;
     }

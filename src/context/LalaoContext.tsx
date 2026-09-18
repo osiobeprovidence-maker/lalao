@@ -82,9 +82,9 @@ interface LalaoContextType {
   unreadNotifsCount: number;
 
   // Actions
-  toggleLikePost: (postId: string) => void;
+  toggleLikePost: (postId: string) => void | Promise<void>;
   toggleRepostPost: (postId: string) => void;
-  addComment: (postId: string, text: string, parentCommentId?: string, replyToUsername?: string) => void;
+  addComment: (postId: string, text: string, parentCommentId?: string, replyToUsername?: string) => void | Promise<void>;
   toggleLikeComment: (postId: string, commentId: string, replyId?: string) => void;
   createPost: (post: {
     text: string;
@@ -318,6 +318,9 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const conversationsQuery = useQuery(api.social.listConversations);
 
   const [users, setUsers] = useState<User[]>([]);
+
+  const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
+  const addCommentMutation = useMutation(api.social.addCommentToPost);
 
   const [currentUser, setCurrentUser] = useState<User>(() => {
     try {
@@ -1051,20 +1054,46 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setTimeout(() => setShareToast(null), 2500);
   };
 
-  const toggleLikePost = (postId: string) => {
+  const toggleLikePost = async (postId: string) => {
+    const prevPost = posts.find((post) => post.id === postId);
+    const optimisticLiked = !(prevPost?.isLiked ?? false);
+
     setPosts((prev) =>
       prev.map((post) => {
-        if (post.id === postId) {
-          const isLiked = !post.isLiked;
-          return {
-            ...post,
-            isLiked,
-            likesCount: isLiked ? post.likesCount + 1 : Math.max(0, post.likesCount - 1),
-          };
-        }
-        return post;
+        if (post.id !== postId) return post;
+        const isLiked = !post.isLiked;
+        return {
+          ...post,
+          isLiked,
+          likesCount: isLiked ? post.likesCount + 1 : Math.max(0, post.likesCount - 1),
+        };
       })
     );
+
+    try {
+      const result = await toggleLikePostMutation({ postId: postId as any });
+      setPosts((prev) =>
+        prev.map((post) => {
+          if (post.id !== postId) return post;
+          return {
+            ...post,
+            isLiked: Boolean(result?.liked),
+            likesCount: typeof result?.likesCount === 'number' ? result.likesCount : post.likesCount,
+          };
+        })
+      );
+    } catch {
+      setPosts((prev) =>
+        prev.map((post) => {
+          if (post.id !== postId) return post;
+          return {
+            ...post,
+            isLiked: optimisticLiked ? false : true,
+            likesCount: prevPost ? (prevPost.likesCount ?? 0) : post.likesCount,
+          };
+        })
+      );
+    }
   };
 
   const toggleRepostPost = (postId: string) => {
@@ -1084,7 +1113,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     triggerShareToast('Reposted to your local feed');
   };
 
-  const addComment = (
+  const addComment = async (
     postId: string,
     text: string,
     parentCommentId?: string,
@@ -1092,17 +1121,19 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   ) => {
     if (!text.trim()) return;
 
-    setPosts((prev) =>
-      prev.map((p) => {
-        if (p.id !== postId) return p;
+    const trimmed = text.trim();
+    const prevPost = posts.find((p) => p.id === postId);
 
-        if (parentCommentId) {
+    if (parentCommentId) {
+      setPosts((prev) =>
+        prev.map((p) => {
+          if (p.id !== postId) return p;
           const updatedComments = p.comments.map((comm) => {
             if (comm.id !== parentCommentId) return comm;
             const newReply: CommentReply = {
               id: `rep_${Date.now()}`,
               author: currentUser,
-              text: text.trim(),
+              text: trimmed,
               createdAt: 'Just now',
               likesCount: 0,
               isLiked: false,
@@ -1120,11 +1151,16 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             commentsCount: p.commentsCount + 1,
             comments: updatedComments,
           };
-        } else {
+        })
+      );
+    } else {
+      setPosts((prev) =>
+        prev.map((p) => {
+          if (p.id !== postId) return p;
           const newComment: PostComment = {
             id: `comm_${Date.now()}`,
             author: currentUser,
-            text: text.trim(),
+            text: trimmed,
             createdAt: 'Just now',
             likesCount: 0,
             isLiked: false,
@@ -1135,9 +1171,37 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             commentsCount: p.commentsCount + 1,
             comments: [newComment, ...p.comments],
           };
-        }
-      })
-    );
+        })
+      );
+    }
+
+    try {
+      await addCommentMutation({
+        postId: postId as any,
+        text: trimmed,
+        parentCommentId: parentCommentId as any,
+      });
+      const refreshed = posts.find((p) => p.id === postId);
+      if (refreshed) {
+        setPosts((prev) =>
+          prev.map((p) => {
+            if (p.id !== postId) return p;
+            return {
+              ...p,
+              commentsCount: Math.max(0, (p.commentsCount ?? 0)),
+            };
+          })
+        );
+      }
+    } catch {
+      setPosts((prev) =>
+        prev.map((p) => {
+          if (p.id !== postId) return p;
+          if (prevPost) return prevPost;
+          return p;
+        })
+      );
+    }
   };
 
   const toggleLikeComment = (postId: string, commentId: string, replyId?: string) => {

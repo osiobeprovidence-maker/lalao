@@ -25,7 +25,12 @@ export const SignUpPage: React.FC = () => {
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
-      await createUserRecord({ email: userCredential.user.email ?? undefined });
+      const readyUser = userCredential.user ?? auth.currentUser;
+      if (!readyUser) {
+        throw new Error('Authentication is still loading. Please try again.');
+      }
+      await readyUser.getIdToken(true);
+      await createUserRecord({ email: readyUser.email ?? undefined });
       navigate('/onboarding/name');
     } catch (err: any) {
       setError(err.message || 'Failed to create account. Try again.');

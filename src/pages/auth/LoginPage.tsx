@@ -24,8 +24,13 @@ export const LoginPage: React.FC = () => {
     setIsLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, identifier.trim(), password);
+      const readyUser = userCredential.user ?? auth.currentUser;
+      if (!readyUser) {
+        throw new Error('Authentication is still loading. Please try again.');
+      }
+      await readyUser.getIdToken(true);
       // Ensure convex record exists
-      await createUserRecord({ email: userCredential.user.email ?? undefined });
+      await createUserRecord({ email: readyUser.email ?? undefined });
       navigate('/app');
     } catch (err: any) {
       setError(err.message || 'Invalid email or password.');
