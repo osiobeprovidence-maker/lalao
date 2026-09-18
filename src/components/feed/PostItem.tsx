@@ -20,6 +20,11 @@ import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
 import { useLalao } from '../../context/LalaoContext';
 import { formatDistance, getProximityCategory } from '../../utils/locationUtils';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { Id } from '../../../convex/_generated/dataModel';
+import { CommentThread } from '../common/CommentsModal';
+import { CommentComposer } from '../common/CommentComposer';
 
 export interface PostItemProps {
   post?: Post;
@@ -45,6 +50,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
     pages,
     locationPrivacy,
     deletePost,
+    addComment,
   } = useLalao();
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -487,48 +493,10 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
           {/* Inline Comments Section for Text-Only Posts */}
           {showInlineComments && associatedPost && (
             <div className="mt-4 pt-3 border-t border-neutral-100 animate-in fade-in slide-in-from-top-2">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Write a reply..."
-                  className="flex-1 bg-neutral-100/70 border border-neutral-200 rounded-full px-3.5 py-2 text-xs text-neutral-900 focus:outline-none focus:border-[#5E43F3] focus:bg-white transition-all"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                      // @ts-ignore
-                      if (typeof window !== 'undefined' && window.addCommentToPost) {
-                        // @ts-ignore
-                        window.addCommentToPost(associatedPost.id, e.currentTarget.value.trim());
-                      }
-                      e.currentTarget.value = '';
-                      triggerShareToast('Reply posted');
-                    }
-                  }}
-                />
-              </div>
-              
-              {associatedPost.comments && associatedPost.comments.length > 0 && (
-                <div className="mt-3 space-y-3">
-                  {associatedPost.comments.slice(0, 3).map((c) => (
-                    <div key={c.id} className="flex gap-2">
-                      <Avatar src={c.author.avatar} alt={c.author.name} size="sm" />
-                      <div className="flex-1 min-w-0">
-                        <div className="bg-neutral-100/70 rounded-2xl px-3.5 py-2 text-xs inline-block max-w-full">
-                          <span className="font-bold text-neutral-900 mr-1.5">{c.author.name}</span>
-                          <span className="text-neutral-700 break-words">{c.text}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {associatedPost.comments.length > 3 && (
-                    <button 
-                      onClick={() => setActiveCommentsPostId(associatedPost.id)}
-                      className="text-xs font-medium text-[#5E43F3] hover:underline pl-10"
-                    >
-                      View all {associatedPost.comments.length} replies
-                    </button>
-                  )}
-                </div>
-              )}
+              <InlineComments 
+                postId={associatedPost.id} 
+                postAuthorId={associatedPost.author.id} 
+              />
             </div>
           )}
 
@@ -565,5 +533,56 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
         </div>
       )}
     </article>
+  );
+};
+
+const InlineComments = ({ postId, postAuthorId }: { postId: string, postAuthorId: string }) => {
+  const { toggleLikeComment, deleteComment, setActiveUserProfile, currentUser } = useLalao();
+  const comments = useQuery(api.social.getCommentsForPost, { postId: postId as Id<"posts"> });
+  const [replyingTo, setReplyingTo] = useState<{ commentId: string; username: string } | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  if (!comments) return <div className="py-4 text-center text-xs text-neutral-400">Loading replies...</div>;
+
+  const displayComments = isExpanded ? comments : comments.slice(0, 3);
+
+  return (
+    <div className="flex flex-col">
+      <CommentComposer
+        postId={postId}
+        replyingTo={replyingTo}
+        onCancelReply={() => setReplyingTo(null)}
+        onCommentAdded={() => setIsExpanded(true)}
+        currentUser={currentUser}
+      />
+      
+      {comments.length > 0 && (
+        <div className="mt-4 space-y-3">
+          {displayComments.map((comment: any) => (
+            <CommentThread
+              key={comment.id}
+              comment={comment}
+              postId={postId}
+              postAuthorId={postAuthorId}
+              onReply={(commentId, username) => {
+                setReplyingTo({ commentId, username });
+              }}
+              onLike={toggleLikeComment}
+              onDelete={deleteComment}
+              setActiveUserProfile={setActiveUserProfile}
+              currentUser={currentUser}
+            />
+          ))}
+          {!isExpanded && comments.length > 3 && (
+            <button 
+              onClick={() => setIsExpanded(true)}
+              className="text-xs font-medium text-[#5E43F3] hover:underline pl-10 pt-1"
+            >
+              View all {comments.length} replies
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 };

@@ -94,7 +94,8 @@ interface LalaoContextType {
   toggleLikePost: (postId: string) => void | Promise<void>;
   toggleRepostPost: (postId: string) => void;
   toggleFollowUser: (userId: string) => void | Promise<void>;
-  addComment: (postId: string, text: string, parentCommentId?: string, replyToUsername?: string) => void | Promise<void>;
+  addComment: (postId: string, text: string, parentCommentId?: string, mediaStorageId?: string, mediaType?: 'image' | 'voice' | 'gif' | 'sticker') => void | Promise<void>;
+  deleteComment: (commentId: string) => Promise<void>;
   toggleLikeComment: (postId: string, commentId: string, replyId?: string) => void | Promise<void>;
   createPost: (post: {
     text: string;
@@ -1190,170 +1191,42 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     postId: string,
     text: string,
     parentCommentId?: string,
-    replyToUsername?: string
+    mediaStorageId?: string,
+    mediaType?: 'image' | 'voice' | 'gif' | 'sticker',
+    duration?: number
   ) => {
-    if (!text.trim()) return;
-
-    const trimmed = text.trim();
-    const prevPost = posts.find((p) => p.id === postId);
-
-    const appendReplyToCommentTree = (
-      comments: PostComment[],
-      targetId: string,
-      reply: CommentReply
-    ): PostComment[] =>
-      comments.map((comment) => {
-        if (comment.id === targetId) {
-          return {
-            ...comment,
-            replies: [...(comment.replies || []), reply],
-          };
-        }
-
-        if (comment.replies && comment.replies.length > 0) {
-          return {
-            ...comment,
-            replies: appendReplyToCommentTree(
-              comment.replies as unknown as PostComment[],
-              targetId,
-              reply
-            ) as any,
-          };
-        }
-
-        return comment;
-      });
-
-    if (parentCommentId) {
-      setPosts((prev) =>
-        prev.map((p) => {
-          if (p.id !== postId) return p;
-          const newReply: CommentReply = {
-            id: `rep_${Date.now()}`,
-            author: currentUser,
-            text: trimmed,
-            createdAt: 'Just now',
-            likesCount: 0,
-            isLiked: false,
-            replyToUsername: replyToUsername || 'user',
-            isAuthor: p.author.id === currentUser.id,
-            replies: [],
-          };
-
-          const updatedComments = appendReplyToCommentTree(p.comments, parentCommentId, newReply);
-
-          return {
-            ...p,
-            commentsCount: p.commentsCount + 1,
-            comments: updatedComments,
-          };
-        })
-      );
-    } else {
-      setPosts((prev) =>
-        prev.map((p) => {
-          if (p.id !== postId) return p;
-          const newComment: PostComment = {
-            id: `comm_${Date.now()}`,
-            author: currentUser,
-            text: trimmed,
-            createdAt: 'Just now',
-            likesCount: 0,
-            isLiked: false,
-            replies: [],
-          };
-          return {
-            ...p,
-            commentsCount: p.commentsCount + 1,
-            comments: [newComment, ...p.comments],
-          };
-        })
-      );
-    }
-
     try {
       await addCommentMutation({
         postId: postId as any,
-        text: trimmed,
+        text: text.trim(),
         parentCommentId: parentCommentId as any,
+        mediaStorageId: mediaStorageId as any,
+        mediaType,
+        duration,
       });
-      const refreshed = posts.find((p) => p.id === postId);
-      if (refreshed) {
-        setPosts((prev) =>
-          prev.map((p) => {
-            if (p.id !== postId) return p;
-            return {
-              ...p,
-              commentsCount: Math.max(0, (p.commentsCount ?? 0)),
-            };
-          })
-        );
-      }
-    } catch {
-      setPosts((prev) =>
-        prev.map((p) => {
-          if (p.id !== postId) return p;
-          if (prevPost) return prevPost;
-          return p;
-        })
-      );
+    } catch (error) {
+      console.error("Failed to add comment:", error);
+      throw error;
     }
   };
 
   const toggleLikeComment = async (postId: string, commentId: string, replyId?: string) => {
     const targetId = replyId || commentId;
-    const toggleReplyLike = (replies: CommentReply[] = []): CommentReply[] =>
-      replies.map((reply) => {
-        if (reply.id === replyId) {
-          const isLiked = !reply.isLiked;
-          return {
-            ...reply,
-            isLiked,
-            likesCount: isLiked ? reply.likesCount + 1 : Math.max(0, reply.likesCount - 1),
-            replies: toggleReplyLike(reply.replies ?? []),
-          };
-        }
-
-        if (reply.replies && reply.replies.length > 0) {
-          return {
-            ...reply,
-            replies: toggleReplyLike(reply.replies),
-          };
-        }
-
-        return reply;
-      });
-
-    setPosts((prev) =>
-      prev.map((p) => {
-        if (p.id !== postId) return p;
-
-        const updatedComments = p.comments.map((comm) => {
-          if (replyId) {
-            const replies = toggleReplyLike(comm.replies ?? []);
-            if (replies !== comm.replies) {
-              return { ...comm, replies };
-            }
-          }
-
-          if (comm.id === commentId && !replyId) {
-            const isLiked = !comm.isLiked;
-            return {
-              ...comm,
-              isLiked,
-              likesCount: isLiked ? comm.likesCount + 1 : Math.max(0, comm.likesCount - 1),
-            };
-          }
-          return comm;
-        });
-
-        return { ...p, comments: updatedComments };
-      })
-    );
-
     try {
       await toggleLikeCommentMutation({ commentId: targetId as any });
-    } catch {}
+    } catch (error) {
+      console.error("Failed to toggle comment like:", error);
+    }
+  };
+
+  const deleteCommentMutation = useMutation(api.social.deleteComment);
+  const deleteComment = async (commentId: string) => {
+    try {
+      await deleteCommentMutation({ commentId: commentId as any });
+    } catch (e) {
+      console.error("Failed to delete comment:", e);
+      throw e;
+    }
   };
 
   const generateUploadUrlMutation = useMutation(api.social.generateUploadUrl);
@@ -2291,6 +2164,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toggleLikePost,
         toggleRepostPost,
         addComment,
+        deleteComment,
         toggleLikeComment,
         createPost,
         generateUploadUrl,

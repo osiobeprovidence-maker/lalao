@@ -38,6 +38,8 @@ export const DiscoverView: React.FC = () => {
     location,
     locationPrivacy,
     setIsLocationModalOpen,
+    setIsCreateSheetOpen,
+    setCreateFlowType,
     pages,
     toggleFollowPage,
     setActivePageId,
@@ -555,14 +557,38 @@ export const DiscoverView: React.FC = () => {
                     })}
                   </div>
                 ) : (
-                  <div className="p-5 rounded-2xl bg-neutral-50 text-center border border-neutral-100 space-y-2">
-                    <p className="text-xs text-neutral-600">
-                      No local pages found within {location.radiusKm} km of {location.name}.
-                    </p>
+                  <div className="p-5 rounded-2xl bg-neutral-50 text-center border border-neutral-100 space-y-4">
+                    <div className="mx-auto w-12 h-12 rounded-full bg-white flex items-center justify-center mb-1 border border-neutral-100 shadow-sm">
+                      <Building className="w-5 h-5 text-[#5E43F3]" />
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-bold text-neutral-900 mb-1">
+                        No local Stands found
+                      </p>
+                      <p className="text-[11px] text-neutral-500 leading-relaxed max-w-[280px] mx-auto">
+                        No local Stands found within {location.radiusKm} km of {location.name}.
+                        <br/><br/>
+                        Be the first to create a Stand in your area and let people nearby discover you.
+                      </p>
+                    </div>
+                    
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCreateFlowType('page');
+                          setIsCreateSheetOpen(true);
+                        }}
+                        className="w-full max-w-[220px] mx-auto py-2.5 rounded-xl bg-[#5E43F3] text-white text-xs font-bold hover:bg-[#4E34E0] transition-colors"
+                      >
+                        Create a Stand
+                      </button>
+                    </div>
+                    
                     <button
                       type="button"
                       onClick={() => setNearbyOnly(false)}
-                      className="text-xs font-bold text-[#5E43F3] hover:underline cursor-pointer"
+                      className="block mx-auto text-[11px] font-bold text-[#5E43F3] hover:underline"
                     >
                       Show pages everywhere
                     </button>

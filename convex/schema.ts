@@ -106,6 +106,11 @@ export default defineSchema({
     text: v.string(),
     createdAt: v.number(),
     likesCount: v.number(),
+    mediaUrl: v.optional(v.string()),
+    mediaStorageId: v.optional(v.id("_storage")),
+    mediaType: v.optional(v.union(v.literal("image"), v.literal("voice"), v.literal("gif"), v.literal("sticker"))),
+    duration: v.optional(v.number()),
+    isDeleted: v.optional(v.boolean()),
   })
     .index("by_post", ["postId"])
     .index("by_parent", ["parentCommentId"]),
@@ -184,6 +189,8 @@ export default defineSchema({
       v.literal("like"),
       v.literal("comment"),
       v.literal("reply"),
+      v.literal("comment_like"),
+      v.literal("reply_like"),
       v.literal("follow"),
       v.literal("rally_join"),
     ),

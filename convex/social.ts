@@ -679,7 +679,64 @@ export const toggleLikeComment = mutation({
 
     const nextCount = (comment.likesCount ?? 0) + 1;
     await ctx.db.patch(commentId, { likesCount: nextCount });
+
+    if (comment.authorId !== currentUser._id) {
+      const type = comment.parentCommentId ? "reply_like" : "comment_like";
+      await ctx.db.insert("notifications", {
+        recipientId: comment.authorId,
+        actorId: currentUser._id,
+        type,
+        postId: comment.postId,
+        commentId,
+        targetExcerpt: comment.text ? comment.text.slice(0, 80) : "an attachment",
+        isRead: false,
+        createdAt: Date.now(),
+      });
+    }
+
     return { liked: true, likesCount: nextCount };
+  },
+});
+
+export const deleteComment = mutation({
+  args: { commentId: v.id("comments") },
+  handler: async (ctx, { commentId }) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const comment = await ctx.db.get(commentId);
+    if (!comment) throw new Error("Comment not found");
+
+    if (comment.authorId !== currentUser._id) {
+      throw new Error("Unauthorized");
+    }
+
+    // Check if it has children
+    const children = await ctx.db
+      .query("comments")
+      .withIndex("by_parent", (q) => q.eq("parentCommentId", commentId))
+      .collect();
+
+    if (children.length > 0) {
+      // Soft delete
+      await ctx.db.patch(commentId, {
+        text: "[Deleted]",
+        mediaUrl: undefined,
+        mediaStorageId: undefined,
+        mediaType: undefined,
+        duration: undefined,
+        isDeleted: true,
+      });
+    } else {
+      // Hard delete
+      await ctx.db.delete(commentId);
+      const post = await ctx.db.get(comment.postId);
+      if (post) {
+        await ctx.db.patch(comment.postId, {
+          commentsCount: Math.max(0, (post.commentsCount ?? 0) - 1),
+        });
+      }
+    }
   },
 });
 
@@ -692,16 +749,35 @@ export const addCommentToPost = mutation({
     postId: v.id("posts"),
     text: v.string(),
     parentCommentId: v.optional(v.id("comments")),
+    mediaStorageId: v.optional(v.id("_storage")),
+    mediaType: v.optional(v.union(v.literal("image"), v.literal("voice"), v.literal("gif"), v.literal("sticker"))),
+    duration: v.optional(v.number()),
   },
-  handler: async (ctx, { postId, text, parentCommentId }) => {
+  handler: async (ctx, { postId, text, parentCommentId, mediaStorageId, mediaType, duration }) => {
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 
     const trimmed = text.trim();
-    if (!trimmed) throw new Error("Comment cannot be empty");
+    if (!trimmed && !mediaStorageId) throw new Error("Comment cannot be empty");
 
     const post = await ctx.db.get(postId);
     if (!post) throw new Error("Post not found");
+
+    if (post.replyPermission && post.replyPermission !== "everyone") {
+      const relSets = await getRelationshipSets(ctx, currentUser);
+      const isFollowing = relSets.followingIds.has(post.authorId);
+      const isFollower = relSets.followerIds.has(post.authorId);
+      const isFriend = isFollowing && isFollower;
+
+      if (post.replyPermission === "followers" && !isFollower) throw new Error("Only followers can reply");
+      if (post.replyPermission === "following" && !isFollowing) throw new Error("Only users this person follows can reply");
+      if (post.replyPermission === "friends" && !isFriend) throw new Error("Only friends can reply");
+    }
+
+    let mediaUrl = undefined;
+    if (mediaStorageId) {
+      mediaUrl = (await ctx.storage.getUrl(mediaStorageId)) || undefined;
+    }
 
     const now = Date.now();
     const commentId = await ctx.db.insert("comments", {
@@ -711,6 +787,10 @@ export const addCommentToPost = mutation({
       text: trimmed,
       createdAt: now,
       likesCount: 0,
+      mediaUrl,
+      mediaStorageId,
+      mediaType,
+      duration,
     });
 
     await ctx.db.patch(postId, {
@@ -772,6 +852,69 @@ export const addCommentToPost = mutation({
         isVerified: false,
       },
     };
+  },
+});
+
+export const getCommentsForPost = query({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, { postId }) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return [];
+
+    const allComments = await ctx.db
+      .query("comments")
+      .withIndex("by_post", (q) => q.eq("postId", postId))
+      .order("desc")
+      .take(200);
+
+    const buildCommentTree = async (comments: any[], parentId?: any): Promise<any[]> => {
+      const children = comments.filter((c) => {
+        const cParentStr = c.parentCommentId ? String(c.parentCommentId) : undefined;
+        const parentStr = parentId ? String(parentId) : undefined;
+        return cParentStr === parentStr;
+      });
+      const enrichedChildren = await Promise.all(
+        children.map(async (c) => {
+          const authorDoc = await ctx.db.get(c.authorId);
+          const author = await resolveAuthor(ctx, authorDoc, currentUser._id);
+          const like = await ctx.db
+            .query("likes")
+            .withIndex("by_user_target", (q: any) =>
+              q.eq("userId", currentUser._id).eq("targetType", "comment").eq("targetId", c._id)
+            )
+            .unique();
+            
+          let parentAuthorDoc = null;
+          if (c.parentCommentId) {
+             const parent = comments.find(p => p._id === c.parentCommentId);
+             if (parent) parentAuthorDoc = await ctx.db.get(parent.authorId);
+          }
+
+          let mediaUrl = c.mediaUrl;
+          if (!mediaUrl && c.mediaStorageId) {
+             mediaUrl = await ctx.storage.getUrl(c.mediaStorageId);
+          }
+
+          return {
+            id: c._id,
+            author,
+            text: c.text,
+            createdAt: formatRelativeTime(c.createdAt),
+            likesCount: c.likesCount ?? 0,
+            isLiked: !!like,
+            mediaUrl,
+            mediaType: c.mediaType,
+            duration: c.duration,
+            isDeleted: c.isDeleted,
+            replyToUsername: (parentAuthorDoc as any)?.username ?? "user",
+            replies: await buildCommentTree(comments, c._id),
+          };
+        })
+      );
+      return enrichedChildren;
+    };
+
+    return buildCommentTree(allComments, undefined);
   },
 });
 
