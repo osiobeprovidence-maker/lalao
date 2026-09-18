@@ -69,6 +69,19 @@ async function resolveAuthor(ctx: any, authorDoc: any, currentUserId: string | n
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   STORAGE
+   ───────────────────────────────────────────────────────────────────────────── */
+
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getAuthedUser(ctx);
+    if (!user) throw new Error("Unauthenticated");
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
    FEED
    ───────────────────────────────────────────────────────────────────────────── */
 
@@ -391,6 +404,7 @@ export const createPost = mutation({
   args: {
     text: v.string(),
     mediaUrl: v.optional(v.string()),
+    mediaStorageId: v.optional(v.id("_storage")),
     mediaType: v.optional(v.union(v.literal("image"), v.literal("video"))),
     location: v.string(),
     latitude: v.optional(v.number()),
@@ -423,11 +437,17 @@ export const createPost = mutation({
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 
+    let mediaUrl = args.mediaUrl;
+    if (args.mediaStorageId) {
+      mediaUrl = (await ctx.storage.getUrl(args.mediaStorageId)) ?? undefined;
+    }
+
     const now = Date.now();
     const postId = await ctx.db.insert("posts", {
       authorId: currentUser._id,
       text: args.text,
-      mediaUrl: args.mediaUrl,
+      mediaUrl: mediaUrl,
+      mediaStorageId: args.mediaStorageId,
       mediaType: args.mediaType,
       location: args.location,
       latitude: args.latitude,

@@ -96,6 +96,7 @@ interface LalaoContextType {
   createPost: (post: {
     text: string;
     mediaUrl?: string;
+    mediaStorageId?: string;
     mediaType?: 'image' | 'video';
     location: string;
     audience?: PostAudience;
@@ -105,6 +106,8 @@ interface LalaoContextType {
     rallyRefId?: string;
     pageRefId?: string;
   }) => void | Promise<void>;
+  
+  generateUploadUrl: () => Promise<string>;
   
   toggleJoinRally: (rallyId: string) => void;
   joinRally: (rallyId: string) => void;
@@ -1317,11 +1320,18 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch {}
   };
 
+  const generateUploadUrlMutation = useMutation(api.social.generateUploadUrl);
+
+  const generateUploadUrl = async () => {
+    return await generateUploadUrlMutation();
+  };
+
   const createPostMutation = useMutation(api.social.createPost);
 
   const createPost = async ({
     text,
     mediaUrl,
+    mediaStorageId,
     mediaType = 'image',
     location: postLocation,
     audience = 'everyone',
@@ -1341,12 +1351,14 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     poll?: { question: string; options: string[] };
     rallyRefId?: string;
     pageRefId?: string;
+    mediaStorageId?: string;
   }) => {
-    if (!text.trim()) return;
+    if (!text.trim() && !mediaUrl && !mediaStorageId) return;
 
     const created = await createPostMutation({
       text: text.trim(),
       mediaUrl,
+      mediaStorageId: mediaStorageId as any,
       mediaType,
       location: postLocation || location.name,
       audience,
@@ -2224,6 +2236,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         addComment,
         toggleLikeComment,
         createPost,
+        generateUploadUrl,
         toggleJoinRally,
         joinRally: toggleJoinRally,
         createRally,

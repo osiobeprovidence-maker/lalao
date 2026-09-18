@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
-import { uploadFileToStorage } from '../../lib/firebase';
 import type { PostAudience, PostReplyPermission } from '../../types';
 
 export const PostComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
@@ -25,6 +24,7 @@ export const PostComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded =
     currentUser,
     location,
     createPost,
+    generateUploadUrl,
     createFlowType,
     setCreateFlowType,
     setIsCreateSheetOpen,
@@ -178,46 +178,63 @@ export const PostComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded =
     if (!text.trim() && !mediaUrl) return;
     if (isUploadingMedia) return;
 
-    let finalMediaUrl = mediaUrl;
-    const fileToUpload = selectedFile ?? fileInputRef.current?.files?.[0] ?? null;
+    setIsUploadingMedia(true);
 
-    if (fileToUpload) {
-      setIsUploadingMedia(true);
-      try {
-        finalMediaUrl = await uploadFileToStorage(fileToUpload, 'posts');
-      } catch {
-        setIsUploadingMedia(false);
-        return;
+    try {
+      let finalMediaUrl = mediaUrl;
+      let mediaStorageId: string | undefined;
+      const fileToUpload = selectedFile ?? fileInputRef.current?.files?.[0] ?? null;
+
+      if (fileToUpload) {
+        // Use Convex Storage
+        const uploadUrl = await generateUploadUrl();
+        const result = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": fileToUpload.type },
+          body: fileToUpload,
+        });
+
+        if (!result.ok) {
+          throw new Error("Upload failed");
+        }
+
+        const data = await result.json();
+        mediaStorageId = data.storageId;
       }
+
+      await createPost({
+        text: text.trim(),
+        mediaUrl: finalMediaUrl || undefined,
+        mediaStorageId,
+        mediaType,
+        location: postLocation,
+        audience: selectedAudience,
+        replyPermission,
+        pageRefId: selectedAudience === 'page' ? selectedPageId ?? undefined : undefined,
+        poll: isPollOpen && pollQuestion.trim() ? { question: pollQuestion, options: pollOptions.filter((o) => o.trim() !== '') } : undefined,
+      });
+
+      if (mediaUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(mediaUrl);
+      }
+
+      if (currentDraftId) {
+        try {
+          await deleteDraftFromConvex(currentDraftId);
+        } catch {}
+      }
+      setCurrentDraftId(null);
+      setMediaUrl('');
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setComposerInitialText('');
+      setCreateFlowType(null);
+    } catch (err) {
+      console.error("Failed to post:", err);
+      // Let it stay open so user can retry, spinner stops
+    } finally {
       setIsUploadingMedia(false);
     }
-
-    createPost({
-      text: text.trim(),
-      mediaUrl: finalMediaUrl || undefined,
-      mediaType,
-      location: postLocation,
-      audience: selectedAudience,
-      replyPermission,
-      pageRefId: selectedAudience === 'page' ? selectedPageId ?? undefined : undefined,
-      poll: isPollOpen && pollQuestion.trim() ? { question: pollQuestion, options: pollOptions.filter((o) => o.trim() !== '') } : undefined,
-    });
-
-    if (mediaUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(mediaUrl);
-    }
-
-    if (currentDraftId) {
-      try {
-        await deleteDraftFromConvex(currentDraftId);
-      } catch {}
-    }
-    setCurrentDraftId(null);
-    setMediaUrl('');
-    setSelectedFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    setComposerInitialText('');
-    setCreateFlowType(null);
   };
 
   const sampleMediaPresets = [

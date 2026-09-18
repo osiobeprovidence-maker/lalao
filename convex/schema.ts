@@ -58,6 +58,7 @@ export default defineSchema({
     authorId: v.id("users"),
     text: v.string(),
     mediaUrl: v.optional(v.string()),
+    mediaStorageId: v.optional(v.id("_storage")),
     mediaType: v.optional(v.union(v.literal("image"), v.literal("video"))),
     location: v.string(),
     latitude: v.optional(v.number()),
