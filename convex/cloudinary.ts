@@ -35,6 +35,7 @@ export const generateSignature = action({
       signature,
       timestamp,
       apiKey,
+      folder: args.folder,
     };
   },
 });
