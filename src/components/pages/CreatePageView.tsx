@@ -25,6 +25,7 @@ export const CreatePageView: React.FC = () => {
     setActiveTab,
     triggerShareToast,
     generateCloudinarySignature,
+    setActivePageId,
   } = useLalao();
 
   const [stage, setStage] = useState<1 | 2 | 3>(1);
@@ -106,7 +107,7 @@ export const CreatePageView: React.FC = () => {
         finalAvatarUrl = config?.sampleAvatar || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=300&auto=format&fit=crop&q=80';
       }
 
-      await createPage({
+      const newPageId = await createPage({
         name: name.trim(),
         username: username.trim() || name.toLowerCase().replace(/[^a-z0-9]/g, ''),
         category: category.trim(),
@@ -116,8 +117,12 @@ export const CreatePageView: React.FC = () => {
         avatar: finalAvatarUrl,
         coverImage: finalCoverImage,
       });
-      triggerShareToast(`Page "${name.trim()}" created successfully!`);
-      handleClose();
+      if (newPageId) {
+        setActiveTab('home');
+        setActivePageId(newPageId);
+      } else {
+        handleClose();
+      }
     } catch (err) {
       console.error(err);
       triggerShareToast('Failed to create page');

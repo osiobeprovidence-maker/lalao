@@ -80,6 +80,7 @@ interface LalaoContextType {
   isFeedLoading: boolean;
   rallies: Rally[];
   pages: Page[];
+  myPages: Page[];
   cycles: Cycle[];
   conversations: Conversation[];
   messageContacts: User[];
@@ -121,7 +122,16 @@ interface LalaoContextType {
   createRally: (rally: { title: string; description: string; location: string; timeDate: string; category: Rally['category'] }) => void;
 
   toggleFollowPage: (pageId: string) => void;
-  createPage: (pageData: { name: string; username: string; category: string; description: string; type: Page['type']; location: string; avatar?: string; coverImage?: string }) => void;
+  createPage: (pageData: {
+    name: string;
+    username: string;
+    category: string;
+    description: string;
+    type: Page['type'];
+    location: string;
+    avatar?: string;
+    coverImage?: string;
+  }) => Promise<string | undefined>;
   updatePage: (pageId: string, updatedData: Partial<Page>) => void;
   createPagePost: (pageId: string, postData: { text: string; mediaUrl?: string; mediaType?: 'image' | 'video'; location?: string }) => void;
   createPageEvent: (pageId: string, eventData: Partial<OrgEvent>) => void;
@@ -332,9 +342,11 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const feedPostsQuery = useQuery(api.social.listFeedPosts);
   const exploreUsersQuery = useQuery(api.social.listUsersForExplore);
   const pagesQuery = useQuery(api.social.listPages);
+  const myPagesQuery = useQuery(api.pages.getMyPages);
   const conversationsQuery = useQuery(api.social.listConversations);
 
   const [users, setUsers] = useState<User[]>([]);
+  const [myPages, setMyPages] = useState<Page[]>([]);
 
   const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
   const addCommentMutation = useMutation(api.social.addCommentToPost);
@@ -413,6 +425,12 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setPages(pagesQuery as Page[]);
     }
   }, [pagesQuery]);
+
+  useEffect(() => {
+    if (myPagesQuery) {
+      setMyPages(myPagesQuery as Page[]);
+    }
+  }, [myPagesQuery]);
 
   useEffect(() => {
     if (conversationsQuery) {
@@ -1493,7 +1511,9 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const createPage = ({
+  const createPageMutation = useMutation(api.pages.createPage);
+
+  const createPage = async ({
     name,
     username,
     category,
@@ -1512,40 +1532,28 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     avatar?: string;
     coverImage?: string;
   }) => {
-    const badgeMap: Record<Page['type'], Page['badge']> = {
-      business: 'BIZ',
-      organization: 'ORG',
-      club: 'CLUB',
-      community: 'COMMUNITY',
-    };
+    try {
+      const newPageId = await createPageMutation({
+        name,
+        username,
+        category,
+        description,
+        type,
+        location: pageLoc || `${location.name}, ${location.subArea}`,
+        avatar,
+        coverImage,
+      });
 
-    const newPage: Page = {
-      id: `page_${Date.now()}`,
-      name,
-      username: username.replace('@', ''),
-      type,
-      badge: badgeMap[type],
-      avatar: avatar || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&auto=format&fit=crop&q=80',
-      coverImage: coverImage || 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=1200&auto=format&fit=crop&q=80',
-      description,
-      location: pageLoc || `${location.name}, ${location.subArea}`,
-      followersCount: 1,
-      isFollowing: true,
-      isOwner: true,
-      ownerId: currentUser.id,
-      category,
-      aboutInfo: {
-        address: `${pageLoc || location.name}, Delta State`,
-        hours: 'Standard local operating hours',
-        founded: '2026',
-      },
-    };
-
-    setPages([newPage, ...pages]);
-    setCreateFlowType(null);
-    setIsCreateSheetOpen(false);
-    setActivePageId(newPage.id);
-    triggerShareToast(`Page "${name}" successfully created!`);
+      setCreateFlowType(null);
+      setIsCreateSheetOpen(false);
+      
+      triggerShareToast(`Page "${name}" successfully created!`);
+      return newPageId;
+    } catch (err) {
+      console.error(err);
+      triggerShareToast('Failed to create page');
+      return undefined;
+    }
   };
 
   const updatePage = (pageId: string, updatedData: Partial<Page>) => {
@@ -2175,6 +2183,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         joinRally: toggleJoinRally,
         createRally,
         toggleFollowPage,
+        myPages,
         createPage,
         updatePage,
         createPagePost,

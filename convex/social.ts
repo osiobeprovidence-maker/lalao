@@ -328,6 +328,9 @@ export const listPages = query({
     const results: any[] = [];
 
     for (const page of pages) {
+      if (page.ownerId === currentUser._id) {
+        continue; // Exclude own pages from discover
+      }
       const isFollowing = !!(await ctx.db
         .query("pageFollowers")
         .withIndex("by_page_user", (q: any) =>

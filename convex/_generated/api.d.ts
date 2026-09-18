@@ -10,6 +10,7 @@
 
 import type * as admin from "../admin.js";
 import type * as cloudinary from "../cloudinary.js";
+import type * as pages from "../pages.js";
 import type * as search from "../search.js";
 import type * as social from "../social.js";
 import type * as users from "../users.js";
@@ -23,6 +24,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   cloudinary: typeof cloudinary;
+  pages: typeof pages;
   search: typeof search;
   social: typeof social;
   users: typeof users;
