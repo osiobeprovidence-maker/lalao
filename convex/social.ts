@@ -876,7 +876,7 @@ export const listNotifications = query({
 
     return await Promise.all(
       notifs.map(async (notif: any) => {
-        const actor = notif.actorId ? await ctx.db.get(notif.actorId) : null;
+        const actor = notif.actorId ? (await ctx.db.get(notif.actorId)) as any : null;
         return {
           id: notif._id,
           type: notif.type as string,
@@ -1048,7 +1048,7 @@ export const getMessageContacts = query({
 
     const results = [];
     for (const friendId of friendIds) {
-      const friend = await ctx.db.get(friendId as any);
+      const friend = (await ctx.db.get(friendId as any)) as any;
       if (friend) {
         results.push({
           id: friend._id,

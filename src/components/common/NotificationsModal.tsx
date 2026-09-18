@@ -45,7 +45,7 @@ export const NotificationsModal: React.FC = () => {
     isNotificationsOpen,
     setIsNotificationsOpen,
     notifications,
-    markAllNotificationsRead,
+    markNotificationsAsRead,
     setActiveUserProfile,
     setActiveCommentsPostId,
     setActiveTab,

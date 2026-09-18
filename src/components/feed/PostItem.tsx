@@ -510,7 +510,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
                 <div className="mt-3 space-y-3">
                   {associatedPost.comments.slice(0, 3).map((c) => (
                     <div key={c.id} className="flex gap-2">
-                      <Avatar src={c.author.avatar} size="sm" />
+                      <Avatar src={c.author.avatar} alt={c.author.name} size="sm" />
                       <div className="flex-1 min-w-0">
                         <div className="bg-neutral-100/70 rounded-2xl px-3.5 py-2 text-xs inline-block max-w-full">
                           <span className="font-bold text-neutral-900 mr-1.5">{c.author.name}</span>

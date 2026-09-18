@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import {
   User,
@@ -183,7 +183,6 @@ interface LalaoContextType {
   setActivePageId: (id: string | null) => void;
   activeUserProfile: User | null;
   setActiveUserProfile: (user: User | null) => void;
-  toggleFollowUser: (userId: string) => void;
   composerInitialText: string;
   setComposerInitialText: (text: string) => void;
   activeCommentsPostId: string | null;
@@ -1356,7 +1355,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const generateUploadUrlMutation = useMutation(api.social.generateUploadUrl);
-  const generateCloudinarySignatureMutation = useMutation(api.cloudinary.generateSignature);
+  const generateCloudinarySignatureMutation = useAction(api.cloudinary.generateSignature);
 
   const generateUploadUrl = async () => {
     return await generateUploadUrlMutation();
