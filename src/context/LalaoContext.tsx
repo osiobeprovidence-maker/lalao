@@ -108,6 +108,7 @@ interface LalaoContextType {
   }) => void | Promise<void>;
   
   generateUploadUrl: () => Promise<string>;
+  generateCloudinarySignature: (folder?: string) => Promise<{ signature: string; timestamp: number; apiKey: string }>;
   deletePost: (postId: string) => Promise<void>;
   
   toggleJoinRally: (rallyId: string) => void;
@@ -1322,9 +1323,14 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const generateUploadUrlMutation = useMutation(api.social.generateUploadUrl);
+  const generateCloudinarySignatureMutation = useMutation(api.cloudinary.generateSignature);
 
   const generateUploadUrl = async () => {
     return await generateUploadUrlMutation();
+  };
+
+  const generateCloudinarySignature = async (folder?: string) => {
+    return await generateCloudinarySignatureMutation({ folder });
   };
 
   const createPostMutation = useMutation(api.social.createPost);
@@ -2251,6 +2257,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toggleLikeComment,
         createPost,
         generateUploadUrl,
+        generateCloudinarySignature,
         deletePost,
         toggleJoinRally,
         joinRally: toggleJoinRally,

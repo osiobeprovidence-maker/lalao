@@ -18,6 +18,7 @@ import {
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import type { PostAudience, PostReplyPermission } from '../../types';
+import { uploadImageToCloudinary } from '../../lib/cloudinary';
 
 export const PostComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const {
@@ -32,6 +33,7 @@ export const PostComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded =
     setComposerInitialText,
     pages,
     setIsLocationModalOpen,
+    generateCloudinarySignature,
   } = useLalao();
 
   const [text, setText] = useState('');
@@ -182,30 +184,19 @@ export const PostComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded =
 
     try {
       let finalMediaUrl = mediaUrl;
-      let mediaStorageId: string | undefined;
       const fileToUpload = selectedFile ?? fileInputRef.current?.files?.[0] ?? null;
 
       if (fileToUpload) {
-        // Use Convex Storage
-        const uploadUrl = await generateUploadUrl();
-        const result = await fetch(uploadUrl, {
-          method: "POST",
-          headers: { "Content-Type": fileToUpload.type },
-          body: fileToUpload,
-        });
-
-        if (!result.ok) {
-          throw new Error("Upload failed");
-        }
-
-        const data = await result.json();
-        mediaStorageId = data.storageId;
+        // Generate signature from Convex backend securely
+        const signatureData = await generateCloudinarySignature("posts");
+        
+        // Upload to Cloudinary using the secure signature
+        finalMediaUrl = await uploadImageToCloudinary(fileToUpload, signatureData);
       }
 
       await createPost({
         text: text.trim(),
         mediaUrl: finalMediaUrl || undefined,
-        mediaStorageId,
         mediaType,
         location: postLocation,
         audience: selectedAudience,
