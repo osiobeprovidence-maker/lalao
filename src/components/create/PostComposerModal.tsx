@@ -103,7 +103,7 @@ export const PostComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded =
           Cancel
         </button>
 
-        <h3 className="font-bold text-base text-neutral-950">New Post</h3>
+        <h3 className="font-bold text-base text-neutral-950">Create Post</h3>
 
         <button
           id="btn-submit-post"
@@ -201,7 +201,7 @@ export const PostComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded =
             rows={6}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={`What's happening in ${postLocation}? Share local news, questions, or updates...`}
+            placeholder="What's on your mind?"
             className="w-full text-base text-neutral-900 placeholder:text-neutral-400 border-none resize-none focus:outline-none leading-relaxed"
             autoFocus
           />

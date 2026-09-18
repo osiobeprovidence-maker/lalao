@@ -18,6 +18,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
     setCreateFlowType,
     setIsWalletModalOpen,
     setIsShoppingHistoryOpen,
+    setActiveTab,
   } = useLalao();
 
   if (!isOpen) return null;
@@ -80,8 +81,9 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
                     handleOrdersAction();
                     return;
                   }
-                  setCreateFlowType('page');
-                  setIsCreateSheetOpen(true);
+                  setCreateFlowType(null);
+                  setIsCreateSheetOpen(false);
+                  setActiveTab('create-post');
                   onClose();
                 }}
                 className="flex w-full items-center rounded-xl px-3 py-3 text-left transition hover:bg-neutral-50"

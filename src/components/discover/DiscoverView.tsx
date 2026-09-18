@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search,
   MapPin,
@@ -27,6 +27,8 @@ import { User } from '../../types';
 
 export const DiscoverView: React.FC = () => {
   const {
+    currentUser,
+    users,
     location,
     locationPrivacy,
     setIsLocationModalOpen,
@@ -43,8 +45,11 @@ export const DiscoverView: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<'all' | 'people' | 'pages' | 'video' | 'trending'>('all');
   const [nearbyOnly, setNearbyOnly] = useState(true);
 
-  // Real app data only. Empty until the app has actual nearby user records to display.
   const [people, setPeople] = useState<User[]>([]);
+
+  useEffect(() => {
+    setPeople(users || []);
+  }, [users]);
 
   const toggleFollowUser = (userId: string) => {
     setPeople((prev) =>
@@ -62,12 +67,29 @@ export const DiscoverView: React.FC = () => {
     );
   };
 
-  const trendingTopics = [
-    { tag: '#UduFootballLeague', postsCount: '1.4k posts', location: 'Udu' },
-    { tag: '#DeltaFounders', postsCount: '890 posts', location: 'Warri' },
-    { tag: '#RiverbankCleanUp', postsCount: '620 posts', location: 'Udu Bridge' },
-    { tag: '#SubteenStudioDrop', postsCount: '410 posts', location: 'Express Junction' },
-  ];
+  const trendingTopics = useMemo(() => {
+    const topicMap = new Map<string, { count: number; location: string }>();
+
+    posts.forEach((post) => {
+      const matches = post.text.match(/#[A-Za-z0-9_]+/g) || [];
+      matches.forEach((tag) => {
+        const key = tag.toLowerCase();
+        const entry = topicMap.get(key) ?? { count: 0, location: post.location || location.name };
+        entry.count += 1;
+        entry.location = post.location || entry.location;
+        topicMap.set(key, entry);
+      });
+    });
+
+    return Array.from(topicMap.entries())
+      .map(([tag, data]) => ({
+        tag,
+        postsCount: `${data.count} post${data.count === 1 ? '' : 's'}`,
+        location: data.location,
+      }))
+      .sort((a, b) => b.postsCount.localeCompare(a.postsCount))
+      .slice(0, 4);
+  }, [posts, location.name]);
 
   const userCoords = useMemo(() => {
     return {
@@ -213,7 +235,7 @@ export const DiscoverView: React.FC = () => {
       {/* Content Feed */}
       <div className="space-y-6 pt-3">
         {/* Trending Section */}
-        {(activeFilter === 'all' || activeFilter === 'trending') && !searchQuery && (
+        {(activeFilter === 'all' || activeFilter === 'trending') && !searchQuery && trendingTopics.length > 0 && (
           <section className="px-4">
             <div className="flex items-center justify-between mb-2.5">
               <div className="flex items-center gap-1.5">

@@ -9,6 +9,7 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as social from "../social.js";
 import type * as users from "../users.js";
 
 import type {
@@ -19,6 +20,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  social: typeof social;
   users: typeof users;
 }>;
 

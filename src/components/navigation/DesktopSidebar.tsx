@@ -127,8 +127,9 @@ export const DesktopSidebar: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                setCreateFlowType('post');
-                setIsCreateSheetOpen(true);
+                setCreateFlowType(null);
+                setIsCreateSheetOpen(false);
+                setActiveTab('create-post');
               }}
               className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 bg-[#f9f7f4] text-neutral-700 transition hover:border-neutral-300 hover:text-neutral-950 cursor-pointer"
               aria-label="Create post"

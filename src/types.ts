@@ -56,6 +56,9 @@ export interface DevicePermissions {
 
 export type PermissionPromptType = 'location' | 'notifications' | 'camera' | 'microphone' | 'photos' | null;
 
+export type PostAudience = 'everyone' | 'friends' | 'closeFriends';
+export type PostReplyPermission = 'everyone' | 'friends' | 'closeFriends';
+
 export interface Post {
   id: string;
   author: User;
@@ -74,6 +77,14 @@ export interface Post {
   isLiked: boolean;
   isReposted: boolean;
   comments: PostComment[];
+  audience?: PostAudience;
+  replyPermission?: PostReplyPermission;
+  gifUrl?: string;
+  poll?: {
+    question: string;
+    options: string[];
+    votes?: number[];
+  };
   rallyRefId?: string; // If this post is linked to or broadcasting a Rally
   pageRefId?: string;
 }

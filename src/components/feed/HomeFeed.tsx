@@ -148,7 +148,11 @@ export const HomeFeed: React.FC = () => {
         if (joinedCommunityIds.includes(post.author.id)) return true;
         return false;
       })
-    : [];
+    : posts.filter((post) => {
+        if (post.author.id === currentUser.id) return true;
+        if (post.pageRefId && pages.some((page) => page.id === post.pageRefId && (page.isFollowing || page.ownerId === currentUser.id))) return true;
+        return true;
+      });
 
   // Filter posts according to feed tab and user membership state
   const filteredPosts = communityFeedPosts
@@ -468,7 +472,13 @@ export const HomeFeed: React.FC = () => {
       )}
 
       {/* Posts Stream */}
-      {!hasJoinedCommunities ? (
+      {filteredPosts.length > 0 ? (
+        <div className="divide-y divide-neutral-100">
+          {filteredPosts.map((post) => (
+            <PostItem key={post.id} post={post} />
+          ))}
+        </div>
+      ) : !hasJoinedCommunities ? (
         <div className="min-h-[62vh] flex items-center justify-center px-6 pb-8 pt-10">
           <div className="flex max-w-sm flex-col items-center text-center gap-2.5">
             <div className="w-11 h-11 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center">
@@ -489,12 +499,6 @@ export const HomeFeed: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
-      ) : filteredPosts.length > 0 ? (
-        <div className="divide-y divide-neutral-100">
-          {filteredPosts.map((post) => (
-            <PostItem key={post.id} post={post} />
-          ))}
         </div>
       ) : (
         /* Empty State */
@@ -518,8 +522,9 @@ export const HomeFeed: React.FC = () => {
               </button>
               <button
                 onClick={() => {
-                  setCreateFlowType('post');
-                  setIsCreateSheetOpen(true);
+                  setCreateFlowType(null);
+                  setIsCreateSheetOpen(false);
+                  setActiveTab('create-post');
                 }}
                 className="px-3.5 py-2 rounded-full bg-[#5E43F3] text-[11px] font-bold text-white hover:bg-[#4E34E0] cursor-pointer"
               >

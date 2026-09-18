@@ -3,7 +3,7 @@ import { Home, Heart, Plus, MessageCircle, User } from 'lucide-react';
 import { useLalao, NavTab } from '../../context/LalaoContext';
 
 export const BottomNav: React.FC = () => {
-  const { activeTab, setActiveTab, setIsCreateSheetOpen } = useLalao();
+  const { activeTab, setActiveTab, setIsCreateSheetOpen, setCreateFlowType } = useLalao();
 
   const navItems: { id: NavTab; label: string; icon: typeof Home }[] = [
     { id: 'home', label: 'Home', icon: Home },
@@ -28,7 +28,11 @@ export const BottomNav: React.FC = () => {
             <div key={item.id} className="relative -top-4 flex items-center justify-center">
               <button
                 id="btn-nav-create-center"
-                onClick={() => setIsCreateSheetOpen(true)}
+                onClick={() => {
+                  setCreateFlowType(null);
+                  setIsCreateSheetOpen(false);
+                  setActiveTab('create-post');
+                }}
                 className="w-13 h-13 rounded-full bg-[#5E43F3] text-white flex items-center justify-center shadow-lg shadow-[#5E43F3]/30 hover:bg-[#4E34E0] active:scale-90 transition-transform cursor-pointer focus:outline-none"
                 aria-label="Create Post, Rally or Page"
               >

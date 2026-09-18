@@ -70,11 +70,20 @@ export const createUserRecord = mutation({
       
     if (existing) return existing._id;
     
+    const baseUsername = (email ?? phone ?? `user${Date.now()}`)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "")
+      .slice(0, 20);
+
     return await ctx.db.insert("users", {
       tokenIdentifier: identity.tokenIdentifier,
       email,
       phone,
+      name: email ? email.split("@")[0] : "New user",
+      username: baseUsername || `user${Date.now()}`,
       onboardingStep: "pending",
+      followersCount: 0,
+      followingCount: 0,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     } as any);

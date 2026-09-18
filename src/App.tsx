@@ -12,6 +12,7 @@ import { ProfileView } from './components/profile/ProfileView';
 // Modals, Sheets, and Full-Page Subviews
 import { LocationRadiusModal } from './components/location/LocationRadiusModal';
 import { CreateBottomSheet } from './components/create/CreateBottomSheet';
+import { CreatePostPage } from './components/create/CreatePostPage';
 import { PostComposerModal } from './components/create/PostComposerModal';
 import { RallyComposerModal } from './components/create/RallyComposerModal';
 import { CreatePageView } from './components/pages/CreatePageView';
@@ -97,39 +98,38 @@ const LalaoAppContent: React.FC = () => {
   const likedPosts = posts.filter((post) => post.isLiked);
 
   const renderListPage = (title: string, subtitle: string, items: Array<{ id: string; title: string; meta: string; accent?: string }>, emptyText: string) => (
-    <div className="mx-auto w-full max-w-[680px] px-4 py-5">
-      <div className="rounded-[28px] border border-neutral-200 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.04)]">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#5E43F3]">Lalao</p>
-            <h1 className="mt-1 text-2xl font-black text-neutral-950">{title}</h1>
-          </div>
-          <div className="rounded-full bg-[#5E43F3]/10 px-2.5 py-1 text-[10px] font-bold text-[#5E43F3]">
-            {items.length}
-          </div>
+    <div className="mx-auto w-full max-w-[680px] px-4 py-6">
+      <div className="mb-5 flex items-center justify-between gap-3 border-b border-neutral-200/80 pb-3">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#5E43F3]">Lalao</p>
+          <h1 className="mt-1 text-2xl font-black tracking-[-0.03em] text-neutral-950">{title}</h1>
         </div>
-        <p className="mb-5 text-sm text-neutral-600">{subtitle}</p>
-
-        {items.length > 0 ? (
-          <div className="space-y-3">
-            {items.map((item) => (
-              <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-[#f9f7f4] p-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-neutral-900">{item.title}</p>
-                  <p className="mt-1 text-[11px] text-neutral-500">{item.meta}</p>
-                </div>
-                <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${item.accent ?? 'bg-neutral-900 text-white'}`}>
-                  {item.title.split(' ')[0] || 'Lalao'}
-                </span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 p-5 text-center text-sm text-neutral-600">
-            {emptyText}
-          </div>
-        )}
+        <div className="rounded-full bg-[#5E43F3]/10 px-2.5 py-1 text-[10px] font-bold text-[#5E43F3]">
+          {items.length}
+        </div>
       </div>
+
+      <p className="mb-5 text-sm text-neutral-600">{subtitle}</p>
+
+      {items.length > 0 ? (
+        <div className="space-y-3">
+          {items.map((item) => (
+            <div key={item.id} className="flex items-center justify-between gap-3 border-b border-neutral-200/80 pb-3 last:border-b-0 last:pb-0">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-neutral-900">{item.title}</p>
+                <p className="mt-1 text-[11px] text-neutral-500">{item.meta}</p>
+              </div>
+              <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${item.accent ?? 'bg-neutral-900 text-white'}`}>
+                {item.title.split(' ')[0] || 'Lalao'}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-3 text-sm text-neutral-600">
+          <p className="leading-relaxed">{emptyText}</p>
+        </div>
+      )}
     </div>
   );
 
@@ -156,6 +156,17 @@ const LalaoAppContent: React.FC = () => {
             ref={mainRef}
             className="relative flex-1 overflow-y-auto bg-[#f6f3ee] pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0 lg:min-h-0"
           >
+            {activeTab === 'create-post' && (
+              <div key="tab-create-post" className="animate-in fade-in duration-200 relative min-h-full w-full overflow-hidden bg-[#f6f3ee]">
+                <div className="absolute inset-0">
+                  <HomeFeed />
+                </div>
+                <div className="absolute inset-0 z-10 bg-[#f6f3ee]/70 backdrop-blur-[1px]" />
+                <div className="relative z-20">
+                  <CreatePostPage />
+                </div>
+              </div>
+            )}
             {activeTab === 'home' && (
               <div key="tab-home" className="animate-in fade-in duration-200 mx-auto w-full max-w-[680px] bg-transparent min-h-full">
                 <HomeFeed />
@@ -239,7 +250,6 @@ const LalaoAppContent: React.FC = () => {
       <CreatePageView />
       <SettingsPageView />
       <LocationRadiusModal />
-      <PostComposerModal />
       <RallyComposerModal />
       <CreateCycleModal isOpen={isCreateCycleOpen} onClose={() => setIsCreateCycleOpen(false)} />
       <CycleDetailModal />
@@ -248,27 +258,31 @@ const LalaoAppContent: React.FC = () => {
       <CommentsModal />
       <NotificationsModal />
 
-      <CreateBottomSheet />
-      <CycleStoryViewerModal />
-      <PermissionPromptModal />
-      <DevicePermissionsModal />
-      <CartDrawer />
-      <ShoppingHistoryScreen
-        isOpen={isShoppingHistoryOpen}
-        onClose={() => setIsShoppingHistoryOpen(false)}
-        onSelectOrder={(order) => setSelectedOrderForDetail(order)}
-      />
-      <OrderDetailModal
-        order={selectedOrderForDetail}
-        onClose={() => setSelectedOrderForDetail(null)}
-      />
+      {!['create-post'].includes(activeTab) && <CreateBottomSheet />}
+      {!['create-post'].includes(activeTab) && <CycleStoryViewerModal />}
+      {!['create-post'].includes(activeTab) && <PermissionPromptModal />}
+      {!['create-post'].includes(activeTab) && <DevicePermissionsModal />}
+      {!['create-post'].includes(activeTab) && <CartDrawer />}
+      {!['create-post'].includes(activeTab) && (
+        <ShoppingHistoryScreen
+          isOpen={isShoppingHistoryOpen}
+          onClose={() => setIsShoppingHistoryOpen(false)}
+          onSelectOrder={(order) => setSelectedOrderForDetail(order)}
+        />
+      )}
+      {!['create-post'].includes(activeTab) && (
+        <OrderDetailModal
+          order={selectedOrderForDetail}
+          onClose={() => setSelectedOrderForDetail(null)}
+        />
+      )}
 
-      <EventDetailModal />
-      <TournamentRegisterModal />
-      <TicketPurchaseModal />
-      <DigitalTicketModal />
-      <MyTicketsModal />
-      <WalletModal />
+      {!['create-post'].includes(activeTab) && <EventDetailModal />}
+      {!['create-post'].includes(activeTab) && <TournamentRegisterModal />}
+      {!['create-post'].includes(activeTab) && <TicketPurchaseModal />}
+      {!['create-post'].includes(activeTab) && <DigitalTicketModal />}
+      {!['create-post'].includes(activeTab) && <MyTicketsModal />}
+      {!['create-post'].includes(activeTab) && <WalletModal />}
 
 
       {shareToast && (

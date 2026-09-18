@@ -15,6 +15,8 @@ import { NotificationItem } from '../../types';
 
 export const NotificationsView: React.FC = () => {
   const {
+    currentUser,
+    users,
     notifications,
     markNotificationsAsRead,
     setActiveUserProfile,
@@ -28,12 +30,12 @@ export const NotificationsView: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<'all' | 'suggested' | 'activity'>('all');
 
   const suggestedUsers = useMemo(() => {
-    const users = notifications
-      .map((n) => n.actor)
-      .filter((actor, index, arr) => arr.findIndex((item) => item.id === actor.id) === index);
+    if (!users?.length) return [];
 
-    return users.slice(0, 4);
-  }, [notifications]);
+    return users
+      .filter((user) => user.id !== (currentUser?.id ?? ''))
+      .slice(0, 4);
+  }, [currentUser?.id, users]);
 
   const todayNotifs = notifications.filter(
     (n) => n.timestamp.includes('m ago') || n.timestamp.includes('h ago')

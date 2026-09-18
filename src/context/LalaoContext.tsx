@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import {
   User,
@@ -42,6 +42,7 @@ export type NavTab =
   | 'home'
   | 'discover'
   | 'create'
+  | 'create-post'
   | 'messages'
   | 'notifications'
   | 'profile'
@@ -71,6 +72,7 @@ interface LalaoContextType {
   isDetectingGps: boolean;
   
   // Content state
+  users: User[];
   posts: Post[];
   rallies: Rally[];
   pages: Page[];
@@ -84,7 +86,17 @@ interface LalaoContextType {
   toggleRepostPost: (postId: string) => void;
   addComment: (postId: string, text: string, parentCommentId?: string, replyToUsername?: string) => void;
   toggleLikeComment: (postId: string, commentId: string, replyId?: string) => void;
-  createPost: (post: { text: string; mediaUrl?: string; mediaType?: 'image' | 'video'; location: string }) => void;
+  createPost: (post: {
+    text: string;
+    mediaUrl?: string;
+    mediaType?: 'image' | 'video';
+    location: string;
+    audience?: PostAudience;
+    replyPermission?: PostReplyPermission;
+    gifUrl?: string;
+    poll?: { question: string; options: string[] };
+    rallyRefId?: string;
+  }) => void | Promise<void>;
   
   toggleJoinRally: (rallyId: string) => void;
   joinRally: (rallyId: string) => void;
@@ -300,6 +312,12 @@ const normalizeConvexUser = (user: Record<string, any> | null | undefined): User
 
 export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const currentUserQuery = useQuery(api.users.getCurrentUser);
+  const feedPostsQuery = useQuery(api.social.listFeedPosts);
+  const exploreUsersQuery = useQuery(api.social.listUsersForExplore);
+  const pagesQuery = useQuery(api.social.listPages);
+  const conversationsQuery = useQuery(api.social.listConversations);
+
+  const [users, setUsers] = useState<User[]>([]);
 
   const [currentUser, setCurrentUser] = useState<User>(() => {
     try {
@@ -330,7 +348,37 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [currentUserQuery, hydratedCurrentUser]);
 
   useEffect(() => {
+    if (exploreUsersQuery) {
+      setUsers(exploreUsersQuery as User[]);
+    }
+  }, [exploreUsersQuery]);
+
+  useEffect(() => {
+    if (feedPostsQuery) {
+      setPosts(feedPostsQuery as Post[]);
+    }
+  }, [feedPostsQuery]);
+
+  useEffect(() => {
+    if (pagesQuery) {
+      setPages(pagesQuery as Page[]);
+    }
+  }, [pagesQuery]);
+
+  useEffect(() => {
+    if (conversationsQuery) {
+      setConversations(conversationsQuery as Conversation[]);
+    }
+  }, [conversationsQuery]);
+
+  useEffect(() => {
     try {
+      localStorage.removeItem('lalao_posts');
+      localStorage.removeItem('lalao_rallies');
+      localStorage.removeItem('lalao_pages');
+      localStorage.removeItem('lalao_cycles');
+      localStorage.removeItem('lalao_conversations');
+      localStorage.removeItem('lalao_notifications');
       localStorage.setItem('lalao_current_user', JSON.stringify(currentUser));
     } catch {
       // ignore storage issues
@@ -360,14 +408,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
-  const [posts, setPosts] = useState<Post[]>(() => {
-    try {
-      const saved = localStorage.getItem('lalao_posts');
-      return saved ? JSON.parse(saved) : EMPTY_POSTS;
-    } catch {
-      return EMPTY_POSTS;
-    }
-  });
+  const [posts, setPosts] = useState<Post[]>(EMPTY_POSTS);
 
   const [rallies, setRallies] = useState<Rally[]>(() => {
     try {
@@ -378,20 +419,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
-  const [pages, setPages] = useState<Page[]>(() => {
-    try {
-      const saved = localStorage.getItem('lalao_pages');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-      return EMPTY_PAGES;
-    } catch {
-      return EMPTY_PAGES;
-    }
-  });
+  const [pages, setPages] = useState<Page[]>(EMPTY_PAGES);
 
   const [cycles, setCycles] = useState<Cycle[]>(() => {
     try {
@@ -1149,21 +1177,49 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     );
   };
 
-  const createPost = ({
+  const createPostMutation = useMutation(api.social.createPost);
+
+  const createPost = async ({
     text,
     mediaUrl,
     mediaType = 'image',
     location: postLocation,
+    audience = 'everyone',
+    replyPermission = 'everyone',
+    gifUrl,
+    poll,
+    rallyRefId,
   }: {
     text: string;
     mediaUrl?: string;
     mediaType?: 'image' | 'video';
     location: string;
+    audience?: PostAudience;
+    replyPermission?: PostReplyPermission;
+    gifUrl?: string;
+    poll?: { question: string; options: string[] };
+    rallyRefId?: string;
   }) => {
-    const newPost: Post = {
+    if (!text.trim()) return;
+
+    const created = await createPostMutation({
+      text: text.trim(),
+      mediaUrl,
+      mediaType,
+      location: postLocation || location.name,
+      audience,
+      replyPermission,
+      gifUrl,
+      pollQuestion: poll?.question,
+      pollOptions: poll?.options,
+      rallyRefId,
+    });
+
+    const backendPost = created as Post | null;
+    const newPost: Post = backendPost || {
       id: `post_${Date.now()}`,
       author: currentUser,
-      text,
+      text: text.trim(),
       mediaUrl,
       mediaType,
       location: postLocation || location.name,
@@ -1175,8 +1231,14 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       isLiked: false,
       isReposted: false,
       comments: [],
+      audience,
+      replyPermission,
+      gifUrl,
+      poll,
+      rallyRefId,
     };
-    setPosts([newPost, ...posts]);
+
+    setPosts((prev) => [newPost, ...prev]);
     setCreateFlowType(null);
     setIsCreateSheetOpen(false);
     setActiveTab('home');
@@ -1979,6 +2041,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <LalaoContext.Provider
       value={{
+        users,
         currentUser,
         setCurrentUser,
         activeTab,

@@ -1,5 +1,4 @@
 import { User, Post, Rally, Page, Cycle, Conversation, NotificationItem, LocationConfig, LocationPrivacySettings, Order } from '../types';
-import { HOK_ORGANIZATION_PAGE, HOK_POSTS } from './honorOfKingsData';
 
 export const CURRENT_USER: User = {
   id: 'user_providence',
@@ -512,7 +511,6 @@ export const SEED_POSTS: Post[] = [
     isReposted: false,
     comments: [],
   },
-  ...HOK_POSTS,
 ];
 
 export const SEED_PAGES: Page[] = [
@@ -587,7 +585,6 @@ export const SEED_PAGES: Page[] = [
       },
     ],
   },
-  HOK_ORGANIZATION_PAGE,
   {
     id: 'page_subteen',
     name: 'Subteen Wear',

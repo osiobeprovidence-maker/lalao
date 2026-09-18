@@ -22,7 +22,7 @@ interface CreateCycleModalProps {
 }
 
 type CreateStep = 'choose' | 'gallery' | 'customize' | 'audio' | 'preview';
-type ContentType = 'photo' | 'video' | 'text' | 'voice';
+type ContentType = 'photo' | 'video' | 'text' | 'voice' | 'audio';
 
 const BG_GRADIENTS = [
   { id: 'violet', label: 'Violet Twilight', value: 'from-violet-600 to-indigo-800' },
