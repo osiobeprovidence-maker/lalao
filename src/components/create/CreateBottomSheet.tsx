@@ -3,7 +3,6 @@ import { X, PenLine, Hand, Building2, ChevronRight, ArrowLeft } from 'lucide-rea
 import { useLalao, CreateOption } from '../../context/LalaoContext';
 import { PostComposerModal } from './PostComposerModal';
 import { RallyComposerModal } from './RallyComposerModal';
-import { CreatePageView } from '../pages/CreatePageView';
 
 export const CreateBottomSheet: React.FC = () => {
   const { isCreateSheetOpen, setIsCreateSheetOpen, setCreateFlowType, createFlowType } = useLalao();
@@ -258,10 +257,6 @@ export const CreateBottomSheet: React.FC = () => {
 
   if (createFlowType === 'rally') {
     return <RallyComposerModal embedded={isDesktop} />;
-  }
-
-  if (createFlowType === 'page') {
-    return <CreatePageView embedded={isDesktop} />;
   }
 
   return renderCreateOptions();

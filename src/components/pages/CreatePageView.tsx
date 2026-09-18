@@ -16,7 +16,7 @@ import {
 import { useLalao } from '../../context/LalaoContext';
 import { Page } from '../../types';
 import { Badge } from '../common/Badge';
-import { uploadImageToCloudinary } from '../../utils/cloudinaryUtils';
+import { uploadImageToCloudinary } from '../../lib/cloudinary';
 
 export const CreatePageView: React.FC = () => {
   const {
