@@ -270,18 +270,22 @@ export const PageDetailModal: React.FC = () => {
     <div
       ref={containerRef}
       id="page-detail-screen"
-      className="w-full bg-white animate-in fade-in duration-200"
+      className="w-full bg-transparent animate-in fade-in duration-200"
     >
-      <div className="w-full min-h-full flex flex-col bg-white pb-24">
+      <div className="w-full min-h-full flex flex-col bg-[#f6f3ee] pb-24">
         {/* Cover Photo Area with Back Button & Action Controls */}
-        <div className="relative h-44 sm:h-56 w-full bg-neutral-900 shrink-0">
-          <img
-            src={page.coverImage}
-            alt={page.name}
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover opacity-90"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/30 pointer-events-none" />
+        <div className={`relative h-44 sm:h-56 w-full shrink-0 ${page.coverImage ? 'bg-neutral-900' : 'bg-gradient-to-tr from-[#5E43F3]/10 to-[#f6f3ee]'}`}>
+          {page.coverImage && (
+            <>
+              <img
+                src={page.coverImage}
+                alt={page.name}
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover opacity-90"
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/30 pointer-events-none" />
+            </>
+          )}
 
           {/* Top Bar with Back, Badges, Cart and Share/More Menu */}
           <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
@@ -640,7 +644,7 @@ export const PageDetailModal: React.FC = () => {
         {/* Sub-Tabs: Posts | Shop (if BIZ) | Events | Media | About */}
         <div
           id="page-subtabs-bar"
-          className="sticky top-0 bg-white/95 backdrop-blur-md border-y border-neutral-100 flex items-center justify-around px-2 z-10"
+          className="sticky top-0 bg-[#f6f3ee]/95 backdrop-blur-md border-b border-neutral-200/80 flex items-center justify-around px-2 z-10 mb-6"
         >
           {tabs.map((tab) => (
             <button

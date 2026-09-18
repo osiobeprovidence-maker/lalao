@@ -247,7 +247,7 @@ const LalaoAppContent: React.FC = () => {
             )}
               </>
             ) : (
-              <div key="tab-page-detail" className="animate-in fade-in duration-200 w-full bg-transparent min-h-full">
+              <div key="tab-page-detail" className="animate-in fade-in duration-200 max-w-3xl mx-auto w-full bg-transparent min-h-full">
                 <PageDetailModal />
               </div>
             )}
