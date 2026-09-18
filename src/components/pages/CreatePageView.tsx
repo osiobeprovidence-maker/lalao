@@ -123,9 +123,9 @@ export const CreatePageView: React.FC = () => {
       } else {
         handleClose();
       }
-    } catch (err) {
-      console.error(err);
-      triggerShareToast('Failed to create page');
+    } catch (err: any) {
+      console.error("Create page failed at Cloudinary signature generation:", err.data || err.message || err);
+      triggerShareToast('Unable to create page. Please try again.');
     } finally {
       setIsUploading(false);
     }

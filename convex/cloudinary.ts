@@ -1,6 +1,6 @@
 "use node";
 import { action } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import crypto from "crypto";
 
 export const generateSignature = action({
@@ -12,7 +12,7 @@ export const generateSignature = action({
     const apiKey = process.env.CLOUDINARY_API_KEY;
 
     if (!apiSecret || !apiKey) {
-      throw new Error("Cloudinary API Key or Secret is missing. Please add them via 'npx convex env set CLOUDINARY_API_KEY ...'");
+      throw new ConvexError("Cloudinary is not configured in Convex. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET.");
     }
 
     const timestamp = Math.round(new Date().getTime() / 1000);
