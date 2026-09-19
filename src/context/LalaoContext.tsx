@@ -398,23 +398,13 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const messageContactsQuery = useQuery(api.social.getMessageContacts);
   const draftsQuery = useQuery(api.social.listMyDrafts);
 
-  // Subscriptions
-  // @ts-ignore
+  // Subscriptions — these are now queried directly by PageDetailModal & MySubscriptionsModal
+  // Only keep the calls that have real matching Convex functions
   const pageSubscriptionPlansQuery = useQuery(
-    // @ts-ignore
-    api.subscriptions.getPlansByPage, 
+    api.subscriptions.getListingsByPage,
     activePageId ? { pageId: activePageId as any } : "skip"
   );
-  // @ts-ignore
   const mySubscriptionsQuery = useQuery(api.subscriptions.getMySubscriptions);
-  // @ts-ignore
-  const createSubscriptionPlanMutation = useMutation(api.subscriptions.createPlan);
-  // @ts-ignore
-  const updateSubscriptionPlanMutation = useMutation(api.subscriptions.updatePlan);
-  // @ts-ignore
-  const subscribeToPlanMutation = useMutation(api.subscriptions.subscribeToPlan);
-  // @ts-ignore
-  const cancelSubscriptionMutation = useMutation(api.subscriptions.cancelSubscription);
 
   const [currentUser, setCurrentUser] = useState<User>(() => {
     try {

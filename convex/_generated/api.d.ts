@@ -16,6 +16,7 @@ import type * as shop from "../shop.js";
 import type * as social from "../social.js";
 import type * as subscriptions from "../subscriptions.js";
 import type * as users from "../users.js";
+import type * as wallet from "../wallet.js";
 
 import type {
   ApiFromModules,
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   social: typeof social;
   subscriptions: typeof subscriptions;
   users: typeof users;
+  wallet: typeof wallet;
 }>;
 
 /**

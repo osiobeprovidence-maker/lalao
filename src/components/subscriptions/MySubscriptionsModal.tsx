@@ -1,22 +1,26 @@
 import React from 'react';
 import { X, Crown, Check, AlertCircle, Clock, Ban } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 export const MySubscriptionsModal: React.FC = () => {
   const { 
     isMySubscriptionsOpen, 
     setIsMySubscriptionsOpen,
-    mySubscriptions,
-    cancelSubscription,
     triggerShareToast
   } = useLalao();
+
+  const mySubscriptions = useQuery(api.subscriptions.getMyMemberships) || [];
+  const cancelSubscription = useMutation(api.subscriptions.cancelMembership);
 
   if (!isMySubscriptionsOpen) return null;
 
   const handleCancel = async (subId: string) => {
-    if (!confirm('Are you sure you want to cancel this subscription?')) return;
+    if (!confirm('Are you sure you want to cancel this subscription? You will retain access until the end of the billing period.')) return;
     try {
-      await cancelSubscription(subId);
+      await cancelSubscription({ membershipId: subId as any });
+      triggerShareToast('Subscription will cancel at the end of the period.');
     } catch (err: any) {
       triggerShareToast(err.message || 'Error cancelling subscription');
     }
@@ -66,17 +70,17 @@ export const MySubscriptionsModal: React.FC = () => {
 
                   <div className="flex items-start gap-4 mb-4">
                     <div className="w-12 h-12 rounded-xl bg-neutral-100 overflow-hidden shrink-0">
-                      {sub.page.avatar ? (
+                      {sub.page?.avatar ? (
                         <img src={sub.page.avatar} alt={sub.page.name} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full bg-[#5E43F3]/10 flex items-center justify-center">
-                          <span className="text-lg font-black text-[#5E43F3]">{sub.page.name.charAt(0)}</span>
+                          <span className="text-lg font-black text-[#5E43F3]">{sub.page?.name?.charAt(0)}</span>
                         </div>
                       )}
                     </div>
                     <div>
-                      <h3 className="text-base font-black text-neutral-900">{sub.plan.name}</h3>
-                      <p className="text-xs text-neutral-500 font-bold">@ {sub.page.name}</p>
+                      <h3 className="text-base font-black text-neutral-900">{sub.plan?.name}</h3>
+                      <p className="text-xs text-neutral-500 font-bold">@ {sub.page?.name}</p>
                     </div>
                   </div>
                   
@@ -87,7 +91,7 @@ export const MySubscriptionsModal: React.FC = () => {
                         {sub.status === 'pending' ? (
                           <>
                             <Clock className="w-3.5 h-3.5 text-amber-500" />
-                            <span className="text-xs font-bold text-amber-600">Pending Payment</span>
+                            <span className="text-xs font-bold text-amber-600">Pending</span>
                           </>
                         ) : sub.status === 'active' ? (
                           <>
@@ -104,13 +108,21 @@ export const MySubscriptionsModal: React.FC = () => {
                     </div>
                     <div className="w-px h-8 bg-neutral-200"></div>
                     <div className="flex-1">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-0.5">Billing</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-0.5">Slot Price</p>
                       <span className="text-xs font-bold text-neutral-900">
-                        {sub.plan.currency === 'NGN' ? '₦' : sub.plan.currency}{(sub.plan.price).toLocaleString()} / {sub.plan.billingInterval}
+                        {sub.plan?.currency === 'NGN' ? '₦' : sub.plan?.currency}{(sub.plan?.defaultSlotPrice ?? 0).toLocaleString()} / {sub.plan?.billingCycle}
                       </span>
                     </div>
                   </div>
                   
+                  {sub.currentPeriodEnd && (
+                    <div className="mb-4">
+                      <p className="text-xs text-neutral-500">
+                        {sub.cancelAtPeriodEnd ? 'Ends on' : 'Renews on'} <span className="font-bold text-neutral-900">{new Date(sub.currentPeriodEnd).toLocaleDateString()}</span>
+                      </p>
+                    </div>
+                  )}
+
                   <div className="flex gap-2">
                     {!sub.cancelAtPeriodEnd && sub.status !== 'cancelled' && (
                       <button 

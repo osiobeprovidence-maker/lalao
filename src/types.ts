@@ -258,6 +258,8 @@ export interface Page {
   ticketingEnabled?: boolean;
   monetization?: PageMonetization;
   analytics?: PageAnalytics;
+  businessType?: 'commerce' | 'subscription' | 'hybrid';
+  activeTools?: string[];
 }
 
 export type EventType = 'tournament' | 'community' | 'live';
@@ -535,4 +537,51 @@ export interface LocationConfig {
   latitude?: number;
   longitude?: number;
   isGpsDetected?: boolean;
+}
+
+export interface SubscriptionListing {
+  _id: string;
+  pageId: string;
+  platformId?: string;
+  platformName?: string;
+  platformLogo?: string;
+  name: string;
+  description?: string;
+  category: string;
+  totalAccountCost: number;
+  currency: string;
+  billingCycle: 'monthly' | 'quarterly' | 'yearly';
+  totalCapacity: number;
+  defaultSlotPrice: number;
+  allowDifferentSlotPrices: boolean;
+  memberInstructions?: string;
+  benefits: string[];
+  active: boolean;
+  availableSlots?: number;
+  slotsCount?: number;
+}
+
+export interface SubscriptionSlot {
+  _id: string;
+  subscriptionId: string;
+  pageId: string;
+  slotNumber: number;
+  status: 'available' | 'occupied' | 'paused';
+  currentMemberId?: string;
+  priceOverride?: number;
+  role?: 'Head of Family' | 'Member';
+}
+
+export interface SubscriptionMembership {
+  _id: string;
+  userId: string;
+  pageId: string;
+  subscriptionId: string;
+  slotId: string;
+  role: 'Head of Family' | 'Member';
+  status: 'pending' | 'active' | 'cancelled' | 'past_due';
+  startedAt?: number;
+  currentPeriodStart?: number;
+  currentPeriodEnd?: number;
+  cancelAtPeriodEnd: boolean;
 }

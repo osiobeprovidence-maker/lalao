@@ -39,10 +39,13 @@ import {
   Copy,
   Briefcase,
   Crown,
+  Repeat,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
 import { PostItem } from '../feed/PostItem';
@@ -55,16 +58,15 @@ import { EditPageModal } from './EditPageModal';
 import { PageMonetizationModal } from './PageMonetizationModal';
 import { PageAnalyticsModal } from './PageAnalyticsModal';
 import { PageToolsModal } from './PageToolsModal';
-import { PageManageSubscriptionsModal } from './PageManageSubscriptionsModal';
+import { SubscriptionCRMModal } from './SubscriptionCRMModal';
 import { SubscriptionCheckoutModal } from './SubscriptionCheckoutModal';
 import { PageSettingsModal } from './PageSettingsModal';
 import { PageEventModal } from './PageEventModal';
 import { EventAttendeesModal } from './EventAttendeesModal';
 import { PageManageProductsModal } from './PageManageProductsModal';
 import { PagePostComposerModal } from './PagePostComposerModal';
-import { PageToolsModal } from './PageToolsModal';
 
-type PageTab = 'posts' | 'shop' | 'media' | 'events' | 'about';
+type PageTab = 'posts' | 'shop' | 'subscriptions' | 'media' | 'events' | 'about';
 
 export const PageDetailModal: React.FC = () => {
   const {
@@ -112,6 +114,8 @@ export const PageDetailModal: React.FC = () => {
   const [eventToEdit, setEventToEdit] = useState<OrgEvent | null>(null);
   const [selectedEventForAttendees, setSelectedEventForAttendees] = useState<OrgEvent | null>(null);
   const [isPostComposerOpen, setIsPostComposerOpen] = useState(false);
+
+  const activePlans = useQuery(api.subscriptions.getPageSubscriptions, activePageId && activePageId !== 'page_honorofkings' ? { pageId: activePageId as any } : 'skip') || [];
 
   const containerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -188,11 +192,6 @@ export const PageDetailModal: React.FC = () => {
     ),
   ];
 
-  const activePlans = pageSubscriptionPlans?.filter((p: any) => p.active) || [];
-  if (activePlans.length > 0) {
-    categories.push('Subscriptions');
-  }
-
   const filteredProducts =
     selectedCategory === 'All'
       ? products
@@ -208,35 +207,30 @@ export const PageDetailModal: React.FC = () => {
   );
 
   let tabs: { id: PageTab; label: string }[] = [];
-  if (isBizPage && hasEvents) {
-    tabs = [
-      { id: 'posts', label: 'Posts' },
-      { id: 'shop', label: 'Shop' },
-      { id: 'events', label: 'Events' },
-      { id: 'media', label: 'Media' },
-      { id: 'about', label: 'About' },
-    ];
-  } else if (hasEvents) {
-    tabs = [
-      { id: 'posts', label: 'Posts' },
-      { id: 'media', label: 'Media' },
-      { id: 'events', label: 'Events' },
-      { id: 'about', label: 'About' },
-    ];
-  } else if (isBizPage) {
-    tabs = [
-      { id: 'posts', label: 'Posts' },
-      { id: 'shop', label: 'Shop' },
-      { id: 'media', label: 'Media' },
-      { id: 'about', label: 'About' },
-    ];
-  } else {
-    tabs = [
-      { id: 'posts', label: 'Posts' },
-      { id: 'media', label: 'Media' },
-      { id: 'about', label: 'About' },
-    ];
+  tabs.push({ id: 'posts', label: 'Posts' });
+
+  const activeTools = page.activeTools || [];
+  
+  if (isBizPage) {
+    if (page.businessType === 'commerce' || page.businessType === 'hybrid') {
+      if (activeTools.includes('shop')) {
+        tabs.push({ id: 'shop', label: 'Shop' });
+      }
+    }
+    if (page.businessType === 'subscription' || page.businessType === 'hybrid') {
+      if (activeTools.includes('subscriptions')) {
+        tabs.push({ id: 'subscriptions', label: 'Subscriptions' });
+      }
+    }
   }
+
+  tabs.push({ id: 'media', label: 'Media' });
+
+  if (hasEvents) {
+    tabs.push({ id: 'events', label: 'Events' });
+  }
+
+  tabs.push({ id: 'about', label: 'About' });
 
   // Filter posts belonging to this page
   // Instead of guessing by name/username, use pageRefId or exact author id
@@ -797,65 +791,8 @@ export const PageDetailModal: React.FC = () => {
                 </div>
               )}
 
-              {/* Products/Subscriptions Grid */}
-              {selectedCategory === 'Subscriptions' ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {activePlans.map((plan: any) => (
-                    <div
-                      key={plan._id}
-                      className="group bg-white rounded-2xl border border-[#5E43F3]/20 overflow-hidden hover:border-[#5E43F3]/50 transition-all flex flex-col cursor-pointer active:scale-[0.99] shadow-sm hover:shadow-md"
-                      onClick={() => {
-                        setSelectedSubscriptionPlan(plan);
-                        setIsSubscriptionCheckoutOpen(true);
-                      }}
-                    >
-                      <div className="p-4 bg-gradient-to-br from-[#5E43F3]/5 to-transparent border-b border-[#5E43F3]/10">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Crown className="w-4 h-4 text-[#5E43F3]" />
-                          <span className="text-[10px] font-black uppercase tracking-wider text-[#5E43F3]">
-                            Subscription
-                          </span>
-                        </div>
-                        <h4 className="text-sm font-black text-neutral-900">{plan.name}</h4>
-                        <div className="mt-1 flex items-baseline gap-1">
-                          <span className="text-lg font-black text-neutral-900">
-                            {plan.currency === 'NGN' ? '₦' : plan.currency}{(plan.price).toLocaleString()}
-                          </span>
-                          <span className="text-[10px] text-neutral-500 font-bold uppercase">
-                            / {plan.billingInterval}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="p-4 flex-1 flex flex-col">
-                        <p className="text-xs text-neutral-600 mb-4 line-clamp-2">
-                          {plan.description}
-                        </p>
-                        
-                        <div className="space-y-2 flex-1">
-                          {plan.benefits.slice(0, 3).map((benefit: string, idx: number) => (
-                            <div key={idx} className="flex items-start gap-1.5">
-                              <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                              <span className="text-[11px] text-neutral-700 leading-tight">
-                                {benefit}
-                              </span>
-                            </div>
-                          ))}
-                          {plan.benefits.length > 3 && (
-                            <div className="text-[10px] font-bold text-neutral-400 pl-5">
-                              + {plan.benefits.length - 3} more benefits
-                            </div>
-                          )}
-                        </div>
-                        
-                        <button className="w-full mt-4 py-2 bg-neutral-900 text-white rounded-xl text-xs font-bold group-hover:bg-[#5E43F3] transition-colors">
-                          Subscribe
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : filteredProducts.length > 0 ? (
+              {/* Products Grid */}
+              {filteredProducts.length > 0 ? (
                 <div className="grid grid-cols-2 gap-3">
                   {filteredProducts.map((prod) => (
                     <div
@@ -1405,7 +1342,7 @@ export const PageDetailModal: React.FC = () => {
       )}
 
       {isManageSubscriptionsOpen && (
-        <PageManageSubscriptionsModal
+        <SubscriptionCRMModal
           page={page}
           isOpen={isManageSubscriptionsOpen}
           onClose={() => setIsManageSubscriptionsOpen(false)}

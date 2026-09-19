@@ -147,3 +147,31 @@ export const updatePage = mutation({
     await ctx.db.patch(args.pageId, updates);
   },
 });
+
+export const updatePageBusinessSettings = mutation({
+  args: {
+    pageId: v.id("pages"),
+    businessType: v.union(v.literal("commerce"), v.literal("subscription"), v.literal("hybrid")),
+    activeTools: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+    if (!user) throw new Error("User not found");
+
+    const page = await ctx.db.get(args.pageId);
+    if (!page) throw new Error("Page not found");
+    if (page.ownerId !== user._id) throw new Error("Unauthorized: Only the owner can update the page");
+
+    await ctx.db.patch(args.pageId, {
+      businessType: args.businessType,
+      activeTools: args.activeTools,
+      updatedAt: Date.now(),
+    });
+  }
+});

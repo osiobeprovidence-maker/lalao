@@ -51,6 +51,7 @@ export const Header: React.FC = () => {
               <Search className="h-5 w-5 stroke-[2.2]" />
             </button>
           </div>
+        </div>
       </header>
 
       <MobileDrawer isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
