@@ -360,8 +360,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const toggleLikeCommentMutation = useMutation(api.social.toggleLikeComment);
   const saveDraftMutation = useMutation(api.social.saveDraft);
   const deleteDraftMutation = useMutation(api.social.deleteDraft);
-  const addProductMutation = useMutation(api.shop?.addProduct || (() => {}));
-  const deleteProductMutation = useMutation(api.shop?.deleteProduct || (() => {}));
+  const addProductMutation = useMutation(api.shop.addProduct);
+  const deleteProductMutation = useMutation(api.shop.deleteProduct);
 
   const [activePageId, setActivePageId] = useState<string | null>(null);
   
@@ -372,7 +372,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   
   // Use a query specifically for the active page's products
   const pageProductsQuery = useQuery(
-    api.shop?.getProductsByPage || (() => []), 
+    api.shop.getProductsByPage, 
     activePageId ? { pageId: activePageId } : "skip"
   );
 

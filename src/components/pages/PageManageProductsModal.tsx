@@ -8,6 +8,7 @@ import {
   Check,
   Tag,
   DollarSign,
+  Camera,
 } from 'lucide-react';
 import { Page, ShopProduct } from '../../types';
 import { useLalao } from '../../context/LalaoContext';

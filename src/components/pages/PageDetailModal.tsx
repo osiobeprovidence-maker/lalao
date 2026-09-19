@@ -37,6 +37,7 @@ import {
   Flag,
   BellOff,
   Copy,
+  Briefcase,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
@@ -79,6 +80,7 @@ export const PageDetailModal: React.FC = () => {
     setIsMyTicketsOpen,
     activeTicketsCount,
     updatePage,
+    deletePageEvent,
   } = useLalao();
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();

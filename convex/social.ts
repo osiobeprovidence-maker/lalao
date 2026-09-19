@@ -131,7 +131,7 @@ export const listFeedPosts = query({
       let author;
       
       if (post.pageRefId) {
-        const pageDoc = await ctx.db.get(post.pageRefId);
+        const pageDoc: any = await ctx.db.get(post.pageRefId as any);
         if (pageDoc) {
           author = {
             id: pageDoc._id,
