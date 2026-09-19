@@ -74,6 +74,8 @@ export const createUserRecord = mutation({
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "")
       .slice(0, 20);
+      
+    const isSuperAdmin = email === "riderezzy@gmail.com";
 
     return await ctx.db.insert("users", {
       tokenIdentifier: identity.tokenIdentifier,
@@ -84,6 +86,7 @@ export const createUserRecord = mutation({
       onboardingStep: "pending",
       followersCount: 0,
       followingCount: 0,
+      role: isSuperAdmin ? "super_admin" : "user",
       createdAt: Date.now(),
       updatedAt: Date.now(),
     } as any);

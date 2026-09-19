@@ -59,6 +59,34 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
+/**
+ * AdminRoute — redirects to /app when the user is not a super_admin.
+ * Shows a spinner while checking.
+ */
+import { useQuery } from 'convex/react';
+import { api } from '../convex/_generated/api';
+
+const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const role = useQuery(api.admin.getMyRole);
+
+  if (isAuthLoading || role === undefined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0B0F19]">
+        <div className="w-8 h-8 rounded-full border-4 border-white/30 border-t-indigo-500 animate-spin" />
+      </div>
+    );
+  }
+
+  const isSuperAdmin = role === 'super_admin' || user?.email === 'riderezzy@gmail.com';
+
+  if (!isAuthenticated || !isSuperAdmin) {
+    return <Navigate to="/app" replace />;
+  }
+
+  return <>{children}</>;
+};
+
 // Auth pages
 import { LoginPage } from './pages/auth/LoginPage';
 import { SignUpPage } from './pages/auth/SignUpPage';
@@ -74,6 +102,9 @@ import { PronounsPage } from './pages/onboarding/PronounsPage';
 import { LocationSetupPage } from './pages/onboarding/LocationSetupPage';
 import { InterestsPage } from './pages/onboarding/InterestsPage';
 import { CompletePage } from './pages/onboarding/CompletePage';
+
+// Admin page
+import { AdminApp } from './pages/admin/AdminApp';
 
 const LalaoAppContent: React.FC = () => {
   const {
@@ -356,6 +387,9 @@ export default function App() {
 
       <Route path="/app" element={<ProtectedRoute><LalaoApp /></ProtectedRoute>} />
       <Route path="/app/*" element={<ProtectedRoute><LalaoApp /></ProtectedRoute>} />
+
+      <Route path="/admin" element={<AdminRoute><AdminApp /></AdminRoute>} />
+      <Route path="/admin/*" element={<AdminRoute><AdminApp /></AdminRoute>} />
 
       <Route path="*" element={<Navigate to="/onboarding/welcome" replace />} />
     </Routes>

@@ -30,7 +30,23 @@ export const SignUpPage: React.FC = () => {
         throw new Error('Authentication is still loading. Please try again.');
       }
       await readyUser.getIdToken(true);
-      await createUserRecord({ email: readyUser.email ?? undefined });
+      
+      let attempts = 0;
+      while (attempts < 15) {
+        try {
+          await createUserRecord({ email: readyUser.email ?? undefined });
+          break;
+        } catch (e: any) {
+          if (e.message?.includes("Not authenticated")) {
+            await new Promise(r => setTimeout(r, 500));
+            attempts++;
+          } else {
+            throw e;
+          }
+        }
+      }
+      if (attempts >= 15) throw new Error('Server authentication timeout.');
+
       navigate('/onboarding/name');
     } catch (err: any) {
       setError(err.message || 'Failed to create account. Try again.');
@@ -157,7 +173,24 @@ export const SignUpPage: React.FC = () => {
                 try {
                   const provider = new GoogleAuthProvider();
                   const credential = await signInWithPopup(auth, provider);
-                  await createUserRecord({ email: credential.user.email ?? undefined });
+                  await credential.user.getIdToken(true);
+
+                  let attempts = 0;
+                  while (attempts < 15) {
+                    try {
+                      await createUserRecord({ email: credential.user.email ?? undefined });
+                      break;
+                    } catch (e: any) {
+                      if (e.message?.includes("Not authenticated")) {
+                        await new Promise(r => setTimeout(r, 500));
+                        attempts++;
+                      } else {
+                        throw e;
+                      }
+                    }
+                  }
+                  if (attempts >= 15) throw new Error('Server authentication timeout.');
+
                   navigate('/onboarding/name');
                 } catch (err: any) {
                   setError(err.message || 'Google sign-up failed.');

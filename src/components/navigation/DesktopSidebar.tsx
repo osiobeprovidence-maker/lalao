@@ -11,7 +11,10 @@ import {
   User as UserIcon,
   Users,
   Building2,
+  ShieldCheck,
 } from 'lucide-react';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../common/Avatar';
@@ -34,6 +37,10 @@ export const DesktopSidebar: React.FC = () => {
   } = useLalao();
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const locationPath = window.location.pathname;
+
+  const role = useQuery(api.admin.getMyRole);
+  const isSuperAdmin = role === 'super_admin' || currentUser?.email === 'riderezzy@gmail.com';
 
   const unreadMessagesCount = conversations.reduce(
     (acc, conv) => acc + (conv.unreadCount || 0),
@@ -262,6 +269,36 @@ export const DesktopSidebar: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* ADMIN Section (Only visible to Super Admins) */}
+        {isSuperAdmin && (
+          <div className="pt-2">
+            <div className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
+              Admin
+            </div>
+            <div className="space-y-1.5 px-1">
+              <button
+                type="button"
+                onClick={() => {
+                  navigate('/admin');
+                }}
+                className={`flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition cursor-pointer ${
+                  locationPath.startsWith('/admin')
+                    ? 'bg-neutral-900 text-white shadow-sm'
+                    : 'text-neutral-700 hover:bg-[#f8f6f3] hover:text-neutral-950'
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${locationPath.startsWith('/admin') ? 'bg-neutral-800' : 'bg-neutral-100'}`}>
+                  <ShieldCheck className={`w-4 h-4 ${locationPath.startsWith('/admin') ? 'text-white' : 'text-neutral-500'}`} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[13px] font-bold">Control Center</div>
+                  <div className={`truncate text-[11px] ${locationPath.startsWith('/admin') ? 'text-neutral-400' : 'text-neutral-500'}`}>Platform-wide admin</div>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="mt-auto pt-4 border-t border-neutral-200/80 flex items-center justify-between gap-1">
           <button
