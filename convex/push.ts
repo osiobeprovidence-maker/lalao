@@ -73,21 +73,25 @@ export const removeFcmToken = mutation({
 export const hasActivePushToken = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return false;
+    try {
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) return false;
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
-    if (!user) return false;
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+        .unique();
+      if (!user) return false;
 
-    const token = await ctx.db
-      .query("fcmTokens")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .first();
+      const token = await ctx.db
+        .query("fcmTokens")
+        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .first();
 
-    return token !== null;
+      return token !== null;
+    } catch {
+      return false;
+    }
   },
 });
 
