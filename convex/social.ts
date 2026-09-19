@@ -128,8 +128,32 @@ export const listFeedPosts = query({
     const results: any[] = [];
 
     for (const post of posts) {
-      const authorDoc = post.authorId ? await ctx.db.get(post.authorId) : null;
-      const author = await resolveAuthor(ctx, authorDoc, currentUser._id);
+      let author;
+      
+      if (post.pageRefId) {
+        const pageDoc = await ctx.db.get(post.pageRefId);
+        if (pageDoc) {
+          author = {
+            id: pageDoc._id,
+            name: pageDoc.name,
+            username: pageDoc.username,
+            avatar: pageDoc.avatar || "",
+            userType: pageDoc.type || "business",
+            followersCount: pageDoc.followersCount || 0,
+            followingCount: 0,
+            isFollowing: false,
+            isVerified: true,
+            location: pageDoc.location,
+          };
+        } else {
+          // Fallback if page was deleted
+          const authorDoc = post.authorId ? await ctx.db.get(post.authorId) : null;
+          author = await resolveAuthor(ctx, authorDoc, currentUser._id);
+        }
+      } else {
+        const authorDoc = post.authorId ? await ctx.db.get(post.authorId) : null;
+        author = await resolveAuthor(ctx, authorDoc, currentUser._id);
+      }
 
       // Top-level comments only (parentCommentId is undefined/null)
       const allComments = await ctx.db
@@ -317,6 +341,57 @@ export const listSuggestedUsers = query({
 /* ─────────────────────────────────────────────────────────────────────────────
    PAGES
    ───────────────────────────────────────────────────────────────────────────── */
+
+export const getPage = query({
+  args: { pageId: v.string() },
+  handler: async (ctx, { pageId }) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!pageId) return null;
+
+    // Optional: map specific hardcoded IDs if needed (e.g. page_honorofkings)
+    // For now, we try to fetch it from DB.
+    let page;
+    try {
+      page = await ctx.db.get(pageId as any);
+    } catch {
+      // Invalid ID format
+      return null;
+    }
+
+    if (!page) return null;
+
+    let isFollowing = false;
+    let isOwner = false;
+
+    if (currentUser) {
+      isOwner = page.ownerId === currentUser._id;
+      isFollowing = !!(await ctx.db
+        .query("pageFollowers")
+        .withIndex("by_page_user", (q: any) =>
+          q.eq("pageId", page._id).eq("userId", currentUser._id)
+        )
+        .unique());
+    }
+
+    return {
+      id: page._id,
+      ownerId: page.ownerId,
+      name: page.name,
+      username: page.username,
+      type: page.type,
+      badge: page.badge ?? "COMMUNITY",
+      avatar: page.avatar ?? "",
+      coverImage: page.coverImage ?? "",
+      description: page.description ?? "",
+      location: page.location ?? "",
+      followersCount: page.followersCount ?? 0,
+      isFollowing,
+      isOwner,
+      category: page.category ?? "General",
+      aboutInfo: {},
+    };
+  },
+});
 
 export const listPages = query({
   args: {},

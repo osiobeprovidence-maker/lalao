@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Page } from '../../types';
 import { useLalao } from '../../context/LalaoContext';
+import { uploadImageToCloudinary } from '../../lib/cloudinary';
 
 interface EditPageModalProps {
   page: Page;
@@ -56,7 +57,9 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { updatePage } = useLalao();
+  const { updatePage, generateCloudinarySignature, triggerShareToast } = useLalao();
+
+  const [isSaving, setIsSaving] = useState(false);
 
   const [name, setName] = useState(page.name);
   const [username, setUsername] = useState(page.username);
@@ -75,31 +78,54 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
 
   const [showCoverSelector, setShowCoverSelector] = useState(false);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   if (!isOpen) return null;
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    updatePage(page.id, {
-      name: name.trim(),
-      username: username.trim().replace('@', ''),
-      category,
-      description: description.trim(),
-      location: location.trim(),
-      coverImage,
-      avatar,
-      aboutInfo: {
-        address: address.trim(),
-        phone: phone.trim(),
-        email: email.trim(),
-        website: website.trim().replace(/^https?:\/\//, ''),
-        hours: hours.trim(),
-      },
-    });
+    try {
+      setIsSaving(true);
+      let finalCoverImage = coverImage;
+      let finalAvatar = avatar;
 
-    onClose();
+      if (coverImageFile) {
+        const signatureData = await generateCloudinarySignature("pages");
+        finalCoverImage = await uploadImageToCloudinary(coverImageFile, signatureData);
+      }
+      
+      if (avatarFile) {
+        const signatureData = await generateCloudinarySignature("pages");
+        finalAvatar = await uploadImageToCloudinary(avatarFile, signatureData);
+      }
+
+      await updatePage(page.id, {
+        name: name.trim(),
+        username: username.trim().replace('@', ''),
+        category,
+        description: description.trim(),
+        location: location.trim(),
+        coverImage: finalCoverImage,
+        avatar: finalAvatar,
+        aboutInfo: {
+          address: address.trim(),
+          phone: phone.trim(),
+          email: email.trim(),
+          website: website.trim().replace(/^https?:\/\//, ''),
+          hours: hours.trim(),
+        },
+      });
+
+      onClose();
+    } catch (error) {
+      console.error("Failed to save page:", error);
+      triggerShareToast("Failed to save changes. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCustomCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,6 +133,7 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
     if (file) {
       const url = URL.createObjectURL(file);
       setCoverImage(url);
+      setCoverImageFile(file);
       setShowCoverSelector(false);
     }
   };
@@ -116,6 +143,7 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
     if (file) {
       const url = URL.createObjectURL(file);
       setAvatar(url);
+      setAvatarFile(file);
       setShowAvatarSelector(false);
     }
   };
@@ -144,10 +172,15 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
         <button
           type="button"
           onClick={handleSave}
-          className="px-4 py-2 rounded-xl bg-[#5E43F3] text-white text-xs font-bold hover:bg-[#4E34E0] shadow-sm flex items-center gap-1.5 cursor-pointer"
+          disabled={isSaving}
+          className="px-4 py-2 rounded-xl bg-[#5E43F3] text-white text-xs font-bold hover:bg-[#4E34E0] disabled:opacity-50 shadow-sm flex items-center gap-1.5 cursor-pointer"
         >
-          <Check className="w-4 h-4 stroke-[2.5]" />
-          <span>Save</span>
+          {isSaving ? (
+            <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+          ) : (
+            <Check className="w-4 h-4 stroke-[2.5]" />
+          )}
+          <span>{isSaving ? 'Saving...' : 'Save'}</span>
         </button>
       </div>
 
@@ -200,6 +233,7 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
                       type="button"
                       onClick={() => {
                         setCoverImage(url);
+                        setCoverImageFile(null);
                         setShowCoverSelector(false);
                       }}
                       className={`relative h-14 rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
@@ -271,6 +305,7 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
                     type="button"
                     onClick={() => {
                       setAvatar(url);
+                      setAvatarFile(null);
                       setShowAvatarSelector(false);
                     }}
                     className={`relative w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${

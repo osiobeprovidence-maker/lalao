@@ -138,8 +138,13 @@ interface LalaoContextType {
   updatePageEvent: (eventId: string, eventData: Partial<OrgEvent>) => void;
   deletePageEvent: (eventId: string) => void;
   updatePageMonetization: (pageId: string, monetization: Partial<PageMonetization>) => void;
-  addPageProduct: (pageId: string, product: Partial<ShopProduct>) => void;
-  deletePageProduct: (pageId: string, productId: string) => void;
+  
+  currentPage: Page | null | undefined;
+  
+  // Real Convex product integration
+  pageProducts: ShopProduct[];
+  addPageProduct: (pageId: string, product: Partial<ShopProduct>) => Promise<void>;
+  deletePageProduct: (pageId: string, productId: string) => Promise<void>;
 
   toggleJoinCycle: (cycleId: string) => void;
   createCycle: (cycleData: { name: string; description: string; category: string; location: string }) => void;
@@ -355,6 +360,21 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const toggleLikeCommentMutation = useMutation(api.social.toggleLikeComment);
   const saveDraftMutation = useMutation(api.social.saveDraft);
   const deleteDraftMutation = useMutation(api.social.deleteDraft);
+  const addProductMutation = useMutation(api.shop?.addProduct || (() => {}));
+  const deleteProductMutation = useMutation(api.shop?.deleteProduct || (() => {}));
+
+  const [activePageId, setActivePageId] = useState<string | null>(null);
+  
+  const currentPageQuery = useQuery(
+    api.social.getPage,
+    activePageId ? { pageId: activePageId } : "skip"
+  );
+  
+  // Use a query specifically for the active page's products
+  const pageProductsQuery = useQuery(
+    api.shop?.getProductsByPage || (() => []), 
+    activePageId ? { pageId: activePageId } : "skip"
+  );
 
   const notificationsQuery = useQuery(api.social.listNotifications);
   const unreadNotifsCountQuery = useQuery(api.social.getUnreadNotificationCount);
@@ -663,7 +683,6 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [activeCycleId, setActiveCycleId] = useState<string | null>(null);
   const [activeStoryIndex, setActiveStoryIndex] = useState<number>(0);
   const [isCreateCycleOpen, setIsCreateCycleOpen] = useState(false);
-  const [activePageId, setActivePageId] = useState<string | null>(null);
   const [activeUserProfile, setActiveUserProfile] = useState<User | null>(null);
   const [composerInitialText, setComposerInitialText] = useState<string>('');
   const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null);
@@ -1714,44 +1733,36 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     triggerShareToast('Monetization settings saved!');
   };
 
-  const addPageProduct = (pageId: string, productData: Partial<ShopProduct>) => {
-    const newProduct: ShopProduct = {
-      id: `prod_${Date.now()}`,
-      name: productData.name || 'New Product',
-      price: productData.price || 0,
-      currency: productData.currency || 'NGN',
-      image:
-        productData.image ||
-        'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80',
-      description: productData.description || '',
-      category: productData.category || 'General',
-      inStock: productData.inStock ?? true,
-      rating: 5.0,
-      reviewsCount: 1,
-    };
-
-    setPages((prev) =>
-      prev.map((p) =>
-        p.id === pageId
-          ? { ...p, products: [newProduct, ...(p.products || [])] }
-          : p
-      )
-    );
-    triggerShareToast('Product added to storefront!');
+  const addPageProduct = async (pageId: string, productData: Partial<ShopProduct>) => {
+    try {
+      await addProductMutation({
+        pageId: pageId as any,
+        name: productData.name || 'New Product',
+        description: productData.description || '',
+        price: productData.price || 0,
+        currency: productData.currency || 'NGN',
+        category: productData.category,
+        inStock: productData.inStock ?? true,
+        image: productData.image,
+      });
+      triggerShareToast('Product added successfully!');
+    } catch (e) {
+      console.error('Failed to add product', e);
+      triggerShareToast('Failed to add product');
+    }
   };
 
-  const deletePageProduct = (pageId: string, productId: string) => {
-    setPages((prev) =>
-      prev.map((p) =>
-        p.id === pageId
-          ? {
-              ...p,
-              products: (p.products || []).filter((prod) => prod.id !== productId),
-            }
-          : p
-      )
-    );
-    triggerShareToast('Product removed from storefront');
+  const deletePageProduct = async (pageId: string, productId: string) => {
+    try {
+      await deleteProductMutation({
+        pageId: pageId as any,
+        productId: productId as any,
+      });
+      triggerShareToast('Product removed');
+    } catch (e) {
+      console.error('Failed to delete product', e);
+      triggerShareToast('Failed to delete product');
+    }
   };
 
   const toggleJoinCycle = (cycleId: string) => {
@@ -2191,6 +2202,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updatePageEvent,
         deletePageEvent,
         updatePageMonetization,
+        currentPage: currentPageQuery as Page | null | undefined,
+        pageProducts: (pageProductsQuery || []) as ShopProduct[],
         addPageProduct,
         deletePageProduct,
         toggleJoinCycle,

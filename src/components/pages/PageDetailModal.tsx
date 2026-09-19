@@ -39,6 +39,8 @@ import {
   Copy,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
+import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
 import { PostItem } from '../feed/PostItem';
@@ -55,14 +57,17 @@ import { PageEventModal } from './PageEventModal';
 import { EventAttendeesModal } from './EventAttendeesModal';
 import { PageManageProductsModal } from './PageManageProductsModal';
 import { PagePostComposerModal } from './PagePostComposerModal';
+import { PageToolsModal } from './PageToolsModal';
 
 type PageTab = 'posts' | 'shop' | 'media' | 'events' | 'about';
 
 export const PageDetailModal: React.FC = () => {
   const {
+    pages,
+    currentPage,
     activePageId,
     setActivePageId,
-    pages,
+    pageProducts,
     toggleFollowPage,
     posts,
     triggerShareToast,
@@ -73,9 +78,10 @@ export const PageDetailModal: React.FC = () => {
     events,
     setIsMyTicketsOpen,
     activeTicketsCount,
-    currentUser,
-    deletePageEvent,
+    updatePage,
   } = useLalao();
+  const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<PageTab>('posts');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -89,9 +95,10 @@ export const PageDetailModal: React.FC = () => {
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [isManageProductsOpen, setIsManageProductsOpen] = useState(false);
+  const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
   const [eventToEdit, setEventToEdit] = useState<OrgEvent | null>(null);
   const [selectedEventForAttendees, setSelectedEventForAttendees] = useState<OrgEvent | null>(null);
-  const [isManageProductsOpen, setIsManageProductsOpen] = useState(false);
   const [isPostComposerOpen, setIsPostComposerOpen] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -125,72 +132,42 @@ export const PageDetailModal: React.FC = () => {
 
   if (!activePageId) return null;
 
-  const page =
-    pages.find((p) => p.id === activePageId) ||
-    (activePageId === 'page_honorofkings' ? HOK_ORGANIZATION_PAGE : null);
-  if (!page) return null;
+  // Use the definitive currentPage from Convex. If it's undefined, it's loading.
+  if (currentPage === undefined && activePageId !== 'page_honorofkings') {
+    return (
+      <div className="flex w-full h-full min-h-[50vh] items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-4 border-[#5E43F3]/30 border-t-[#5E43F3] animate-spin" />
+      </div>
+    );
+  }
 
-  // Manager determination: owner or matches currentUser id
-  const isManager = Boolean(
-    page.isOwner || (page.ownerId && currentUser && page.ownerId === currentUser.id)
-  );
+  const page =
+    activePageId === 'page_honorofkings' ? HOK_ORGANIZATION_PAGE : currentPage;
+    
+  if (!page) {
+    return (
+      <div className="flex w-full h-full min-h-[50vh] flex-col items-center justify-center bg-[#f6f3ee]">
+        <h2 className="text-xl font-bold text-neutral-900 mb-2">Page Not Found</h2>
+        <p className="text-neutral-500 mb-6">This page may have been deleted or doesn't exist.</p>
+        <button
+          onClick={() => navigate('/app')}
+          className="px-6 py-2.5 bg-neutral-900 text-white rounded-full font-bold hover:bg-black transition-colors"
+        >
+          Go Back
+        </button>
+      </div>
+    );
+  }
+
+  // Use Convex's authoritative isOwner flag for management mode
+  const isManager = Boolean(page.isOwner);
 
   // Check if page has BIZ tag
   const isBizPage = page.badge === 'BIZ' || page.type === 'business';
   // Check if page is eligible for ticketing (Community, Club, Esports Org, etc.)
   const isTicketingEligible = isPageTicketingEligible(page);
 
-  // Fallback products if none configured on page
-  const defaultBizProducts: ShopProduct[] = [
-    {
-      id: `${page.id}_prod_1`,
-      name: `${page.name} Signature Collection`,
-      price: 24500,
-      currency: 'NGN',
-      image: page.coverImage || page.avatar,
-      images: [
-        page.coverImage || page.avatar,
-        page.avatar,
-        'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80',
-      ],
-      rating: 4.9,
-      reviewsCount: 14,
-      description: `Official offering from ${page.name}. Sourced and curated for high quality and authentic craftsmanship. Inquire directly for bulk orders, customization, and instant fulfillment in ${page.location}.`,
-      category: 'Featured',
-      inStock: true,
-      variants: [
-        {
-          name: 'Package',
-          options: ['Standard Edition', 'Deluxe Edition', 'Collector Tier'],
-        },
-      ],
-      details: [
-        '100% verified merchant item',
-        `Direct dispatch from ${page.location}`,
-        'Includes store warranty and inspection guarantee',
-      ],
-    },
-    {
-      id: `${page.id}_prod_2`,
-      name: `${page.name} Standard Package`,
-      price: 18000,
-      currency: 'NGN',
-      image: page.avatar,
-      images: [page.avatar, page.coverImage || page.avatar],
-      rating: 5.0,
-      reviewsCount: 6,
-      description: `Premium service package and verified item available in ${page.location}. Guaranteed doorstep dispatch.`,
-      category: 'Services',
-      inStock: true,
-    },
-  ];
-
-  const products: ShopProduct[] =
-    Array.isArray(page.products) && page.products.length > 0
-      ? page.products
-      : isBizPage
-      ? defaultBizProducts
-      : [];
+  const products: ShopProduct[] = pageProducts || [];
 
   const categories = [
     'All',
@@ -245,11 +222,12 @@ export const PageDetailModal: React.FC = () => {
   }
 
   // Filter posts belonging to this page
+  // Instead of guessing by name/username, use pageRefId or exact author id
   const pagePosts = (posts || []).filter(
     (p) =>
       p?.author?.id === page.id ||
-      p?.author?.username === page.username ||
-      p?.author?.name === page.name
+      p?.pageRefId === page.id ||
+      p?.author?.username === page.username
   );
   const pageMediaPosts = pagePosts.filter((p) => Boolean(p?.mediaUrl));
 
@@ -292,7 +270,10 @@ export const PageDetailModal: React.FC = () => {
             <button
               id="btn-back-page-detail"
               type="button"
-              onClick={() => setActivePageId(null)}
+              onClick={() => {
+                setActivePageId(null);
+                navigate('/app');
+              }}
               className="p-2 rounded-full bg-black/60 backdrop-blur-md text-white hover:bg-black/80 active:scale-95 transition-all cursor-pointer shadow-md"
               title="Go back"
               aria-label="Go back"
@@ -336,255 +317,20 @@ export const PageDetailModal: React.FC = () => {
               )}
 
               <Badge type={page.badge} size="md" />
-
-              <button
-                type="button"
-                onClick={() => triggerShareToast('Page link copied to clipboard')}
-                className="p-2 rounded-full bg-black/60 backdrop-blur-md text-white hover:bg-black/80 active:scale-95 transition-all cursor-pointer shadow-md"
-                title="Share page"
-              >
-                <Share2 className="w-4 h-4" />
-              </button>
-
-              {/* 3-Dot Menu Dropdown (Contextual: Manager vs Public Visitor) */}
-              <div className="relative" ref={menuRef}>
-                <button
-                  type="button"
-                  id="btn-page-header-more"
-                  onClick={() => setIsMenuOpen(!isMenuOpen)}
-                  className={`p-2 rounded-full backdrop-blur-md active:scale-95 transition-all cursor-pointer shadow-md ${
-                    isMenuOpen
-                      ? 'bg-white text-neutral-950'
-                      : 'bg-black/60 text-white hover:bg-black/80'
-                  }`}
-                  title="More actions"
-                  aria-label="More actions"
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </button>
-
-                {isMenuOpen && (
-                  <div className="absolute right-0 top-11 w-56 bg-white rounded-2xl shadow-2xl border border-neutral-100 py-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                    {isManager ? (
-                      /* MANAGER ACTIONS MENU */
-                      <div className="divide-y divide-neutral-100">
-                        <div className="px-3.5 py-2 bg-neutral-50/70">
-                          <p className="text-[10px] font-black uppercase tracking-wider text-[#5E43F3]">
-                            Page Manager Tools
-                          </p>
-                          <p className="text-[11px] text-neutral-500 font-medium truncate">
-                            Managing @{page.username}
-                          </p>
-                        </div>
-
-                        <div className="py-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsMenuOpen(false);
-                              setIsEditModalOpen(true);
-                            }}
-                            className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
-                          >
-                            <Edit3 className="w-4 h-4 text-[#5E43F3]" />
-                            <span>Edit Page Profile</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsMenuOpen(false);
-                              setIsPostComposerOpen(true);
-                            }}
-                            className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
-                          >
-                            <PlusSquare className="w-4 h-4 text-[#5E43F3]" />
-                            <span>Create New Post</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsMenuOpen(false);
-                              setEventToEdit(null);
-                              setIsEventModalOpen(true);
-                            }}
-                            className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
-                          >
-                            <Calendar className="w-4 h-4 text-[#5E43F3]" />
-                            <span>Create / Manage Events</span>
-                          </button>
-
-                          {(isBizPage || page.monetization?.sellProducts) && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsMenuOpen(false);
-                                setIsManageProductsOpen(true);
-                              }}
-                              className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
-                            >
-                              <ShoppingBag className="w-4 h-4 text-[#5E43F3]" />
-                              <span>Manage Products / Shop</span>
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="py-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsMenuOpen(false);
-                              setIsMonetizationOpen(true);
-                            }}
-                            className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
-                          >
-                            <Coins className="w-4 h-4 text-emerald-600" />
-                            <span>Monetize Page & Payouts</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsMenuOpen(false);
-                              setIsAnalyticsOpen(true);
-                            }}
-                            className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
-                          >
-                            <BarChart3 className="w-4 h-4 text-blue-600" />
-                            <span>Page Analytics</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsMenuOpen(false);
-                              setIsSettingsOpen(true);
-                            }}
-                            className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
-                          >
-                            <Settings className="w-4 h-4 text-neutral-600" />
-                            <span>Page Settings</span>
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      /* PUBLIC VISITOR ACTIONS MENU */
-                      <div className="py-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsMenuOpen(false);
-                            triggerShareToast('Page link copied to clipboard!');
-                          }}
-                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
-                        >
-                          <Copy className="w-4 h-4 text-neutral-500" />
-                          <span>Copy Page Link</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsMenuOpen(false);
-                            triggerShareToast('Page notifications muted');
-                          }}
-                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
-                        >
-                          <BellOff className="w-4 h-4 text-neutral-500" />
-                          <span>Mute Updates</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsMenuOpen(false);
-                            triggerShareToast('Report submitted for moderation review');
-                          }}
-                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2.5 cursor-pointer"
-                        >
-                          <Flag className="w-4 h-4 text-red-500" />
-                          <span>Report Page</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>
 
         {/* Profile Content Body */}
         <div className="px-4 sm:px-6 pb-3">
-          {/* Avatar & Action Button Row */}
-          <div className="flex items-end justify-between -mt-10 sm:-mt-12 mb-3.5 sm:mb-4 relative z-10">
-            <div className="relative shrink-0">
-              <Avatar
-                src={page?.avatar}
-                alt={page?.name || 'Page'}
-                size="xl"
-                className="ring-4 ring-white shadow-md bg-white"
-              />
-            </div>
-
-            {/* Contextual Action: Manager Edit Page Button vs Visitor Follow Button */}
-            {isManager ? (
-              <div className="translate-y-2.5 sm:translate-y-3 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsEditModalOpen(true)}
-                  className="px-4 py-2 rounded-full border border-neutral-300 text-neutral-800 hover:bg-neutral-100 bg-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
-                >
-                  <Edit3 className="w-3.5 h-3.5 text-[#5E43F3]" />
-                  <span>Edit Page</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsMonetizationOpen(true)}
-                  className="px-3.5 py-2 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
-                >
-                  <Coins className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="hidden sm:inline">Monetize</span>
-                </button>
-              </div>
-            ) : (
-              <div className="translate-y-2.5 sm:translate-y-3 flex items-center gap-2">
-                {page.aboutInfo?.phone && (
-                  <button
-                    type="button"
-                    onClick={() => triggerShareToast(`Connecting to ${page.name}...`)}
-                    className="p-2 rounded-full border border-neutral-200 text-neutral-700 hover:bg-neutral-100 bg-white transition-colors cursor-pointer"
-                    title="Direct inquiry"
-                  >
-                    <MessageSquare className="w-4 h-4 text-[#5E43F3]" />
-                  </button>
-                )}
-
-                <button
-                  id={`btn-follow-page-detail-${page.id}`}
-                  onClick={() => toggleFollowPage(page.id)}
-                  className={`px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    page.isFollowing
-                      ? 'border border-neutral-300 text-neutral-800 hover:bg-neutral-100 bg-white'
-                      : 'bg-[#5E43F3] text-white hover:bg-[#4E34E0] shadow-sm shadow-[#5E43F3]/25'
-                  }`}
-                >
-                  {page.isFollowing ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                      Following
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                      Follow
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
+          {/* Avatar */}
+          <div className="relative shrink-0 w-max -mt-10 sm:-mt-12 mb-3.5 z-10">
+            <Avatar
+              src={page?.avatar}
+              alt={page?.name || 'Page'}
+              size="xl"
+              className="ring-4 ring-[#f6f3ee] shadow-md bg-white"
+            />
           </div>
 
           {/* Title & Metadata */}
@@ -606,18 +352,275 @@ export const PageDetailModal: React.FC = () => {
 
             {/* Category Label Row */}
             <div className="flex items-center gap-2 mt-2.5 flex-wrap">
-              <span className="px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase bg-neutral-950 text-white shadow-xs">
+              <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase bg-neutral-900 text-white shadow-xs">
                 {page.id === 'page_honorofkings' || page.category === 'ESPORTS / GAMING'
                   ? 'ESPORTS'
                   : page.type === 'business' || page.badge === 'BIZ'
                   ? 'BUSINESS'
                   : page.category || page.type.toUpperCase()}
               </span>
+              {page.location && (
+                <div className="flex items-center gap-1 text-xs text-neutral-500 font-medium">
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>{page.location}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Page Actions */}
+          <div className="mt-4 flex flex-wrap items-center gap-2 relative" ref={menuRef}>
+            {isManager ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="px-4 py-2 rounded-full bg-neutral-900 text-white hover:bg-black text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Edit Page</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsMonetizationOpen(true)}
+                  className="px-4 py-2 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                >
+                  <Coins className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Monetize</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  id={`btn-follow-page-detail-${page.id}`}
+                  onClick={() => toggleFollowPage(page.id)}
+                  className={`px-6 py-2 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    page.isFollowing
+                      ? 'border border-neutral-300 text-neutral-800 hover:bg-neutral-100 bg-white'
+                      : 'bg-[#5E43F3] text-white hover:bg-[#4E34E0] shadow-sm shadow-[#5E43F3]/25'
+                  }`}
+                >
+                  {page.isFollowing ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                      Following
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                      Follow
+                    </>
+                  )}
+                </button>
+                {page.aboutInfo?.phone && (
+                  <button
+                    type="button"
+                    onClick={() => triggerShareToast(`Connecting to ${page.name}...`)}
+                    className="p-2 rounded-full border border-neutral-200 text-neutral-700 hover:bg-neutral-100 bg-white transition-colors cursor-pointer"
+                    title="Direct inquiry"
+                  >
+                    <MessageSquare className="w-4 h-4 text-[#5E43F3]" />
+                  </button>
+                )}
+              </>
+            )}
+
+            <button
+              type="button"
+              onClick={() => triggerShareToast('Page link copied to clipboard')}
+              className="p-2 rounded-full border border-neutral-200 text-neutral-700 hover:bg-neutral-100 bg-white transition-colors cursor-pointer"
+              title="Share page"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
+
+            {/* 3-Dot Menu Dropdown */}
+            <div>
+              <button
+                type="button"
+                id="btn-page-header-more"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className={`p-2 rounded-full border border-neutral-200 transition-all cursor-pointer shadow-sm ${
+                  isMenuOpen
+                    ? 'bg-neutral-100 text-neutral-950'
+                    : 'bg-white text-neutral-700 hover:bg-neutral-100'
+                }`}
+                title="More actions"
+                aria-label="More actions"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+
+              {isMenuOpen && (
+                <div className="absolute left-0 sm:left-auto sm:right-0 top-12 w-56 bg-white rounded-2xl shadow-2xl border border-neutral-100 py-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  {isManager ? (
+                    /* MANAGER ACTIONS MENU */
+                    <div className="divide-y divide-neutral-100">
+                      <div className="px-3.5 py-2 bg-neutral-50/70">
+                        <p className="text-[10px] font-black uppercase tracking-wider text-[#5E43F3]">
+                          Page Manager Tools
+                        </p>
+                        <p className="text-[11px] text-neutral-500 font-medium truncate">
+                          Managing @{page.username}
+                        </p>
+                      </div>
+
+                      <div className="py-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            setIsEditModalOpen(true);
+                          }}
+                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
+                        >
+                          <Edit3 className="w-4 h-4 text-[#5E43F3]" />
+                          <span>Edit Page Profile</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            setIsPostComposerOpen(true);
+                          }}
+                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
+                        >
+                          <PlusSquare className="w-4 h-4 text-[#5E43F3]" />
+                          <span>Create New Post</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            setEventToEdit(null);
+                            setIsEventModalOpen(true);
+                          }}
+                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
+                        >
+                          <Calendar className="w-4 h-4 text-[#5E43F3]" />
+                          <span>Create / Manage Events</span>
+                        </button>
+
+                        {(isBizPage || page.monetization?.sellProducts) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsMenuOpen(false);
+                              setIsManageProductsOpen(true);
+                            }}
+                            className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
+                          >
+                            <ShoppingBag className="w-4 h-4 text-[#5E43F3]" />
+                            <span>Manage Products / Shop</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="py-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            setIsMonetizationOpen(true);
+                          }}
+                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
+                        >
+                          <Coins className="w-4 h-4 text-emerald-600" />
+                          <span>Monetize Page & Payouts</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            setIsAnalyticsOpen(true);
+                          }}
+                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
+                        >
+                          <BarChart3 className="w-4 h-4 text-blue-600" />
+                          <span>Page Analytics</span>
+                        </button>
+                      </div>
+
+                      <div className="py-1">
+                        <div className="px-3.5 py-1 text-[10px] font-black uppercase tracking-wider text-neutral-400">Tools</div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            setIsToolsModalOpen(true);
+                          }}
+                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
+                        >
+                          <Briefcase className="w-4 h-4 text-[#5E43F3]" />
+                          <span>Business Tools</span>
+                        </button>
+                      </div>
+
+                      <div className="py-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            setIsSettingsOpen(true);
+                          }}
+                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
+                        >
+                          <Settings className="w-4 h-4 text-neutral-600" />
+                          <span>Page Settings</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* PUBLIC VISITOR ACTIONS MENU */
+                    <div className="py-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          triggerShareToast('Page link copied to clipboard!');
+                        }}
+                        className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
+                      >
+                        <Copy className="w-4 h-4 text-neutral-500" />
+                        <span>Copy Page Link</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          triggerShareToast('Page notifications muted');
+                        }}
+                        className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
+                      >
+                        <BellOff className="w-4 h-4 text-neutral-500" />
+                        <span>Mute Updates</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          triggerShareToast('Report submitted for moderation review');
+                        }}
+                        className="w-full px-3.5 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2.5 cursor-pointer"
+                      >
+                        <Flag className="w-4 h-4 text-red-500" />
+                        <span>Report Page</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
           {/* Description */}
-          <p className="text-xs sm:text-sm text-neutral-700 mt-2.5 leading-relaxed">
+          <p className="text-xs sm:text-sm text-neutral-700 mt-4 leading-relaxed">
             {page.description}
           </p>
 
@@ -851,6 +854,29 @@ export const PageDetailModal: React.FC = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+              ) : products.length === 0 ? (
+                <div className="p-8 text-center flex flex-col items-center justify-center space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center">
+                    <ShoppingBag className="w-5 h-5 text-neutral-400" />
+                  </div>
+                  {isManager ? (
+                    <>
+                      <h4 className="text-sm font-bold text-neutral-900">Your shop is empty</h4>
+                      <p className="text-xs text-neutral-500 max-w-[200px]">Add your first product to start selling from your Page.</p>
+                      <button 
+                        onClick={() => setIsManageProductsOpen(true)}
+                        className="mt-2 px-4 py-2 bg-[#5E43F3] text-white text-xs font-bold rounded-xl"
+                      >
+                        Add Product
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <h4 className="text-sm font-bold text-neutral-900">No products yet</h4>
+                      <p className="text-xs text-neutral-500 max-w-[200px]">This Page hasn't listed any products yet.</p>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="p-8 text-center text-neutral-400 text-xs">
@@ -1134,7 +1160,7 @@ export const PageDetailModal: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100 text-center">
                   <p className="text-base sm:text-lg font-black text-neutral-900">
-                    {page.followersCount}
+                    {page.followersCount || 1}
                   </p>
                   <p className="text-[10px] uppercase font-bold text-neutral-400 mt-0.5">Followers</p>
                 </div>
@@ -1144,12 +1170,14 @@ export const PageDetailModal: React.FC = () => {
                   </p>
                   <p className="text-[10px] uppercase font-bold text-neutral-400 mt-0.5">Events</p>
                 </div>
-                <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100 text-center">
-                  <p className="text-base sm:text-lg font-black text-amber-600">
-                    {page.aboutInfo?.founded || '2024'}
-                  </p>
-                  <p className="text-[10px] uppercase font-bold text-neutral-400 mt-0.5">Est. Year</p>
-                </div>
+                {page.aboutInfo?.founded && (
+                  <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100 text-center">
+                    <p className="text-base sm:text-lg font-black text-amber-600">
+                      {page.aboutInfo.founded}
+                    </p>
+                    <p className="text-[10px] uppercase font-bold text-neutral-400 mt-0.5">Est. Year</p>
+                  </div>
+                )}
                 <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100 text-center">
                   <p className="text-base sm:text-lg font-black text-emerald-600">
                     Verified
@@ -1291,6 +1319,14 @@ export const PageDetailModal: React.FC = () => {
           page={page}
           isOpen={isPostComposerOpen}
           onClose={() => setIsPostComposerOpen(false)}
+        />
+      )}
+
+      {isToolsModalOpen && (
+        <PageToolsModal
+          page={page}
+          isOpen={isToolsModalOpen}
+          onClose={() => setIsToolsModalOpen(false)}
         />
       )}
     </div>

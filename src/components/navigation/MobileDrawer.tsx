@@ -7,6 +7,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
+import { useNavigate } from 'react-router-dom';
 
 interface MobileDrawerProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
     myPages,
     setActivePageId,
   } = useLalao();
+  const navigate = useNavigate();
 
   if (!isOpen) return null;
 
@@ -124,7 +126,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
                     key={p.id}
                     type="button"
                     onClick={() => {
-                      setActivePageId(p.id);
+                      navigate('/app/page/' + p.id);
                       onClose();
                     }}
                     className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition cursor-pointer text-neutral-700 hover:bg-[#f8f6f3] hover:text-neutral-950"

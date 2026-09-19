@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Page, ShopProduct } from '../../types';
 import { useLalao } from '../../context/LalaoContext';
+import { uploadImageToCloudinary } from '../../lib/cloudinary';
 
 interface PageManageProductsModalProps {
   page: Page;
@@ -18,51 +19,65 @@ interface PageManageProductsModalProps {
   onClose: () => void;
 }
 
-const PRESET_PRODUCT_IMAGES = [
-  'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=800&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=800&auto=format&fit=crop&q=80',
-];
+// Presets removed
 
 export const PageManageProductsModal: React.FC<PageManageProductsModalProps> = ({
   page,
   isOpen,
   onClose,
 }) => {
-  const { addPageProduct, deletePageProduct } = useLalao();
+  const { addPageProduct, deletePageProduct, generateCloudinarySignature, triggerShareToast, pageProducts } = useLalao();
 
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [name, setName] = useState('');
   const [price, setPrice] = useState<number>(8500);
   const [category, setCategory] = useState('Merchandise');
   const [description, setDescription] = useState('');
-  const [image, setImage] = useState(PRESET_PRODUCT_IMAGES[0]);
-  const [showImagePresets, setShowImagePresets] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
-  const handleAddProduct = (e: React.FormEvent) => {
+  const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    addPageProduct(page.id, {
-      name: name.trim(),
-      price: Number(price) || 0,
-      currency: 'NGN',
-      category: category.trim(),
-      description: description.trim(),
-      image,
-      inStock: true,
-    });
+    try {
+      setIsUploading(true);
+      let finalImageUrl = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80';
 
-    setName('');
-    setDescription('');
-    setIsAddingNew(false);
+      if (imageFile) {
+        const signatureData = await generateCloudinarySignature("products");
+        finalImageUrl = await uploadImageToCloudinary(imageFile, signatureData);
+      }
+
+      await addPageProduct(page.id, {
+        name: name.trim(),
+        price: Number(price) || 0,
+        currency: 'NGN',
+        category: category.trim(),
+        description: description.trim(),
+        image: finalImageUrl,
+        inStock: true,
+      });
+
+      setName('');
+      setDescription('');
+      setImageFile(null);
+      setImagePreview(null);
+      setIsAddingNew(false);
+    } catch (err: any) {
+      console.error("Failed to add product:", err);
+      triggerShareToast("Failed to upload product image");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
-  const products = page.products || [];
+  const products = pageProducts || [];
 
   return (
     <div className="absolute inset-0 z-50 bg-white overflow-y-auto flex flex-col animate-in fade-in slide-in-from-right-4 duration-250">
@@ -188,40 +203,48 @@ export const PageManageProductsModal: React.FC<PageManageProductsModalProps> = (
                 Product Image
               </label>
               <div className="flex items-center gap-4">
-                <img
-                  src={image}
-                  alt="Preview"
-                  className="w-20 h-20 rounded-2xl object-cover ring-1 ring-neutral-200 bg-neutral-100"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowImagePresets(!showImagePresets)}
-                  className="px-4 py-2 rounded-xl border border-neutral-200 text-xs font-bold text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 cursor-pointer"
+                <div 
+                  className="w-20 h-20 rounded-2xl bg-neutral-100 ring-1 ring-neutral-200 overflow-hidden flex items-center justify-center shrink-0 cursor-pointer relative group"
+                  onClick={() => fileInputRef.current?.click()}
                 >
-                  <ImageIcon className="w-4 h-4 text-[#5E43F3]" />
-                  <span>Choose Preset Image</span>
-                </button>
-              </div>
-
-              {showImagePresets && (
-                <div className="mt-3 p-3 bg-neutral-50 rounded-2xl border border-neutral-200 flex gap-2.5 overflow-x-auto">
-                  {PRESET_PRODUCT_IMAGES.map((url, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => {
-                        setImage(url);
-                        setShowImagePresets(false);
-                      }}
-                      className={`w-14 h-14 rounded-xl overflow-hidden shrink-0 border-2 cursor-pointer transition-all ${
-                        image === url ? 'border-[#5E43F3] scale-95' : 'border-transparent'
-                      }`}
-                    >
-                      <img src={url} alt={`Preset ${i}`} className="w-full h-full object-cover" />
-                    </button>
-                  ))}
+                  {imagePreview ? (
+                    <>
+                      <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Camera className="w-5 h-5 text-white" />
+                      </div>
+                    </>
+                  ) : (
+                    <ImageIcon className="w-6 h-6 text-neutral-400" />
+                  )}
                 </div>
-              )}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-4 py-2 rounded-xl border border-neutral-200 text-xs font-bold text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 cursor-pointer"
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                    <span>Upload Image</span>
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setImageFile(file);
+                        setImagePreview(URL.createObjectURL(file));
+                      }
+                    }}
+                  />
+                  <p className="text-[10px] text-neutral-400 mt-2">
+                    Recommended: Square aspect ratio, minimum 800x800px.
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div>
@@ -293,10 +316,20 @@ export const PageManageProductsModal: React.FC<PageManageProductsModalProps> = (
               </button>
               <button
                 type="submit"
-                className="px-6 py-2.5 rounded-xl bg-[#5E43F3] text-white text-xs font-bold hover:bg-[#4E34E0] shadow-sm flex items-center gap-1.5 cursor-pointer"
+                disabled={isUploading}
+                className="px-6 py-2.5 rounded-xl bg-[#5E43F3] text-white text-xs font-bold hover:bg-[#4E34E0] disabled:opacity-50 disabled:cursor-not-allowed shadow-sm flex items-center gap-1.5 cursor-pointer"
               >
-                <Check className="w-4 h-4 stroke-[2.5]" />
-                <span>Add to Store</span>
+                {isUploading ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4 stroke-[2.5]" />
+                    <span>Add to Store</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

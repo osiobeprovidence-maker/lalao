@@ -237,4 +237,18 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_author", ["authorId"]),
+
+  products: defineTable({
+    pageId: v.id("pages"),
+    name: v.string(),
+    description: v.string(),
+    price: v.number(),
+    currency: v.string(),
+    category: v.optional(v.string()),
+    stockQuantity: v.optional(v.number()),
+    inStock: v.boolean(),
+    image: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_page", ["pageId"]),
 });

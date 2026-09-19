@@ -38,7 +38,7 @@ import { WalletModal } from './components/wallet/WalletModal';
 import { Check, Plus } from 'lucide-react';
 
 // Router
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 
 /**
@@ -89,8 +89,25 @@ const LalaoAppContent: React.FC = () => {
     pages,
     currentUser,
     activePageId,
+    setActivePageId,
   } = useLalao();
   const mainRef = useRef<HTMLElement>(null);
+  
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/app/page/')) {
+      const pageId = location.pathname.split('/app/page/')[1];
+      if (pageId && activePageId !== pageId) {
+        setActivePageId(pageId);
+      }
+    } else {
+      if (activePageId) {
+        setActivePageId(null);
+      }
+    }
+  }, [location.pathname, activePageId, setActivePageId]);
 
   const followingPosts = posts.filter(
     (post) => post.author.isFollowing || post.author.id === currentUser.id || (post.pageRefId && pages.some((page) => page.id === post.pageRefId && page.isFollowing))

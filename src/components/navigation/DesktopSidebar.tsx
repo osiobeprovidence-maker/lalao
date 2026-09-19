@@ -15,6 +15,7 @@ import {
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../common/Avatar';
+import { useNavigate } from 'react-router-dom';
 
 export const DesktopSidebar: React.FC = () => {
   const {
@@ -32,6 +33,7 @@ export const DesktopSidebar: React.FC = () => {
     setActivePageId,
   } = useLalao();
   const { logout } = useAuth();
+  const navigate = useNavigate();
 
   const unreadMessagesCount = conversations.reduce(
     (acc, conv) => acc + (conv.unreadCount || 0),
@@ -243,7 +245,7 @@ export const DesktopSidebar: React.FC = () => {
                   key={p.id}
                   type="button"
                   onClick={() => {
-                    setActivePageId(p.id);
+                    navigate('/app/page/' + p.id);
                   }}
                   className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition cursor-pointer text-neutral-700 hover:bg-[#f8f6f3] hover:text-neutral-950"
                 >
