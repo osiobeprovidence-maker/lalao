@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, BellOff, Loader2, Sparkles, X, Zap } from 'lucide-react';
+import { Bell, BellOff, Loader2, X } from 'lucide-react';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 
 /**
@@ -72,12 +72,9 @@ export const HomePushBanner: React.FC = () => {
             <Bell className="w-4.5 h-4.5" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <h3 className="text-[13px] font-bold text-neutral-950 tracking-tight">
-                Stay up to date
-              </h3>
-              <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-            </div>
+            <h3 className="text-[13px] font-bold text-neutral-950 tracking-tight">
+              Stay up to date
+            </h3>
             <p className="text-[11px] text-neutral-600 mt-0.5 leading-relaxed">
               Get notifications for messages, follows, comments, subscriptions, and important Lalao updates.
             </p>
@@ -95,10 +92,7 @@ export const HomePushBanner: React.FC = () => {
                     <span>Enabling…</span>
                   </>
                 ) : (
-                  <>
-                    <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
-                    <span>Enable notifications</span>
-                  </>
+                  <span>Enable notifications</span>
                 )}
               </button>
             </div>

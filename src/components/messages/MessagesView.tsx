@@ -137,21 +137,29 @@ export const MessagesView: React.FC = () => {
     (c) => c.user?.id !== currentUser.id && c.id !== 'cycle_user_me' && c.items && c.items.length > 0
   );
 
-  const filteredConversations = useMemo(() => {
-    return conversations.filter(
+  const unifiedChats = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    
+    // 1. Get all conversations matching search
+    const matchedConvs = conversations.filter(
       (c) =>
-        c.participant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+        c.participant.name.toLowerCase().includes(query) ||
+        c.lastMessage.toLowerCase().includes(query)
     );
-  }, [conversations, searchQuery]);
 
-  const filteredContacts = useMemo(() => {
-    return messageContacts.filter(
+    // 2. Track participant IDs to avoid duplicates
+    const convParticipantIds = new Set(conversations.map(c => c.participant.id));
+
+    // 3. Get contacts matching search that don't have a conversation
+    const matchedContacts = messageContacts.filter(
       (c) =>
-        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.username.toLowerCase().includes(searchQuery.toLowerCase())
+        !convParticipantIds.has(c.id) &&
+        (c.name.toLowerCase().includes(query) ||
+         c.username.toLowerCase().includes(query))
     );
-  }, [messageContacts, searchQuery]);
+
+    return { matchedConvs, matchedContacts };
+  }, [conversations, messageContacts, searchQuery]);
 
   const effectiveOffset = isRefreshing ? 54 : pullDistance;
   const isReadyToRelease = pullDistance >= pullThreshold;
@@ -355,7 +363,8 @@ export const MessagesView: React.FC = () => {
         </div>
 
         <div className="divide-y divide-neutral-100">
-          {filteredConversations.map((conv) => {
+          {/* 1. Render Conversations */}
+          {unifiedChats.matchedConvs.map((conv) => {
             const lastMsg = conv.messages && conv.messages.length > 0 ? conv.messages[conv.messages.length - 1] : null;
             const isLastMine = lastMsg?.isMine;
 
@@ -415,25 +424,8 @@ export const MessagesView: React.FC = () => {
             );
           })}
 
-          {filteredConversations.length === 0 && (
-            <div className="p-8 text-center text-neutral-400 space-y-2">
-              <MessageSquare className="w-8 h-8 mx-auto text-neutral-300" />
-              <p className="text-xs font-semibold">No chats found</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Contacts Section */}
-      <div className="pt-3 border-t border-neutral-100">
-        <div className="px-4 mb-1">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-600">
-            Contacts
-          </h2>
-        </div>
-
-        <div className="divide-y divide-neutral-100">
-          {filteredContacts.map((contact) => (
+          {/* 2. Render Contacts without a conversation */}
+          {unifiedChats.matchedContacts.map((contact) => (
             <div
               key={contact.id}
               onClick={() => openChatWithUser(contact)}
@@ -457,8 +449,8 @@ export const MessagesView: React.FC = () => {
                     )}
                     {contact.badge && <Badge type={contact.badge} />}
                   </div>
-                  <div className="text-xs text-neutral-500 truncate mt-0.5">
-                    @{contact.username}
+                  <div className="flex items-center gap-1 text-xs text-neutral-500 truncate mt-0.5 max-w-[220px]">
+                    <span className="truncate">Start a conversation</span>
                   </div>
                 </div>
               </div>
@@ -469,10 +461,10 @@ export const MessagesView: React.FC = () => {
             </div>
           ))}
 
-          {filteredContacts.length === 0 && (
+          {unifiedChats.matchedConvs.length === 0 && unifiedChats.matchedContacts.length === 0 && (
             <div className="p-8 text-center text-neutral-400 space-y-2">
-              <UserPlus className="w-8 h-8 mx-auto text-neutral-300" />
-              <p className="text-xs font-semibold">No contacts found</p>
+              <MessageSquare className="w-8 h-8 mx-auto text-neutral-300" />
+              <p className="text-xs font-semibold">No chats found</p>
             </div>
           )}
         </div>
