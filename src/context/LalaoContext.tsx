@@ -384,7 +384,10 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const addProductMutation = useMutation(api.shop.addProduct);
   const deleteProductMutation = useMutation(api.shop.deleteProduct);
   const upsertFcmTokenMutation = useMutation(api.push.upsertFcmToken);
-  const hasActivePushTokenQuery = useQuery(api.push.hasActivePushToken);
+  const hasActivePushTokenQuery = useQuery(
+    api.push.hasActivePushToken,
+    currentUserQuery ? {} : "skip"
+  );
 
   const [activePageId, setActivePageId] = useState<string | null>(null);
   

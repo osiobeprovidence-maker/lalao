@@ -1,13 +1,13 @@
-import { internalMutation, mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   TOKEN MANAGEMENT  (called from the frontend)
+   TOKEN MANAGEMENT (called from the frontend)
    ───────────────────────────────────────────────────────────────────────────── */
 
 /**
  * Upsert an FCM registration token for the current user/device.
- * If the token already exists for this user, update the timestamp.
+ * Supports multiple active tokens/devices per user.
  */
 export const upsertFcmToken = mutation({
   args: {
@@ -21,19 +21,23 @@ export const upsertFcmToken = mutation({
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+      .first();
     if (!user) throw new Error("User not found");
 
     const now = Date.now();
 
-    // Check if this exact token already exists for this user
+    // Check if this exact token already exists
     const existing = await ctx.db
       .query("fcmTokens")
       .withIndex("by_token", (q) => q.eq("token", token))
-      .unique();
+      .first();
 
     if (existing) {
-      await ctx.db.patch(existing._id, { updatedAt: now });
+      await ctx.db.patch(existing._id, {
+        userId: user._id,
+        userAgent: userAgent ?? existing.userAgent,
+        updatedAt: now,
+      });
       return existing._id;
     }
 
@@ -59,7 +63,7 @@ export const removeFcmToken = mutation({
     const existing = await ctx.db
       .query("fcmTokens")
       .withIndex("by_token", (q) => q.eq("token", token))
-      .unique();
+      .first();
 
     if (existing) {
       await ctx.db.delete(existing._id);
@@ -69,6 +73,7 @@ export const removeFcmToken = mutation({
 
 /**
  * Check whether the current user has any active FCM tokens registered.
+ * Safe for unauthenticated users (returns false).
  */
 export const hasActivePushToken = query({
   args: {},
@@ -80,7 +85,7 @@ export const hasActivePushToken = query({
       const user = await ctx.db
         .query("users")
         .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-        .unique();
+        .first();
       if (!user) return false;
 
       const token = await ctx.db
@@ -89,7 +94,8 @@ export const hasActivePushToken = query({
         .first();
 
       return token !== null;
-    } catch {
+    } catch (err) {
+      console.warn("[push] hasActivePushToken query error:", err);
       return false;
     }
   },
@@ -99,7 +105,10 @@ export const hasActivePushToken = query({
    INTERNAL TOKEN HELPERS (used by the dispatch action)
    ───────────────────────────────────────────────────────────────────────────── */
 
-export const getTokensForUser = internalMutation({
+/**
+ * Retrieve all active push tokens for a user (used by FCM push dispatch).
+ */
+export const getTokensForUser = internalQuery({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
     return await ctx.db
@@ -109,9 +118,15 @@ export const getTokensForUser = internalMutation({
   },
 });
 
+/**
+ * Deactivate/delete a stale or invalid FCM token after send failure.
+ */
 export const deleteStaleToken = internalMutation({
   args: { tokenId: v.id("fcmTokens") },
   handler: async (ctx, { tokenId }) => {
-    await ctx.db.delete(tokenId);
+    const existing = await ctx.db.get(tokenId);
+    if (existing) {
+      await ctx.db.delete(tokenId);
+    }
   },
 });

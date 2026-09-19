@@ -31,8 +31,8 @@ export const dispatchPush = internalAction({
       return;
     }
 
-    // Fetch tokens using an internal mutation (actions can't query directly)
-    const tokenRows: any[] = await ctx.runMutation(internal.push.getTokensForUser, {
+    // Fetch tokens using internal query
+    const tokenRows: any[] = await ctx.runQuery(internal.push.getTokensForUser, {
       userId: recipientId,
     });
 
