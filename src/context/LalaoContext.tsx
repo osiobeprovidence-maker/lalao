@@ -1531,6 +1531,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const createPageMutation = useMutation(api.pages.createPage);
+  const updatePageMutation = useMutation(api.pages.updatePage);
 
   const createPage = async ({
     name,
@@ -1544,9 +1545,9 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }: {
     name: string;
     username: string;
-    category: string;
-    description: string;
-    type: Page['type'];
+    category?: string;
+    description?: string;
+    type: 'business' | 'organization' | 'club' | 'community';
     location: string;
     avatar?: string;
     coverImage?: string;
@@ -1575,7 +1576,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const updatePage = (pageId: string, updatedData: Partial<Page>) => {
+  const updatePage = async (pageId: string, updatedData: Partial<Page>) => {
+    // Update local state optimistically
     setPages((prev) =>
       prev.map((p) => {
         if (p.id !== pageId) return p;
@@ -1590,7 +1592,25 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return updated;
       })
     );
-    triggerShareToast('Page details updated successfully!');
+
+    // Update backend via Convex mutation
+    try {
+      await updatePageMutation({
+        pageId: pageId as any,
+        name: updatedData.name,
+        username: updatedData.username,
+        category: updatedData.category,
+        description: updatedData.description,
+        location: updatedData.location,
+        avatar: updatedData.avatar,
+        coverImage: updatedData.coverImage,
+        aboutInfo: updatedData.aboutInfo,
+      });
+      triggerShareToast('Page details updated successfully!');
+    } catch (err) {
+      console.error('Failed to update page', err);
+      triggerShareToast('Failed to update page backend');
+    }
   };
 
   const createPagePost = (

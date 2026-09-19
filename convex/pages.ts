@@ -34,6 +34,7 @@ export const getMyPages = query({
       isFollowing: true,
       isOwner: true,
       category: page.category ?? "",
+      aboutInfo: page.aboutInfo ?? {},
     }));
   },
 });
@@ -92,5 +93,57 @@ export const createPage = mutation({
     });
 
     return newPageId;
+  },
+});
+
+export const updatePage = mutation({
+  args: {
+    pageId: v.id("pages"),
+    name: v.optional(v.string()),
+    username: v.optional(v.string()),
+    category: v.optional(v.string()),
+    description: v.optional(v.string()),
+    location: v.optional(v.string()),
+    avatar: v.optional(v.string()),
+    coverImage: v.optional(v.string()),
+    aboutInfo: v.optional(v.object({
+      address: v.optional(v.string()),
+      phone: v.optional(v.string()),
+      email: v.optional(v.string()),
+      website: v.optional(v.string()),
+      hours: v.optional(v.string()),
+      founded: v.optional(v.string()),
+    })),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+    if (!user) throw new Error("User not found");
+
+    const page = await ctx.db.get(args.pageId);
+    if (!page) throw new Error("Page not found");
+    if (page.ownerId !== user._id) throw new Error("Unauthorized: Only the owner can update the page");
+
+    const updates: any = { updatedAt: Date.now() };
+    if (args.name !== undefined) updates.name = args.name;
+    if (args.username !== undefined) updates.username = args.username;
+    if (args.category !== undefined) updates.category = args.category;
+    if (args.description !== undefined) updates.description = args.description;
+    if (args.location !== undefined) updates.location = args.location;
+    if (args.avatar !== undefined) updates.avatar = args.avatar;
+    if (args.coverImage !== undefined) updates.coverImage = args.coverImage;
+    if (args.aboutInfo !== undefined) {
+      updates.aboutInfo = {
+        ...page.aboutInfo,
+        ...args.aboutInfo,
+      };
+    }
+
+    await ctx.db.patch(args.pageId, updates);
   },
 });

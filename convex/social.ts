@@ -388,7 +388,7 @@ export const getPage = query({
       isFollowing,
       isOwner,
       category: page.category ?? "General",
-      aboutInfo: {},
+      aboutInfo: page.aboutInfo ?? {},
     };
   },
 });
@@ -428,7 +428,7 @@ export const listPages = query({
         isFollowing,
         isOwner: page.ownerId === currentUser._id,
         category: page.category ?? "General",
-        aboutInfo: {},
+        aboutInfo: page.aboutInfo ?? {},
       });
     }
 
