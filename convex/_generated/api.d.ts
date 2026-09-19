@@ -11,6 +11,8 @@
 import type * as admin from "../admin.js";
 import type * as cloudinary from "../cloudinary.js";
 import type * as pages from "../pages.js";
+import type * as push from "../push.js";
+import type * as pushActions from "../pushActions.js";
 import type * as search from "../search.js";
 import type * as shop from "../shop.js";
 import type * as social from "../social.js";
@@ -28,6 +30,8 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   cloudinary: typeof cloudinary;
   pages: typeof pages;
+  push: typeof push;
+  pushActions: typeof pushActions;
   search: typeof search;
   shop: typeof shop;
   social: typeof social;

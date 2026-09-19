@@ -1,4 +1,5 @@
 import { query, mutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -719,6 +720,12 @@ export const toggleLikePost = mutation({
         isRead: false,
         createdAt: Date.now(),
       });
+      await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
+        recipientId: post.authorId,
+        title: `${currentUser.name ?? "Someone"} liked your post`,
+        body: post.text ? post.text.slice(0, 100) : "Check it out on Lalao",
+        url: "/",
+      });
     }
 
     return { liked: true, likesCount: nextCount };
@@ -769,6 +776,12 @@ export const toggleLikeComment = mutation({
         targetExcerpt: comment.text ? comment.text.slice(0, 80) : "an attachment",
         isRead: false,
         createdAt: Date.now(),
+      });
+      await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
+        recipientId: comment.authorId,
+        title: `${currentUser.name ?? "Someone"} liked your ${comment.parentCommentId ? "reply" : "comment"}`,
+        body: comment.text ? comment.text.slice(0, 100) : "an attachment",
+        url: "/",
       });
     }
 
@@ -888,6 +901,12 @@ export const addCommentToPost = mutation({
         isRead: false,
         createdAt: now,
       });
+      await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
+        recipientId: post.authorId,
+        title: `${currentUser.name ?? "Someone"} ${parentCommentId ? "replied to your comment" : "commented on your post"}`,
+        body: trimmed.slice(0, 100),
+        url: "/",
+      });
     }
 
     // Also notify parent comment author if different from post author and self
@@ -907,6 +926,12 @@ export const addCommentToPost = mutation({
           targetExcerpt: trimmed.slice(0, 80),
           isRead: false,
           createdAt: now,
+        });
+        await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
+          recipientId: parentComment.authorId,
+          title: `${currentUser.name ?? "Someone"} replied to your comment`,
+          body: trimmed.slice(0, 100),
+          url: "/",
         });
       }
     }
@@ -1080,6 +1105,12 @@ export const toggleFollowUser = mutation({
       type: "follow",
       isRead: false,
       createdAt: Date.now(),
+    });
+    await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
+      recipientId: targetUserId,
+      title: "New follower on Lalao",
+      body: `${currentUser.name ?? "Someone"} started following you`,
+      url: "/",
     });
 
     return { following: true };

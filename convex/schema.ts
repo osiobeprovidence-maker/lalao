@@ -405,5 +405,21 @@ export default defineSchema({
   })
     .index("by_actor", ["actorId"])
     .index("by_created", ["createdAt"]),
+
+  // ---- PUSH NOTIFICATIONS ----
+
+  /**
+   * FCM device tokens — one row per user/device.
+   * Upserted from the frontend after the user grants notification permission.
+   */
+  fcmTokens: defineTable({
+    userId: v.id("users"),
+    token: v.string(),           // Firebase Cloud Messaging registration token
+    userAgent: v.optional(v.string()), // Browser/device label for display
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_token", ["token"]),
 });
 

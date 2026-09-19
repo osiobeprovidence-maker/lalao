@@ -12,6 +12,7 @@ import {
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { NotificationItem } from '../../types';
+import { PushNotificationSettings } from './PushNotificationSettings';
 
 export const NotificationsView: React.FC = () => {
   const {
@@ -23,8 +24,6 @@ export const NotificationsView: React.FC = () => {
     setActiveCommentsPostId,
     setActiveTab,
     toggleFollowUser,
-    permissions,
-    setActivePermissionPrompt,
     triggerShareToast,
   } = useLalao();
 
@@ -122,25 +121,8 @@ export const NotificationsView: React.FC = () => {
         </div>
       </div>
 
-      {permissions.notifications !== 'granted' && (
-        <div className="mx-4 mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2.5 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-              <Bell className="w-4 h-4" />
-            </div>
-            <p className="text-[11px] text-rose-900 leading-snug">
-              Turn on alerts for likes, replies, and local activity.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setActivePermissionPrompt('notifications')}
-            className="px-2.5 py-1.5 rounded-full bg-[#5E43F3] text-white text-[10px] font-bold hover:bg-[#4E34E0] transition-colors cursor-pointer shrink-0"
-          >
-            Enable
-          </button>
-        </div>
-      )}
+      {/* Push notification settings banner */}
+      <PushNotificationSettings />
 
       <div className="px-4 pt-4 space-y-4">
         {(activeFilter === 'all' || activeFilter === 'suggested') && visibleSuggested.length > 0 && (

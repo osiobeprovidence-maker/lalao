@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import { getOrRequestFcmToken } from '../lib/firebase';
 import {
   User,
   Post,
@@ -298,6 +299,10 @@ interface LalaoContextType {
   triggerShareToast: (message?: string) => void;
   isEditProfileOpen: boolean;
   setIsEditProfileOpen: (open: boolean) => void;
+
+  // Push Notifications
+  enablePushNotifications: () => Promise<boolean>;
+  pushEnabled: boolean;
 }
 
 const LalaoContext = createContext<LalaoContextType | undefined>(undefined);
@@ -378,6 +383,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const deleteDraftMutation = useMutation(api.social.deleteDraft);
   const addProductMutation = useMutation(api.shop.addProduct);
   const deleteProductMutation = useMutation(api.shop.deleteProduct);
+  const upsertFcmTokenMutation = useMutation(api.push.upsertFcmToken);
+  const hasActivePushTokenQuery = useQuery(api.push.hasActivePushToken);
 
   const [activePageId, setActivePageId] = useState<string | null>(null);
   
@@ -670,6 +677,10 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const res = await Notification.requestPermission();
           const state: PermissionState = res === 'granted' ? 'granted' : res === 'denied' ? 'denied' : 'prompt';
           updatePermission('notifications', state);
+          if (state === 'granted') {
+            // Auto-register FCM token after permission is granted
+            enablePushNotifications().catch(() => {});
+          }
           return state === 'granted';
         }
       } catch {
@@ -707,6 +718,28 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     return false;
   };
+
+  /**
+   * Request FCM permission + register device token in Convex.
+   * Returns true if push was successfully enabled.
+   */
+  const enablePushNotifications = useCallback(async (): Promise<boolean> => {
+    try {
+      const token = await getOrRequestFcmToken();
+      if (!token) return false;
+      await upsertFcmTokenMutation({
+        token,
+        userAgent: navigator.userAgent.slice(0, 200),
+      });
+      updatePermission('notifications', 'granted');
+      return true;
+    } catch (err) {
+      console.error('[push] enablePushNotifications error:', err);
+      return false;
+    }
+  }, [upsertFcmTokenMutation]);
+
+  const pushEnabled = hasActivePushTokenQuery === true;
 
   // Drilldowns
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -2419,6 +2452,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setIsWalletModalOpen,
         topUpWallet,
         payWithWallet,
+        enablePushNotifications,
+        pushEnabled,
       }}
     >
       {children}
