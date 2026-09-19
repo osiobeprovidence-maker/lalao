@@ -40,7 +40,7 @@ export const DesktopSidebar: React.FC = () => {
   const locationPath = window.location.pathname;
 
   const role = useQuery(api.admin.getMyRole);
-  const isSuperAdmin = role === 'super_admin' || currentUser?.email === 'riderezzy@gmail.com';
+  const isSuperAdmin = role === 'super_admin' || (currentUser as any)?.email === 'riderezzy@gmail.com';
 
   const unreadMessagesCount = conversations.reduce(
     (acc, conv) => acc + (conv.unreadCount || 0),
