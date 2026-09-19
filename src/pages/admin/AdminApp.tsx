@@ -27,10 +27,13 @@ import { AdminPlatformSettings } from './AdminPlatformSettings';
 import { AdminSubPlatforms } from './AdminSubPlatforms';
 import { AdminComingSoon } from './AdminComingSoon';
 import { useAuth } from '../../context/AuthContext';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 export const AdminApp: React.FC = () => {
   const location = useLocation();
   const { logout } = useAuth();
+  const role = useQuery(api.admin.getMyRole);
 
   const navGroups = [
     {
@@ -130,23 +133,30 @@ export const AdminApp: React.FC = () => {
           
           <div className="flex-1 overflow-y-auto custom-scrollbar p-8 z-10">
             <div className="max-w-6xl mx-auto">
-              <Routes>
-                <Route path="/" element={<AdminDashboard />} />
-                <Route path="/users" element={<AdminUsers />} />
-                <Route path="/pages" element={<AdminPages />} />
-                <Route path="/subscriptions" element={<AdminSubscriptions />} />
-                <Route path="/transactions" element={<AdminTransactions />} />
-                <Route path="/wallet" element={<AdminComingSoon title="Wallet Activity" />} />
-                <Route path="/monetization" element={<AdminComingSoon title="Creator Monetization" />} />
-                <Route path="/reports" element={<AdminComingSoon title="Reports" />} />
-                <Route path="/moderation" element={<AdminComingSoon title="Moderation Queue" />} />
-                <Route path="/notifications" element={<AdminComingSoon title="System Notifications" />} />
-                <Route path="/settings" element={<AdminPlatformSettings />} />
-                <Route path="/platforms" element={<AdminSubPlatforms />} />
-                <Route path="/features" element={<AdminComingSoon title="Feature Flags" />} />
-                <Route path="/audit" element={<AdminAuditLog />} />
-                <Route path="*" element={<Navigate to="/admin" replace />} />
-              </Routes>
+              {role !== 'super_admin' ? (
+                <Routes>
+                  <Route path="/" element={<AdminDashboard />} />
+                  <Route path="*" element={<Navigate to="/admin" replace />} />
+                </Routes>
+              ) : (
+                <Routes>
+                  <Route path="/" element={<AdminDashboard />} />
+                  <Route path="/users" element={<AdminUsers />} />
+                  <Route path="/pages" element={<AdminPages />} />
+                  <Route path="/subscriptions" element={<AdminSubscriptions />} />
+                  <Route path="/transactions" element={<AdminTransactions />} />
+                  <Route path="/wallet" element={<AdminComingSoon title="Wallet Activity" />} />
+                  <Route path="/monetization" element={<AdminComingSoon title="Creator Monetization" />} />
+                  <Route path="/reports" element={<AdminComingSoon title="Reports" />} />
+                  <Route path="/moderation" element={<AdminComingSoon title="Moderation Queue" />} />
+                  <Route path="/notifications" element={<AdminComingSoon title="System Notifications" />} />
+                  <Route path="/settings" element={<AdminPlatformSettings />} />
+                  <Route path="/platforms" element={<AdminSubPlatforms />} />
+                  <Route path="/features" element={<AdminComingSoon title="Feature Flags" />} />
+                  <Route path="/audit" element={<AdminAuditLog />} />
+                  <Route path="*" element={<Navigate to="/admin" replace />} />
+                </Routes>
+              )}
             </div>
           </div>
         </main>
