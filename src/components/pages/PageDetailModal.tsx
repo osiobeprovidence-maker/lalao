@@ -38,6 +38,7 @@ import {
   BellOff,
   Copy,
   Briefcase,
+  Crown,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
@@ -53,6 +54,9 @@ import { isPageTicketingEligible } from '../../utils/pageCapabilities';
 import { EditPageModal } from './EditPageModal';
 import { PageMonetizationModal } from './PageMonetizationModal';
 import { PageAnalyticsModal } from './PageAnalyticsModal';
+import { PageToolsModal } from './PageToolsModal';
+import { PageManageSubscriptionsModal } from './PageManageSubscriptionsModal';
+import { SubscriptionCheckoutModal } from './SubscriptionCheckoutModal';
 import { PageSettingsModal } from './PageSettingsModal';
 import { PageEventModal } from './PageEventModal';
 import { EventAttendeesModal } from './EventAttendeesModal';
@@ -81,6 +85,12 @@ export const PageDetailModal: React.FC = () => {
     activeTicketsCount,
     updatePage,
     deletePageEvent,
+    isManageSubscriptionsOpen,
+    setIsManageSubscriptionsOpen,
+    pageSubscriptionPlans,
+    isSubscriptionCheckoutOpen,
+    setSelectedSubscriptionPlan,
+    setIsSubscriptionCheckoutOpen,
   } = useLalao();
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
@@ -177,6 +187,11 @@ export const PageDetailModal: React.FC = () => {
       new Set(products.map((p) => p.category).filter(Boolean) as string[])
     ),
   ];
+
+  const activePlans = pageSubscriptionPlans?.filter((p: any) => p.active) || [];
+  if (activePlans.length > 0) {
+    categories.push('Subscriptions');
+  }
 
   const filteredProducts =
     selectedCategory === 'All'
@@ -782,8 +797,65 @@ export const PageDetailModal: React.FC = () => {
                 </div>
               )}
 
-              {/* Products Grid */}
-              {filteredProducts.length > 0 ? (
+              {/* Products/Subscriptions Grid */}
+              {selectedCategory === 'Subscriptions' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {activePlans.map((plan: any) => (
+                    <div
+                      key={plan._id}
+                      className="group bg-white rounded-2xl border border-[#5E43F3]/20 overflow-hidden hover:border-[#5E43F3]/50 transition-all flex flex-col cursor-pointer active:scale-[0.99] shadow-sm hover:shadow-md"
+                      onClick={() => {
+                        setSelectedSubscriptionPlan(plan);
+                        setIsSubscriptionCheckoutOpen(true);
+                      }}
+                    >
+                      <div className="p-4 bg-gradient-to-br from-[#5E43F3]/5 to-transparent border-b border-[#5E43F3]/10">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Crown className="w-4 h-4 text-[#5E43F3]" />
+                          <span className="text-[10px] font-black uppercase tracking-wider text-[#5E43F3]">
+                            Subscription
+                          </span>
+                        </div>
+                        <h4 className="text-sm font-black text-neutral-900">{plan.name}</h4>
+                        <div className="mt-1 flex items-baseline gap-1">
+                          <span className="text-lg font-black text-neutral-900">
+                            {plan.currency === 'NGN' ? '₦' : plan.currency}{(plan.price).toLocaleString()}
+                          </span>
+                          <span className="text-[10px] text-neutral-500 font-bold uppercase">
+                            / {plan.billingInterval}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="p-4 flex-1 flex flex-col">
+                        <p className="text-xs text-neutral-600 mb-4 line-clamp-2">
+                          {plan.description}
+                        </p>
+                        
+                        <div className="space-y-2 flex-1">
+                          {plan.benefits.slice(0, 3).map((benefit: string, idx: number) => (
+                            <div key={idx} className="flex items-start gap-1.5">
+                              <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                              <span className="text-[11px] text-neutral-700 leading-tight">
+                                {benefit}
+                              </span>
+                            </div>
+                          ))}
+                          {plan.benefits.length > 3 && (
+                            <div className="text-[10px] font-bold text-neutral-400 pl-5">
+                              + {plan.benefits.length - 3} more benefits
+                            </div>
+                          )}
+                        </div>
+                        
+                        <button className="w-full mt-4 py-2 bg-neutral-900 text-white rounded-xl text-xs font-bold group-hover:bg-[#5E43F3] transition-colors">
+                          Subscribe
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : filteredProducts.length > 0 ? (
                 <div className="grid grid-cols-2 gap-3">
                   {filteredProducts.map((prod) => (
                     <div
@@ -1330,6 +1402,18 @@ export const PageDetailModal: React.FC = () => {
           isOpen={isToolsModalOpen}
           onClose={() => setIsToolsModalOpen(false)}
         />
+      )}
+
+      {isManageSubscriptionsOpen && (
+        <PageManageSubscriptionsModal
+          page={page}
+          isOpen={isManageSubscriptionsOpen}
+          onClose={() => setIsManageSubscriptionsOpen(false)}
+        />
+      )}
+
+      {isSubscriptionCheckoutOpen && (
+        <SubscriptionCheckoutModal />
       )}
     </div>
   );

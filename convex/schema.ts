@@ -259,4 +259,39 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_page", ["pageId"]),
+
+  subscriptionPlans: defineTable({
+    pageId: v.id("pages"),
+    name: v.string(),
+    description: v.string(),
+    price: v.number(),
+    currency: v.string(),
+    billingInterval: v.union(v.literal("monthly"), v.literal("yearly")),
+    benefits: v.array(v.string()),
+    active: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_page", ["pageId"]),
+
+  userSubscriptions: defineTable({
+    userId: v.id("users"),
+    pageId: v.id("pages"),
+    planId: v.id("subscriptionPlans"),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("active"),
+      v.literal("cancelled"),
+      v.literal("past_due")
+    ),
+    startedAt: v.optional(v.number()),
+    currentPeriodStart: v.optional(v.number()),
+    currentPeriodEnd: v.optional(v.number()),
+    cancelAtPeriodEnd: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_page", ["pageId"])
+    .index("by_user_page", ["userId", "pageId"]),
 });
+

@@ -191,6 +191,14 @@ interface LalaoContextType {
   setIsLocationModalOpen: (open: boolean) => void;
   isNotificationsOpen: boolean;
   setIsNotificationsOpen: (open: boolean) => void;
+  isMySubscriptionsOpen: boolean;
+  setIsMySubscriptionsOpen: (open: boolean) => void;
+  isManageSubscriptionsOpen: boolean;
+  setIsManageSubscriptionsOpen: (open: boolean) => void;
+  isSubscriptionCheckoutOpen: boolean;
+  setIsSubscriptionCheckoutOpen: (open: boolean) => void;
+  selectedSubscriptionPlan: any;
+  setSelectedSubscriptionPlan: (plan: any) => void;
   
   // Drilldown modals
   activeChatId: string | null;
@@ -264,6 +272,14 @@ interface LalaoContextType {
   teamRegistrations: TeamRegistration[];
   addTeamRegistration: (reg: TeamRegistration) => void;
   openHonorOfKingsPage: () => void;
+
+  // Subscriptions
+  mySubscriptions: any[];
+  pageSubscriptionPlans: any[];
+  createSubscriptionPlan: (plan: any) => Promise<string>;
+  updateSubscriptionPlan: (planId: string, updates: any) => Promise<void>;
+  subscribeToPlan: (planId: string) => Promise<string>;
+  cancelSubscription: (subscriptionId: string) => Promise<void>;
 
   // Teams & Roster Storage
   savedTeams: PlayerTeam[];
@@ -381,6 +397,24 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const suggestedUsersQuery = useQuery(api.social.listSuggestedUsers);
   const messageContactsQuery = useQuery(api.social.getMessageContacts);
   const draftsQuery = useQuery(api.social.listMyDrafts);
+
+  // Subscriptions
+  // @ts-ignore
+  const pageSubscriptionPlansQuery = useQuery(
+    // @ts-ignore
+    api.subscriptions.getPlansByPage, 
+    activePageId ? { pageId: activePageId as any } : "skip"
+  );
+  // @ts-ignore
+  const mySubscriptionsQuery = useQuery(api.subscriptions.getMySubscriptions);
+  // @ts-ignore
+  const createSubscriptionPlanMutation = useMutation(api.subscriptions.createPlan);
+  // @ts-ignore
+  const updateSubscriptionPlanMutation = useMutation(api.subscriptions.updatePlan);
+  // @ts-ignore
+  const subscribeToPlanMutation = useMutation(api.subscriptions.subscribeToPlan);
+  // @ts-ignore
+  const cancelSubscriptionMutation = useMutation(api.subscriptions.cancelSubscription);
 
   const [currentUser, setCurrentUser] = useState<User>(() => {
     try {
@@ -575,6 +609,12 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [createFlowType, setCreateFlowType] = useState<CreateOption>(null);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  
+  // Subscription UI states
+  const [isMySubscriptionsOpen, setIsMySubscriptionsOpen] = useState(false);
+  const [isManageSubscriptionsOpen, setIsManageSubscriptionsOpen] = useState(false);
+  const [isSubscriptionCheckoutOpen, setIsSubscriptionCheckoutOpen] = useState(false);
+  const [selectedSubscriptionPlan, setSelectedSubscriptionPlan] = useState<any>(null);
 
   // Device Permissions State
   const [permissions, setPermissions] = useState<DevicePermissions>(() => {
@@ -1753,6 +1793,52 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     triggerShareToast('Monetization settings saved!');
   };
 
+  const createSubscriptionPlan = async (planData: any) => {
+    try {
+      // @ts-ignore
+      const planId = await createSubscriptionPlanMutation(planData);
+      triggerShareToast('Subscription plan created!');
+      return planId;
+    } catch (error: any) {
+      triggerShareToast(`Error: ${error.message}`);
+      throw error;
+    }
+  };
+
+  const updateSubscriptionPlan = async (planId: string, updates: any) => {
+    try {
+      // @ts-ignore
+      await updateSubscriptionPlanMutation({ planId, ...updates });
+      triggerShareToast('Subscription plan updated!');
+    } catch (error: any) {
+      triggerShareToast(`Error: ${error.message}`);
+      throw error;
+    }
+  };
+
+  const subscribeToPlan = async (planId: string) => {
+    try {
+      // @ts-ignore
+      const subId = await subscribeToPlanMutation({ planId });
+      triggerShareToast('Subscription initiated! Complete payment to activate.');
+      return subId;
+    } catch (error: any) {
+      triggerShareToast(`Error: ${error.message}`);
+      throw error;
+    }
+  };
+
+  const cancelSubscription = async (subscriptionId: string) => {
+    try {
+      // @ts-ignore
+      await cancelSubscriptionMutation({ subscriptionId });
+      triggerShareToast('Subscription will be cancelled at the end of the billing period.');
+    } catch (error: any) {
+      triggerShareToast(`Error: ${error.message}`);
+      throw error;
+    }
+  };
+
   const addPageProduct = async (pageId: string, productData: Partial<ShopProduct>) => {
     try {
       await addProductMutation({
@@ -2256,6 +2342,20 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setIsLocationModalOpen,
         isNotificationsOpen,
         setIsNotificationsOpen,
+        isMySubscriptionsOpen,
+        setIsMySubscriptionsOpen,
+        isManageSubscriptionsOpen,
+        setIsManageSubscriptionsOpen,
+        isSubscriptionCheckoutOpen,
+        setIsSubscriptionCheckoutOpen,
+        selectedSubscriptionPlan,
+        setSelectedSubscriptionPlan,
+        mySubscriptions: (mySubscriptionsQuery || []) as any[],
+        pageSubscriptionPlans: (pageSubscriptionPlansQuery || []) as any[],
+        createSubscriptionPlan,
+        updateSubscriptionPlan,
+        subscribeToPlan,
+        cancelSubscription,
         activeChatId,
         setActiveChatId,
         openChatWithUser,

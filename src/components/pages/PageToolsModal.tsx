@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowLeft, Briefcase, Gift, Tag, Repeat, Users, BarChart } from 'lucide-react';
 import { Page } from '../../types';
+import { useLalao } from '../../context/LalaoContext';
 
 interface PageToolsModalProps {
   page: Page;
@@ -13,6 +14,8 @@ export const PageToolsModal: React.FC<PageToolsModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  const { setIsManageSubscriptionsOpen } = useLalao();
+
   if (!isOpen) return null;
 
   return (
@@ -72,15 +75,23 @@ export const PageToolsModal: React.FC<PageToolsModalProps> = ({
             </div>
           </div>
 
-          <div className="p-5 rounded-2xl border border-neutral-200 bg-neutral-50/50 flex flex-col gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
+          <button 
+            type="button"
+            onClick={() => {
+              setIsManageSubscriptionsOpen(true);
+              // We'll keep this modal open or close it depending on design. For now, closing the Tools modal to open Manage Subscriptions is cleaner.
+              onClose();
+            }}
+            className="p-5 rounded-2xl border border-[#5E43F3]/20 bg-white hover:bg-[#5E43F3]/5 flex flex-col gap-3 text-left transition-colors cursor-pointer shadow-sm"
+          >
+            <div className="w-10 h-10 bg-[#5E43F3]/10 rounded-xl flex items-center justify-center text-[#5E43F3]">
               <Repeat className="w-5 h-5" />
             </div>
             <div>
               <h4 className="font-bold text-neutral-900 mb-1">Subscriptions</h4>
-              <p className="text-xs text-neutral-500">Offer premium memberships and recurring subscriptions to your followers.</p>
+              <p className="text-xs text-neutral-500">Manage premium memberships and recurring plans for your page.</p>
             </div>
-          </div>
+          </button>
 
           <div className="p-5 rounded-2xl border border-neutral-200 bg-neutral-50/50 flex flex-col gap-3">
             <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600">

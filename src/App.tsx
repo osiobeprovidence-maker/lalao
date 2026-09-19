@@ -35,6 +35,7 @@ import { TicketPurchaseModal } from './components/tickets/TicketPurchaseModal';
 import { DigitalTicketModal } from './components/tickets/DigitalTicketModal';
 import { MyTicketsModal } from './components/tickets/MyTicketsModal';
 import { WalletModal } from './components/wallet/WalletModal';
+import { MySubscriptionsModal } from './components/subscriptions/MySubscriptionsModal';
 import { Check, Plus } from 'lucide-react';
 
 // Router
@@ -312,6 +313,7 @@ const LalaoAppContent: React.FC = () => {
       {!['create-post'].includes(activeTab) && <DigitalTicketModal />}
       {!['create-post'].includes(activeTab) && <MyTicketsModal />}
       {!['create-post'].includes(activeTab) && <WalletModal />}
+      {!['create-post'].includes(activeTab) && <MySubscriptionsModal />}
 
 
       {shareToast && (

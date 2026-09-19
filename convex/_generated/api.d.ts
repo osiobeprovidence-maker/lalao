@@ -14,6 +14,7 @@ import type * as pages from "../pages.js";
 import type * as search from "../search.js";
 import type * as shop from "../shop.js";
 import type * as social from "../social.js";
+import type * as subscriptions from "../subscriptions.js";
 import type * as users from "../users.js";
 
 import type {
@@ -29,6 +30,7 @@ declare const fullApi: ApiFromModules<{
   search: typeof search;
   shop: typeof shop;
   social: typeof social;
+  subscriptions: typeof subscriptions;
   users: typeof users;
 }>;
 
