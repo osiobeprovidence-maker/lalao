@@ -2,6 +2,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useLalao, FeedTab } from '../../context/LalaoContext';
 import { PostItem } from './PostItem';
+import { HomePushBanner } from '../notifications/HomePushBanner';
 import {
   MapPin,
   ArrowUpDown,
@@ -471,6 +472,9 @@ export const HomeFeed: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Web Push Notification Onboarding Banner */}
+      <HomePushBanner />
 
       {/* Posts Stream */}
       {isFeedLoading ? (

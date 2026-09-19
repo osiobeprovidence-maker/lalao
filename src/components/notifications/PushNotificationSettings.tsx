@@ -1,36 +1,45 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Bell, BellOff, CheckCircle2, Loader2, Smartphone, Zap } from 'lucide-react';
-import { useLalao } from '../../context/LalaoContext';
+import { usePushNotifications } from '../../hooks/usePushNotifications';
 
 /**
  * PushNotificationSettings
  *
  * Shown inside the Notifications view as a banner / settings block.
- * - If push is already enabled  → shows green "Active" state.
- * - If permission is denied     → shows browser instruction.
- * - Otherwise                   → shows "Enable" button.
+ * - Uses the unified usePushNotifications hook shared with Home.
+ * - Displays active, denied, prompt, or unsupported state dynamically.
  */
 export const PushNotificationSettings: React.FC = () => {
-  const { enablePushNotifications, pushEnabled } = useLalao();
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'denied'>('idle');
+  const {
+    isSupported,
+    browserPermission,
+    hasActivePushToken,
+    status,
+    enableNotifications,
+  } = usePushNotifications();
 
-  const browserPermission =
-    typeof window !== 'undefined' && 'Notification' in window
-      ? Notification.permission
-      : 'default';
+  // ── Browser Unsupported ──────────────────────────────────────────────────────
+  if (!isSupported || browserPermission === 'unsupported') {
+    return (
+      <div
+        id="push-settings-unsupported"
+        className="mx-4 mt-3 rounded-2xl border border-neutral-200 bg-neutral-100/70 px-4 py-3 flex items-center gap-3"
+      >
+        <div className="w-9 h-9 rounded-full bg-neutral-200 text-neutral-600 flex items-center justify-center shrink-0">
+          <BellOff className="w-4.5 h-4.5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[12px] font-bold text-neutral-800">Push notifications unavailable</p>
+          <p className="text-[11px] text-neutral-600 mt-0.5">
+            Web Push is not supported by your current browser or device environment.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-  const handleEnable = async () => {
-    if (browserPermission === 'denied') {
-      setStatus('denied');
-      return;
-    }
-    setStatus('loading');
-    const ok = await enablePushNotifications();
-    setStatus(ok ? 'success' : 'denied');
-  };
-
-  // ── Already enabled ──────────────────────────────────────────────────────────
-  if (pushEnabled || status === 'success') {
+  // ── Already Enabled / Active Token ──────────────────────────────────────────
+  if (hasActivePushToken || status === 'success') {
     return (
       <div
         id="push-settings-active"
@@ -42,16 +51,16 @@ export const PushNotificationSettings: React.FC = () => {
         <div className="flex-1 min-w-0">
           <p className="text-[12px] font-bold text-emerald-900">Push notifications are on</p>
           <p className="text-[11px] text-emerald-700 mt-0.5">
-            You'll get alerts for likes, replies, follows &amp; more — even when the app is closed.
+            You&apos;ll get alerts for likes, replies, follows &amp; more — even when the app is closed.
           </p>
         </div>
-        <Smartphone className="w-4 h-4 text-emerald-400 shrink-0" />
+        <Smartphone className="w-4 h-4 text-emerald-500 shrink-0" />
       </div>
     );
   }
 
-  // ── Browser denied ────────────────────────────────────────────────────────────
-  if (status === 'denied' || browserPermission === 'denied') {
+  // ── Browser Permission Denied ────────────────────────────────────────────────
+  if (browserPermission === 'denied' || status === 'denied') {
     return (
       <div
         id="push-settings-denied"
@@ -70,7 +79,7 @@ export const PushNotificationSettings: React.FC = () => {
     );
   }
 
-  // ── Default prompt ────────────────────────────────────────────────────────────
+  // ── Default Prompt ───────────────────────────────────────────────────────────
   return (
     <div
       id="push-settings-prompt"
@@ -93,8 +102,8 @@ export const PushNotificationSettings: React.FC = () => {
           id="push-enable-btn"
           type="button"
           disabled={status === 'loading'}
-          onClick={handleEnable}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#5E43F3] text-white text-[11px] font-bold hover:bg-[#4E34E0] active:scale-95 transition-all cursor-pointer disabled:opacity-60 shrink-0"
+          onClick={enableNotifications}
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#5E43F3] text-white text-[11px] font-bold hover:bg-[#4E34E0] active:scale-95 transition-all cursor-pointer disabled:opacity-60 shrink-0"
         >
           {status === 'loading' ? (
             <>
