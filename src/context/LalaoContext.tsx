@@ -752,6 +752,33 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [shareToast, setShareToast] = useState<string | null>(null);
 
+  // Handle URL deep links from Web Push notifications or external links
+  useEffect(() => {
+    const handleUrlDeepLink = () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const tabParam = params.get('tab');
+        const postParam = params.get('post');
+
+        if (
+          tabParam &&
+          ['home', 'discover', 'create', 'create-post', 'messages', 'notifications', 'profile', 'following', 'saved', 'liked', 'create-page'].includes(tabParam)
+        ) {
+          setActiveTab(tabParam as NavTab);
+        }
+        if (postParam) {
+          setActiveCommentsPostId(postParam);
+        }
+      } catch (err) {
+        console.error('Failed to parse URL deep link:', err);
+      }
+    };
+
+    handleUrlDeepLink();
+    window.addEventListener('popstate', handleUrlDeepLink);
+    return () => window.removeEventListener('popstate', handleUrlDeepLink);
+  }, []);
+
   // Shopping, Cart & Saved Products
   const [cart, setCart] = useState<CartItem[]>(() => {
     try {

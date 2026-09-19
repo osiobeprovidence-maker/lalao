@@ -724,7 +724,7 @@ export const toggleLikePost = mutation({
         recipientId: post.authorId,
         title: `${currentUser.name ?? "Someone"} liked your post`,
         body: post.text ? post.text.slice(0, 100) : "Check it out on Lalao",
-        url: "/",
+        url: `/app?tab=home&post=${postId}`,
       });
     }
 
@@ -781,7 +781,7 @@ export const toggleLikeComment = mutation({
         recipientId: comment.authorId,
         title: `${currentUser.name ?? "Someone"} liked your ${comment.parentCommentId ? "reply" : "comment"}`,
         body: comment.text ? comment.text.slice(0, 100) : "an attachment",
-        url: "/",
+        url: `/app?tab=home&post=${comment.postId}`,
       });
     }
 
@@ -905,7 +905,7 @@ export const addCommentToPost = mutation({
         recipientId: post.authorId,
         title: `${currentUser.name ?? "Someone"} ${parentCommentId ? "replied to your comment" : "commented on your post"}`,
         body: trimmed.slice(0, 100),
-        url: "/",
+        url: `/app?tab=home&post=${postId}`,
       });
     }
 
@@ -931,7 +931,7 @@ export const addCommentToPost = mutation({
           recipientId: parentComment.authorId,
           title: `${currentUser.name ?? "Someone"} replied to your comment`,
           body: trimmed.slice(0, 100),
-          url: "/",
+          url: `/app?tab=home&post=${postId}`,
         });
       }
     }
@@ -1110,7 +1110,7 @@ export const toggleFollowUser = mutation({
       recipientId: targetUserId,
       title: "New follower on Lalao",
       body: `${currentUser.name ?? "Someone"} started following you`,
-      url: "/",
+      url: "/app?tab=notifications",
     });
 
     return { following: true };

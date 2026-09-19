@@ -1,4 +1,5 @@
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 
 // Create a subscription listing and its slots (Admin only)
@@ -228,6 +229,12 @@ export const joinSlot = mutation({
         isRead: false,
         createdAt: now,
       });
+      await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
+        recipientId: user._id,
+        title: "Subscription Confirmed",
+        body: `You are now a member of ${subscription.name}!`,
+        url: "/app?tab=notifications",
+      });
       
       // Notify the business owner
       await ctx.db.insert("notifications", {
@@ -237,6 +244,12 @@ export const joinSlot = mutation({
         targetExcerpt: `${user.name} joined ${subscription.name} (Slot ${slot.slotNumber}).`,
         isRead: false,
         createdAt: now,
+      });
+      await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
+        recipientId: page.ownerId,
+        title: "New Subscriber",
+        body: `${user.name} joined ${subscription.name} (Slot ${slot.slotNumber}).`,
+        url: "/app?tab=notifications",
       });
     }
 
