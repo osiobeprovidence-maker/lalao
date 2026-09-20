@@ -253,7 +253,7 @@ const LalaoAppContent: React.FC = () => {
               </div>
             )}
             {activeTab === 'following' && (
-              <div key="tab-following" className="animate-in fade-in duration-200 w-full max-w-[680px]">
+              <div key="tab-following" className="animate-in fade-in duration-200 mx-auto w-full max-w-[680px] bg-transparent min-h-full">
                 <HomeFeed 
                   hideTabs 
                   forceTab="following" 
