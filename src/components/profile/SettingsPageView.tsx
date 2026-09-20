@@ -662,15 +662,18 @@ export const SettingsPageView: React.FC = () => {
               disabled={isCreatingAdminSession}
               className="w-full rounded-2xl border border-neutral-200 bg-white p-4 flex items-center justify-between hover:bg-neutral-50 cursor-pointer disabled:opacity-50 transition-colors"
             >
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-900 text-white">
+              <div className="flex items-center gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-white">
                   {isCreatingAdminSession ? (
-                    <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                   ) : (
-                    <Shield className="w-4 h-4" />
+                    <Shield className="w-5 h-5" />
                   )}
                 </div>
-                <span className="text-sm font-bold text-neutral-900">Go to Admin Panel</span>
+                <div className="text-left flex flex-col">
+                  <span className="text-sm font-bold text-neutral-900">Go to Admin Panel</span>
+                  <span className="text-[11px] text-neutral-500 line-clamp-1">Manage the Lalao platform</span>
+                </div>
               </div>
               <ChevronRight className="w-5 h-5 text-neutral-400" />
             </button>

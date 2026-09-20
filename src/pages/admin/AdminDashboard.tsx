@@ -46,8 +46,14 @@ const StatCard: React.FC<{
 export const AdminDashboard: React.FC = () => {
   const role = useQuery(api.admin.getMyRole);
   
-  const stats = useQuery(api.admin.getDashboardStats, role === 'super_admin' ? {} : "skip");
-  const auditLog = useQuery(api.admin.listAuditLog, role === 'super_admin' ? { limit: 8 } : "skip");
+  const stats = useQuery(
+    api.admin.getDashboardStats, 
+    role === 'super_admin' || role === 'admin' || role === 'editor' ? {} : "skip"
+  );
+  const auditLog = useQuery(
+    api.admin.listAuditLog, 
+    role === 'super_admin' || role === 'admin' || role === 'editor' ? { limit: 8 } : "skip"
+  );
 
   const systemServices = [
     { name: 'Convex Database', status: stats !== undefined ? 'operational' : 'checking' },

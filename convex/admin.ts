@@ -241,7 +241,7 @@ export const destroyAdminSession = mutation({
 export const getDashboardStats = query({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx);
+    await requireAdmin(ctx, ["super_admin", "admin", "editor"]);
 
     const [users, pages, listings, memberships, transactions] =
       await Promise.all([
@@ -567,7 +567,7 @@ export const upsertSubscriptionPlatform = mutation({
 export const listAuditLog = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx);
+    await requireAdmin(ctx, ["super_admin", "admin", "editor"]);
 
     const entries = await ctx.db
       .query("auditLog")
