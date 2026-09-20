@@ -19,6 +19,9 @@ import {
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../common/Avatar';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { useNavigate } from 'react-router-dom';
 
 export const SettingsPageView: React.FC = () => {
   const {
@@ -45,6 +48,23 @@ export const SettingsPageView: React.FC = () => {
   const [isBankFormOpen, setIsBankFormOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  const navigate = useNavigate();
+  const role = useQuery(api.admin.getMyRole);
+  const createAdminSession = useMutation(api.admin.createAdminSession);
+  const [isCreatingAdminSession, setIsCreatingAdminSession] = useState(false);
+
+  const handleSwitchToAdmin = async () => {
+    try {
+      setIsCreatingAdminSession(true);
+      const token = await createAdminSession({});
+      sessionStorage.setItem('lalao_admin_token', token);
+      navigate('/admin');
+    } catch (e: any) {
+      triggerShareToast(e.message || 'Failed to switch to Admin');
+      setIsCreatingAdminSession(false);
+    }
+  };
 
   useEffect(() => {
     if (isEditProfileOpen) {
@@ -627,7 +647,44 @@ export const SettingsPageView: React.FC = () => {
           </div>
         </div>
 
-        {/* 7. Account Actions */}
+        {/* 7. Administration (Super Admin Only) */}
+        {role === 'super_admin' && (
+          <div className="space-y-3">
+            <div className="border-b border-neutral-100 pb-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+                Administration
+              </h3>
+            </div>
+            
+            <div className="rounded-2xl border border-neutral-200 bg-white p-4">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-rose-500" />
+                  <span className="text-xs font-bold text-neutral-900">Admin Access</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-neutral-500 mb-4">
+                Platform administration controls. Switch to the secure platform control center.
+              </p>
+              
+              <button
+                type="button"
+                onClick={handleSwitchToAdmin}
+                disabled={isCreatingAdminSession}
+                className="w-full rounded-xl bg-neutral-900 px-4 py-3 text-xs font-bold text-white hover:bg-neutral-800 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isCreatingAdminSession ? (
+                  <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                ) : (
+                  <Shield className="w-3.5 h-3.5" />
+                )}
+                Switch to Admin
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 8. Account Actions */}
         <div className="space-y-3">
           <div className="border-b border-neutral-100 pb-2">
             <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">

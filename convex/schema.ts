@@ -406,6 +406,12 @@ export default defineSchema({
     .index("by_actor", ["actorId"])
     .index("by_created", ["createdAt"]),
 
+  adminSessions: defineTable({
+    userId: v.id("users"),
+    token: v.string(), // Secure randomly generated token
+    expiresAt: v.number(),
+  }).index("by_token", ["token"]),
+
   // ---- PUSH NOTIFICATIONS ----
 
   /**

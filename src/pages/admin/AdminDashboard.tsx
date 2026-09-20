@@ -48,18 +48,6 @@ export const AdminDashboard: React.FC = () => {
   
   const stats = useQuery(api.admin.getDashboardStats, role === 'super_admin' ? {} : "skip");
   const auditLog = useQuery(api.admin.listAuditLog, role === 'super_admin' ? { limit: 8 } : "skip");
-  
-  const bootstrapSuperAdmin = useMutation(api.admin.bootstrapSuperAdmin);
-
-  const handleBootstrap = async () => {
-    try {
-      const result = await bootstrapSuperAdmin({});
-      alert(`Super Admin bootstrapped! Status: ${result.status}`);
-      window.location.reload();
-    } catch (e: any) {
-      alert(`Error: ${e.message}`);
-    }
-  };
 
   const systemServices = [
     { name: 'Convex Database', status: stats !== undefined ? 'operational' : 'checking' },
@@ -84,28 +72,10 @@ export const AdminDashboard: React.FC = () => {
             Real-time platform overview — all data from Convex
           </p>
         </div>
-        {role !== 'super_admin' && role !== undefined && (
-          <button
-            onClick={handleBootstrap}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold transition cursor-pointer"
-          >
-            <Rocket className="w-4 h-4" />
-            Bootstrap Super Admin
-          </button>
-        )}
       </div>
 
       {/* Metric Cards */}
-      {role !== 'super_admin' ? (
-        <div className="flex flex-col items-center justify-center py-20 border border-slate-700/40 rounded-2xl bg-slate-900/60 text-center">
-          <Shield className="w-12 h-12 text-indigo-500 mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">Bootstrap Required</h2>
-          <p className="text-sm text-slate-400 max-w-md">
-            You have accessed the admin route but your account is not yet marked as a Super Admin in the database.
-            Click the "Bootstrap Super Admin" button to initialize your permissions and view the dashboard.
-          </p>
-        </div>
-      ) : stats === undefined ? (
+      {stats === undefined ? (
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           {Array.from({ length: 7 }).map((_, i) => (
             <div key={i} className="rounded-2xl border border-slate-700/40 bg-slate-900/60 p-5 h-32 animate-pulse" />
@@ -172,9 +142,7 @@ export const AdminDashboard: React.FC = () => {
             <Clock className="w-4 h-4 text-indigo-400" />
             Recent Platform Activity
           </h2>
-          {role !== 'super_admin' ? (
-             <div className="text-sm text-slate-500 text-center py-8">Bootstrap required to view logs</div>
-          ) : auditLog === undefined ? (
+          {auditLog === undefined ? (
             <div className="space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="h-10 rounded-lg bg-slate-800/60 animate-pulse" />

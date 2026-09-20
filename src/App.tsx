@@ -67,10 +67,13 @@ import { useQuery } from 'convex/react';
 import { api } from '../convex/_generated/api';
 
 const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const role = useQuery(api.admin.getMyRole);
+  
+  const token = typeof window !== 'undefined' ? sessionStorage.getItem('lalao_admin_token') : null;
+  const isSessionValid = useQuery(api.admin.verifyAdminSession, token ? { token } : "skip");
 
-  if (isAuthLoading || role === undefined) {
+  if (isAuthLoading || role === undefined || (token && isSessionValid === undefined)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0B0F19]">
         <div className="w-8 h-8 rounded-full border-4 border-white/30 border-t-indigo-500 animate-spin" />
@@ -78,9 +81,9 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     );
   }
 
-  const isSuperAdmin = role === 'super_admin' || user?.email === 'riderezzy@gmail.com';
+  const isSuperAdmin = role === 'super_admin';
 
-  if (!isAuthenticated || !isSuperAdmin) {
+  if (!isAuthenticated || !isSuperAdmin || !token || !isSessionValid) {
     return <Navigate to="/app" replace />;
   }
 

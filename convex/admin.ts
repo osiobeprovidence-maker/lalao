@@ -99,7 +99,7 @@ export const getMyRole = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    if (!identity) return undefined;
 
     const user = await ctx.db
       .query("users")
@@ -108,7 +108,91 @@ export const getMyRole = query({
       )
       .unique();
 
-    return user?.role ?? "user";
+    return user?.role;
+  },
+});
+
+// ─────────────────────────────────────────────────────────────
+// ADMIN SESSION MANAGEMENT
+// ─────────────────────────────────────────────────────────────
+
+export const createAdminSession = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireSuperAdmin(ctx);
+    
+    const token = crypto.randomUUID();
+    const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+
+    await ctx.db.insert("adminSessions", {
+      userId: user._id,
+      token,
+      expiresAt,
+    });
+
+    await writeAudit(ctx, user._id, "created_admin_session", {
+      target: "admin_sessions",
+    });
+
+    return token;
+  },
+});
+
+export const verifyAdminSession = query({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return false;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q: any) =>
+        q.eq("tokenIdentifier", identity.tokenIdentifier)
+      )
+      .unique();
+
+    if (!user || user.role !== "super_admin") return false;
+
+    const session = await ctx.db
+      .query("adminSessions")
+      .withIndex("by_token", (q) => q.eq("token", args.token))
+      .unique();
+
+    if (!session) return false;
+    if (session.userId !== user._id) return false;
+    if (Date.now() > session.expiresAt) return false;
+
+    return true;
+  },
+});
+
+export const destroyAdminSession = mutation({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q: any) =>
+        q.eq("tokenIdentifier", identity.tokenIdentifier)
+      )
+      .unique();
+
+    if (!user) return;
+
+    const session = await ctx.db
+      .query("adminSessions")
+      .withIndex("by_token", (q) => q.eq("token", args.token))
+      .unique();
+
+    if (session && session.userId === user._id) {
+      await ctx.db.delete(session._id);
+      
+      await writeAudit(ctx, user._id, "destroyed_admin_session", {
+        target: "admin_sessions",
+      });
+    }
   },
 });
 

@@ -27,13 +27,29 @@ import { AdminPlatformSettings } from './AdminPlatformSettings';
 import { AdminSubPlatforms } from './AdminSubPlatforms';
 import { AdminComingSoon } from './AdminComingSoon';
 import { useAuth } from '../../context/AuthContext';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import { useNavigate } from 'react-router-dom';
 
 export const AdminApp: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { logout } = useAuth();
   const role = useQuery(api.admin.getMyRole);
+  const destroyAdminSession = useMutation(api.admin.destroyAdminSession);
+
+  const handleExit = async () => {
+    const token = sessionStorage.getItem('lalao_admin_token');
+    if (token) {
+      try {
+        await destroyAdminSession({ token });
+      } catch (e) {
+        console.error("Failed to destroy admin session", e);
+      }
+      sessionStorage.removeItem('lalao_admin_token');
+    }
+    navigate('/app');
+  };
 
   const navGroups = [
     {
@@ -117,12 +133,12 @@ export const AdminApp: React.FC = () => {
           </div>
 
           <div className="p-4 border-t border-slate-800/60 shrink-0">
-            <NavLink 
-              to="/app"
-              className="flex items-center justify-center w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-bold transition-colors"
+            <button
+              onClick={handleExit}
+              className="flex items-center justify-center w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-bold transition-colors cursor-pointer"
             >
               Exit to Lalao
-            </NavLink>
+            </button>
           </div>
         </aside>
 
@@ -133,30 +149,23 @@ export const AdminApp: React.FC = () => {
           
           <div className="flex-1 overflow-y-auto custom-scrollbar p-8 z-10">
             <div className="max-w-6xl mx-auto">
-              {role !== 'super_admin' ? (
-                <Routes>
-                  <Route path="/" element={<AdminDashboard />} />
-                  <Route path="*" element={<Navigate to="/admin" replace />} />
-                </Routes>
-              ) : (
-                <Routes>
-                  <Route path="/" element={<AdminDashboard />} />
-                  <Route path="/users" element={<AdminUsers />} />
-                  <Route path="/pages" element={<AdminPages />} />
-                  <Route path="/subscriptions" element={<AdminSubscriptions />} />
-                  <Route path="/transactions" element={<AdminTransactions />} />
-                  <Route path="/wallet" element={<AdminComingSoon title="Wallet Activity" />} />
-                  <Route path="/monetization" element={<AdminComingSoon title="Creator Monetization" />} />
-                  <Route path="/reports" element={<AdminComingSoon title="Reports" />} />
-                  <Route path="/moderation" element={<AdminComingSoon title="Moderation Queue" />} />
-                  <Route path="/notifications" element={<AdminComingSoon title="System Notifications" />} />
-                  <Route path="/settings" element={<AdminPlatformSettings />} />
-                  <Route path="/platforms" element={<AdminSubPlatforms />} />
-                  <Route path="/features" element={<AdminComingSoon title="Feature Flags" />} />
-                  <Route path="/audit" element={<AdminAuditLog />} />
-                  <Route path="*" element={<Navigate to="/admin" replace />} />
-                </Routes>
-              )}
+              <Routes>
+                <Route path="/" element={<AdminDashboard />} />
+                <Route path="/users" element={<AdminUsers />} />
+                <Route path="/pages" element={<AdminPages />} />
+                <Route path="/subscriptions" element={<AdminSubscriptions />} />
+                <Route path="/transactions" element={<AdminTransactions />} />
+                <Route path="/wallet" element={<AdminComingSoon title="Wallet Activity" />} />
+                <Route path="/monetization" element={<AdminComingSoon title="Creator Monetization" />} />
+                <Route path="/reports" element={<AdminComingSoon title="Reports" />} />
+                <Route path="/moderation" element={<AdminComingSoon title="Moderation Queue" />} />
+                <Route path="/notifications" element={<AdminComingSoon title="System Notifications" />} />
+                <Route path="/settings" element={<AdminPlatformSettings />} />
+                <Route path="/platforms" element={<AdminSubPlatforms />} />
+                <Route path="/features" element={<AdminComingSoon title="Feature Flags" />} />
+                <Route path="/audit" element={<AdminAuditLog />} />
+                <Route path="*" element={<Navigate to="/admin" replace />} />
+              </Routes>
             </div>
           </div>
         </main>
