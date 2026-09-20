@@ -54,6 +54,7 @@ export default defineSchema({
       v.union(
         v.literal("user"),
         v.literal("moderator"),
+        v.literal("editor"),
         v.literal("admin"),
         v.literal("super_admin"),
       )

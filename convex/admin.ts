@@ -5,17 +5,34 @@ import { v } from "convex/values";
 // INTERNAL HELPERS
 // ─────────────────────────────────────────────────────────────
 
-const SUPER_ADMIN_EMAIL = "riderezzy@gmail.com";
+const INITIAL_SUPER_ADMINS = ["riderezzy@gmail.com", "osiobeprovidence@gmail.com"];
 
 /**
- * Asserts the caller is authenticated and has role 'super_admin'.
+ * Ensures initial super admins are promoted automatically.
+ */
+async function ensureSuperAdmin(ctx: any, user: any) {
+  if (user.email && INITIAL_SUPER_ADMINS.includes(user.email) && user.role !== "super_admin") {
+    await ctx.db.patch(user._id, { role: "super_admin", updatedAt: Date.now() });
+    
+    await writeAudit(ctx, user._id, "auto_promoted_super_admin", {
+      target: `user:${user._id}`,
+      before: user.role ?? "user",
+      after: "super_admin",
+    });
+    return { ...user, role: "super_admin" };
+  }
+  return user;
+}
+
+/**
+ * Asserts the caller is authenticated and has one of the allowed admin roles.
  * Throws with HTTP-401/403 semantics if not.
  */
-async function requireSuperAdmin(ctx: any) {
+async function requireAdmin(ctx: any, allowedRoles = ["super_admin", "admin", "editor"]) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) throw new Error("Unauthenticated");
 
-  const user = await ctx.db
+  let user = await ctx.db
     .query("users")
     .withIndex("by_token", (q: any) =>
       q.eq("tokenIdentifier", identity.tokenIdentifier)
@@ -23,9 +40,21 @@ async function requireSuperAdmin(ctx: any) {
     .unique();
 
   if (!user) throw new Error("User not found");
-  if (user.role !== "super_admin") throw new Error("Unauthorized: Super Admin only");
+  
+  user = await ensureSuperAdmin(ctx, user);
+
+  if (!user.role || !allowedRoles.includes(user.role)) {
+    throw new Error(`Unauthorized: Requires one of: ${allowedRoles.join(", ")}`);
+  }
 
   return user;
+}
+
+/**
+ * Asserts the caller is authenticated and has role 'super_admin'.
+ */
+async function requireSuperAdmin(ctx: any) {
+  return requireAdmin(ctx, ["super_admin"]);
 }
 
 /** Write an audit log entry (call after successful mutations) */
@@ -60,10 +89,10 @@ export const bootstrapSuperAdmin = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Must be authenticated to bootstrap");
 
-    // Only the designated super admin email can bootstrap themselves
+    // Only the designated super admin emails can bootstrap themselves
     const callerEmail = identity.email;
-    if (callerEmail !== SUPER_ADMIN_EMAIL) {
-      throw new Error("Only the designated Super Admin email can bootstrap.");
+    if (!callerEmail || !INITIAL_SUPER_ADMINS.includes(callerEmail)) {
+      throw new Error("Only designated Super Admin emails can bootstrap.");
     }
 
     const user = await ctx.db
@@ -101,12 +130,16 @@ export const getMyRole = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return undefined;
 
-    const user = await ctx.db
+    let user = await ctx.db
       .query("users")
       .withIndex("by_token", (q: any) =>
         q.eq("tokenIdentifier", identity.tokenIdentifier)
       )
       .unique();
+
+    if (user) {
+      user = await ensureSuperAdmin(ctx, user);
+    }
 
     return user?.role;
   },
@@ -119,7 +152,8 @@ export const getMyRole = query({
 export const createAdminSession = mutation({
   args: {},
   handler: async (ctx) => {
-    const user = await requireSuperAdmin(ctx);
+    // Allows super_admin, admin, editor
+    const user = await requireAdmin(ctx);
     
     const token = crypto.randomUUID();
     const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
@@ -144,14 +178,18 @@ export const verifyAdminSession = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return false;
 
-    const user = await ctx.db
+    let user = await ctx.db
       .query("users")
       .withIndex("by_token", (q: any) =>
         q.eq("tokenIdentifier", identity.tokenIdentifier)
       )
       .unique();
 
-    if (!user || user.role !== "super_admin") return false;
+    if (!user) return false;
+    user = await ensureSuperAdmin(ctx, user);
+
+    const allowedRoles = ["super_admin", "admin", "editor"];
+    if (!user.role || !allowedRoles.includes(user.role)) return false;
 
     const session = await ctx.db
       .query("adminSessions")

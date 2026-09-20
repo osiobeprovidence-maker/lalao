@@ -81,9 +81,9 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     );
   }
 
-  const isSuperAdmin = role === 'super_admin';
+  const isAdminAccount = role === 'super_admin' || role === 'admin' || role === 'editor';
 
-  if (!isAuthenticated || !isSuperAdmin || !token || !isSessionValid) {
+  if (!isAuthenticated || !isAdminAccount || !token || !isSessionValid) {
     return <Navigate to="/app" replace />;
   }
 

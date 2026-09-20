@@ -647,40 +647,33 @@ export const SettingsPageView: React.FC = () => {
           </div>
         </div>
 
-        {/* 7. Administration (Super Admin Only) */}
-        {role === 'super_admin' && (
+        {/* 7. Account Mode (Admin Roles Only) */}
+        {(role === 'super_admin' || role === 'admin' || role === 'editor') && (
           <div className="space-y-3">
             <div className="border-b border-neutral-100 pb-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
-                Administration
+                Account Mode
               </h3>
             </div>
             
-            <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-rose-500" />
-                  <span className="text-xs font-bold text-neutral-900">Admin Access</span>
+            <button
+              type="button"
+              onClick={handleSwitchToAdmin}
+              disabled={isCreatingAdminSession}
+              className="w-full rounded-2xl border border-neutral-200 bg-white p-4 flex items-center justify-between hover:bg-neutral-50 cursor-pointer disabled:opacity-50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-900 text-white">
+                  {isCreatingAdminSession ? (
+                    <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  ) : (
+                    <Shield className="w-4 h-4" />
+                  )}
                 </div>
+                <span className="text-sm font-bold text-neutral-900">Go to Admin Panel</span>
               </div>
-              <p className="text-[11px] text-neutral-500 mb-4">
-                Platform administration controls. Switch to the secure platform control center.
-              </p>
-              
-              <button
-                type="button"
-                onClick={handleSwitchToAdmin}
-                disabled={isCreatingAdminSession}
-                className="w-full rounded-xl bg-neutral-900 px-4 py-3 text-xs font-bold text-white hover:bg-neutral-800 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {isCreatingAdminSession ? (
-                  <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                ) : (
-                  <Shield className="w-3.5 h-3.5" />
-                )}
-                Switch to Admin
-              </button>
-            </div>
+              <ChevronRight className="w-5 h-5 text-neutral-400" />
+            </button>
           </div>
         )}
 
