@@ -50,6 +50,7 @@ export const DiscoverView: React.FC = () => {
     setIsNotificationsOpen,
     unreadNotifsCount,
     toggleFollowUser,
+    setActiveCommentsPostId,
   } = useLalao();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -620,7 +621,11 @@ export const DiscoverView: React.FC = () => {
 
                 <div className="divide-y divide-neutral-200/80">
                   {videoPosts.map((post) => (
-                    <div key={post.id} className="py-3 flex items-center gap-3">
+                    <div 
+                      key={post.id} 
+                      onClick={() => setActiveCommentsPostId(post.id)}
+                      className="py-3 flex items-center gap-3 cursor-pointer hover:bg-neutral-100/60 p-2 rounded-xl transition-colors"
+                    >
                       <div className="relative h-16 w-24 rounded-xl overflow-hidden bg-neutral-200 shrink-0">
                         <div className="absolute inset-0 bg-gradient-to-br from-neutral-300 via-neutral-200 to-neutral-100" />
                         <div className="absolute inset-0 flex items-center justify-center">

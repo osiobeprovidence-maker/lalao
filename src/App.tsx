@@ -137,12 +137,18 @@ const LalaoAppContent: React.FC = () => {
       if (pageId && activePageId !== pageId) {
         setActivePageId(pageId);
       }
-    } else {
-      if (activePageId) {
-        setActivePageId(null);
-      }
+    } else if (activePageId) {
+      setActivePageId(null);
     }
-  }, [location.pathname, activePageId, setActivePageId]);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (activePageId && !location.pathname.startsWith(`/app/page/${activePageId}`)) {
+      navigate(`/app/page/${activePageId}`);
+    } else if (!activePageId && location.pathname.startsWith('/app/page/')) {
+      navigate('/app');
+    }
+  }, [activePageId]);
 
   const followingPosts = posts.filter(
     (post) => post.author.isFollowing || post.author.id === currentUser.id || (post.pageRefId && pages.some((page) => page.id === post.pageRefId && page.isFollowing))
