@@ -57,6 +57,7 @@ export type FeedTab = 'for_you' | 'following' | 'nearby';
 export type CreateOption = 'post' | 'rally' | 'page' | 'cycle' | null;
 
 interface LalaoContextType {
+  platformSettings: any;
   currentUser: User;
   setCurrentUser: React.Dispatch<React.SetStateAction<User>>;
   activeTab: NavTab;
@@ -407,6 +408,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const suggestedUsersQuery = useQuery(api.social.listSuggestedUsers);
   const messageContactsQuery = useQuery(api.social.getMessageContacts);
   const draftsQuery = useQuery(api.social.listMyDrafts);
+  const platformSettingsQuery = useQuery((api as any).platformSettings?.getBrandingSettings);
 
   // Subscriptions — these are now queried directly by PageDetailModal & MySubscriptionsModal
   // Only keep the calls that have real matching Convex functions
@@ -583,6 +585,32 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setSuggestedUsers((suggestedUsersQuery as User[]) || []);
     }
   }, [suggestedUsersQuery]);
+
+  useEffect(() => {
+    if (platformSettingsQuery) {
+      if (platformSettingsQuery.browserTitle) {
+        document.title = platformSettingsQuery.browserTitle;
+      }
+      if (platformSettingsQuery.faviconUrl) {
+        let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+        if (!link) {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          document.head.appendChild(link);
+        }
+        link.href = platformSettingsQuery.faviconUrl;
+      }
+      if (platformSettingsQuery.primaryColor) {
+        document.documentElement.style.setProperty('--color-primary', platformSettingsQuery.primaryColor);
+      }
+      if (platformSettingsQuery.accentColor) {
+        document.documentElement.style.setProperty('--color-accent', platformSettingsQuery.accentColor);
+      }
+      if (platformSettingsQuery.backgroundColor) {
+        document.documentElement.style.setProperty('--color-background', platformSettingsQuery.backgroundColor);
+      }
+    }
+  }, [platformSettingsQuery]);
 
   const markAllNotificationsRead = async () => {
     try {
@@ -2348,6 +2376,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         createPost,
         generateUploadUrl,
         generateCloudinarySignature,
+        platformSettings: platformSettingsQuery || {},
         deletePost,
         toggleJoinRally,
         joinRally: toggleJoinRally,

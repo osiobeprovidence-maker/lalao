@@ -10,9 +10,12 @@
 
 import type * as admin from "../admin.js";
 import type * as cloudinary from "../cloudinary.js";
+import type * as moderation from "../moderation.js";
 import type * as pages from "../pages.js";
+import type * as platformSettings from "../platformSettings.js";
 import type * as push from "../push.js";
 import type * as pushActions from "../pushActions.js";
+import type * as reports from "../reports.js";
 import type * as search from "../search.js";
 import type * as shop from "../shop.js";
 import type * as social from "../social.js";
@@ -29,9 +32,12 @@ import type {
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   cloudinary: typeof cloudinary;
+  moderation: typeof moderation;
   pages: typeof pages;
+  platformSettings: typeof platformSettings;
   push: typeof push;
   pushActions: typeof pushActions;
+  reports: typeof reports;
   search: typeof search;
   shop: typeof shop;
   social: typeof social;

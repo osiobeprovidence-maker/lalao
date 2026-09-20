@@ -11,15 +11,15 @@ export const AdminComingSoon: React.FC<AdminComingSoonProps> = ({
   description,
 }) => (
   <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-8">
-    <div className="w-16 h-16 rounded-2xl bg-indigo-900/30 border border-indigo-700/40 flex items-center justify-center mb-5">
-      <Construction className="w-8 h-8 text-indigo-400" />
+    <div className="w-16 h-16 rounded-2xl bg-[#5200FF]/5 border border-[#5200FF]/10 flex items-center justify-center mb-5">
+      <Construction className="w-8 h-8 text-[#5200FF]" />
     </div>
-    <h2 className="text-2xl font-black text-white mb-2">{title}</h2>
-    <p className="text-sm text-slate-400 max-w-sm leading-relaxed">
+    <h2 className="text-2xl font-black text-neutral-900 mb-2">{title}</h2>
+    <p className="text-sm text-neutral-500 max-w-sm leading-relaxed">
       {description ??
         'This section is being built. Check back soon — it will connect to real Lalao platform data.'}
     </p>
-    <span className="mt-5 inline-flex items-center gap-1.5 rounded-full border border-indigo-700/50 bg-indigo-900/30 px-3 py-1 text-[11px] font-bold text-indigo-300 uppercase tracking-wider">
+    <span className="mt-5 inline-flex items-center gap-1.5 rounded-full border border-[#5200FF]/20 bg-[#5200FF]/5 px-3 py-1 text-[11px] font-bold text-[#5200FF] uppercase tracking-wider">
       Coming Soon
     </span>
   </div>

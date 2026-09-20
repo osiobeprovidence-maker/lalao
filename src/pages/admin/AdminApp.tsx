@@ -14,7 +14,10 @@ import {
   ToggleLeft,
   FileText,
   ActivitySquare,
-  BadgeDollarSign
+  BadgeDollarSign,
+  Menu,
+  LogOut,
+  X
 } from 'lucide-react';
 
 import { AdminDashboard } from './AdminDashboard';
@@ -26,7 +29,9 @@ import { AdminAuditLog } from './AdminAuditLog';
 import { AdminPlatformSettings } from './AdminPlatformSettings';
 import { AdminSubPlatforms } from './AdminSubPlatforms';
 import { AdminComingSoon } from './AdminComingSoon';
+import { AdminReports } from './AdminReports';
 import { useAuth } from '../../context/AuthContext';
+import { useLalao } from '../../context/LalaoContext';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useNavigate } from 'react-router-dom';
@@ -35,8 +40,10 @@ export const AdminApp: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { platformSettings } = useLalao();
   const role = useQuery(api.admin.getMyRole);
   const destroyAdminSession = useMutation(api.admin.destroyAdminSession);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const handleExit = async () => {
     const token = sessionStorage.getItem('lalao_admin_token');
@@ -88,66 +95,115 @@ export const AdminApp: React.FC = () => {
     }
   ];
 
+  const AdminSidebarContent = () => (
+    <>
+      <div className="h-16 flex items-center justify-between px-6 border-b border-neutral-200/80 shrink-0">
+        <button 
+          onClick={() => navigate('/admin')}
+          className="flex items-center gap-2 select-none"
+        >
+          {platformSettings?.wordmarkUrl ? (
+            <img src={platformSettings.wordmarkUrl} alt="Lalao" className="h-8 object-contain" />
+          ) : (
+            <span className="lalao-wordmark text-[28px] text-neutral-950">lalao</span>
+          )}
+          <span className="text-sm font-semibold text-neutral-500 uppercase tracking-wider mt-1">Admin</span>
+        </button>
+        {isMobileMenuOpen && (
+          <button 
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="md:hidden text-neutral-500 hover:text-neutral-900"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto py-6 px-4 no-scrollbar">
+        <div className="space-y-8">
+          {navGroups.map((group) => (
+            <div key={group.title}>
+              <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3 px-2">
+                {group.title}
+              </h3>
+              <div className="space-y-1">
+                {group.items.map((item) => {
+                  const isActive = item.exact
+                    ? location.pathname === item.path
+                    : location.pathname.startsWith(item.path);
+
+                  return (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                        isActive
+                          ? 'bg-indigo-50 text-indigo-600'
+                          : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                      }`}
+                    >
+                      <item.icon className={`w-5 h-5 ${isActive ? 'text-indigo-600' : 'text-neutral-400'}`} />
+                      {item.label}
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-4 border-t border-neutral-200/80 shrink-0">
+        <button
+          onClick={handleExit}
+          className="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+        >
+          <LogOut className="w-5 h-5 text-neutral-400" />
+          Exit Admin
+        </button>
+      </div>
+    </>
+  );
+
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-slate-300 font-sans selection:bg-indigo-500/30">
+    <div className="min-h-screen bg-[#F8F9FA] text-neutral-900 font-sans selection:bg-indigo-500/30">
       <div className="flex h-screen overflow-hidden">
         
-        {/* Admin Sidebar */}
-        <aside className="w-64 bg-slate-900/50 border-r border-slate-800/60 flex flex-col shrink-0">
-          <div className="h-16 flex items-center px-6 border-b border-slate-800/60 shrink-0">
-            <span className="text-xl font-black text-white tracking-tight flex items-center gap-2">
-              <span className="text-indigo-500">lalao</span> Admin
-            </span>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto py-6 px-4 space-y-8 custom-scrollbar">
-            {navGroups.map((group) => (
-              <div key={group.title}>
-                <h3 className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-2">
-                  {group.title}
-                </h3>
-                <div className="space-y-1">
-                  {group.items.map((item) => {
-                    const isActive = item.exact 
-                      ? location.pathname === item.path
-                      : location.pathname.startsWith(item.path);
-                    
-                    return (
-                      <NavLink
-                        key={item.path}
-                        to={item.path}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
-                          isActive
-                            ? 'bg-indigo-600 text-white'
-                            : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                        }`}
-                      >
-                        <item.icon className={`w-4 h-4 ${isActive ? 'text-indigo-200' : 'text-slate-500'}`} />
-                        {item.label}
-                      </NavLink>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="p-4 border-t border-slate-800/60 shrink-0">
-            <button
-              onClick={handleExit}
-              className="flex items-center justify-center w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-bold transition-colors cursor-pointer"
-            >
-              Exit to Lalao
-            </button>
-          </div>
+        {/* Desktop Sidebar */}
+        <aside className="hidden md:flex flex-col w-64 bg-[#f6f3ee] border-r border-neutral-200/80 shrink-0">
+          <AdminSidebarContent />
         </aside>
 
-        {/* Main Content Area */}
+        {/* Mobile Sidebar overlay */}
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 z-50 flex md:hidden">
+            <div className="fixed inset-0 bg-neutral-900/50 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
+            <aside className="relative flex flex-col w-64 max-w-[80vw] h-full bg-[#f6f3ee] shadow-2xl">
+              <AdminSidebarContent />
+            </aside>
+          </div>
+        )}
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-          {/* Subtle background glow */}
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
-          
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-8 z-10">
+          <header className="h-16 flex items-center justify-between px-6 bg-white/80 backdrop-blur-xl border-b border-neutral-200/80 shrink-0 sticky top-0 z-20">
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="md:hidden p-2 -ml-2 text-neutral-600 hover:bg-neutral-100 rounded-lg"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <h1 className="text-lg font-bold text-neutral-900">Platform Control Center</h1>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100 border border-neutral-200">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
+                <span className="text-xs font-medium text-neutral-600">System Online</span>
+              </div>
+            </div>
+          </header>
+
+          <div className="flex-1 overflow-y-auto bg-[#F8F9FA] p-4 md:p-8 z-10 no-scrollbar">
             <div className="max-w-6xl mx-auto">
               <Routes>
                 <Route path="/" element={<AdminDashboard />} />
@@ -157,7 +213,7 @@ export const AdminApp: React.FC = () => {
                 <Route path="/transactions" element={<AdminTransactions />} />
                 <Route path="/wallet" element={<AdminComingSoon title="Wallet Activity" />} />
                 <Route path="/monetization" element={<AdminComingSoon title="Creator Monetization" />} />
-                <Route path="/reports" element={<AdminComingSoon title="Reports" />} />
+                <Route path="/reports" element={<AdminReports />} />
                 <Route path="/moderation" element={<AdminComingSoon title="Moderation Queue" />} />
                 <Route path="/notifications" element={<AdminComingSoon title="System Notifications" />} />
                 <Route path="/settings" element={<AdminPlatformSettings />} />

@@ -1,155 +1,334 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { Save } from 'lucide-react';
+import { Save, Upload, Image as ImageIcon, CheckCircle2, RotateCcw } from 'lucide-react';
+import { useLalao } from '../../context/LalaoContext';
+import { uploadImageToCloudinary } from '../../lib/cloudinary';
 
 export const AdminPlatformSettings: React.FC = () => {
-  const settingsMap = useQuery(api.admin.getPlatformSettings);
-  const updateSetting = useMutation(api.admin.updatePlatformSetting);
+  const brandingSettings = useQuery((api as any).platformSettings.getBrandingSettings);
+  const updateBrandingSettings = useMutation((api as any).platformSettings.updateBrandingSettings);
+  const { generateCloudinarySignature } = useLalao();
   
-  const [editing, setEditing] = useState<Record<string, string>>({});
-  const [newKey, setNewKey] = useState('');
-  const [newValue, setNewValue] = useState('');
+  const [formData, setFormData] = useState({
+    platformName: '',
+    shortName: '',
+    wordmarkUrl: '',
+    appIconUrl: '',
+    faviconUrl: '',
+    primaryColor: '#1877F2',
+    accentColor: '#5E43F3',
+    backgroundColor: '#0B0F19',
+    browserTitle: '',
+    browserDescription: '',
+    pwaName: '',
+    pwaShortName: '',
+  });
 
-  const handleSave = async (key: string, value: string) => {
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Initialize form when data loads
+  useEffect(() => {
+    if (brandingSettings) {
+      setFormData(prev => ({
+        ...prev,
+        ...brandingSettings
+      }));
+    }
+  }, [brandingSettings]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
     try {
-      await updateSetting({ key, value });
-      setEditing((prev) => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-    } catch (e: any) {
-      alert(`Error saving setting: ${e.message}`);
+      const sigData = await generateCloudinarySignature();
+      if (!sigData) throw new Error("Could not get signature");
+
+      const url = await uploadImageToCloudinary(file, sigData);
+      setFormData(prev => ({ ...prev, [fieldName]: url }));
+    } catch (err) {
+      console.error("Upload failed", err);
+      alert("Failed to upload image. Check console for details.");
     }
   };
 
-  const handleAdd = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newKey.trim() || !newValue.trim()) return;
+    setIsSaving(true);
+    setSaveSuccess(false);
+
     try {
-      await updateSetting({ key: newKey.trim(), value: newValue.trim() });
-      setNewKey('');
-      setNewValue('');
-    } catch (e: any) {
-      alert(`Error adding setting: ${e.message}`);
+      await updateBrandingSettings({ branding: formData });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err: any) {
+      alert(`Error saving branding settings: ${err.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const resetToDefaults = () => {
+    if (window.confirm("Are you sure you want to revert to original default branding?")) {
+      setFormData({
+        platformName: 'Lalao',
+        shortName: 'Lalao',
+        wordmarkUrl: '',
+        appIconUrl: '',
+        faviconUrl: '',
+        primaryColor: '#1877F2',
+        accentColor: '#5E43F3',
+        backgroundColor: '#F8F9FA',
+        browserTitle: 'Lalao | Community Platform',
+        browserDescription: 'Join the community on Lalao',
+        pwaName: 'Lalao App',
+        pwaShortName: 'Lalao',
+      });
     }
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-black text-white">Platform Settings</h1>
-        <p className="text-sm text-slate-400 mt-1">Global feature flags and configuration key-values</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-neutral-900">Branding & Appearance</h1>
+          <p className="text-sm text-neutral-500 mt-1">Configure global platform identity, colors, and metadata</p>
+        </div>
+        <button
+          onClick={resetToDefaults}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-600 hover:bg-neutral-200 transition-colors"
+        >
+          <RotateCcw className="w-4 h-4" />
+          Reset Defaults
+        </button>
       </div>
 
-      <div className="rounded-2xl border border-slate-700/40 bg-slate-900/60 p-6">
-        <h2 className="text-sm font-bold text-white mb-4">Add New Setting</h2>
-        <form onSubmit={handleAdd} className="flex items-end gap-3">
-          <div className="flex-1">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Key</label>
-            <input
-              type="text"
-              value={newKey}
-              onChange={(e) => setNewKey(e.target.value)}
-              placeholder="e.g. enable_new_checkout"
-              className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700/60 text-white text-sm focus:border-indigo-500 focus:outline-none"
-            />
+      <form onSubmit={handleSave} className="space-y-8">
+        
+        {/* Basic Info Section */}
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <h2 className="text-sm font-bold text-neutral-900 mb-6 uppercase tracking-wider">Basic Identity</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-xs font-bold text-neutral-500 mb-1.5">Platform Name</label>
+              <input
+                type="text"
+                name="platformName"
+                value={formData.platformName}
+                onChange={handleChange}
+                placeholder="e.g. Lalao"
+                className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-neutral-900 text-sm focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-neutral-500 mb-1.5">Short Name</label>
+              <input
+                type="text"
+                name="shortName"
+                value={formData.shortName}
+                onChange={handleChange}
+                placeholder="e.g. Lalao"
+                className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-neutral-900 text-sm focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
           </div>
-          <div className="flex-1">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Value (JSON/String)</label>
-            <input
-              type="text"
-              value={newValue}
-              onChange={(e) => setNewValue(e.target.value)}
-              placeholder="e.g. true"
-              className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700/60 text-white text-sm focus:border-indigo-500 focus:outline-none"
-            />
+        </div>
+
+        {/* Visual Assets Section */}
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <h2 className="text-sm font-bold text-neutral-900 mb-6 uppercase tracking-wider">Visual Assets</h2>
+          <div className="space-y-6">
+            
+            {/* Wordmark */}
+            <div>
+              <label className="block text-xs font-bold text-neutral-500 mb-1.5">Logo Wordmark (Header)</label>
+              <div className="flex items-end gap-4">
+                <div className="w-48 h-16 rounded-xl border border-neutral-200 bg-neutral-50 flex items-center justify-center overflow-hidden shrink-0">
+                  {formData.wordmarkUrl ? (
+                    <img src={formData.wordmarkUrl} alt="Wordmark preview" className="max-h-12 object-contain" />
+                  ) : (
+                    <span className="text-xs text-neutral-400">No wordmark uploaded</span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-sm font-bold transition-colors">
+                    <Upload className="w-4 h-4" />
+                    Upload Image
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e, 'wordmarkUrl')} />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* App Icon */}
+              <div>
+                <label className="block text-xs font-bold text-neutral-500 mb-1.5">App Icon (PWA & Square)</label>
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-2xl border border-neutral-200 bg-neutral-50 flex items-center justify-center overflow-hidden shrink-0">
+                    {formData.appIconUrl ? (
+                      <img src={formData.appIconUrl} alt="Icon preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <ImageIcon className="w-6 h-6 text-neutral-300" />
+                    )}
+                  </div>
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold transition-colors">
+                    <Upload className="w-3.5 h-3.5" />
+                    Upload
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e, 'appIconUrl')} />
+                  </label>
+                </div>
+              </div>
+
+              {/* Favicon */}
+              <div>
+                <label className="block text-xs font-bold text-neutral-500 mb-1.5">Favicon (Browser Tab)</label>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-lg border border-neutral-200 bg-neutral-50 flex items-center justify-center overflow-hidden shrink-0">
+                    {formData.faviconUrl ? (
+                      <img src={formData.faviconUrl} alt="Favicon preview" className="w-8 h-8 object-contain" />
+                    ) : (
+                      <ImageIcon className="w-5 h-5 text-neutral-300" />
+                    )}
+                  </div>
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold transition-colors">
+                    <Upload className="w-3.5 h-3.5" />
+                    Upload
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e, 'faviconUrl')} />
+                  </label>
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
+
+        {/* Colors Section */}
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <h2 className="text-sm font-bold text-neutral-900 mb-6 uppercase tracking-wider">Brand Colors</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-xs font-bold text-neutral-500 mb-1.5">Primary Color</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  name="primaryColor"
+                  value={formData.primaryColor}
+                  onChange={handleChange}
+                  className="w-10 h-10 rounded cursor-pointer border-0 p-0 bg-transparent"
+                />
+                <span className="text-sm font-mono text-neutral-600 uppercase">{formData.primaryColor}</span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-neutral-500 mb-1.5">Accent Color</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  name="accentColor"
+                  value={formData.accentColor}
+                  onChange={handleChange}
+                  className="w-10 h-10 rounded cursor-pointer border-0 p-0 bg-transparent"
+                />
+                <span className="text-sm font-mono text-neutral-600 uppercase">{formData.accentColor}</span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-neutral-500 mb-1.5">Background Theme</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  name="backgroundColor"
+                  value={formData.backgroundColor}
+                  onChange={handleChange}
+                  className="w-10 h-10 rounded cursor-pointer border-0 p-0 bg-transparent"
+                />
+                <span className="text-sm font-mono text-neutral-600 uppercase">{formData.backgroundColor}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* SEO & Metadata Section */}
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <h2 className="text-sm font-bold text-neutral-900 mb-6 uppercase tracking-wider">Browser & SEO</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-xs font-bold text-neutral-500 mb-1.5">Browser Tab Title</label>
+              <input
+                type="text"
+                name="browserTitle"
+                value={formData.browserTitle}
+                onChange={handleChange}
+                placeholder="e.g. Lalao | Community Platform"
+                className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-neutral-900 text-sm focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-neutral-500 mb-1.5">Browser Description</label>
+              <input
+                type="text"
+                name="browserDescription"
+                value={formData.browserDescription}
+                onChange={handleChange}
+                placeholder="Brief description for search engines"
+                className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-neutral-900 text-sm focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-neutral-500 mb-1.5">PWA Name (Install Prompt)</label>
+              <input
+                type="text"
+                name="pwaName"
+                value={formData.pwaName}
+                onChange={handleChange}
+                placeholder="e.g. Lalao Web App"
+                className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-neutral-900 text-sm focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-neutral-500 mb-1.5">PWA Short Name</label>
+              <input
+                type="text"
+                name="pwaShortName"
+                value={formData.pwaShortName}
+                onChange={handleChange}
+                placeholder="e.g. Lalao"
+                className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-neutral-900 text-sm focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Form Actions */}
+        <div className="flex items-center justify-end gap-4 pt-4 sticky bottom-4 z-10">
+          {saveSuccess && (
+            <span className="flex items-center gap-2 text-emerald-600 text-sm font-bold bg-emerald-50 px-4 py-2 rounded-xl">
+              <CheckCircle2 className="w-5 h-5" />
+              Settings Saved!
+            </span>
+          )}
           <button
             type="submit"
-            disabled={!newKey.trim() || !newValue.trim()}
-            className="h-[38px] px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-bold transition flex items-center gap-2"
+            disabled={isSaving}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-bold shadow-lg shadow-indigo-200 transition-all"
           >
-            <Save className="w-4 h-4" />
-            Add
-          </button>
-        </form>
-      </div>
-
-      <div className="rounded-2xl border border-slate-700/40 bg-slate-900/60 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-700/40 bg-slate-800/30">
-              <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500 w-1/3">Key</th>
-              <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Value</th>
-              <th className="px-4 py-3 w-24"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-800/60">
-            {settingsMap === undefined ? (
-              <tr>
-                <td colSpan={3} className="px-4 py-8 text-center text-slate-500">Loading settings...</td>
-              </tr>
-            ) : Object.keys(settingsMap).length === 0 ? (
-              <tr>
-                <td colSpan={3} className="px-4 py-8 text-center text-slate-500 text-sm">No settings configured</td>
-              </tr>
+            {isSaving ? (
+              <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
             ) : (
-              Object.entries(settingsMap).map(([key, value]) => (
-                <tr key={key} className="hover:bg-slate-800/30 transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs text-indigo-300">
-                    {key}
-                  </td>
-                  <td className="px-4 py-3">
-                    {editing[key] !== undefined ? (
-                      <input
-                        autoFocus
-                        value={editing[key]}
-                        onChange={(e) => setEditing({ ...editing, [key]: e.target.value })}
-                        className="w-full px-2 py-1 rounded bg-slate-800 border border-slate-700 text-white text-xs font-mono focus:outline-none focus:border-indigo-500"
-                      />
-                    ) : (
-                      <span className="font-mono text-xs text-slate-300 bg-slate-800/50 px-2 py-1 rounded border border-slate-700/50 break-all">
-                        {value}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {editing[key] !== undefined ? (
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleSave(key, editing[key])}
-                          className="text-emerald-400 hover:text-emerald-300 text-xs font-bold"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => {
-                            const next = { ...editing };
-                            delete next[key];
-                            setEditing(next);
-                          }}
-                          className="text-slate-500 hover:text-slate-300 text-xs font-bold"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setEditing({ ...editing, [key]: value })}
-                        className="text-indigo-400 hover:text-indigo-300 text-xs font-bold"
-                      >
-                        Edit
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))
+              <Save className="w-5 h-5" />
             )}
-          </tbody>
-        </table>
-      </div>
+            Save Configuration
+          </button>
+        </div>
+
+      </form>
     </div>
   );
 };

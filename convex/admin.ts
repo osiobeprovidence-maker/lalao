@@ -1,4 +1,5 @@
 import { mutation, query, internalMutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 
 // ─────────────────────────────────────────────────────────────
@@ -25,7 +26,7 @@ async function ensureSuperAdmin(ctx: any, user: any) {
  * Asserts the caller is authenticated and has one of the allowed admin roles.
  * Throws with HTTP-401/403 semantics if not.
  */
-async function requireAdmin(ctx: any, allowedRoles = ["super_admin", "admin", "editor"]) {
+export async function requireAdmin(ctx: any, allowedRoles = ["super_admin", "admin", "editor"]) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) throw new Error("Unauthenticated");
 
@@ -659,5 +660,112 @@ export const getTransactionsOverview = query({
     );
 
     return result;
+  },
+});
+
+// ─────────────────────────────────────────────────────────────
+// POST MODERATION
+// ─────────────────────────────────────────────────────────────
+
+export const removePost = mutation({
+  args: {
+    postId: v.id("posts"),
+    reason: v.optional(v.string()), // Legacy fallback
+    moderationReasonId: v.optional(v.id("moderationReasons")),
+    violationLevel: v.optional(v.string()),
+    note: v.optional(v.string()),
+    reportId: v.optional(v.id("reports")),
+  },
+  handler: async (ctx, args) => {
+    const adminUser = await requireAdmin(ctx);
+
+    const post = await ctx.db.get(args.postId);
+    if (!post) throw new Error("Post not found");
+
+    let officialReasonCode = undefined;
+    let officialUserMessage = args.reason || "Your post was removed because it violated Lalao's Community Guidelines.";
+
+    if (args.moderationReasonId) {
+      const reasonDoc = await ctx.db.get(args.moderationReasonId);
+      if (reasonDoc) {
+        officialReasonCode = reasonDoc.code;
+        officialUserMessage = reasonDoc.userMessage;
+      }
+    }
+
+    await ctx.db.patch(args.postId, {
+      moderationStatus: "removed",
+      removedAt: Date.now(),
+      removedBy: adminUser._id,
+      removalReason: args.reason,
+      removalReasonId: args.moderationReasonId,
+      removalReasonCode: officialReasonCode,
+      violationLevel: args.violationLevel,
+      moderationNote: args.note,
+    });
+
+    await writeAudit(ctx, adminUser._id, "content_removed", {
+      target: `post/${args.postId}`,
+      after: JSON.stringify({ 
+        reason: officialReasonCode || args.reason, 
+        severity: args.violationLevel,
+        note: args.note 
+      }),
+    });
+
+    if (args.reportId) {
+      await ctx.db.patch(args.reportId, {
+        status: "resolved",
+        resolvedAt: Date.now(),
+        resolvedBy: adminUser._id,
+        resolution: "Post removed",
+        resolutionNote: args.note,
+        moderationReasonId: args.moderationReasonId,
+        moderationReasonCode: officialReasonCode,
+        violationLevel: args.violationLevel,
+        userNotificationMessage: officialUserMessage,
+        updatedAt: Date.now(),
+      });
+    }
+
+    // Insert Notification
+    await ctx.db.insert("notifications", {
+      recipientId: post.authorId,
+      actorId: adminUser._id,
+      type: "system_alert",
+      targetExcerpt: officialUserMessage,
+      isRead: false,
+      createdAt: Date.now(),
+    });
+
+    // Trigger web push
+    await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
+      recipientId: post.authorId,
+      title: "Content Removed",
+      body: officialUserMessage,
+      url: "/notifications"
+    });
+  },
+});
+
+export const restorePost = mutation({
+  args: {
+    postId: v.id("posts"),
+  },
+  handler: async (ctx, args) => {
+    const adminUser = await requireAdmin(ctx);
+
+    const post = await ctx.db.get(args.postId);
+    if (!post) throw new Error("Post not found");
+
+    await ctx.db.patch(args.postId, {
+      moderationStatus: "safe",
+      moderationNote: "Restored by admin",
+    });
+
+    await writeAudit(ctx, adminUser._id, "content_restored", {
+      target: `post/${args.postId}`,
+      after: JSON.stringify({ status: "safe" }),
+    });
   },
 });

@@ -198,6 +198,7 @@ export const globalSearch = query({
       const rawPosts = await ctx.db.query("posts").withSearchIndex("search_text", (q2: any) => q2.search("text", q)).take(20);
       
       for (const p of rawPosts) {
+        if (p.moderationStatus === "removed") continue;
         if (filter === 'video' && p.mediaType !== 'video') continue;
         
         const resolved = await resolvePost(ctx, p, currentUser);

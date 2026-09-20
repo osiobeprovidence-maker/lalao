@@ -129,6 +129,8 @@ export const listFeedPosts = query({
     const results: any[] = [];
 
     for (const post of posts) {
+      if (post.moderationStatus === "removed") continue;
+
       let author;
       
       if (post.pageRefId) {

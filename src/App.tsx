@@ -391,7 +391,13 @@ export default function App() {
       <Route path="/app" element={<ProtectedRoute><LalaoApp /></ProtectedRoute>} />
       <Route path="/app/*" element={<ProtectedRoute><LalaoApp /></ProtectedRoute>} />
 
-      <Route path="/admin/*" element={<AdminRoute><AdminApp /></AdminRoute>} />
+      <Route path="/admin/*" element={
+        <AdminRoute>
+          <LalaoProvider>
+            <AdminApp />
+          </LalaoProvider>
+        </AdminRoute>
+      } />
 
       <Route path="*" element={<Navigate to="/onboarding/welcome" replace />} />
     </Routes>

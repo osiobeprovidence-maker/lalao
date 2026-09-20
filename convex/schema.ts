@@ -107,6 +107,14 @@ export default defineSchema({
     pollOptions: v.optional(v.array(v.string())),
     pageRefId: v.optional(v.string()),
     rallyRefId: v.optional(v.string()),
+    moderationStatus: v.optional(v.union(v.literal("removed"), v.literal("flagged"), v.literal("safe"))),
+    removedAt: v.optional(v.number()),
+    removedBy: v.optional(v.id("users")),
+    removalReason: v.optional(v.string()), // Deprecated/legacy string reason
+    removalReasonCode: v.optional(v.string()),
+    removalReasonId: v.optional(v.id("moderationReasons")),
+    violationLevel: v.optional(v.string()),
+    moderationNote: v.optional(v.string()),
   })
     .index("by_author", ["authorId"])
     .index("by_created", ["createdAt"])
@@ -216,6 +224,7 @@ export default defineSchema({
       v.literal("reply_like"),
       v.literal("follow"),
       v.literal("rally_join"),
+      v.literal("system_alert"),
     ),
     postId: v.optional(v.id("posts")),
     commentId: v.optional(v.id("comments")),
@@ -428,5 +437,64 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_token", ["token"]),
+
+  reports: defineTable({
+    reporterId: v.id("users"),
+    targetType: v.union(
+      v.literal("post"),
+      v.literal("user"),
+      v.literal("page"),
+      v.literal("comment"),
+      v.literal("reply"),
+      v.literal("product"),
+      v.literal("event"),
+      v.literal("message"),
+      v.literal("other")
+    ),
+    targetId: v.string(), 
+    reason: v.string(),
+    description: v.optional(v.string()),
+    priority: v.union(v.literal("low"), v.literal("normal"), v.literal("high"), v.literal("critical")),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("under_review"),
+      v.literal("resolved"),
+      v.literal("dismissed"),
+      v.literal("escalated")
+    ),
+    assignedTo: v.optional(v.id("users")), 
+    resolvedAt: v.optional(v.number()),
+    resolvedBy: v.optional(v.id("users")),
+    resolution: v.optional(v.string()),
+    resolutionNote: v.optional(v.string()),
+    moderationReasonId: v.optional(v.id("moderationReasons")),
+    moderationReasonCode: v.optional(v.string()),
+    violationLevel: v.optional(v.string()),
+    userNotificationMessage: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_status", ["status"])
+    .index("by_priority", ["priority"])
+    .index("by_target", ["targetType", "targetId"])
+    .index("by_reporter", ["reporterId"])
+    .index("by_created", ["createdAt"]),
+
+  moderationReasons: defineTable({
+    code: v.string(),
+    title: v.string(),
+    description: v.string(),
+    userMessage: v.string(),
+    defaultSeverity: v.union(
+      v.literal("low"),
+      v.literal("medium"),
+      v.literal("high"),
+      v.literal("critical")
+    ),
+    enabled: v.boolean(),
+    sortOrder: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_code", ["code"]),
 });
 

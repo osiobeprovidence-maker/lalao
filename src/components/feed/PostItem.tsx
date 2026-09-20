@@ -25,6 +25,7 @@ import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
 import { CommentThread } from '../common/CommentsModal';
 import { CommentComposer } from '../common/CommentComposer';
+import { ReportModal } from './ReportModal';
 
 export interface PostItemProps {
   post?: Post;
@@ -57,6 +58,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
   const [isMuted, setIsMuted] = useState(true);
   const [showOptions, setShowOptions] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [showInlineComments, setShowInlineComments] = useState(false);
 
   // Local state for standalone rally likes
@@ -265,7 +267,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
                     {!isAuthor && (
                       <button
                         onClick={() => {
-                          triggerShareToast('Thank you for keeping Lalao safe');
+                          setShowReportModal(true);
                           setShowOptions(false);
                         }}
                         className="w-full text-left px-3.5 py-2 hover:bg-neutral-50 text-rose-600 font-medium cursor-pointer"
@@ -532,6 +534,16 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
           </div>
         </div>
       )}
+
+      <ReportModal 
+        isOpen={showReportModal} 
+        onClose={() => setShowReportModal(false)}
+        targetId={post ? post.id : (linkedRally?.id ?? "")}
+        targetType={post ? "post" : "other"}
+        onSuccess={() => {
+          triggerShareToast('Thank you for keeping Lalao safe');
+        }}
+      />
     </article>
   );
 };
