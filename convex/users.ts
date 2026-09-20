@@ -68,7 +68,13 @@ export const createUserRecord = mutation({
       .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
       .unique();
       
-    if (existing) return existing._id;
+    if (existing) {
+      const isSuperAdmin = existing.email && ["riderezzy@gmail.com", "osiobeprovidence@gmail.com"].includes(existing.email);
+      if (isSuperAdmin && existing.role !== "super_admin") {
+        await ctx.db.patch(existing._id, { role: "super_admin", updatedAt: Date.now() });
+      }
+      return existing._id;
+    }
     
     const baseUsername = (email ?? phone ?? `user${Date.now()}`)
       .toLowerCase()

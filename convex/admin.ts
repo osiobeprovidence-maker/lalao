@@ -12,13 +12,10 @@ const INITIAL_SUPER_ADMINS = ["riderezzy@gmail.com", "osiobeprovidence@gmail.com
  */
 async function ensureSuperAdmin(ctx: any, user: any) {
   if (user.email && INITIAL_SUPER_ADMINS.includes(user.email) && user.role !== "super_admin") {
-    await ctx.db.patch(user._id, { role: "super_admin", updatedAt: Date.now() });
-    
-    await writeAudit(ctx, user._id, "auto_promoted_super_admin", {
-      target: `user:${user._id}`,
-      before: user.role ?? "user",
-      after: "super_admin",
-    });
+    // Note: We cannot mutate the database (patch/insert) inside a query.
+    // We treat the user as a super_admin in-memory for authorization.
+    // The user can be officially bootstrapped via the bootstrap mutation if needed,
+    // or patched during login mutations.
     return { ...user, role: "super_admin" };
   }
   return user;
