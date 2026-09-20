@@ -20,6 +20,7 @@ import type * as search from "../search.js";
 import type * as shop from "../shop.js";
 import type * as social from "../social.js";
 import type * as subscriptions from "../subscriptions.js";
+import type * as topics from "../topics.js";
 import type * as users from "../users.js";
 import type * as wallet from "../wallet.js";
 
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   shop: typeof shop;
   social: typeof social;
   subscriptions: typeof subscriptions;
+  topics: typeof topics;
   users: typeof users;
   wallet: typeof wallet;
 }>;

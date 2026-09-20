@@ -253,18 +253,13 @@ const LalaoAppContent: React.FC = () => {
               </div>
             )}
             {activeTab === 'following' && (
-              <div key="tab-following" className="animate-in fade-in duration-200">
-                {renderListPage(
-                  'Following',
-                  'People and communities you keep up with in your local Lalao feed.',
-                  followingPosts.slice(0, 6).map((post) => ({
-                    id: post.id,
-                    title: post.author.name || 'Followed creator',
-                    meta: `${post.location} · ${post.likesCount} likes`,
-                    accent: 'bg-[#5E43F3]/10 text-[#5E43F3]',
-                  })),
-                  'You are not following anyone yet. Tap Follow on people or pages to start building your Lalao circle.'
-                )}
+              <div key="tab-following" className="animate-in fade-in duration-200 w-full max-w-[680px]">
+                <HomeFeed 
+                  hideTabs 
+                  forceTab="following" 
+                  headerTitle="Following" 
+                  headerSubtitle="People, Pages and communities you keep up with in your local Lalao feed." 
+                />
               </div>
             )}
             {activeTab === 'saved' && (

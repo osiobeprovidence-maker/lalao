@@ -17,7 +17,19 @@ import {
   Check,
 } from 'lucide-react';
 
-export const HomeFeed: React.FC = () => {
+export interface HomeFeedProps {
+  forceTab?: FeedTab;
+  hideTabs?: boolean;
+  headerTitle?: string;
+  headerSubtitle?: string;
+}
+
+export const HomeFeed: React.FC<HomeFeedProps> = ({ 
+  forceTab, 
+  hideTabs = false, 
+  headerTitle, 
+  headerSubtitle 
+}) => {
   const {
     posts,
     pages,
@@ -34,6 +46,7 @@ export const HomeFeed: React.FC = () => {
     setNearbySort,
     triggerShareToast,
     isFeedLoading,
+    activeTopics,
   } = useLalao();
 
   // Pull to refresh state
@@ -157,27 +170,48 @@ export const HomeFeed: React.FC = () => {
       });
 
   // Filter posts according to feed tab and user membership state
+  const currentTab = forceTab || feedTab;
+  
   const filteredPosts = communityFeedPosts
     .filter((post) => {
-      if (feedTab === 'following') {
-        return post.author.isFollowing || post.author.id === currentUser.id;
+      if (currentTab === 'following') {
+        return (
+          post.author.isFollowing || 
+          post.author.id === currentUser.id ||
+          (post.pageRefId && pages.some((page) => page.id === post.pageRefId && page.isFollowing))
+        );
       }
-      if (feedTab === 'nearby') {
+      if (currentTab === 'nearby') {
         const maxMeters = location.radiusKm * 1000;
         return (post.distanceMeters ?? 0) <= maxMeters;
       }
       return true; // 'for_you'
     })
     .sort((a, b) => {
-      if (feedTab === 'nearby' && nearbySort === 'closest') {
+      if (currentTab === 'nearby' && nearbySort === 'closest') {
         return (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0);
       }
       return 0; // preserve original chronological order
     });
 
+  const dynamicTopicTabs = (activeTopics || [])
+    .filter((topic: any) => {
+      if (!topic.homeEnabled) return false;
+      const isInterested = topic.defaultEnabled || currentUser.interests?.includes(topic.slug);
+      if (!isInterested) return false;
+      const userPref = currentUser.homeFeedPreferences?.[topic.slug];
+      if (userPref === false) return false;
+      return true;
+    })
+    .map((topic: any) => ({
+      id: topic.slug,
+      label: topic.displayName,
+    }));
+
   const tabs: { id: FeedTab; label: string }[] = [
     { id: 'for_you', label: 'For You' },
     { id: 'following', label: 'Following' },
+    ...dynamicTopicTabs,
     { id: 'nearby', label: 'Nearby' },
   ];
 
@@ -204,11 +238,18 @@ export const HomeFeed: React.FC = () => {
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
-      {/* Sticky Feed Sub-Tabs with manual refresh indicator */}
-      <div className="sticky top-0 z-20 bg-[#f6f3ee]/95 backdrop-blur-md border-b border-neutral-200/80 flex items-center justify-around px-2">
-        {tabs.map((tab) => {
-          const isActive = feedTab === tab.id;
-          return (
+      {/* Sticky Feed Sub-Tabs or Custom Header */}
+      {hideTabs && headerTitle ? (
+        <div className="px-4 pt-6 pb-3 border-b border-neutral-200/80 mb-2">
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#5E43F3]">Lalao</p>
+          <h1 className="mt-1 text-2xl font-black tracking-[-0.03em] text-neutral-950">{headerTitle}</h1>
+          {headerSubtitle && <p className="mt-1 text-sm text-neutral-600">{headerSubtitle}</p>}
+        </div>
+      ) : !hideTabs ? (
+        <div className="sticky top-0 z-20 bg-[#f6f3ee]/95 backdrop-blur-md border-b border-neutral-200/80 flex items-center justify-around px-2">
+          {tabs.map((tab) => {
+            const isActive = (forceTab || feedTab) === tab.id;
+            return (
             <button
               key={tab.id}
               id={`tab-feed-${tab.id}`}
@@ -237,6 +278,7 @@ export const HomeFeed: React.FC = () => {
           );
         })}
       </div>
+      ) : null}
 
       {/* Pull-to-Refresh Visual Indicator Banner */}
       <div
@@ -486,6 +528,32 @@ export const HomeFeed: React.FC = () => {
           {filteredPosts.map((post) => (
             <PostItem key={post.id} post={post} />
           ))}
+        </div>
+      ) : !['for_you', 'following', 'nearby'].includes(feedTab) ? (
+        <div className="min-h-[62vh] flex items-center justify-center px-6 pb-8 pt-10">
+          <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+            <div className="w-16 h-16 rounded-full bg-neutral-200/50 flex items-center justify-center mb-4">
+              <Compass className="w-8 h-8 text-neutral-400" />
+            </div>
+            <p className="text-neutral-500 font-semibold mb-1">
+              No {tabs.find(t => t.id === feedTab)?.label || 'content'} content yet.
+            </p>
+            <p className="text-neutral-400 text-sm max-w-[260px] mb-4">
+              Follow creators and communities or create {tabs.find(t => t.id === feedTab)?.label || 'relevant'} content to start building this feed.
+            </p>
+            <div className="pt-1 flex flex-wrap items-center justify-center gap-2">
+              <button
+                onClick={() => {
+                  setCreateFlowType(null);
+                  setIsCreateSheetOpen(false);
+                  setActiveTab('create-post');
+                }}
+                className="px-3.5 py-2 rounded-full bg-[#5E43F3] text-[11px] font-bold text-white hover:bg-[#4E34E0] cursor-pointer"
+              >
+                Create Post
+              </button>
+            </div>
+          </div>
         </div>
       ) : !hasJoinedCommunities ? (
         <div className="min-h-[62vh] flex items-center justify-center px-6 pb-8 pt-10">

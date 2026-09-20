@@ -175,3 +175,86 @@ export const updatePageBusinessSettings = mutation({
     });
   }
 });
+
+export const getPageRelationship = query({
+  args: { pageId: v.id("pages") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return { isFollowing: false };
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+    
+    if (!user) return { isFollowing: false };
+
+    const existing = await ctx.db
+      .query("pageFollowers")
+      .withIndex("by_page_user", (q) => q.eq("pageId", args.pageId).eq("userId", user._id))
+      .unique();
+
+    return { isFollowing: !!existing };
+  }
+});
+
+export const toggleFollowPage = mutation({
+  args: { pageId: v.id("pages") },
+  handler: async (ctx, { pageId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+      
+    if (!user) throw new Error("User not found");
+
+    const page = await ctx.db.get(pageId);
+    if (!page) throw new Error("Page not found");
+
+    if (page.ownerId === user._id) {
+      throw new Error("Cannot follow your own page");
+    }
+
+    const existing = await ctx.db
+      .query("pageFollowers")
+      .withIndex("by_page_user", (q) => q.eq("pageId", pageId).eq("userId", user._id))
+      .unique();
+
+    if (existing) {
+      // Unfollow
+      await ctx.db.delete(existing._id);
+      await ctx.db.patch(pageId, {
+        followersCount: Math.max(0, (page.followersCount ?? 0) - 1),
+        updatedAt: Date.now(),
+      });
+      return { isFollowing: false };
+    }
+
+    // Follow
+    await ctx.db.insert("pageFollowers", {
+      userId: user._id,
+      pageId: pageId,
+      createdAt: Date.now(),
+    });
+
+    await ctx.db.patch(pageId, {
+      followersCount: (page.followersCount ?? 0) + 1,
+      updatedAt: Date.now(),
+    });
+
+    // Notify the page owner
+    await ctx.db.insert("notifications", {
+      recipientId: page.ownerId,
+      actorId: user._id,
+      type: "follow",
+      targetExcerpt: `followed your page ${page.name}`,
+      isRead: false,
+      createdAt: Date.now(),
+    });
+
+    return { isFollowing: true };
+  }
+});

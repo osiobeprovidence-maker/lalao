@@ -1,5 +1,7 @@
 import React from 'react';
-import { Bell, BellOff, CheckCircle2, Loader2, Smartphone, Zap } from 'lucide-react';
+import { Bell, BellOff, CheckCircle2, Loader2, Smartphone, Zap, Send } from 'lucide-react';
+import { useAction } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 
 /**
@@ -17,6 +19,20 @@ export const PushNotificationSettings: React.FC = () => {
     status,
     enableNotifications,
   } = usePushNotifications();
+  const sendTestNotification = useAction(api.pushActions.sendTestNotification);
+  const [isTesting, setIsTesting] = React.useState(false);
+
+  const handleTestPush = async () => {
+    try {
+      setIsTesting(true);
+      await sendTestNotification();
+    } catch (err) {
+      console.error('Test push error:', err);
+      alert('Failed to send test push notification');
+    } finally {
+      setIsTesting(false);
+    }
+  };
 
   // ── Browser Unsupported ──────────────────────────────────────────────────────
   if (!isSupported || browserPermission === 'unsupported') {
@@ -54,7 +70,14 @@ export const PushNotificationSettings: React.FC = () => {
             You&apos;ll get alerts for likes, replies, follows &amp; more — even when the app is closed.
           </p>
         </div>
-        <Smartphone className="w-4 h-4 text-emerald-500 shrink-0" />
+        <button
+          onClick={handleTestPush}
+          disabled={isTesting}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100/50 hover:bg-emerald-200 text-emerald-700 text-[11px] font-bold transition-colors disabled:opacity-50 shrink-0"
+        >
+          {isTesting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+          <span>Test</span>
+        </button>
       </div>
     );
   }

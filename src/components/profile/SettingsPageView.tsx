@@ -34,6 +34,8 @@ export const SettingsPageView: React.FC = () => {
     setRadiusKm,
     location,
     setLocation,
+    activeTopics,
+    updateHomePreference,
   } = useLalao();
   const { logout } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -443,6 +445,83 @@ export const SettingsPageView: React.FC = () => {
                 />
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* 3.5. Home Feed Preferences */}
+        <div className="space-y-3">
+          <div className="border-b border-neutral-100 pb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+              Interests & Home Feed
+            </h3>
+            <p className="text-[11px] text-neutral-500 mt-1">
+              Choose the topics you want Lalao to personalize for you.
+            </p>
+          </div>
+
+          <div className="divide-y divide-neutral-100 border border-neutral-100 rounded-2xl overflow-hidden bg-white">
+            {activeTopics?.length > 0 ? (
+              activeTopics.map((topic: any) => {
+                  let isEnabled = false;
+                  if (topic.defaultEnabled) {
+                     isEnabled = currentUser.homeFeedPreferences?.[topic.slug] !== false;
+                  } else {
+                     isEnabled = !!(currentUser.interests?.includes(topic.slug) && currentUser.homeFeedPreferences?.[topic.slug] !== false);
+                  }
+                  
+                  return (
+                    <div key={topic.slug} className="p-3.5 flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-bold text-neutral-900">{topic.displayName}</span>
+                        <p className="text-[11px] text-neutral-500 max-w-[200px]">
+                          {topic.description}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateHomePreference(topic.slug, !isEnabled);
+                          // Optimistically update current user so UI reflects immediately
+                          setCurrentUser(prev => {
+                            const newPreferences = { ...prev.homeFeedPreferences };
+                            newPreferences[topic.slug] = !isEnabled;
+                            
+                            let newInterests = prev.interests || [];
+                            if (!isEnabled) {
+                              if (!newInterests.includes(topic.slug)) {
+                                newInterests = [...newInterests, topic.slug];
+                              }
+                            } else {
+                              newInterests = newInterests.filter(i => i !== topic.slug);
+                            }
+                            
+                            return {
+                              ...prev,
+                              homeFeedPreferences: newPreferences,
+                              interests: newInterests
+                            };
+                          });
+                        }}
+                        className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                          isEnabled ? 'bg-[#5E43F3]' : 'bg-neutral-300'
+                        }`}
+                      >
+                        <div
+                          className={`w-5 h-5 rounded-full bg-white transition-transform absolute top-0.5 ${
+                            isEnabled ? 'right-0.5' : 'left-0.5'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  );
+                })
+            ) : (
+              <div className="p-4 text-center">
+                <p className="text-[11px] text-neutral-500">
+                  No active topics available.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

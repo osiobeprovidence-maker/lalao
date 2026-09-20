@@ -4,7 +4,6 @@ import {
   Calendar,
   Share2,
   Settings,
-  Sparkles,
   Heart,
   Plus,
   Clock,
@@ -14,6 +13,8 @@ import {
   CheckCircle2,
   ChevronRight,
 } from 'lucide-react';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { PostItem } from '../feed/PostItem';
@@ -25,7 +26,6 @@ type ConnectionTab = 'community' | 'followers' | 'following';
 export const ProfileView: React.FC = () => {
   const {
     currentUser,
-    posts,
     cycles,
     openCycleStory,
     setIsCreateCycleOpen,
@@ -43,15 +43,17 @@ export const ProfileView: React.FC = () => {
   const [connectionTab, setConnectionTab] = useState<ConnectionTab>('community');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Fetch this user's posts directly — not limited by the feed window
+  const myPostsQuery = useQuery(api.social.listMyPosts);
+  const userPosts = (myPostsQuery as any[]) ?? [];
+  const isPostsLoading = myPostsQuery === undefined;
+  const userMediaPosts = userPosts.filter((p: any) => Boolean(p.mediaUrl));
+  const userReposts = userPosts.filter((p: any) => p.isReposted);
+
   const myCycle = cycles.find(
     (c) => c.user?.id === currentUser.id || c.id === 'cycle_user_me'
   );
   const myHasItems = myCycle && myCycle.items && myCycle.items.length > 0;
-
-  // Filter posts created by current user
-  const userPosts = posts.filter((p) => p.author.id === currentUser.id);
-  const userMediaPosts = userPosts.filter((p) => Boolean(p.mediaUrl));
-  const userReposts = posts.filter((p) => p.isReposted);
 
   const tabs: { id: ProfileTab; label: string }[] = [
     { id: 'posts', label: 'Posts' },
@@ -295,8 +297,12 @@ export const ProfileView: React.FC = () => {
       {/* Tab Contents */}
       <div className="divide-y divide-neutral-100">
         {profileTab === 'posts' && (
-          userPosts.length > 0 ? (
-            userPosts.map((post) => <PostItem key={post.id} post={post} />)
+          isPostsLoading ? (
+            <div className="flex justify-center p-10">
+              <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-[#5E43F3]" />
+            </div>
+          ) : userPosts.length > 0 ? (
+            userPosts.map((post: any) => <PostItem key={post.id} post={post} />)
           ) : (
             <div className="p-8 text-center text-neutral-400 text-xs">
               You haven&apos;t posted yet. Tap the center + button to share with your local community.

@@ -25,12 +25,12 @@ export const AdminReports: React.FC = () => {
   const [selectedSeverity, setSelectedSeverity] = useState<string>('');
   const [adminNotes, setAdminNotes] = useState('');
 
-  const moderationReasons = useQuery(api.moderation.listReasons) || [];
+  const moderationReasons = useQuery(api.moderation.listReasons);
   const seedReasons = useMutation(api.moderation.seedReasons);
   const [isSeeding, setIsSeeding] = useState(false);
 
   React.useEffect(() => {
-    if (moderationReasons && moderationReasons.length === 0 && !isSeeding) {
+    if (moderationReasons !== undefined && moderationReasons.length === 0 && !isSeeding) {
       setIsSeeding(true);
       seedReasons().finally(() => setIsSeeding(false));
     }
@@ -114,11 +114,11 @@ export const AdminReports: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 text-sm focus:outline-none focus:border-[#5200FF] cursor-pointer shadow-sm"
+          className="w-full sm:w-auto px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 text-sm focus:outline-none focus:border-[#5200FF] cursor-pointer shadow-sm"
         >
           <option value="all">All Statuses</option>
           <option value="pending">Pending</option>
@@ -128,8 +128,52 @@ export const AdminReports: React.FC = () => {
         </select>
       </div>
 
-      {/* Table */}
-      <div className="rounded-2xl border border-neutral-200 bg-white overflow-hidden shadow-sm">
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {reports === undefined ? (
+          <div className="text-center py-8 text-neutral-500 bg-white rounded-2xl border border-neutral-200 shadow-sm text-sm">
+            Loading reports...
+          </div>
+        ) : reports.length === 0 ? (
+          <div className="text-center py-8 text-neutral-500 bg-white rounded-2xl border border-neutral-200 shadow-sm text-sm">
+            No reports found for this filter.
+          </div>
+        ) : (
+          reports.map((report) => (
+            <div 
+              key={report._id} 
+              onClick={() => setSelectedReportId(report._id)} 
+              className="bg-white border border-neutral-200 rounded-2xl p-4 shadow-sm active:bg-neutral-50 transition-colors cursor-pointer"
+            >
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-bold text-neutral-900 uppercase tracking-wider">{report.targetType}</span>
+                    <span className="text-neutral-300">•</span>
+                    <span className="text-neutral-500 text-xs font-mono">{report.targetId.substring(0, 8)}...</span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-neutral-900 line-clamp-1">{report.reason}</h3>
+                </div>
+                <ChevronRight className="w-5 h-5 text-neutral-400 shrink-0 mt-1" />
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`inline-flex px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider ${STATUS_COLORS[report.status]}`}>
+                  {report.status.replace('_', ' ')}
+                </span>
+                <span className={`inline-flex px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider ${PRIORITY_COLORS[report.priority]}`}>
+                  {report.priority}
+                </span>
+                <span className="text-neutral-400 text-[11px] ml-auto font-medium">
+                  {new Date(report.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Table */}
+      <div className="hidden md:block rounded-2xl border border-neutral-200 bg-white overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -201,7 +245,7 @@ export const AdminReports: React.FC = () => {
       {selectedReportId && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm" onClick={() => setSelectedReportId(null)} />
-          <div className="relative w-full max-w-md bg-white border-l border-neutral-200 h-full overflow-y-auto shadow-2xl flex flex-col">
+          <div className="relative w-full sm:w-[400px] bg-white border-l border-neutral-200 h-full overflow-y-auto shadow-2xl flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-neutral-200 bg-neutral-50/50">
               <h2 className="text-lg font-bold text-neutral-900">Report Details</h2>
               <button
@@ -283,13 +327,13 @@ export const AdminReports: React.FC = () => {
                             value={selectedReasonId}
                             onChange={(e) => {
                               setSelectedReasonId(e.target.value);
-                              const selected = moderationReasons.find((r: any) => r._id === e.target.value);
+                              const selected = moderationReasons?.find((r: any) => r._id === e.target.value);
                               if (selected && !selectedSeverity) setSelectedSeverity(selected.defaultSeverity);
                             }}
                             className="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-white text-sm focus:outline-none focus:border-[#5200FF] cursor-pointer"
                           >
                             <option value="">Select a reason...</option>
-                            {moderationReasons.map((reason: any) => (
+                            {moderationReasons?.map((reason: any) => (
                               <option key={reason._id} value={reason._id}>{reason.title}</option>
                             ))}
                           </select>
@@ -315,7 +359,7 @@ export const AdminReports: React.FC = () => {
                         {selectedReasonId && (
                           <div className="bg-neutral-50 p-3 rounded-xl border border-neutral-200">
                             <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-1 block">Notification to User (Preview)</label>
-                            <p className="text-xs text-neutral-700 italic">"{moderationReasons.find((r: any) => r._id === selectedReasonId)?.userMessage}"</p>
+                            <p className="text-xs text-neutral-700 italic">"{moderationReasons?.find((r: any) => r._id === selectedReasonId)?.userMessage}"</p>
                           </div>
                         )}
 

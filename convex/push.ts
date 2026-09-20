@@ -6,8 +6,61 @@ import { v } from "convex/values";
    ───────────────────────────────────────────────────────────────────────────── */
 
 /**
- * Upsert an FCM registration token for the current user/device.
+ * Upsert a native Web Push subscription for the current user/device.
  * Supports multiple active tokens/devices per user.
+ */
+export const upsertWebPushSubscription = mutation({
+  args: {
+    endpoint: v.string(),
+    p256dh: v.string(),
+    auth: v.string(),
+    userAgent: v.optional(v.string()),
+  },
+  handler: async (ctx, { endpoint, p256dh, auth, userAgent }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .first();
+    if (!user) throw new Error("User not found");
+
+    const now = Date.now();
+
+    const existing = await ctx.db
+      .query("pushSubscriptions")
+      .withIndex("by_endpoint", (q) => q.eq("endpoint", endpoint))
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        userId: user._id,
+        p256dh,
+        auth,
+        userAgent: userAgent ?? existing.userAgent,
+        updatedAt: now,
+        isActive: true,
+      });
+      return existing._id;
+    }
+
+    return await ctx.db.insert("pushSubscriptions", {
+      userId: user._id,
+      endpoint,
+      p256dh,
+      auth,
+      userAgent,
+      createdAt: now,
+      updatedAt: now,
+      isActive: true,
+      provider: "web_push",
+    });
+  },
+});
+
+/**
+ * Upsert an FCM registration token for the current user/device (Legacy/Fallback).
  */
 export const upsertFcmToken = mutation({
   args: {
@@ -52,28 +105,7 @@ export const upsertFcmToken = mutation({
 });
 
 /**
- * Remove an FCM token (called on logout or when the user disables push).
- */
-export const removeFcmToken = mutation({
-  args: { token: v.string() },
-  handler: async (ctx, { token }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return;
-
-    const existing = await ctx.db
-      .query("fcmTokens")
-      .withIndex("by_token", (q) => q.eq("token", token))
-      .first();
-
-    if (existing) {
-      await ctx.db.delete(existing._id);
-    }
-  },
-});
-
-/**
- * Check whether the current user has any active FCM tokens registered.
- * Safe for unauthenticated users (returns false).
+ * Check whether the current user has any active push subscriptions.
  */
 export const hasActivePushToken = query({
   args: {},
@@ -88,12 +120,19 @@ export const hasActivePushToken = query({
         .first();
       if (!user) return false;
 
-      const token = await ctx.db
+      const webPushSub = await ctx.db
+        .query("pushSubscriptions")
+        .withIndex("by_user_active", (q) => q.eq("userId", user._id).eq("isActive", true))
+        .first();
+        
+      if (webPushSub) return true;
+
+      const fcmToken = await ctx.db
         .query("fcmTokens")
         .withIndex("by_user", (q) => q.eq("userId", user._id))
         .first();
 
-      return token !== null;
+      return fcmToken !== null;
     } catch (err) {
       console.warn("[push] hasActivePushToken query error:", err);
       return false;
@@ -105,10 +144,17 @@ export const hasActivePushToken = query({
    INTERNAL TOKEN HELPERS (used by the dispatch action)
    ───────────────────────────────────────────────────────────────────────────── */
 
-/**
- * Retrieve all active push tokens for a user (used by FCM push dispatch).
- */
-export const getTokensForUser = internalQuery({
+export const getWebPushSubscriptionsForUser = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    return await ctx.db
+      .query("pushSubscriptions")
+      .withIndex("by_user_active", (q) => q.eq("userId", userId).eq("isActive", true))
+      .collect();
+  },
+});
+
+export const getFcmTokensForUser = internalQuery({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
     return await ctx.db
@@ -118,9 +164,16 @@ export const getTokensForUser = internalQuery({
   },
 });
 
-/**
- * Deactivate/delete a stale or invalid FCM token after send failure.
- */
+export const markWebPushSubscriptionInactive = internalMutation({
+  args: { subscriptionId: v.id("pushSubscriptions") },
+  handler: async (ctx, { subscriptionId }) => {
+    const existing = await ctx.db.get(subscriptionId);
+    if (existing) {
+      await ctx.db.patch(subscriptionId, { isActive: false, updatedAt: Date.now() });
+    }
+  },
+});
+
 export const deleteStaleToken = internalMutation({
   args: { tokenId: v.id("fcmTokens") },
   handler: async (ctx, { tokenId }) => {
@@ -128,5 +181,16 @@ export const deleteStaleToken = internalMutation({
     if (existing) {
       await ctx.db.delete(tokenId);
     }
+  },
+});
+
+export const getUserIdFromIdentity = internalQuery({
+  args: { tokenIdentifier: v.string() },
+  handler: async (ctx, { tokenIdentifier }) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", tokenIdentifier))
+      .first();
+    return user?._id ?? null;
   },
 });

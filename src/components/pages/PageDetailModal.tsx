@@ -79,6 +79,8 @@ export const PageDetailModal: React.FC = () => {
     posts,
     triggerShareToast,
     openChatWithUser,
+    startPageConversation,
+    setActiveTab: setGlobalTab,
     cartCount,
     setIsCartOpen,
     setIsShoppingHistoryOpen,
@@ -102,6 +104,7 @@ export const PageDetailModal: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<ShopProduct | null>(null);
   const [eventFilter, setEventFilter] = useState<'all' | 'tournaments' | 'community' | 'completed'>('all');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
 
   // Management modals state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -400,19 +403,47 @@ export const PageDetailModal: React.FC = () => {
                   <Coins className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Monetize</span>
                 </button>
+
+                {(page.type === 'business' || page.badge === 'BIZ') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActivePageId(null);
+                      setGlobalTab('messages');
+                      navigate('/app/messages');
+                    }}
+                    className="px-4 py-2 rounded-full border border-[#5E43F3]/20 bg-[#5E43F3]/5 text-[#5E43F3] hover:bg-[#5E43F3]/10 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>Inbox</span>
+                  </button>
+                )}
               </>
             ) : (
               <>
                 <button
                   id={`btn-follow-page-detail-${page.id}`}
-                  onClick={() => toggleFollowPage(page.id)}
-                  className={`px-6 py-2 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    page.isFollowing
-                      ? 'border border-neutral-300 text-neutral-800 hover:bg-neutral-100 bg-white'
-                      : 'bg-[#5E43F3] text-white hover:bg-[#4E34E0] shadow-sm shadow-[#5E43F3]/25'
+                  disabled={isFollowLoading}
+                  onClick={async () => {
+                    if (isFollowLoading) return;
+                    setIsFollowLoading(true);
+                    try {
+                      await toggleFollowPage(page.id);
+                    } finally {
+                      setIsFollowLoading(false);
+                    }
+                  }}
+                  className={`px-6 py-2 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1.5 min-w-[120px] ${
+                    isFollowLoading 
+                      ? 'opacity-70 cursor-not-allowed bg-neutral-200 text-neutral-500'
+                      : page.isFollowing
+                        ? 'border border-neutral-300 text-neutral-800 hover:bg-neutral-100 bg-white cursor-pointer'
+                        : 'bg-[#5E43F3] text-white hover:bg-[#4E34E0] shadow-sm shadow-[#5E43F3]/25 cursor-pointer'
                   }`}
                 >
-                  {page.isFollowing ? (
+                  {isFollowLoading ? (
+                    <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                  ) : page.isFollowing ? (
                     <>
                       <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                       Following
@@ -424,10 +455,13 @@ export const PageDetailModal: React.FC = () => {
                     </>
                   )}
                 </button>
-                {page.aboutInfo?.phone && (
+                {(page.type === 'business' || page.badge === 'BIZ') && (
                   <button
                     type="button"
-                    onClick={() => triggerShareToast(`Connecting to ${page.name}...`)}
+                    onClick={() => {
+                      startPageConversation(page.id);
+                      setActivePageId(null);
+                    }}
                     className="p-2 rounded-full border border-neutral-200 text-neutral-700 hover:bg-neutral-100 bg-white transition-colors cursor-pointer"
                     title="Direct inquiry"
                   >

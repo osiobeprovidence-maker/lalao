@@ -16,7 +16,7 @@ import {
   ActivitySquare,
   BadgeDollarSign,
   Menu,
-  LogOut,
+  LogOut as LogOutIcon,
   X
 } from 'lucide-react';
 
@@ -159,7 +159,7 @@ export const AdminApp: React.FC = () => {
           onClick={handleExit}
           className="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
         >
-          <LogOut className="w-5 h-5 text-neutral-400" />
+          <LogOutIcon className="w-5 h-5 text-neutral-400" />
           Exit Admin
         </button>
       </div>
@@ -184,18 +184,18 @@ export const AdminApp: React.FC = () => {
             </aside>
           </div>
         )}
-        <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-          <header className="h-16 flex items-center justify-between px-6 bg-white/80 backdrop-blur-xl border-b border-neutral-200/80 shrink-0 sticky top-0 z-20">
-            <div className="flex items-center gap-4">
+        <main className="flex-1 flex flex-col min-w-0 overflow-x-hidden relative w-full max-w-full">
+          <header className="h-16 flex items-center justify-between px-4 sm:px-6 bg-white/80 backdrop-blur-xl border-b border-neutral-200/80 shrink-0 sticky top-0 z-20">
+            <div className="flex items-center gap-2 sm:gap-4">
               <button 
                 onClick={() => setIsMobileMenuOpen(true)}
                 className="md:hidden p-2 -ml-2 text-neutral-600 hover:bg-neutral-100 rounded-lg"
               >
                 <Menu className="w-5 h-5" />
               </button>
-              <h1 className="text-lg font-bold text-neutral-900">Platform Control Center</h1>
+              <h1 className="text-base sm:text-lg font-bold text-neutral-900 truncate">Platform Control Center</h1>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 shrink-0">
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100 border border-neutral-200">
                 <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
                 <span className="text-xs font-medium text-neutral-600">System Online</span>
@@ -203,8 +203,8 @@ export const AdminApp: React.FC = () => {
             </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto bg-[#F8F9FA] p-4 md:p-8 z-10 no-scrollbar">
-            <div className="max-w-6xl mx-auto">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden bg-[#F8F9FA] p-4 md:p-8 z-10 no-scrollbar w-full">
+            <div className="max-w-6xl mx-auto w-full">
               <Routes>
                 <Route path="/" element={<AdminDashboard />} />
                 <Route path="/users" element={<AdminUsers />} />

@@ -149,16 +149,16 @@ export const AdminPlatformSettings: React.FC = () => {
             {/* Wordmark */}
             <div>
               <label className="block text-xs font-bold text-neutral-500 mb-1.5">Logo Wordmark (Header)</label>
-              <div className="flex items-end gap-4">
-                <div className="w-48 h-16 rounded-xl border border-neutral-200 bg-neutral-50 flex items-center justify-center overflow-hidden shrink-0">
+              <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+                <div className="w-full sm:w-48 h-16 rounded-xl border border-neutral-200 bg-neutral-50 flex items-center justify-center overflow-hidden shrink-0">
                   {formData.wordmarkUrl ? (
                     <img src={formData.wordmarkUrl} alt="Wordmark preview" className="max-h-12 object-contain" />
                   ) : (
                     <span className="text-xs text-neutral-400">No wordmark uploaded</span>
                   )}
                 </div>
-                <div className="flex-1">
-                  <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-sm font-bold transition-colors">
+                <div className="flex-1 w-full sm:w-auto">
+                  <label className="w-full sm:w-auto cursor-pointer inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-sm font-bold transition-colors">
                     <Upload className="w-4 h-4" />
                     Upload Image
                     <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e, 'wordmarkUrl')} />
@@ -307,9 +307,9 @@ export const AdminPlatformSettings: React.FC = () => {
         </div>
 
         {/* Form Actions */}
-        <div className="flex items-center justify-end gap-4 pt-4 sticky bottom-4 z-10">
+        <div className="flex flex-col sm:flex-row items-center justify-end gap-4 pt-4 sticky bottom-4 z-10">
           {saveSuccess && (
-            <span className="flex items-center gap-2 text-emerald-600 text-sm font-bold bg-emerald-50 px-4 py-2 rounded-xl">
+            <span className="flex items-center justify-center w-full sm:w-auto gap-2 text-emerald-600 text-sm font-bold bg-emerald-50 px-4 py-2 rounded-xl">
               <CheckCircle2 className="w-5 h-5" />
               Settings Saved!
             </span>
@@ -317,7 +317,7 @@ export const AdminPlatformSettings: React.FC = () => {
           <button
             type="submit"
             disabled={isSaving}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-bold shadow-lg shadow-indigo-200 transition-all"
+            className="flex items-center justify-center w-full sm:w-auto gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-bold shadow-lg shadow-indigo-200 transition-all"
           >
             {isSaving ? (
               <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />

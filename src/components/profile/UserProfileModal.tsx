@@ -92,13 +92,13 @@ export const UserProfileModal: React.FC = () => {
   );
   const hasActiveCycle = Boolean(userCycle && userCycle.items && userCycle.items.length > 0);
 
-  // User's posts
-  const userPosts = useMemo(() => {
-    if (!activeUserProfile) return [];
-    return posts.filter(
-      (p) => p.author.id === activeUserProfile.id || p.author.username === activeUserProfile.username
-    );
-  }, [posts, activeUserProfile]);
+  // User's posts — fetched directly by author id, not from the feed window
+  const userPostsQuery = useQuery(
+    api.social.listUserPosts,
+    activeUserProfile ? { userId: activeUserProfile.id } : "skip"
+  );
+  const userPosts: Post[] = (userPostsQuery as any[]) ?? [];
+  const isPostsLoading = userPostsQuery === undefined;
 
   // User's media posts (photos/videos)
   const userMediaPosts = useMemo(() => {
@@ -650,7 +650,11 @@ export const UserProfileModal: React.FC = () => {
             {/* 1. POSTS TAB */}
             {activeTab === 'posts' && (
               <div>
-                {filteredPosts.length > 0 ? (
+                {isPostsLoading ? (
+                  <div className="flex justify-center p-10">
+                    <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-[#5E43F3]" />
+                  </div>
+                ) : filteredPosts.length > 0 ? (
                   <div className="divide-y divide-neutral-100">
                     {filteredPosts.map((post) => (
                       <article

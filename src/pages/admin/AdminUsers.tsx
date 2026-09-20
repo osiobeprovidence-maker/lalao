@@ -58,7 +58,7 @@ export const AdminUsers: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
           <input
@@ -81,8 +81,84 @@ export const AdminUsers: React.FC = () => {
         </select>
       </div>
 
-      {/* Table */}
-      <div className="rounded-2xl border border-neutral-200 bg-white overflow-hidden shadow-sm">
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {users === undefined ? (
+          <div className="text-center py-8 text-neutral-500 bg-white rounded-2xl border border-neutral-200 shadow-sm text-sm">
+            Loading users...
+          </div>
+        ) : users.length === 0 ? (
+          <div className="text-center py-8 text-neutral-500 bg-white rounded-2xl border border-neutral-200 shadow-sm text-sm">
+            No users found.
+          </div>
+        ) : (
+          users.map((u: any) => (
+            <div key={u._id} className="bg-white border border-neutral-200 rounded-2xl p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div>
+                  <p className="font-semibold text-neutral-900">{u.name ?? '—'}</p>
+                  <p className="text-xs text-neutral-500">{u.email ?? u.username ?? '—'}</p>
+                </div>
+                {u.suspended ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 text-[10px] font-bold">Suspended</span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold">Active</span>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-2 flex-wrap mb-4">
+                <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${ROLE_COLORS[u.role ?? 'user']}`}>
+                  {u.role ?? 'user'}
+                </span>
+                <span className="text-neutral-500 text-[11px]">
+                  Pages: <span className="font-semibold text-neutral-900">{u.pageCount}</span>
+                </span>
+                <span className="text-neutral-500 text-[11px]">
+                  Subs: <span className="font-semibold text-neutral-900">{u.subscriptionCount}</span>
+                </span>
+                <span className="text-neutral-400 text-[11px] ml-auto">
+                  {new Date(u.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-2 pt-3 border-t border-neutral-100">
+                {u.role !== 'super_admin' && (
+                  <>
+                    <select
+                      value={u.role ?? 'user'}
+                      onChange={(e) => handleRoleChange(u._id, e.target.value)}
+                      className="flex-1 text-[11px] rounded-lg bg-neutral-50 border border-neutral-200 text-neutral-700 px-2 py-1.5 focus:outline-none cursor-pointer"
+                    >
+                      <option value="user">user</option>
+                      <option value="moderator">moderator</option>
+                      <option value="admin">admin</option>
+                      <option value="super_admin">super_admin</option>
+                    </select>
+                    {u.suspended ? (
+                      <button
+                        onClick={() => handleRestore(u._id)}
+                        className="px-3 py-1.5 rounded-lg text-emerald-600 bg-emerald-50 hover:bg-emerald-100 text-xs font-semibold transition cursor-pointer"
+                      >
+                        Restore
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleSuspend(u._id)}
+                        className="px-3 py-1.5 rounded-lg text-rose-600 bg-rose-50 hover:bg-rose-100 text-xs font-semibold transition cursor-pointer"
+                      >
+                        Suspend
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Table */}
+      <div className="hidden md:block rounded-2xl border border-neutral-200 bg-white overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

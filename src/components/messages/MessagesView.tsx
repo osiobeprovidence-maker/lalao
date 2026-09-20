@@ -394,6 +394,16 @@ export const MessagesView: React.FC = () => {
                       )}
                       {conv.participant?.badge && <Badge type={conv.participant.badge} />}
                     </div>
+                    {(conv as any).isPageConvo && !(conv as any).amIUserA && (
+                      <div className="text-[10px] font-black tracking-wider text-[#5E43F3] bg-[#5E43F3]/10 border border-[#5E43F3]/20 px-1.5 py-0.5 rounded-sm uppercase mt-1 w-fit mb-0.5">
+                        Manager View
+                      </div>
+                    )}
+                    {(conv as any).isPageConvo && (conv as any).amIUserA && (
+                      <div className="text-[10px] font-black tracking-wider text-neutral-500 bg-neutral-100 border border-neutral-200 px-1.5 py-0.5 rounded-sm uppercase mt-1 w-fit mb-0.5">
+                        Business Chat
+                      </div>
+                    )}
                     <div className="flex items-center gap-1 text-xs text-neutral-500 truncate mt-0.5 max-w-[220px]">
                       {isLastMine && (
                         <span className="shrink-0" title={lastMsg?.status === 'read' ? 'Read' : lastMsg?.status === 'delivered' ? 'Delivered' : 'Sent'}>

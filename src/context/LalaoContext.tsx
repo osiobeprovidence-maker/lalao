@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import { getOrRequestFcmToken } from '../lib/firebase';
+import { getOrRequestWebPushSubscription } from '../lib/push';
 import {
   User,
   Post,
@@ -53,7 +53,7 @@ export type NavTab =
   | 'saved'
   | 'liked'
   | 'create-page';
-export type FeedTab = 'for_you' | 'following' | 'nearby';
+export type FeedTab = 'for_you' | 'following' | 'nearby' | string;
 export type CreateOption = 'post' | 'rally' | 'page' | 'cycle' | null;
 
 interface LalaoContextType {
@@ -182,6 +182,8 @@ interface LalaoContextType {
   setIsCreateCycleOpen: (open: boolean) => void;
 
   sendDirectMessage: (conversationId: string, text: string, stickerId?: string) => void;
+  markConversationRead: (conversationId: string) => void;
+  startPageConversation: (pageId: string) => Promise<void>;
   markNotificationsAsRead: () => void;
 
   // Modal / Navigation Overlay States
@@ -304,6 +306,10 @@ interface LalaoContextType {
   // Push Notifications
   enablePushNotifications: () => Promise<boolean>;
   pushEnabled: boolean;
+
+  // Topics & Preferences
+  activeTopics: any[];
+  updateHomePreference: (slug: string, enabled: boolean) => Promise<void>;
 }
 
 const LalaoContext = createContext<LalaoContextType | undefined>(undefined);
@@ -365,8 +371,14 @@ const normalizeConvexUser = (user: Record<string, any> | null | undefined): User
 };
 
 export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [activeTab, setActiveTab] = useState<NavTab>('home');
+  const startPageConversationMutation = useMutation(api.social.startPageConversation);
+  const [feedTab, setFeedTab] = useState<FeedTab>('for_you');
+
   const currentUserQuery = useQuery(api.users.getCurrentUser);
-  const feedPostsQuery = useQuery(api.social.listFeedPosts);
+  const feedPostsQuery = useQuery(api.social.listFeedPosts, { feedType: feedTab });
+  const activeTopicsQuery = useQuery((api as any).topics?.listActiveTopics) || [];
+  const updateUserHomePreferenceMutation = useMutation((api as any).topics?.updateUserHomePreference || api.social.toggleLikePost); // fallback while compiling
   const exploreUsersQuery = useQuery(api.social.listUsersForExplore);
   const pagesQuery = useQuery(api.social.listPages);
   const myPagesQuery = useQuery(api.pages.getMyPages);
@@ -378,13 +390,14 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
   const addCommentMutation = useMutation(api.social.addCommentToPost);
   const toggleFollowUserMutation = useMutation(api.social.toggleFollowUser);
+  const toggleFollowPageMutation = useMutation(api.pages.toggleFollowPage);
   const markAllNotificationsReadMutation = useMutation(api.social.markAllNotificationsRead);
   const toggleLikeCommentMutation = useMutation(api.social.toggleLikeComment);
   const saveDraftMutation = useMutation(api.social.saveDraft);
   const deleteDraftMutation = useMutation(api.social.deleteDraft);
   const addProductMutation = useMutation(api.shop.addProduct);
   const deleteProductMutation = useMutation(api.shop.deleteProduct);
-  const upsertFcmTokenMutation = useMutation(api.push.upsertFcmToken);
+  const upsertWebPushSubscriptionMutation = useMutation(api.push.upsertWebPushSubscription);
   const hasActivePushTokenQuery = useQuery(
     api.push.hasActivePushToken,
     currentUserQuery ? {} : "skip"
@@ -508,8 +521,6 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [currentUser]);
 
-  const [activeTab, setActiveTab] = useState<NavTab>('home');
-  const [feedTab, setFeedTab] = useState<FeedTab>('for_you');
   const [nearbySort, setNearbySort] = useState<'closest' | 'recent'>('closest');
   const [isDetectingGps, setIsDetectingGps] = useState(false);
 
@@ -751,24 +762,30 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   /**
-   * Request FCM permission + register device token in Convex.
+   * Request native Web Push permission + register push subscription in Convex.
    * Returns true if push was successfully enabled.
    */
   const enablePushNotifications = useCallback(async (): Promise<boolean> => {
     try {
-      const token = await getOrRequestFcmToken();
-      if (!token) return false;
-      await upsertFcmTokenMutation({
-        token,
+      const subscription = await getOrRequestWebPushSubscription();
+      if (!subscription) return false;
+      
+      const subJson = subscription.toJSON();
+      
+      await upsertWebPushSubscriptionMutation({
+        endpoint: subscription.endpoint,
+        p256dh: subJson.keys?.p256dh || '',
+        auth: subJson.keys?.auth || '',
         userAgent: navigator.userAgent.slice(0, 200),
       });
+      
       updatePermission('notifications', 'granted');
       return true;
     } catch (err) {
       console.error('[push] enablePushNotifications error:', err);
       return false;
     }
-  }, [upsertFcmTokenMutation]);
+  }, [upsertWebPushSubscriptionMutation]);
 
   const pushEnabled = hasActivePushTokenQuery === true;
 
@@ -1563,22 +1580,28 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     triggerShareToast('Rally created! Broadcasting to people nearby');
   };
 
-  const toggleFollowPage = (pageId: string) => {
-    setPages((prev) =>
-      prev.map((page) => {
-        if (page.id === pageId) {
-          const isFollowing = !page.isFollowing;
-          return {
-            ...page,
-            isFollowing,
-            followersCount: isFollowing
-              ? page.followersCount + 1
-              : Math.max(0, page.followersCount - 1),
-          };
-        }
-        return page;
-      })
-    );
+  const toggleFollowPage = async (pageId: string) => {
+    try {
+      const { isFollowing } = await toggleFollowPageMutation({ pageId: pageId as any });
+      
+      setPages((prev) =>
+        prev.map((page) => {
+          if (page.id === pageId) {
+            return {
+              ...page,
+              isFollowing,
+              followersCount: isFollowing
+                ? (page.followersCount ?? 0) + 1
+                : Math.max(0, (page.followersCount ?? 0) - 1),
+            };
+          }
+          return page;
+        })
+      );
+    } catch (error: any) {
+      triggerShareToast(error.message || 'Failed to toggle follow');
+      console.error(error);
+    }
   };
 
   const toggleFollowUser = async (userId: string) => {
@@ -2240,10 +2263,21 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     triggerShareToast('Status removed from Cycle');
   };
 
-  const sendDirectMessage = (conversationId: string, text: string, stickerId?: string) => {
+  const sendMessageMutation = useMutation(api.social.sendMessage);
+  
+  const sendDirectMessage = async (conversationId: string, text: string, stickerId?: string) => {
     if (!text.trim() && !stickerId) return;
     const msgText = stickerId ? (text.trim() || 'Sent a sticker') : text.trim();
     const msgId = `dm_${Date.now()}`;
+    
+    const conv = conversations.find(c => c.id === conversationId);
+    let pageSenderId: string | undefined = undefined;
+    
+    // If it's a page convo and I am not UserA, I must be the Page owner
+    if (conv && (conv as any).isPageConvo && !(conv as any).amIUserA) {
+      pageSenderId = (conv as any).pageId;
+    }
+
     const newMsg: DirectMessage = {
       id: msgId,
       senderId: currentUser.id,
@@ -2256,53 +2290,78 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     setConversations((prev) =>
-      prev.map((conv) => {
-        if (conv.id === conversationId) {
+      prev.map((c) => {
+        if (c.id === conversationId) {
           return {
-            ...conv,
+            ...c,
             lastMessage: msgText,
             timestamp: 'Just now',
-            messages: [...conv.messages, newMsg],
+            messages: [...c.messages, newMsg],
           };
         }
-        return conv;
+        return c;
       })
     );
+    
+    try {
+      await sendMessageMutation({
+        conversationId: conversationId as any,
+        text: msgText,
+        pageSenderId: pageSenderId as any,
+      });
+      
+      // Simulate delivered status
+      setTimeout(() => {
+        setConversations((prev) =>
+          prev.map((c) => {
+            if (c.id === conversationId) {
+              return {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id === msgId ? { ...m, status: 'delivered' } : m
+                ),
+              };
+            }
+            return c;
+          })
+        );
+      }, 500);
+    } catch (err) {
+      console.error('Failed to send message', err);
+    }
+  };
 
-    // Simulate realistic delivery and read receipt status transitions
-    setTimeout(() => {
+  const markConversationReadMutation = useMutation(api.social.markConversationRead);
+
+  const markConversationRead = async (conversationId: string) => {
+    try {
+      await markConversationReadMutation({ conversationId: conversationId as any });
+      // Optimistically clear unreadCount locally
       setConversations((prev) =>
-        prev.map((conv) => {
-          if (conv.id === conversationId) {
+        prev.map((c) => {
+          if (c.id === conversationId) {
             return {
-              ...conv,
-              messages: conv.messages.map((m) =>
-                m.id === msgId && m.status === 'sent' ? { ...m, status: 'delivered' } : m
-              ),
+              ...c,
+              unreadCount: 0,
             };
           }
-          return conv;
+          return c;
         })
       );
-    }, 1000);
+    } catch (err) {
+      console.error('Failed to mark conversation read', err);
+    }
+  };
 
-    setTimeout(() => {
-      setConversations((prev) =>
-        prev.map((conv) => {
-          if (conv.id === conversationId) {
-            return {
-              ...conv,
-              messages: conv.messages.map((m) =>
-                m.id === msgId && (m.status === 'delivered' || m.status === 'sent')
-                  ? { ...m, status: 'read' }
-                  : m
-              ),
-            };
-          }
-          return conv;
-        })
-      );
-    }, 2400);
+  const startPageConversation = async (pageId: string) => {
+    try {
+      const conversationId = await startPageConversationMutation({ pageId });
+      setActiveChatId(conversationId);
+      setActiveTab('messages');
+    } catch (err) {
+      console.error('Failed to start page conversation:', err);
+      triggerShareToast('Could not start conversation');
+    }
   };
 
   const markNotificationsAsRead = () => {
@@ -2336,6 +2395,10 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <LalaoContext.Provider
       value={{
+        activeTopics: activeTopicsQuery,
+        updateHomePreference: async (slug, enabled) => {
+          await updateUserHomePreferenceMutation({ slug, enabled });
+        },
         users,
         currentUser,
         setCurrentUser,
@@ -2415,6 +2478,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isCreateCycleOpen,
         setIsCreateCycleOpen,
         sendDirectMessage,
+        markConversationRead,
+        startPageConversation,
         markNotificationsAsRead,
         isCreateSheetOpen,
         setIsCreateSheetOpen,

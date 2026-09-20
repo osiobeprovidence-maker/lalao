@@ -112,30 +112,40 @@ const SEED_REASONS = [
 export const listReasons = query({
   args: {},
   handler: async (ctx) => {
-    await requireAdmin(ctx);
-    return await ctx.db.query("moderationReasons").filter(q => q.eq(q.field("enabled"), true)).collect();
+    try {
+      await requireAdmin(ctx);
+      return await ctx.db.query("moderationReasons").filter(q => q.eq(q.field("enabled"), true)).collect();
+    } catch (e: any) {
+      console.error("listReasons error:", e);
+      throw new Error(`listReasons failed: ${e.message}`);
+    }
   }
 });
 
 export const seedReasons = mutation({
   args: {},
   handler: async (ctx) => {
-    await requireAdmin(ctx, ["super_admin"]);
+    try {
+      await requireAdmin(ctx, ["super_admin"]);
 
-    const existing = await ctx.db.query("moderationReasons").collect();
-    const existingCodes = new Set(existing.map(r => r.code));
+      const existing = await ctx.db.query("moderationReasons").collect();
+      const existingCodes = new Set(existing.map(r => r.code));
 
-    let sortOrder = 1;
-    for (const reason of SEED_REASONS) {
-      if (!existingCodes.has(reason.code)) {
-        await ctx.db.insert("moderationReasons", {
-          ...reason,
-          enabled: true,
-          sortOrder: sortOrder++,
-          createdAt: Date.now(),
-          updatedAt: Date.now()
-        });
+      let sortOrder = 1;
+      for (const reason of SEED_REASONS) {
+        if (!existingCodes.has(reason.code)) {
+          await ctx.db.insert("moderationReasons", {
+            ...reason,
+            enabled: true,
+            sortOrder: sortOrder++,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+          });
+        }
       }
+    } catch (e: any) {
+      console.error("seedReasons error:", e);
+      throw new Error(`seedReasons failed: ${e.message}`);
     }
   }
 });

@@ -6,7 +6,7 @@ import { v } from "convex/values";
    AUTH HELPERS
    ───────────────────────────────────────────────────────────────────────────── */
 
-async function getAuthedUser(ctx: any) {
+export async function getAuthedUser(ctx: any) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) return null;
   return await ctx.db
@@ -115,16 +115,57 @@ export const generateUploadUrl = mutation({
    ───────────────────────────────────────────────────────────────────────────── */
 
 export const listFeedPosts = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    feedType: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) return [];
 
-    const posts = await ctx.db
-      .query("posts")
-      .withIndex("by_created")
-      .order("desc")
-      .take(40);
+    let posts: any[] = [];
+    if (args.feedType && !['for_you', 'following', 'nearby'].includes(args.feedType)) {
+      const allPosts = await ctx.db.query("posts").withIndex("by_created").order("desc").take(200);
+      posts = allPosts.filter((p: any) => p.contentTopics?.includes(args.feedType)).slice(0, 40);
+    } else if (args.feedType === 'following') {
+      // Get users the current user follows
+      const followedUsers = await ctx.db
+        .query("follows")
+        .withIndex("by_follower", (q: any) => q.eq("followerId", currentUser._id))
+        .collect();
+      const followedUserIds = new Set(followedUsers.map((f: any) => f.followingId));
+
+      // Get pages the current user follows
+      const followedPages = await ctx.db
+        .query("pageFollowers")
+        .withIndex("by_page_user")
+        .filter((q) => q.eq(q.field("userId"), currentUser._id))
+        .collect();
+      const followedPageIds = new Set(followedPages.map((f: any) => f.pageId));
+
+      // Fetch recent posts and filter them
+      const recentPosts = await ctx.db
+        .query("posts")
+        .withIndex("by_created")
+        .order("desc")
+        .take(200);
+
+      posts = recentPosts.filter((p: any) => {
+        // Include if user authored it
+        if (p.authorId === currentUser._id) return true;
+        // Include if page authored it and user follows the page
+        if (p.pageRefId && followedPageIds.has(p.pageRefId)) return true;
+        // Include if user authored it and user follows the user (and it's not a page post)
+        if (!p.pageRefId && followedUserIds.has(p.authorId)) return true;
+        
+        return false;
+      }).slice(0, 40);
+    } else {
+      posts = await ctx.db
+        .query("posts")
+        .withIndex("by_created")
+        .order("desc")
+        .take(40);
+    }
 
     const results: any[] = [];
 
@@ -256,6 +297,168 @@ export const listFeedPosts = query({
       });
     }
 
+    return results;
+  },
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   PROFILE POSTS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Returns all posts created by the currently authenticated user.
+ * Uses the by_author index so it is not limited to the feed window.
+ */
+export const listMyPosts = query({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return [];
+
+    const posts = await ctx.db
+      .query("posts")
+      .withIndex("by_author", (q: any) => q.eq("authorId", currentUser._id))
+      .order("desc")
+      .collect();
+
+    const results: any[] = [];
+    for (const post of posts) {
+      if (post.moderationStatus === "removed") continue;
+
+      const isLiked = !!(await ctx.db
+        .query("likes")
+        .withIndex("by_user_target", (q: any) =>
+          q.eq("userId", currentUser._id).eq("targetType", "post").eq("targetId", post._id)
+        )
+        .unique());
+
+      results.push({
+        id: post._id,
+        author: {
+          id: currentUser._id,
+          name: currentUser.name ?? "User",
+          username: currentUser.username ?? "user",
+          avatar: currentUser.avatarUrl ?? "",
+          userType: currentUser.userType ?? "person",
+          bio: currentUser.bio ?? "",
+          location: currentUser.locationName ?? "",
+          followersCount: currentUser.followersCount ?? 0,
+          followingCount: currentUser.followingCount ?? 0,
+          isFollowing: false,
+          isVerified: false,
+        },
+        text: post.text,
+        mediaUrl: post.mediaUrl,
+        mediaType: post.mediaType,
+        location: post.location,
+        latitude: post.latitude,
+        longitude: post.longitude,
+        distanceMeters: 0,
+        createdAt: formatRelativeTime(post.createdAt),
+        likesCount: post.likesCount ?? 0,
+        commentsCount: post.commentsCount ?? 0,
+        repostsCount: post.repostsCount ?? 0,
+        isLiked,
+        isReposted: false,
+        comments: [],
+        audience: post.audience ?? "everyone",
+        replyPermission: post.replyPermission ?? "everyone",
+        gifUrl: post.gifUrl,
+        poll: post.pollQuestion
+          ? {
+              question: post.pollQuestion,
+              options: post.pollOptions ?? [],
+              votes: new Array((post.pollOptions ?? []).length).fill(0),
+            }
+          : undefined,
+        rallyRefId: post.rallyRefId,
+        pageRefId: post.pageRefId,
+      });
+    }
+    return results;
+  },
+});
+
+/**
+ * Returns all posts created by a specific user (by their user id).
+ * Used when viewing another user's profile.
+ */
+export const listUserPosts = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+
+    // Resolve the target user
+    const targetUser = await ctx.db
+      .query("users")
+      .collect()
+      .then((all: any[]) => all.find((u: any) => u._id === args.userId));
+
+    if (!targetUser) return [];
+
+    const posts = await ctx.db
+      .query("posts")
+      .withIndex("by_author", (q: any) => q.eq("authorId", targetUser._id))
+      .order("desc")
+      .collect();
+
+    const results: any[] = [];
+    for (const post of posts) {
+      if (post.moderationStatus === "removed") continue;
+
+      let isLiked = false;
+      if (currentUser) {
+        isLiked = !!(await ctx.db
+          .query("likes")
+          .withIndex("by_user_target", (q: any) =>
+            q.eq("userId", currentUser._id).eq("targetType", "post").eq("targetId", post._id)
+          )
+          .unique());
+      }
+
+      results.push({
+        id: post._id,
+        author: {
+          id: targetUser._id,
+          name: targetUser.name ?? "User",
+          username: targetUser.username ?? "user",
+          avatar: targetUser.avatarUrl ?? "",
+          userType: targetUser.userType ?? "person",
+          bio: targetUser.bio ?? "",
+          location: targetUser.locationName ?? "",
+          followersCount: targetUser.followersCount ?? 0,
+          followingCount: targetUser.followingCount ?? 0,
+          isFollowing: false,
+          isVerified: false,
+        },
+        text: post.text,
+        mediaUrl: post.mediaUrl,
+        mediaType: post.mediaType,
+        location: post.location,
+        latitude: post.latitude,
+        longitude: post.longitude,
+        distanceMeters: 0,
+        createdAt: formatRelativeTime(post.createdAt),
+        likesCount: post.likesCount ?? 0,
+        commentsCount: post.commentsCount ?? 0,
+        repostsCount: post.repostsCount ?? 0,
+        isLiked,
+        isReposted: false,
+        comments: [],
+        audience: post.audience ?? "everyone",
+        replyPermission: post.replyPermission ?? "everyone",
+        gifUrl: post.gifUrl,
+        poll: post.pollQuestion
+          ? {
+              question: post.pollQuestion,
+              options: post.pollOptions ?? [],
+              votes: new Array((post.pollOptions ?? []).length).fill(0),
+            }
+          : undefined,
+        rallyRefId: post.rallyRefId,
+        pageRefId: post.pageRefId,
+      });
+    }
     return results;
   },
 });
@@ -451,51 +654,141 @@ export const listConversations = query({
 
     const relSets = await getRelationshipSets(ctx, currentUser);
 
-    const conversations = await ctx.db
+    const convosAsUserA = await ctx.db
       .query("conversations")
-      .filter((q: any) =>
-        q.or(
-          q.eq(q.field("userA"), currentUser._id),
-          q.eq(q.field("userB"), currentUser._id)
-        )
-      )
+      .withIndex("by_user_a", (q) => q.eq("userA", currentUser._id))
       .collect();
+
+    const convosAsUserB = await ctx.db
+      .query("conversations")
+      .withIndex("by_user_b", (q) => q.eq("userB", currentUser._id))
+      .collect();
+      
+    const myPages = await ctx.db
+      .query("pages")
+      .withIndex("by_owner", (q) => q.eq("ownerId", currentUser._id))
+      .collect();
+      
+    const convosAsPage = [];
+    for (const page of myPages) {
+      const pageConvos = await ctx.db
+        .query("conversations")
+        .withIndex("by_page_b", (q) => q.eq("pageB", page._id))
+        .collect();
+      convosAsPage.push(...pageConvos);
+    }
+
+    const allConvosMap = new Map();
+    [...convosAsUserA, ...convosAsUserB, ...convosAsPage].forEach((c) => {
+      allConvosMap.set(c._id, c);
+    });
+    
+    const conversations = Array.from(allConvosMap.values());
 
     const result: any[] = [];
 
     for (const conversation of conversations) {
-      const otherUserId =
-        conversation.userA === currentUser._id ? conversation.userB : conversation.userA;
-      const otherUser = await ctx.db.get(otherUserId);
+      const isPageConvo = !!conversation.pageB;
+      const amIUserA = conversation.userA === currentUser._id;
+      
+      let otherParticipant: any = null;
+      let isFollowingParticipant = false;
+      let participantRelationship = "none";
+      
+      if (isPageConvo) {
+        // If I am UserA, the participant is the Page (PageB)
+        // If I am the Page Owner, the participant is the User (UserA)
+        if (amIUserA) {
+          otherParticipant = await ctx.db.get(conversation.pageB);
+          if (otherParticipant) {
+            otherParticipant.userType = otherParticipant.type;
+            const followRel = await ctx.db
+              .query("pageFollowers")
+              .withIndex("by_page_user", (q) => q.eq("pageId", otherParticipant._id).eq("userId", currentUser._id))
+              .first();
+            isFollowingParticipant = !!followRel;
+          }
+        } else {
+          otherParticipant = await ctx.db.get(conversation.userA);
+          if (otherParticipant) {
+            isFollowingParticipant = relSets.followingIds.has(otherParticipant._id);
+            participantRelationship = resolveRelationship(otherParticipant._id, relSets);
+          }
+        }
+      } else {
+        const otherUserId = amIUserA ? conversation.userB : conversation.userA;
+        otherParticipant = await ctx.db.get(otherUserId);
+        if (otherParticipant) {
+          isFollowingParticipant = relSets.followingIds.has(otherParticipant._id);
+          participantRelationship = resolveRelationship(otherParticipant._id, relSets);
+        }
+      }
+
       const latestMessage = await ctx.db
         .query("messages")
         .withIndex("by_conversation", (q: any) => q.eq("conversationId", conversation._id))
         .order("desc")
         .first();
 
+      // Calculate unread count
+      const allMessages = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation", (q: any) => q.eq("conversationId", conversation._id))
+        .collect();
+
+      let unreadCount = 0;
+      for (const msg of allMessages) {
+        if (!msg.isRead) {
+          // If we are looking as a Page Manager, it's unread if the customer sent it
+          if (isPageConvo && !amIUserA) {
+            if (msg.senderId !== currentUser._id && !msg.pageSenderId) {
+              unreadCount++;
+            }
+          } else {
+            // Otherwise, it's unread if someone else sent it to us
+            // Check if pageSenderId is not my page, OR senderId is not me
+            const senderWasPage = msg.pageSenderId !== undefined;
+            if (senderWasPage) {
+              // A page sent this. Am I the owner of this page?
+              // The conversation.pageB is the page. I am amIUserA (customer).
+              unreadCount++;
+            } else {
+              // A regular user sent this. Is it me?
+              if (msg.senderId !== currentUser._id) {
+                unreadCount++;
+              }
+            }
+          }
+        }
+      }
+
       result.push({
         id: conversation._id,
+        isPageConvo,
+        amIUserA,
+        pageId: conversation.pageB,
         participant: {
-          id: otherUser?._id ?? "",
-          name: otherUser?.name ?? "User",
-          username: otherUser?.username ?? "user",
-          avatar: otherUser?.avatarUrl ?? "",
-          userType: otherUser?.userType ?? "person",
-          followersCount: otherUser?.followersCount ?? 0,
-          followingCount: otherUser?.followingCount ?? 0,
-          isFollowing: otherUser ? relSets.followingIds.has(otherUser._id) : false,
-          relationship: otherUser ? resolveRelationship(otherUser._id, relSets) : "none",
+          id: otherParticipant?._id ?? "",
+          name: otherParticipant?.name ?? "Unknown",
+          username: otherParticipant?.username ?? "unknown",
+          avatar: otherParticipant?.avatarUrl || otherParticipant?.avatar || "",
+          userType: otherParticipant?.userType ?? "person",
+          followersCount: otherParticipant?.followersCount ?? 0,
+          followingCount: otherParticipant?.followingCount ?? 0,
+          isFollowing: isFollowingParticipant,
+          relationship: participantRelationship,
         },
         lastMessage: latestMessage?.text ?? "Say hello",
         timestamp: latestMessage
           ? new Date(latestMessage.createdAt).toLocaleTimeString()
           : "Now",
-        unreadCount: 0,
+        updatedAt: conversation.updatedAt || latestMessage?.createdAt || 0,
+        unreadCount,
         messages: [],
       });
     }
 
-    return result;
+    return result.sort((a, b) => b.updatedAt - a.updatedAt);
   },
 });
 
@@ -1337,4 +1630,199 @@ export const getMessageContacts = query({
     }
     return results;
   }
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MESSAGING
+   ───────────────────────────────────────────────────────────────────────────── */
+
+export const startPageConversation = mutation({
+  args: {
+    pageId: v.id("pages"),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const page = await ctx.db.get(args.pageId);
+    if (!page) throw new Error("Page not found");
+
+    if (page.type !== "business" && page.badge !== "BIZ") {
+      throw new Error("Messaging is only available for Business pages");
+    }
+
+    if (page.ownerId === currentUser._id) {
+      throw new Error("Cannot start a conversation with your own page");
+    }
+
+    // Check if conversation already exists
+    const existingConvo = await ctx.db
+      .query("conversations")
+      .withIndex("by_user_a", (q) => q.eq("userA", currentUser._id))
+      .filter((q) => q.eq(q.field("pageB"), args.pageId))
+      .first();
+
+    if (existingConvo) {
+      return existingConvo._id;
+    }
+
+    const conversationId = await ctx.db.insert("conversations", {
+      userA: currentUser._id,
+      pageB: args.pageId,
+      updatedAt: Date.now(),
+    });
+
+    return conversationId;
+  },
+});
+
+export const sendMessage = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+    text: v.string(),
+    pageSenderId: v.optional(v.id("pages")),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation) throw new Error("Conversation not found");
+
+    // Authorization check
+    let authorized = false;
+    
+    if (conversation.userA === currentUser._id || conversation.userB === currentUser._id) {
+      authorized = true;
+    }
+    
+    let recipientId: Id<"users"> | undefined;
+
+    // If the conversation is with a page, the page owner is authorized
+    if (conversation.pageB) {
+      const page = await ctx.db.get(conversation.pageB);
+      if (page && page.ownerId === currentUser._id) {
+        authorized = true;
+        // Verify pageSenderId matches the page they own
+        if (args.pageSenderId && args.pageSenderId !== page._id) {
+          throw new Error("Not authorized to send as this page");
+        }
+        recipientId = conversation.userA as Id<"users">;
+      } else if (page && conversation.userA === currentUser._id) {
+        recipientId = page.ownerId;
+      }
+    } else {
+      if (conversation.userA === currentUser._id) {
+        recipientId = conversation.userB;
+      } else {
+        recipientId = conversation.userA;
+      }
+    }
+
+    if (!authorized) {
+      throw new Error("Not authorized to send to this conversation");
+    }
+
+    const messageId = await ctx.db.insert("messages", {
+      conversationId: args.conversationId,
+      senderId: currentUser._id,
+      pageSenderId: args.pageSenderId,
+      text: args.text,
+      isRead: false,
+      createdAt: Date.now(),
+    });
+    
+    await ctx.db.patch(args.conversationId, {
+      updatedAt: Date.now(),
+    });
+
+    if (recipientId) {
+      // Find the other user to get their name for the push notification
+      const senderName = args.pageSenderId 
+        ? (await ctx.db.get(args.pageSenderId))?.name 
+        : currentUser.name;
+
+      await ctx.db.insert("notifications", {
+        recipientId,
+        actorId: currentUser._id,
+        type: "message",
+        conversationId: args.conversationId,
+        messageId,
+        targetExcerpt: args.text.slice(0, 80),
+        isRead: false,
+        createdAt: Date.now(),
+      });
+      
+      // Dispatch push notification
+      await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
+        recipientId,
+        title: `New message from ${senderName ?? "Someone"}`,
+        body: args.text.slice(0, 100),
+        url: `/app/messages`,
+      });
+    }
+
+    return messageId;
+  },
+});
+
+export const markConversationRead = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation) return;
+
+    let amIUserA = conversation.userA === currentUser._id;
+    let isPageConvo = !!conversation.pageB;
+
+    let isManager = false;
+    if (isPageConvo && conversation.pageB) {
+      const page = await ctx.db.get(conversation.pageB);
+      if (page && page.ownerId === currentUser._id) {
+        isManager = true;
+      }
+    }
+
+    if (!amIUserA && conversation.userB !== currentUser._id && !isManager) {
+      throw new Error("Not authorized");
+    }
+
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_conversation_read", (q: any) => 
+        q.eq("conversationId", args.conversationId).eq("isRead", false)
+      )
+      .collect();
+
+    for (const msg of messages) {
+      if (isManager && !amIUserA) {
+        if (msg.senderId !== currentUser._id && !msg.pageSenderId) {
+          await ctx.db.patch(msg._id, { isRead: true });
+        }
+      } else {
+        if (msg.pageSenderId || msg.senderId !== currentUser._id) {
+          await ctx.db.patch(msg._id, { isRead: true });
+        }
+      }
+    }
+
+    // Also mark notifications as read
+    const notifications = await ctx.db
+      .query("notifications")
+      .withIndex("by_recipient_read", (q: any) => 
+        q.eq("recipientId", currentUser._id).eq("isRead", false)
+      )
+      .collect();
+      
+    for (const notif of notifications) {
+      if (notif.type === "message" && notif.conversationId === args.conversationId) {
+        await ctx.db.patch(notif._id, { isRead: true });
+      }
+    }
+  },
 });

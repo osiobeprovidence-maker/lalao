@@ -215,12 +215,20 @@ export const ChatModal: React.FC = () => {
     setActivePermissionPrompt,
     setActiveUserProfile,
     currentUser,
+    setGlobalTab,
+    markConversationRead,
   } = useLalao();
 
   const [inputMessage, setInputMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [showStickerTray, setShowStickerTray] = useState(true);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (activeChatId) {
+      markConversationRead(activeChatId);
+    }
+  }, [activeChatId]);
 
   const conv = conversations.find((c) => c.id === activeChatId);
 

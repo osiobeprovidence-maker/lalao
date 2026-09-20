@@ -82,13 +82,13 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Metric Cards */}
       {stats === undefined ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 7 }).map((_, i) => (
             <div key={i} className="rounded-2xl border border-neutral-200 bg-white p-5 h-32 animate-pulse" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             label="Total Users"
             value={stats.totalUsers}

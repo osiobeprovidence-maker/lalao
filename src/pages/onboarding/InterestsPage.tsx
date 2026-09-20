@@ -6,6 +6,10 @@ import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
 const INTERESTS = [
+  { id: 'anime', label: 'Anime' },
+  { id: 'gaming', label: 'Gaming' },
+  { id: 'stem', label: 'STEM' },
+  { id: 'drama', label: 'Drama' },
   { id: 'community', label: 'Community' },
   { id: 'events', label: 'Events' },
   { id: 'shopping', label: 'Local Shopping' },

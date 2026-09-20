@@ -13,7 +13,56 @@ export const AdminAuditLog: React.FC = () => {
         <p className="text-sm text-neutral-500 mt-1">Platform administrative actions history</p>
       </div>
 
-      <div className="rounded-2xl border border-neutral-200 bg-white overflow-hidden shadow-sm">
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {auditLog === undefined ? (
+          <div className="text-center py-8 text-neutral-500 bg-white rounded-2xl border border-neutral-200 shadow-sm text-sm">
+            Loading audit logs...
+          </div>
+        ) : auditLog.length === 0 ? (
+          <div className="text-center py-8 text-neutral-500 bg-white rounded-2xl border border-neutral-200 shadow-sm text-sm">
+            No audit logs found
+          </div>
+        ) : (
+          auditLog.map((log: any) => (
+            <div key={log._id} className="bg-white border border-neutral-200 rounded-2xl p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                    <Shield className="w-4 h-4 text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-neutral-900 text-sm">{log.actorName}</p>
+                    <p className="text-[11px] text-neutral-500">{log.actorEmail}</p>
+                  </div>
+                </div>
+                <span className="text-neutral-400 text-[10px] font-medium whitespace-nowrap">
+                  {new Date(log.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+              
+              <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <span className="inline-flex rounded-full bg-white border border-neutral-200 text-neutral-700 px-2.5 py-1 text-[11px] font-bold shadow-sm">
+                    {log.action}
+                  </span>
+                  <span className="text-neutral-500 text-xs">Target: <span className="font-medium text-neutral-900">{log.target ?? '—'}</span></span>
+                </div>
+                
+                {(log.before || log.after) && (
+                  <div className="space-y-1.5 mt-2 pt-2 border-t border-neutral-200">
+                    {log.before && <div className="text-rose-600 text-[11px] break-all">- {log.before}</div>}
+                    {log.after && <div className="text-emerald-600 text-[11px] break-all">+ {log.after}</div>}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Table */}
+      <div className="hidden md:block rounded-2xl border border-neutral-200 bg-white overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

@@ -77,7 +77,7 @@ export const usePushNotifications = (): UsePushNotificationsReturn => {
 
     try {
       // Trigger real browser permission prompt (Notification.requestPermission)
-      // and register FCM PushSubscription + Convex token record
+      // and register native Web Push Subscription + Convex token record
       const success = await enableInContext();
       if (success) {
         setBrowserPermission('granted');

@@ -34,6 +34,7 @@ export default defineSchema({
     radiusKm: v.optional(v.number()),
 
     interests: v.optional(v.array(v.string())),
+    homeFeedPreferences: v.optional(v.any()),
 
     onboardingStep: v.union(
       v.literal("pending"),
@@ -115,6 +116,7 @@ export default defineSchema({
     removalReasonId: v.optional(v.id("moderationReasons")),
     violationLevel: v.optional(v.string()),
     moderationNote: v.optional(v.string()),
+    contentTopics: v.optional(v.array(v.string())),
   })
     .index("by_author", ["authorId"])
     .index("by_created", ["createdAt"])
@@ -193,20 +195,25 @@ export default defineSchema({
 
   conversations: defineTable({
     userA: v.id("users"),
-    userB: v.id("users"),
+    userB: v.optional(v.id("users")), // Optional if the conversation is with a Page
+    pageB: v.optional(v.id("pages")), // Present if the conversation is with a Page
     updatedAt: v.number(),
   })
     .index("by_user_a", ["userA"])
-    .index("by_user_b", ["userB"]),
+    .index("by_user_b", ["userB"])
+    .index("by_page_b", ["pageB"]),
 
   messages: defineTable({
     conversationId: v.id("conversations"),
-    senderId: v.id("users"),
+    senderId: v.id("users"), // The actual user who sent the message
+    pageSenderId: v.optional(v.id("pages")), // Present if the user is replying as the Page
     text: v.string(),
+    isRead: v.optional(v.boolean()),
     createdAt: v.number(),
   })
     .index("by_conversation", ["conversationId"])
-    .index("by_sender", ["senderId"]),
+    .index("by_sender", ["senderId"])
+    .index("by_conversation_read", ["conversationId", "isRead"]),
 
   /**
    * Real notification events. Created server-side on like / comment / follow / rally_join.
@@ -225,9 +232,12 @@ export default defineSchema({
       v.literal("follow"),
       v.literal("rally_join"),
       v.literal("system_alert"),
+      v.literal("message"),
     ),
     postId: v.optional(v.id("posts")),
     commentId: v.optional(v.id("comments")),
+    conversationId: v.optional(v.id("conversations")),
+    messageId: v.optional(v.id("messages")),
     targetExcerpt: v.optional(v.string()),
     isRead: v.boolean(),
     createdAt: v.number(),
@@ -438,6 +448,25 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_token", ["token"]),
 
+  pushSubscriptions: defineTable({
+    userId: v.id("users"),
+    endpoint: v.string(),
+    p256dh: v.string(),
+    auth: v.string(),
+    deviceId: v.optional(v.string()),
+    browser: v.optional(v.string()),
+    platform: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    lastUsedAt: v.optional(v.number()),
+    isActive: v.boolean(),
+    provider: v.string(), // e.g., "web_push"
+  })
+    .index("by_user", ["userId"])
+    .index("by_endpoint", ["endpoint"])
+    .index("by_user_active", ["userId", "isActive"]),
+
   reports: defineTable({
     reporterId: v.id("users"),
     targetType: v.union(
@@ -496,5 +525,20 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_code", ["code"]),
-});
 
+  topics: defineTable({
+    slug: v.string(),
+    displayName: v.string(),
+    description: v.string(),
+    displayOrder: v.number(),
+    defaultEnabled: v.boolean(),
+    userSelectable: v.boolean(),
+    homeEnabled: v.boolean(),
+    icon: v.optional(v.string()),
+    active: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_active_order", ["active", "displayOrder"]),
+});

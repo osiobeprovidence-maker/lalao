@@ -25,7 +25,65 @@ export const AdminTransactions: React.FC = () => {
         <p className="text-sm text-neutral-500 mt-1">Platform-wide wallet activity and payments</p>
       </div>
 
-      <div className="rounded-2xl border border-neutral-200 bg-white overflow-hidden shadow-sm">
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {transactions === undefined ? (
+          <div className="text-center py-8 text-neutral-500 bg-white rounded-2xl border border-neutral-200 shadow-sm text-sm">
+            Loading transactions...
+          </div>
+        ) : transactions.length === 0 ? (
+          <div className="text-center py-8 text-neutral-500 bg-white rounded-2xl border border-neutral-200 shadow-sm text-sm">
+            No transactions found
+          </div>
+        ) : (
+          transactions.map((t: any) => (
+            <div key={t._id} className="bg-white border border-neutral-200 rounded-2xl p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div>
+                  <p className="font-medium text-neutral-900">{t.description}</p>
+                  {t.reference && <p className="text-[10px] font-mono text-neutral-500 mt-0.5 break-all">{t.reference}</p>}
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0 bg-neutral-50 px-2 py-1 rounded-lg border border-neutral-100">
+                  {['deposit', 'transfer_in', 'prize_payout'].includes(t.type) ? (
+                    <ArrowDownRight className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <ArrowUpRight className="w-4 h-4 text-red-600" />
+                  )}
+                  <span className={`font-bold text-sm ${['deposit', 'transfer_in', 'prize_payout'].includes(t.type) ? 'text-emerald-600' : 'text-neutral-700'}`}>
+                    ₦{t.amount.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="flex flex-col gap-1.5 mb-3">
+                <div className="text-xs">
+                  <span className="text-neutral-500">User: </span>
+                  <span className="font-medium text-neutral-900">{t.userName}</span>
+                  <span className="text-neutral-400 ml-1">({t.userEmail})</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between gap-2 pt-3 border-t border-neutral-100">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-neutral-500 uppercase tracking-wider font-semibold bg-neutral-100 px-2 py-0.5 rounded">
+                    {t.type.replace(/_/g, ' ')}
+                  </span>
+                  <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${STATUS_COLORS[t.status as keyof typeof STATUS_COLORS]}`}>
+                    {STATUS_ICONS[t.status as keyof typeof STATUS_ICONS]}
+                    <span className="capitalize">{t.status}</span>
+                  </span>
+                </div>
+                <span className="text-neutral-400 text-[10px] font-medium">
+                  {new Date(t.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Table */}
+      <div className="hidden md:block rounded-2xl border border-neutral-200 bg-white overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

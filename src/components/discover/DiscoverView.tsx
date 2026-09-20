@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   MapPin,
@@ -55,6 +56,7 @@ export const DiscoverView: React.FC = () => {
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'people' | 'pages' | 'video' | 'trending'>('all');
   const [nearbyOnly, setNearbyOnly] = useState(true);
+  const navigate = useNavigate();
 
   // Debounce search query
   useEffect(() => {
@@ -347,11 +349,12 @@ export const DiscoverView: React.FC = () => {
                     </div>
                     <div className="divide-y divide-neutral-200/80">
                       {searchResults.pages.map((page: any) => (
-                        <div key={page.id} className="py-3.5 flex items-center justify-between gap-3">
-                          <div
-                            onClick={() => setActivePageId(page.id)}
-                            className="flex items-center gap-2.5 min-w-0 cursor-pointer"
-                          >
+                        <div 
+                          key={page.id} 
+                          className="py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-neutral-50/50 transition-colors"
+                          onClick={() => navigate('/app/page/' + page.id)}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
                             <Avatar src={page?.avatar} alt={page?.name || 'Page'} size="md" />
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
@@ -363,7 +366,10 @@ export const DiscoverView: React.FC = () => {
                             </div>
                           </div>
                           <button
-                            onClick={() => toggleFollowPage(page.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFollowPage(page.id);
+                            }}
                             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                               page.isFollowing
                                 ? 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
@@ -523,11 +529,12 @@ export const DiscoverView: React.FC = () => {
                         page.distanceMeters !== undefined ? getProximityCategory(page.distanceMeters) : null;
 
                       return (
-                        <div key={page.id} className="py-3.5 flex items-center justify-between gap-3">
-                          <div
-                            onClick={() => setActivePageId(page.id)}
-                            className="flex items-center gap-2.5 min-w-0 cursor-pointer"
-                          >
+                        <div 
+                          key={page.id} 
+                          className="py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-neutral-50/50 transition-colors"
+                          onClick={() => navigate('/app/page/' + page.id)}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
                             <Avatar src={page?.avatar} alt={page?.name || 'Page'} size="md" />
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
@@ -544,7 +551,10 @@ export const DiscoverView: React.FC = () => {
                             </div>
                           </div>
                           <button
-                            onClick={() => toggleFollowPage(page.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFollowPage(page.id);
+                            }}
                             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                               page.isFollowing
                                 ? 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
