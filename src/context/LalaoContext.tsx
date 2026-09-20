@@ -108,6 +108,9 @@ interface LalaoContextType {
     mediaStorageId?: string;
     mediaType?: 'image' | 'video';
     location: string;
+    latitude?: number;
+    longitude?: number;
+    contentTopics?: string[];
     audience?: PostAudience;
     replyPermission?: PostReplyPermission;
     gifUrl?: string;
@@ -1490,6 +1493,9 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     audience = 'everyone',
     replyPermission = 'everyone',
     gifUrl,
+    latitude,
+    longitude,
+    contentTopics,
     poll,
     rallyRefId,
     pageRefId,
@@ -1498,6 +1504,9 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     mediaUrl?: string;
     mediaType?: 'image' | 'video';
     location: string;
+    latitude?: number;
+    longitude?: number;
+    contentTopics?: string[];
     audience?: PostAudience;
     replyPermission?: PostReplyPermission;
     gifUrl?: string;
@@ -1506,7 +1515,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     pageRefId?: string;
     mediaStorageId?: string;
   }) => {
-    if (!text.trim() && !mediaUrl && !mediaStorageId) return;
+    if (!text.trim() && !mediaUrl && !mediaStorageId && !gifUrl && !poll) return;
 
     const created = await createPostMutation({
       text: text.trim(),
@@ -1514,6 +1523,9 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       mediaStorageId: mediaStorageId as any,
       mediaType,
       location: postLocation || location.name,
+      latitude,
+      longitude,
+      contentTopics,
       audience,
       replyPermission,
       gifUrl,

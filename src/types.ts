@@ -58,14 +58,15 @@ export interface DevicePermissions {
 
 export type PermissionPromptType = 'location' | 'notifications' | 'camera' | 'microphone' | 'photos' | null;
 
-export type PostAudience = 'everyone' | 'closeFriends' | 'community' | 'page';
+export type PostAudience = 'everyone' | 'closeFriends' | 'community' | 'page' | 'nearby' | 'anime' | 'interest';
 export type PostReplyPermission =
   | 'everyone'
   | 'followers'
   | 'following'
   | 'friends'
   | 'closeFriends'
-  | 'sameInterests';
+  | 'sameInterests'
+  | 'mentioned';
 
 export interface Post {
   id: string;

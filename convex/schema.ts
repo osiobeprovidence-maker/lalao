@@ -90,7 +90,10 @@ export default defineSchema({
         v.literal("everyone"),
         v.literal("closeFriends"),
         v.literal("community"),
-        v.literal("page")
+        v.literal("page"),
+        v.literal("nearby"),
+        v.literal("anime"),
+        v.literal("interest")
       )
     ),
     replyPermission: v.optional(
@@ -100,7 +103,8 @@ export default defineSchema({
         v.literal("following"),
         v.literal("friends"),
         v.literal("closeFriends"),
-        v.literal("sameInterests")
+        v.literal("sameInterests"),
+        v.literal("mentioned")
       )
     ),
     gifUrl: v.optional(v.string()),
@@ -260,6 +264,9 @@ export default defineSchema({
         v.literal("closeFriends"),
         v.literal("community"),
         v.literal("page"),
+        v.literal("nearby"),
+        v.literal("anime"),
+        v.literal("interest"),
       )
     ),
     replyPermission: v.optional(
@@ -270,6 +277,7 @@ export default defineSchema({
         v.literal("friends"),
         v.literal("closeFriends"),
         v.literal("sameInterests"),
+        v.literal("mentioned"),
       )
     ),
     gifUrl: v.optional(v.string()),

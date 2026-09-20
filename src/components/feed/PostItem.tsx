@@ -63,6 +63,13 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
 
   // Local state for standalone rally likes
   const [standaloneLiked, setStandaloneLiked] = useState(false);
+  const [userPollVote, setUserPollVote] = useState<number | null>(null);
+
+  const handleVote = (idx: number) => {
+    if (userPollVote === null) {
+      setUserPollVote(idx);
+    }
+  };
 
   // Resolve linked rally if post has rallyRefId, or use directRally
   const linkedRally = directRally || (post?.rallyRefId ? rallies.find((r) => r.id === post.rallyRefId) : null);
@@ -288,6 +295,64 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
             </p>
           )}
 
+          {/* Destination Badge if not general everyone */}
+          {post?.audience && post.audience !== 'everyone' && (
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#5E43F3]/10 text-[#5E43F3]">
+                {post.audience === 'anime' && '✨ Anime'}
+                {post.audience === 'nearby' && '📍 Nearby'}
+                {post.audience === 'community' && '💬 Community'}
+                {post.audience === 'interest' && '#Topic'}
+                {post.audience === 'closeFriends' && '⭐ Close Friends'}
+              </span>
+            </div>
+          )}
+
+          {/* Poll Card */}
+          {post?.poll && (
+            <div className="mt-3 rounded-2xl border border-neutral-200 bg-neutral-50/80 p-3.5 space-y-2">
+              <p className="text-sm font-semibold text-neutral-900">{post.poll.question}</p>
+              <div className="space-y-1.5">
+                {post.poll.options.map((option, idx) => {
+                  const votes = (post.poll?.votes?.[idx] ?? 0) + (userPollVote === idx ? 1 : 0);
+                  const totalVotes = ((post.poll?.votes ?? []).reduce((a, b) => a + b, 0)) + (userPollVote !== null ? 1 : 0);
+                  const percent = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+                  const hasVoted = userPollVote !== null;
+                  const isSelected = userPollVote === idx;
+
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleVote(idx)}
+                      className={`relative w-full overflow-hidden rounded-xl border p-2.5 text-left text-xs font-medium transition cursor-pointer ${
+                        isSelected
+                          ? 'border-[#5E43F3] bg-[#5E43F3]/5 text-[#5E43F3]'
+                          : 'border-neutral-200 bg-white text-neutral-800 hover:border-neutral-300'
+                      }`}
+                    >
+                      {hasVoted && (
+                        <div
+                          className="absolute inset-y-0 left-0 bg-[#5E43F3]/15 transition-all duration-300 pointer-events-none"
+                          style={{ width: `${percent}%` }}
+                        />
+                      )}
+                      <div className="relative flex items-center justify-between z-10 pointer-events-none">
+                        <span className="font-semibold">{option}</span>
+                        {hasVoted && (
+                          <span className="text-[11px] font-bold text-neutral-500">{percent}%</span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-neutral-400 pt-0.5">
+                {((post.poll.votes ?? []).reduce((a, b) => a + b, 0)) + (userPollVote !== null ? 1 : 0)} votes
+              </p>
+            </div>
+          )}
+
           {/* Rally Specific Body (Rendered seamlessly within the same card layout) */}
           {linkedRally && (
             <div className={`space-y-2 ${post ? 'mt-2.5 pt-2.5 border-t border-neutral-100' : 'mt-2'}`}>
@@ -396,6 +461,19 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
                   loading="lazy"
                 />
               )}
+            </div>
+          )}
+
+          {/* GIF Attachment */}
+          {post?.gifUrl && !linkedRally && (
+            <div className="mt-3 relative rounded-2xl overflow-hidden bg-neutral-100 border border-neutral-200/80">
+              <img
+                src={post.gifUrl}
+                alt="GIF attachment"
+                referrerPolicy="no-referrer"
+                className="w-full max-h-96 object-cover"
+                loading="lazy"
+              />
             </div>
           )}
 

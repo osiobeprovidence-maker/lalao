@@ -1006,7 +1006,10 @@ export const createPost = mutation({
         v.literal("everyone"),
         v.literal("closeFriends"),
         v.literal("community"),
-        v.literal("page")
+        v.literal("page"),
+        v.literal("nearby"),
+        v.literal("anime"),
+        v.literal("interest")
       )
     ),
     replyPermission: v.optional(
@@ -1016,7 +1019,8 @@ export const createPost = mutation({
         v.literal("following"),
         v.literal("friends"),
         v.literal("closeFriends"),
-        v.literal("sameInterests")
+        v.literal("sameInterests"),
+        v.literal("mentioned")
       )
     ),
     gifUrl: v.optional(v.string()),
@@ -1367,6 +1371,11 @@ export const addCommentToPost = mutation({
       if (post.replyPermission === "followers" && !isFollower) throw new Error("Only followers can reply");
       if (post.replyPermission === "following" && !isFollowing) throw new Error("Only users this person follows can reply");
       if (post.replyPermission === "friends" && !isFriend) throw new Error("Only friends can reply");
+      if (post.replyPermission === "mentioned") {
+        const isAuthor = post.authorId === currentUser._id;
+        const isMentioned = post.text.includes(`@${currentUser.username}`) || (currentUser.name && post.text.includes(`@${currentUser.name}`));
+        if (!isAuthor && !isMentioned) throw new Error("Only mentioned users can reply to this post");
+      }
     }
 
     let mediaUrl = undefined;
@@ -1742,7 +1751,10 @@ export const saveDraft = mutation({
         v.literal("everyone"),
         v.literal("closeFriends"),
         v.literal("community"),
-        v.literal("page")
+        v.literal("page"),
+        v.literal("nearby"),
+        v.literal("anime"),
+        v.literal("interest")
       )
     ),
     replyPermission: v.optional(
@@ -1752,7 +1764,8 @@ export const saveDraft = mutation({
         v.literal("following"),
         v.literal("friends"),
         v.literal("closeFriends"),
-        v.literal("sameInterests")
+        v.literal("sameInterests"),
+        v.literal("mentioned")
       )
     ),
     gifUrl: v.optional(v.string()),
