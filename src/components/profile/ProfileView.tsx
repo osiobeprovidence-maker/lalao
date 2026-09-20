@@ -140,19 +140,67 @@ export const ProfileView: React.FC = () => {
       </div>
 
       {/* Main Profile Info Card */}
-      <div className="p-4 space-y-3.5">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-neutral-950 leading-tight">
-              {currentUser.name}
-            </h2>
-            <p className="text-xs text-neutral-500 font-medium">
-              @{currentUser.username}
+      <div className="p-4 space-y-3">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <div>
+              <h2 className="text-xl font-bold text-neutral-950 leading-tight">
+                {currentUser.name}
+              </h2>
+              <p className="text-xs text-neutral-500 font-medium">
+                @{currentUser.username}
+              </p>
+            </div>
+
+            {/* Bio */}
+            <p className="text-xs text-neutral-800 leading-relaxed">
+              {currentUser.bio || 'No bio yet. Add a few details to introduce yourself.'}
             </p>
+
+            {/* Location & Metadata */}
+            <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500 pt-0.5">
+              <div className="flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-[#5E43F3]" />
+                <span>{currentUser.location || 'Location not added yet'}</span>
+              </div>
+              <span>·</span>
+              <div className="flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-neutral-400" />
+                <span>Profile ready</span>
+              </div>
+            </div>
+
+            {/* Follower Stats - Clickable to open connections & view other profiles */}
+            <div className="flex items-center gap-4 text-xs pt-0.5">
+              <button
+                id="btn-profile-open-followers"
+                type="button"
+                onClick={() => {
+                  setConnectionTab('followers');
+                  setIsConnectionsOpen(true);
+                }}
+                className="text-neutral-500 hover:text-neutral-950 transition-colors cursor-pointer"
+              >
+                <strong className="text-neutral-900 font-bold">{currentUser.followersCount}</strong>{' '}
+                followers
+              </button>
+              <button
+                id="btn-profile-open-following"
+                type="button"
+                onClick={() => {
+                  setConnectionTab('following');
+                  setIsConnectionsOpen(true);
+                }}
+                className="text-neutral-500 hover:text-neutral-950 transition-colors cursor-pointer"
+              >
+                <strong className="text-neutral-900 font-bold">{currentUser.followingCount}</strong>{' '}
+                following
+              </button>
+            </div>
           </div>
 
           {/* 24-hour Cycle Avatar ring */}
-          <div className="relative">
+          <div className="relative shrink-0 pt-0.5">
             <div
               onClick={() => {
                 if (myHasItems) openCycleStory('cycle_user_me', 0);
@@ -187,52 +235,6 @@ export const ProfileView: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Bio */}
-        <p className="text-xs text-neutral-800 leading-relaxed">
-          {currentUser.bio || 'No bio yet. Add a few details to introduce yourself.'}
-        </p>
-
-        {/* Location & Metadata */}
-        <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500">
-          <div className="flex items-center gap-1">
-            <MapPin className="w-3.5 h-3.5 text-[#5E43F3]" />
-            <span>{currentUser.location || 'Location not added yet'}</span>
-          </div>
-          <span>·</span>
-          <div className="flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5 text-neutral-400" />
-            <span>Profile ready</span>
-          </div>
-        </div>
-
-        {/* Follower Stats - Clickable to open connections & view other profiles */}
-        <div className="flex items-center gap-4 text-xs pt-1">
-          <button
-            id="btn-profile-open-followers"
-            type="button"
-            onClick={() => {
-              setConnectionTab('followers');
-              setIsConnectionsOpen(true);
-            }}
-            className="text-neutral-500 hover:text-neutral-950 transition-colors cursor-pointer"
-          >
-            <strong className="text-neutral-900 font-bold">{currentUser.followersCount}</strong>{' '}
-            followers
-          </button>
-          <button
-            id="btn-profile-open-following"
-            type="button"
-            onClick={() => {
-              setConnectionTab('following');
-              setIsConnectionsOpen(true);
-            }}
-            className="text-neutral-500 hover:text-neutral-950 transition-colors cursor-pointer"
-          >
-            <strong className="text-neutral-900 font-bold">{currentUser.followingCount}</strong>{' '}
-            following
-          </button>
         </div>
 
         {/* Buttons: Edit Profile & Share Profile */}
