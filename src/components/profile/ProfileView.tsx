@@ -50,6 +50,20 @@ export const ProfileView: React.FC = () => {
   const userMediaPosts = userPosts.filter((p: any) => Boolean(p.mediaUrl));
   const userReposts = userPosts.filter((p: any) => p.isReposted);
 
+  // User's total cumulative likes across all authored posts & comments
+  const myLikesQuery = useQuery(
+    (api.users as any).getUserTotalLikes,
+    currentUser?.id ? { userId: currentUser.id, username: currentUser.username } : {}
+  );
+  const myTotalLikes = myLikesQuery?.totalLikes ?? 0;
+
+  const formatLikes = (count: number) => {
+    if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+    if (count >= 1_000) return `${(count / 1000).toFixed(1).replace(/\.0$/, '')}K`;
+    return count.toLocaleString();
+  };
+
+
   const myCycle = cycles.find(
     (c) => c.user?.id === currentUser.id || c.id === 'cycle_user_me'
   );
@@ -170,7 +184,7 @@ export const ProfileView: React.FC = () => {
               </div>
             </div>
 
-            {/* Follower Stats - Clickable to open connections & view other profiles */}
+            {/* Follower Stats & Total Likes */}
             <div className="flex items-center gap-4 text-xs pt-0.5">
               <button
                 id="btn-profile-open-followers"
@@ -196,6 +210,10 @@ export const ProfileView: React.FC = () => {
                 <strong className="text-neutral-900 font-bold">{currentUser.followingCount}</strong>{' '}
                 following
               </button>
+              <span className="text-neutral-500">
+                <strong className="text-neutral-900 font-bold">{formatLikes(myTotalLikes)}</strong>{' '}
+                {myTotalLikes === 1 ? 'Like' : 'Likes'}
+              </span>
             </div>
           </div>
 

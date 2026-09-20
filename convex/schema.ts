@@ -136,7 +136,8 @@ export default defineSchema({
     isDeleted: v.optional(v.boolean()),
   })
     .index("by_post", ["postId"])
-    .index("by_parent", ["parentCommentId"]),
+    .index("by_parent", ["parentCommentId"])
+    .index("by_author", ["authorId"]),
 
   likes: defineTable({
     userId: v.id("users"),

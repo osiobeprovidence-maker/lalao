@@ -68,6 +68,71 @@ export const getUserByUsername = query({
   },
 });
 
+/**
+ * getUserTotalLikes
+ * Computes the total cumulative likes received across all content authored
+ * by the user (posts and comments).
+ * Reactive query: updates in real-time when any post or comment by this author is liked/unliked.
+ */
+export const getUserTotalLikes = query({
+  args: {
+    userId: v.optional(v.string()),
+    username: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    let targetUserId: Id<"users"> | null = null;
+
+    if (args.userId) {
+      targetUserId = ctx.db.normalizeId("users", args.userId);
+    }
+
+    if (!targetUserId && args.username) {
+      const userDoc = await ctx.db
+        .query("users")
+        .withIndex("by_username", (q: any) => q.eq("username", args.username))
+        .unique();
+      targetUserId = userDoc?._id ?? null;
+    }
+
+    if (!targetUserId) {
+      targetUserId = await getAuthUserId(ctx);
+    }
+
+    if (!targetUserId) {
+      return { totalLikes: 0, postLikes: 0, commentLikes: 0 };
+    }
+
+    // 1. Sum likes on all posts authored by this user (excluding removed/moderated posts)
+    const posts = await ctx.db
+      .query("posts")
+      .withIndex("by_author", (q: any) => q.eq("authorId", targetUserId!))
+      .collect();
+
+    const postLikes = posts.reduce((sum, p) => {
+      if (p.moderationStatus === "removed") return sum;
+      return sum + (p.likesCount || 0);
+    }, 0);
+
+    // 2. Sum likes on all comments authored by this user (excluding deleted comments)
+    const comments = await ctx.db
+      .query("comments")
+      .withIndex("by_author", (q: any) => q.eq("authorId", targetUserId!))
+      .collect();
+
+    const commentLikes = comments.reduce((sum, c) => {
+      if (c.isDeleted) return sum;
+      return sum + (c.likesCount || 0);
+    }, 0);
+
+    return {
+      totalLikes: postLikes + commentLikes,
+      postLikes,
+      commentLikes,
+    };
+  },
+});
+
+
 /* ─────────────────────────────────────────────────────────────────────────────
    MUTATIONS — called from onboarding pages & settings
    ───────────────────────────────────────────────────────────────────────────── */

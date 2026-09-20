@@ -100,6 +100,14 @@ export const UserProfileModal: React.FC = () => {
   const userPosts: Post[] = (userPostsQuery as any[]) ?? [];
   const isPostsLoading = userPostsQuery === undefined;
 
+  // User's total cumulative likes across all posts & comments (live real-time subscription)
+  const userLikesQuery = useQuery(
+    (api.users as any).getUserTotalLikes,
+    activeUserProfile ? { userId: activeUserProfile.id, username: activeUserProfile.username } : "skip"
+  );
+  const totalLikes = userLikesQuery?.totalLikes ?? 0;
+
+
   // User's media posts (photos/videos)
   const userMediaPosts = useMemo(() => {
     return userPosts.filter((p) => Boolean(p.mediaUrl));
@@ -188,11 +196,10 @@ export const UserProfileModal: React.FC = () => {
     return count.toLocaleString();
   };
 
-  const formatViews = (views?: number) => {
-    if (!views && views !== 0) return '18.3K';
-    if (views >= 1_000_000) return `${(views / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
-    if (views >= 1_000) return `${(views / 1000).toFixed(1).replace(/\.0$/, '')}K`;
-    return views.toLocaleString();
+  const formatLikes = (count: number) => {
+    if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+    if (count >= 1_000) return `${(count / 1000).toFixed(1).replace(/\.0$/, '')}K`;
+    return count.toLocaleString();
   };
 
 
@@ -399,7 +406,7 @@ export const UserProfileModal: React.FC = () => {
                   {activeUserProfile.badge && <Badge type={activeUserProfile.badge} />}
                 </div>
 
-                {/* Follower Count and Recent Views Count (screenshot style) */}
+                {/* Follower Count and Total Likes Count (reactive real-time sum) */}
                 <div className="flex items-center gap-1.5 text-xs text-neutral-500 mt-2 font-medium">
                   <span className="text-neutral-900 font-bold">
                     {formatFollowers(activeUserProfile.followersCount)}
@@ -407,9 +414,9 @@ export const UserProfileModal: React.FC = () => {
                   <span>followers</span>
                   <span>·</span>
                   <span className="text-neutral-900 font-bold">
-                    {formatViews(activeUserProfile.viewsCount)}
+                    {formatLikes(totalLikes)}
                   </span>
-                  <span>recent views</span>
+                  <span>{totalLikes === 1 ? 'Like' : 'Likes'}</span>
                 </div>
               </div>
 
