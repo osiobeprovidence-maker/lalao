@@ -361,7 +361,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
             {/* Right: Sort Segmented Control */}
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-[11px] font-semibold text-neutral-400 hidden lg:inline">
-                {filteredPosts.length} {filteredPosts.length === 1 ? 'post' : 'posts'}
+                {sortedPosts.length} {sortedPosts.length === 1 ? 'post' : 'posts'}
               </span>
 
               <div className="flex items-center bg-neutral-100/90 p-0.5 rounded-full border border-neutral-200/60">
