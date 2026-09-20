@@ -1,6 +1,9 @@
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { useLalao, FeedTab } from '../../context/LalaoContext';
+import { Post } from '../../types';
 import { PostItem } from './PostItem';
 import { HomePushBanner } from '../notifications/HomePushBanner';
 import {
@@ -15,6 +18,7 @@ import {
   ChevronDown,
   X,
   Check,
+  Users,
 } from 'lucide-react';
 
 export interface HomeFeedProps {
@@ -150,49 +154,29 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
     }
   };
 
-  const joinedCommunityIds = pages
-    .filter((page) => page.isFollowing || page.ownerId === currentUser.id)
-    .map((page) => page.id);
-
-  const hasJoinedCommunities = joinedCommunityIds.length > 0;
-
-  const communityFeedPosts = hasJoinedCommunities
-    ? posts.filter((post) => {
-        if (post.author.id === currentUser.id) return true;
-        if (post.pageRefId && joinedCommunityIds.includes(post.pageRefId)) return true;
-        if (joinedCommunityIds.includes(post.author.id)) return true;
-        return false;
-      })
-    : posts.filter((post) => {
-        if (post.author.id === currentUser.id) return true;
-        if (post.pageRefId && pages.some((page) => page.id === post.pageRefId && (page.isFollowing || page.ownerId === currentUser.id))) return true;
-        return true;
-      });
-
-  // Filter posts according to feed tab and user membership state
+  // Determine active feed tab
   const currentTab = forceTab || feedTab;
-  
-  const filteredPosts = communityFeedPosts
-    .filter((post) => {
-      if (currentTab === 'following') {
-        return (
-          post.author.isFollowing || 
-          post.author.id === currentUser.id ||
-          (post.pageRefId && pages.some((page) => page.id === post.pageRefId && page.isFollowing))
-        );
-      }
-      if (currentTab === 'nearby') {
-        const maxMeters = location.radiusKm * 1000;
-        return (post.distanceMeters ?? 0) <= maxMeters;
-      }
-      return true; // 'for_you'
-    })
-    .sort((a, b) => {
-      if (currentTab === 'nearby' && nearbySort === 'closest') {
-        return (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0);
-      }
-      return 0; // preserve original chronological order
-    });
+
+  // Real-time tab query directly targeting the active feed tab (re-executes on tab or location/radius change)
+  const tabPostsQuery = useQuery(api.social.listFeedPosts, {
+    feedType: currentTab,
+    latitude: location.latitude,
+    longitude: location.longitude,
+    radiusKm: location.radiusKm,
+    locationName: location.name,
+  });
+
+  const activePosts: Post[] = (tabPostsQuery as any[]) ?? posts;
+  const isCurrentFeedLoading = tabPostsQuery === undefined;
+
+  // Proximity or chronological sort
+  const sortedPosts = useMemo(() => {
+    if (currentTab === 'nearby' && nearbySort === 'closest') {
+      return [...activePosts].sort((a, b) => (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0));
+    }
+    return activePosts;
+  }, [activePosts, currentTab, nearbySort]);
+
 
   const dynamicTopicTabs = (activeTopics || [])
     .filter((topic: any) => {
@@ -324,7 +308,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       </div>
 
       {/* Nearby Feed Discovery Scope Bar */}
-      {feedTab === 'nearby' && (
+      {currentTab === 'nearby' && (
         <div
           id="nearby-feed-scope-bar"
           className="bg-[#f6f3ee] border-b border-neutral-200/80 px-3.5 py-2.5 transition-all shadow-none"
@@ -519,93 +503,134 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       <HomePushBanner />
 
       {/* Posts Stream */}
-      {isFeedLoading ? (
-        <div className="flex justify-center p-8 pt-12">
+      {isCurrentFeedLoading ? (
+        <div className="flex justify-center p-8 pt-16">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#5E43F3]"></div>
         </div>
-      ) : filteredPosts.length > 0 ? (
+      ) : sortedPosts.length > 0 ? (
         <div className="divide-y divide-neutral-100">
-          {filteredPosts.map((post) => (
+          {sortedPosts.map((post) => (
             <PostItem key={post.id} post={post} />
           ))}
         </div>
-      ) : !['for_you', 'following', 'nearby'].includes(feedTab) ? (
-        <div className="min-h-[62vh] flex items-center justify-center px-6 pb-8 pt-10">
-          <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-            <div className="w-16 h-16 rounded-full bg-neutral-200/50 flex items-center justify-center mb-4">
-              <Compass className="w-8 h-8 text-neutral-400" />
+      ) : currentTab === 'following' ? (
+        /* Empty State: Following Tab */
+        <div className="min-h-[58vh] flex items-center justify-center px-6 pb-8 pt-10">
+          <div className="flex max-w-sm flex-col items-center text-center gap-3">
+            <div className="w-14 h-14 rounded-full bg-[#5E43F3]/10 text-[#5E43F3] flex items-center justify-center shadow-xs">
+              <Users className="w-7 h-7" />
             </div>
-            <p className="text-neutral-500 font-semibold mb-1">
-              No {tabs.find(t => t.id === feedTab)?.label || 'content'} content yet.
+            <h3 className="font-bold text-neutral-900 text-base leading-snug">
+              Follow users to see their posts here
+            </h3>
+            <p className="text-xs text-neutral-500 leading-relaxed max-w-[280px]">
+              When you follow creators, friends, or local pages, their latest posts will appear here.
             </p>
-            <p className="text-neutral-400 text-sm max-w-[260px] mb-4">
-              Follow creators and communities or create {tabs.find(t => t.id === feedTab)?.label || 'relevant'} content to start building this feed.
-            </p>
-            <div className="pt-1 flex flex-wrap items-center justify-center gap-2">
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-2.5">
               <button
+                type="button"
+                onClick={() => setActiveTab('explore')}
+                className="px-4 py-2 rounded-full bg-[#5E43F3] text-xs font-bold text-white hover:bg-[#4E34E0] active:scale-95 transition-all shadow-xs cursor-pointer"
+              >
+                Discover People
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('discover')}
+                className="px-4 py-2 rounded-full border border-neutral-300 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer"
+              >
+                Browse Communities
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : currentTab === 'nearby' ? (
+        /* Empty State: Nearby Tab */
+        <div className="min-h-[58vh] flex items-center justify-center px-6 pb-8 pt-10">
+          <div className="flex max-w-sm flex-col items-center text-center gap-3">
+            <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-xs">
+              <MapPin className="w-7 h-7" />
+            </div>
+            <h3 className="font-bold text-neutral-900 text-base leading-snug">
+              No posts found within {location.radiusKm} km of {location.name}
+            </h3>
+            <p className="text-xs text-neutral-500 leading-relaxed max-w-[280px]">
+              Try expanding your neighborhood discovery radius or be the first to share an update from this area.
+            </p>
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => updateRadius(Math.min(50, (location.radiusKm || 5) * 2))}
+                className="px-4 py-2 rounded-full border border-neutral-300 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer"
+              >
+                Expand Radius ({Math.min(50, (location.radiusKm || 5) * 2)} km)
+              </button>
+              <button
+                type="button"
                 onClick={() => {
                   setCreateFlowType(null);
                   setIsCreateSheetOpen(false);
                   setActiveTab('create-post');
                 }}
-                className="px-3.5 py-2 rounded-full bg-[#5E43F3] text-[11px] font-bold text-white hover:bg-[#4E34E0] cursor-pointer"
+                className="px-4 py-2 rounded-full bg-[#5E43F3] text-xs font-bold text-white hover:bg-[#4E34E0] active:scale-95 transition-all shadow-xs cursor-pointer"
               >
-                Create Post
+                Create Local Post
               </button>
             </div>
           </div>
         </div>
-      ) : !hasJoinedCommunities ? (
-        <div className="min-h-[62vh] flex items-center justify-center px-6 pb-8 pt-10">
-          <div className="flex max-w-sm flex-col items-center text-center gap-2.5">
-            <div className="w-11 h-11 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center">
-              <Compass className="w-5 h-5" />
+      ) : !['for_you', 'following', 'nearby'].includes(currentTab) ? (
+        /* Empty State: Topic / Interest Tab */
+        <div className="min-h-[58vh] flex items-center justify-center px-6 pb-8 pt-10">
+          <div className="flex max-w-sm flex-col items-center text-center gap-3">
+            <div className="w-14 h-14 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shadow-xs">
+              <Compass className="w-7 h-7" />
             </div>
-            <h3 className="font-bold text-neutral-900 text-sm leading-snug">
-              You haven&apos;t joined a community yet.
+            <h3 className="font-bold text-neutral-900 text-base leading-snug">
+              No {tabs.find((t) => t.id === currentTab)?.label || 'topic'} posts yet
             </h3>
-            <p className="text-[11px] text-neutral-500 leading-relaxed">
-              Discover communities to find people and conversations that interest you.
+            <p className="text-xs text-neutral-500 leading-relaxed max-w-[280px]">
+              Be the first to share a post about {tabs.find((t) => t.id === currentTab)?.label || 'this topic'} or tag your post with #{currentTab}!
             </p>
-            <div className="pt-1 flex flex-wrap items-center justify-center gap-2">
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-2.5">
               <button
-                onClick={() => setActiveTab('discover')}
-                className="px-3.5 py-2 rounded-full bg-[#5E43F3] text-[11px] font-bold text-white hover:bg-[#4E34E0] cursor-pointer"
+                type="button"
+                onClick={() => {
+                  setCreateFlowType(null);
+                  setIsCreateSheetOpen(false);
+                  setActiveTab('create-post');
+                }}
+                className="px-4 py-2 rounded-full bg-[#5E43F3] text-xs font-bold text-white hover:bg-[#4E34E0] active:scale-95 transition-all shadow-xs cursor-pointer"
               >
-                Discover Communities
+                Post in {tabs.find((t) => t.id === currentTab)?.label || 'Topic'}
               </button>
             </div>
           </div>
         </div>
       ) : (
-        /* Empty State */
-        <div className="min-h-[62vh] flex items-center justify-center px-6 pb-8 pt-10">
-          <div className="flex max-w-sm flex-col items-center text-center gap-2.5">
-            <div className="w-11 h-11 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center">
-              <Compass className="w-5 h-5" />
+        /* Empty State: For You Tab */
+        <div className="min-h-[58vh] flex items-center justify-center px-6 pb-8 pt-10">
+          <div className="flex max-w-sm flex-col items-center text-center gap-3">
+            <div className="w-14 h-14 rounded-full bg-[#5E43F3]/10 text-[#5E43F3] flex items-center justify-center shadow-xs">
+              <Compass className="w-7 h-7" />
             </div>
-            <h3 className="font-bold text-neutral-900 text-sm leading-snug">
-              No posts found within {location.radiusKm} km of {location.name}
+            <h3 className="font-bold text-neutral-900 text-base leading-snug">
+              Welcome to Lalao
             </h3>
-            <p className="text-[11px] text-neutral-500 leading-relaxed">
-              Try expanding your discovery radius to 10 km or 25 km, or share the first update from this neighborhood.
+            <p className="text-xs text-neutral-500 leading-relaxed max-w-[280px]">
+              No posts to show right now. Share an update, rally your neighbors, or explore communities.
             </p>
-            <div className="pt-1 flex flex-wrap items-center justify-center gap-2">
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-2.5">
               <button
-                onClick={() => updateRadius(Math.min(50, (location.radiusKm || 5) * 2))}
-                className="px-3.5 py-2 rounded-full border border-neutral-300 text-[11px] font-semibold text-neutral-700 hover:bg-neutral-100 cursor-pointer"
-              >
-                Expand Radius ({Math.min(50, (location.radiusKm || 5) * 2)} km)
-              </button>
-              <button
+                type="button"
                 onClick={() => {
                   setCreateFlowType(null);
                   setIsCreateSheetOpen(false);
                   setActiveTab('create-post');
                 }}
-                className="px-3.5 py-2 rounded-full bg-[#5E43F3] text-[11px] font-bold text-white hover:bg-[#4E34E0] cursor-pointer"
+                className="px-4 py-2 rounded-full bg-[#5E43F3] text-xs font-bold text-white hover:bg-[#4E34E0] active:scale-95 transition-all shadow-xs cursor-pointer"
               >
-                Create Post
+                Create First Post
               </button>
             </div>
           </div>

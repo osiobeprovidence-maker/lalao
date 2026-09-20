@@ -65,6 +65,25 @@ function formatRelativeTime(ms: number | undefined | null): string {
 }
 
 /**
+ * Calculates geographical distance in meters between two coordinates (Haversine formula).
+ */
+function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371e3; // Earth radius in meters
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const φ1 = toRad(lat1);
+  const φ2 = toRad(lat2);
+  const Δφ = toRad(lat2 - lat1);
+  const Δλ = toRad(lon2 - lon1);
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
+
+
+/**
  * Build the author sub-object for feed / comment payloads.
  * Resolves real isFollowing state from the follows table.
  */
@@ -120,20 +139,35 @@ export const generateUploadUrl = mutation({
 export const listFeedPosts = query({
   args: {
     feedType: v.optional(v.string()),
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
+    radiusKm: v.optional(v.number()),
+    locationName: v.optional(v.string()),
+    cursor: v.optional(v.number()),
+    limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const currentUser = await getAuthedUser(ctx);
-    if (!currentUser) return [];
+    const limit = args.limit ?? 40;
+    const currentUserId = currentUser?._id;
 
+    const userLat = args.latitude ?? currentUser?.latitude;
+    const userLng = args.longitude ?? currentUser?.longitude;
+    const radiusKm = args.radiusKm ?? currentUser?.radiusKm ?? 5;
+    const maxRadiusMeters = radiusKm * 1000;
+    const cleanLocationName = (args.locationName ?? currentUser?.locationName ?? "").trim().toLowerCase();
+
+    const feedType = args.feedType || 'for_you';
     let posts: any[] = [];
-    if (args.feedType && !['for_you', 'following', 'nearby'].includes(args.feedType)) {
-      const allPosts = await ctx.db.query("posts").withIndex("by_created").order("desc").take(200);
-      posts = allPosts.filter((p: any) => p.contentTopics?.includes(args.feedType)).slice(0, 40);
-    } else if (args.feedType === 'following') {
+
+    /* ─── TAB 1: FOLLOWING ─── */
+    if (feedType === 'following') {
+      if (!currentUserId) return [];
+
       // Get users the current user follows
       const followedUsers = await ctx.db
         .query("follows")
-        .withIndex("by_follower", (q: any) => q.eq("followerId", currentUser._id))
+        .withIndex("by_follower", (q: any) => q.eq("followerId", currentUserId))
         .collect();
       const followedUserIds = new Set(followedUsers.map((f: any) => f.followingId));
 
@@ -141,34 +175,189 @@ export const listFeedPosts = query({
       const followedPages = await ctx.db
         .query("pageFollowers")
         .withIndex("by_page_user")
-        .filter((q) => q.eq(q.field("userId"), currentUser._id))
+        .filter((q) => q.eq(q.field("userId"), currentUserId))
         .collect();
       const followedPageIds = new Set(followedPages.map((f: any) => f.pageId));
 
-      // Fetch recent posts and filter them
+      // Strictly accounts the user actively follows: if following nobody, return empty
+      if (followedUserIds.size === 0 && followedPageIds.size === 0) {
+        return [];
+      }
+
+      let candidatePosts: any[] = [];
+      if (followedUserIds.size + followedPageIds.size <= 30) {
+        // Query author/page posts directly by index for high accuracy
+        const userPromises = Array.from(followedUserIds).map((authorId) =>
+          ctx.db
+            .query("posts")
+            .withIndex("by_author", (q: any) => q.eq("authorId", authorId))
+            .order("desc")
+            .take(25)
+        );
+        const pagePromises = Array.from(followedPageIds).map((pageId) =>
+          ctx.db
+            .query("posts")
+            .filter((q: any) => q.eq(q.field("pageRefId"), pageId))
+            .order("desc")
+            .take(25)
+        );
+        const allResults = await Promise.all([...userPromises, ...pagePromises]);
+        const postMap = new Map<string, any>();
+        for (const list of allResults) {
+          for (const p of list) {
+            if (p.moderationStatus !== "removed") {
+              postMap.set(p._id, p);
+            }
+          }
+        }
+        candidatePosts = Array.from(postMap.values()).sort((a, b) => b.createdAt - a.createdAt);
+      } else {
+        const recent = await ctx.db
+          .query("posts")
+          .withIndex("by_created")
+          .order("desc")
+          .take(300);
+
+        candidatePosts = recent.filter((p: any) => {
+          if (p.moderationStatus === "removed") return false;
+          if (p.pageRefId && followedPageIds.has(p.pageRefId)) return true;
+          if (!p.pageRefId && followedUserIds.has(p.authorId)) return true;
+          return false;
+        });
+      }
+
+      if (args.cursor) {
+        candidatePosts = candidatePosts.filter((p) => p.createdAt < args.cursor!);
+      }
+      posts = candidatePosts.slice(0, limit);
+    }
+
+    /* ─── TAB 2: NEARBY ─── */
+    else if (feedType === 'nearby') {
       const recentPosts = await ctx.db
         .query("posts")
         .withIndex("by_created")
         .order("desc")
-        .take(200);
+        .take(300);
 
-      posts = recentPosts.filter((p: any) => {
-        // Include if user authored it
-        if (p.authorId === currentUser._id) return true;
-        // Include if page authored it and user follows the page
-        if (p.pageRefId && followedPageIds.has(p.pageRefId)) return true;
-        // Include if user authored it and user follows the user (and it's not a page post)
-        if (!p.pageRefId && followedUserIds.has(p.authorId)) return true;
-        
+      const candidatePosts = recentPosts.filter((post: any) => {
+        if (post.moderationStatus === "removed") return false;
+
+        // 1. Precise GPS calculation if coordinates exist
+        if (
+          userLat !== undefined &&
+          userLng !== undefined &&
+          post.latitude !== undefined &&
+          post.longitude !== undefined
+        ) {
+          const dist = haversineMeters(userLat, userLng, post.latitude, post.longitude);
+          if (dist <= maxRadiusMeters) {
+            post._computedDistance = dist;
+            return true;
+          }
+          return false;
+        }
+
+        // 2. City / Neighborhood substring matching fallback
+        if (cleanLocationName && post.location) {
+          const postLoc = post.location.toLowerCase();
+          if (
+            postLoc.includes(cleanLocationName) ||
+            cleanLocationName.includes(postLoc)
+          ) {
+            post._computedDistance = Math.min(maxRadiusMeters * 0.4, 600);
+            return true;
+          }
+        }
+
+        // 3. If neither GPS nor location string matches, exclude from nearby
         return false;
-      }).slice(0, 40);
-    } else {
-      posts = await ctx.db
+      });
+
+      if (args.cursor) {
+        posts = candidatePosts.filter((p) => p.createdAt < args.cursor!).slice(0, limit);
+      } else {
+        posts = candidatePosts.slice(0, limit);
+      }
+    }
+
+    /* ─── TAB 3: TOPICS / INTEREST FEEDS ─── */
+    else if (feedType && !['for_you', 'following', 'nearby'].includes(feedType)) {
+      const topicSlug = feedType.toLowerCase().trim();
+      const topicDoc = await ctx.db
+        .query("topics")
+        .filter((q) => q.eq(q.field("slug"), topicSlug))
+        .first();
+
+      const topicDisplayName = topicDoc?.displayName?.toLowerCase() || topicSlug;
+
+      const allPosts = await ctx.db
         .query("posts")
         .withIndex("by_created")
         .order("desc")
-        .take(40);
+        .take(300);
+
+      const candidatePosts = allPosts.filter((p: any) => {
+        if (p.moderationStatus === "removed") return false;
+
+        // 1. Direct contentTopics array match
+        if (p.contentTopics && Array.isArray(p.contentTopics)) {
+          const lowerTopics = p.contentTopics.map((t: string) => t.toLowerCase());
+          if (lowerTopics.includes(topicSlug) || lowerTopics.includes(topicDisplayName)) {
+            return true;
+          }
+        }
+
+        // 2. Hashtags in text (e.g. #anime, #gaming, #stem, #drama)
+        const textLower = (p.text || "").toLowerCase();
+        if (textLower.includes(`#${topicSlug}`) || textLower.includes(`#${topicDisplayName}`)) {
+          return true;
+        }
+
+        // 3. Keyword / topic word match in text
+        if (textLower.includes(topicSlug) || textLower.includes(topicDisplayName)) {
+          return true;
+        }
+
+        return false;
+      });
+
+      if (args.cursor) {
+        posts = candidatePosts.filter((p) => p.createdAt < args.cursor!).slice(0, limit);
+      } else {
+        posts = candidatePosts.slice(0, limit);
+      }
     }
+
+    /* ─── TAB 4: FOR YOU (ALGORITHMIC DISCOVERY) ─── */
+    else {
+      let recentPosts = await ctx.db
+        .query("posts")
+        .withIndex("by_created")
+        .order("desc")
+        .take(150);
+
+      if (args.cursor) {
+        recentPosts = recentPosts.filter((p) => p.createdAt < args.cursor!);
+      }
+
+      // Algorithmic discovery score: recency blended with engagement
+      const scoredPosts = recentPosts
+        .filter((p) => p.moderationStatus !== "removed")
+        .map((p) => {
+          const engagement =
+            (p.likesCount || 0) * 3 +
+            (p.commentsCount || 0) * 4 +
+            (p.repostsCount || 0) * 5;
+          const ageHours = Math.max(0.1, (Date.now() - p.createdAt) / (1000 * 60 * 60));
+          const score = (engagement + 1) / Math.pow(ageHours + 2, 1.2);
+          return { post: p, score };
+        });
+
+      scoredPosts.sort((a, b) => b.score - a.score);
+      posts = scoredPosts.slice(0, limit).map((sp) => sp.post);
+    }
+
 
     const results: any[] = [];
 
@@ -277,7 +466,11 @@ export const listFeedPosts = query({
         location: post.location,
         latitude: post.latitude,
         longitude: post.longitude,
-        distanceMeters: 10,
+        distanceMeters: (post as any)._computedDistance !== undefined
+          ? (post as any)._computedDistance
+          : (userLat !== undefined && userLng !== undefined && post.latitude !== undefined && post.longitude !== undefined)
+            ? haversineMeters(userLat, userLng, post.latitude, post.longitude)
+            : 0,
         createdAt: formatRelativeTime(post.createdAt),
         likesCount: post.likesCount ?? 0,
         commentsCount: post.commentsCount ?? topLevel.length,
@@ -831,6 +1024,7 @@ export const createPost = mutation({
     pollOptions: v.optional(v.array(v.string())),
     rallyRefId: v.optional(v.string()),
     pageRefId: v.optional(v.string()),
+    contentTopics: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const currentUser = await getAuthedUser(ctx);
@@ -839,6 +1033,17 @@ export const createPost = mutation({
     let mediaUrl = args.mediaUrl;
     if (args.mediaStorageId) {
       mediaUrl = (await ctx.storage.getUrl(args.mediaStorageId)) ?? undefined;
+    }
+
+    // Auto-extract hashtags from text and combine with any explicitly provided contentTopics
+    const extractedTopics = (args.contentTopics ?? []).slice();
+    const hashtags = (args.text.match(/#[a-zA-Z0-9_\u00C0-\u00FF-]+/g) || []).map((t) =>
+      t.slice(1).toLowerCase()
+    );
+    for (const h of hashtags) {
+      if (!extractedTopics.includes(h)) {
+        extractedTopics.push(h);
+      }
     }
 
     const now = Date.now();
@@ -862,6 +1067,7 @@ export const createPost = mutation({
       pollOptions: args.pollOptions,
       rallyRefId: args.rallyRefId,
       pageRefId: args.pageRefId,
+      contentTopics: extractedTopics.length > 0 ? extractedTopics : undefined,
     });
 
     return {

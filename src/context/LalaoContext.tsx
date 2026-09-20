@@ -385,8 +385,32 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const startPageConversationMutation = useMutation(api.social.startPageConversation);
   const [feedTab, setFeedTab] = useState<FeedTab>('for_you');
 
+  const [location, setLocation] = useState<LocationConfig>(() => {
+    try {
+      const saved = localStorage.getItem('lalao_location');
+      return saved ? JSON.parse(saved) : DEFAULT_LOCATION;
+    } catch {
+      return DEFAULT_LOCATION;
+    }
+  });
+
+  const [locationPrivacy, setLocationPrivacy] = useState<LocationPrivacySettings>(() => {
+    try {
+      const saved = localStorage.getItem('lalao_location_privacy');
+      return saved ? JSON.parse(saved) : DEFAULT_LOCATION_PRIVACY;
+    } catch {
+      return DEFAULT_LOCATION_PRIVACY;
+    }
+  });
+
   const currentUserQuery = useQuery(api.users.getCurrentUser);
-  const feedPostsQuery = useQuery(api.social.listFeedPosts, { feedType: feedTab });
+  const feedPostsQuery = useQuery(api.social.listFeedPosts, {
+    feedType: feedTab,
+    latitude: location.latitude,
+    longitude: location.longitude,
+    radiusKm: location.radiusKm,
+    locationName: location.name,
+  });
   const activeTopicsQuery = useQuery((api as any).topics?.listActiveTopics) || [];
   const updateUserHomePreferenceMutation = useMutation((api as any).topics?.updateUserHomePreference || api.social.toggleLikePost); // fallback while compiling
   const exploreUsersQuery = useQuery(api.social.listUsersForExplore);
@@ -567,23 +591,6 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [nearbySort, setNearbySort] = useState<'closest' | 'recent'>('closest');
   const [isDetectingGps, setIsDetectingGps] = useState(false);
 
-  const [location, setLocation] = useState<LocationConfig>(() => {
-    try {
-      const saved = localStorage.getItem('lalao_location');
-      return saved ? JSON.parse(saved) : DEFAULT_LOCATION;
-    } catch {
-      return DEFAULT_LOCATION;
-    }
-  });
-
-  const [locationPrivacy, setLocationPrivacy] = useState<LocationPrivacySettings>(() => {
-    try {
-      const saved = localStorage.getItem('lalao_location_privacy');
-      return saved ? JSON.parse(saved) : DEFAULT_LOCATION_PRIVACY;
-    } catch {
-      return DEFAULT_LOCATION_PRIVACY;
-    }
-  });
 
   const [posts, setPosts] = useState<Post[]>(EMPTY_POSTS);
 
