@@ -22,6 +22,7 @@ import { Avatar } from '../common/Avatar';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useNavigate } from 'react-router-dom';
+import { uploadImageToCloudinary } from '../../lib/cloudinary';
 
 export const SettingsPageView: React.FC = () => {
   const {
@@ -36,9 +37,13 @@ export const SettingsPageView: React.FC = () => {
     setLocation,
     activeTopics,
     updateHomePreference,
+    updateUserProfile,
+    generateCloudinarySignature,
   } = useLalao();
   const { logout } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   const [name, setName] = useState(currentUser.name);
   const [username, setUsername] = useState(currentUser.username);
@@ -55,6 +60,14 @@ export const SettingsPageView: React.FC = () => {
   const role = useQuery(api.admin.getMyRole);
   const createAdminSession = useMutation(api.admin.createAdminSession);
   const [isCreatingAdminSession, setIsCreatingAdminSession] = useState(false);
+
+  useEffect(() => {
+    setName(currentUser.name);
+    setUsername(currentUser.username);
+    setBio(currentUser.bio || '');
+    setUserLocation(currentUser.location || '');
+    setAvatar(currentUser.avatar || '');
+  }, [currentUser]);
 
   const handleSwitchToAdmin = async () => {
     try {
@@ -86,22 +99,47 @@ export const SettingsPageView: React.FC = () => {
     setIsEditProfileOpen(false);
   };
 
-  const handleSave = (e?: React.FormEvent) => {
+  const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    setCurrentUser((prev) => ({
-      ...prev,
-      name: name.trim() || prev.name,
-      username: username.trim() || prev.username,
-      bio: bio.trim(),
-      location: userLocation.trim(),
-      avatar,
-    }));
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('lalao_withdrawal_account', JSON.stringify(withdrawalAccount));
-      localStorage.setItem('lalao_kyc_status', JSON.stringify(kycStatus));
+    setIsSaving(true);
+    try {
+      let finalAvatarUrl = avatar;
+
+      if (avatarFile) {
+        try {
+          const sig = await generateCloudinarySignature('avatars');
+          finalAvatarUrl = await uploadImageToCloudinary(avatarFile, sig);
+        } catch (uploadErr) {
+          console.warn('Cloudinary upload fallback:', uploadErr);
+          if (!finalAvatarUrl || finalAvatarUrl.startsWith('blob:')) {
+            const reader = new FileReader();
+            finalAvatarUrl = await new Promise<string>((resolve) => {
+              reader.onload = () => resolve(reader.result as string);
+              reader.readAsDataURL(avatarFile);
+            });
+          }
+        }
+      }
+
+      await updateUserProfile({
+        name: name.trim() || undefined,
+        username: username.trim() || undefined,
+        bio: bio.trim(),
+        locationName: userLocation.trim(),
+        avatarUrl: finalAvatarUrl,
+      });
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('lalao_withdrawal_account', JSON.stringify(withdrawalAccount));
+        localStorage.setItem('lalao_kyc_status', JSON.stringify(kycStatus));
+      }
+      setIsEditProfileOpen(false);
+      triggerShareToast('Settings & profile saved successfully!');
+    } catch (err: any) {
+      triggerShareToast(err.message || 'Failed to save settings');
+    } finally {
+      setIsSaving(false);
     }
-    setIsEditProfileOpen(false);
-    triggerShareToast('Settings & profile saved successfully!');
   };
 
   useEffect(() => {
@@ -127,13 +165,10 @@ export const SettingsPageView: React.FC = () => {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === 'string' ? reader.result : '';
-      setAvatar(result);
-      triggerShareToast('Profile photo updated.');
-    };
-    reader.readAsDataURL(file);
+    setAvatarFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setAvatar(objectUrl);
+    triggerShareToast('Profile photo selected.');
   };
 
   const neighborhoodOptions = [
@@ -194,10 +229,11 @@ export const SettingsPageView: React.FC = () => {
         <button
           id="btn-save-settings"
           type="button"
+          disabled={isSaving}
           onClick={() => handleSave()}
-          className="px-4 py-2 rounded-full bg-[#5E43F3] text-white text-xs font-bold hover:bg-[#4E34E0] transition-all shadow-md shadow-[#5E43F3]/25 active:scale-95 cursor-pointer"
+          className="px-4 py-2 rounded-full bg-[#5E43F3] text-white text-xs font-bold hover:bg-[#4E34E0] transition-all shadow-md shadow-[#5E43F3]/25 active:scale-95 cursor-pointer disabled:opacity-50"
         >
-          Save
+          {isSaving ? 'Saving...' : 'Save'}
         </button>
       </div>
 

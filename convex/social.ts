@@ -82,11 +82,14 @@ async function resolveAuthor(ctx: any, authorDoc: any, currentUserId: string | n
     isFollowing = !!follow;
   }
 
+  const avatar = authorDoc.avatarUrl || authorDoc.avatar || "";
+
   return {
     id: authorDoc._id,
     name: authorDoc.name ?? "User",
     username: authorDoc.username ?? "user",
-    avatar: authorDoc.avatarUrl ?? "",
+    avatar,
+    avatarUrl: avatar,
     userType: authorDoc.userType ?? "person",
     bio: authorDoc.bio ?? "",
     location: authorDoc.locationName ?? "",

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import { useAuth } from './AuthContext';
 import { getOrRequestWebPushSubscription } from '../lib/push';
 import {
   User,
@@ -310,6 +311,13 @@ interface LalaoContextType {
   // Topics & Preferences
   activeTopics: any[];
   updateHomePreference: (slug: string, enabled: boolean) => Promise<void>;
+  updateUserProfile: (updates: {
+    name?: string;
+    username?: string;
+    bio?: string;
+    locationName?: string;
+    avatarUrl?: string;
+  }) => Promise<void>;
 }
 
 const LalaoContext = createContext<LalaoContextType | undefined>(undefined);
@@ -350,14 +358,16 @@ const EMPTY_CONVERSATIONS: Conversation[] = [];
 const EMPTY_NOTIFICATIONS: NotificationItem[] = [];
 const EMPTY_ORDERS: Order[] = [];
 
-const normalizeConvexUser = (user: Record<string, any> | null | undefined): User => {
+const normalizeConvexUser = (user: Record<string, any> | null | undefined, fallbackAvatar?: string): User => {
   if (!user) return EMPTY_CURRENT_USER;
+
+  const avatar = user.avatarUrl || user.avatar || fallbackAvatar || EMPTY_CURRENT_USER.avatar;
 
   return {
     id: user._id ?? user.id ?? EMPTY_CURRENT_USER.id,
     name: user.name ?? 'New user',
     username: user.username ?? 'newuser',
-    avatar: user.avatarUrl ?? EMPTY_CURRENT_USER.avatar,
+    avatar,
     userType: (user.userType ?? 'person') as User['userType'],
     bio: user.bio ?? undefined,
     location: user.locationName ?? user.location ?? EMPTY_CURRENT_USER.location,
@@ -444,10 +454,43 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return EMPTY_CURRENT_USER;
   });
 
+  const { user: authUser } = useAuth();
+  const syncAuthProfileMutation = useMutation(api.users.syncAuthProfile);
+  const updateUserProfileMutation = useMutation(api.users.updateUserProfile);
+
+  useEffect(() => {
+    if (authUser && (authUser.photoURL || authUser.displayName)) {
+      if (!currentUserQuery?.avatarUrl && authUser.photoURL) {
+        syncAuthProfileMutation({
+          avatarUrl: authUser.photoURL,
+          name: authUser.displayName || undefined,
+        }).catch(() => {});
+      }
+    }
+  }, [authUser, currentUserQuery, syncAuthProfileMutation]);
+
   const hydratedCurrentUser = useMemo(
-    () => normalizeConvexUser(currentUserQuery),
-    [currentUserQuery]
+    () => normalizeConvexUser(currentUserQuery, authUser?.photoURL || undefined),
+    [currentUserQuery, authUser?.photoURL]
   );
+
+  const updateUserProfile = useCallback(async (updates: {
+    name?: string;
+    username?: string;
+    bio?: string;
+    locationName?: string;
+    avatarUrl?: string;
+  }) => {
+    await updateUserProfileMutation(updates);
+    setCurrentUser((prev) => ({
+      ...prev,
+      name: updates.name ?? prev.name,
+      username: updates.username ?? prev.username,
+      bio: updates.bio ?? prev.bio,
+      location: updates.locationName ?? prev.location,
+      avatar: updates.avatarUrl ?? prev.avatar,
+    }));
+  }, [updateUserProfileMutation]);
 
   useEffect(() => {
     if (currentUserQuery) {
@@ -2578,6 +2621,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         payWithWallet,
         enablePushNotifications,
         pushEnabled,
+        updateUserProfile,
       }}
     >
       {children}

@@ -35,7 +35,11 @@ export const LoginPage: React.FC = () => {
       let attempts = 0;
       while (attempts < 15) {
         try {
-          await createUserRecord({ email: readyUser.email ?? undefined });
+          await createUserRecord({ 
+            email: readyUser.email ?? undefined,
+            name: readyUser.displayName ?? undefined,
+            avatarUrl: readyUser.photoURL ?? undefined,
+          });
           break;
         } catch (e: any) {
           if (e.message?.includes("Not authenticated")) {
@@ -221,7 +225,11 @@ export const LoginPage: React.FC = () => {
                   let attempts = 0;
                   while (attempts < 15) {
                     try {
-                      await createUserRecord({ email: credential.user.email ?? undefined });
+                      await createUserRecord({ 
+                        email: credential.user.email ?? undefined,
+                        name: credential.user.displayName ?? undefined,
+                        avatarUrl: credential.user.photoURL ?? undefined,
+                      });
                       break;
                     } catch (e: any) {
                       if (e.message?.includes("Not authenticated")) {

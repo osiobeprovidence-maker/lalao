@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface AvatarProps {
   src?: string;
+  avatarUrl?: string;
+  photoURL?: string;
+  profileImage?: string;
   alt: string;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
@@ -11,22 +14,31 @@ interface AvatarProps {
 
 export const Avatar: React.FC<AvatarProps> = ({
   src,
+  avatarUrl,
+  photoURL,
+  profileImage,
   alt,
   size = 'md',
   className = '',
   onClick,
   online,
 }) => {
+  const rawSrc = src || avatarUrl || photoURL || profileImage;
+  const imageSrc = typeof rawSrc === 'string' ? rawSrc.trim() : '';
+  const [hasError, setHasError] = useState(false);
+
+  // Reset error state when the image source changes
+  useEffect(() => {
+    setHasError(false);
+  }, [imageSrc]);
+
   const initials = (alt || 'User')
     .split(' ')
+    .filter(Boolean)
     .map((part) => part[0])
     .join('')
     .slice(0, 2)
     .toUpperCase() || 'U';
-
-  const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-    initials
-  )}&background=E7E5E4&color=111827`;
 
   const sizeClasses = {
     xs: 'w-7 h-7 text-xs',
@@ -45,6 +57,8 @@ export const Avatar: React.FC<AvatarProps> = ({
     xl: 'w-4 h-4 border-2',
   }[size];
 
+  const showImage = Boolean(imageSrc && !hasError);
+
   return (
     // Outer wrapper: sizing + positioning anchor. NO overflow-hidden here
     // so the online dot is never clipped.
@@ -61,15 +75,15 @@ export const Avatar: React.FC<AvatarProps> = ({
           onClick ? 'hover:opacity-90 active:scale-95 transition-all' : ''
         }`}
       >
-        {src ? (
+        {showImage ? (
           <img
-            src={src}
+            src={imageSrc}
             alt={alt || 'User'}
             referrerPolicy="no-referrer"
             className="w-full h-full object-cover"
             loading="lazy"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = fallbackUrl;
+            onError={() => {
+              setHasError(true);
             }}
           />
         ) : (

@@ -26,9 +26,23 @@ async function getAuthUserId(ctx: any): Promise<Id<"users"> | null> {
 export const getCurrentUser = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
-    return await ctx.db.get(userId);
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) return null;
+
+    const effectiveAvatar = user.avatarUrl || (user as any).avatar || identity.pictureUrl || "";
+
+    return {
+      ...user,
+      avatarUrl: effectiveAvatar,
+      avatar: effectiveAvatar,
+    };
   },
 });
 
@@ -39,15 +53,23 @@ export const getCurrentUser = query({
 export const getUserByUsername = query({
   args: { username: v.string() },
   handler: async (ctx, { username }) => {
-    return await ctx.db
+    const user = await ctx.db
       .query("users")
       .withIndex("by_username", (q) => q.eq("username", username))
       .unique();
+
+    if (!user) return null;
+    const effectiveAvatar = user.avatarUrl || (user as any).avatar || "";
+    return {
+      ...user,
+      avatarUrl: effectiveAvatar,
+      avatar: effectiveAvatar,
+    };
   },
 });
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   MUTATIONS — called from onboarding pages
+   MUTATIONS — called from onboarding pages & settings
    ───────────────────────────────────────────────────────────────────────────── */
 
 /**
@@ -56,10 +78,12 @@ export const getUserByUsername = query({
  */
 export const createUserRecord = mutation({
   args: {
-    email:  v.optional(v.string()),
-    phone:  v.optional(v.string()),
+    email:     v.optional(v.string()),
+    phone:     v.optional(v.string()),
+    name:      v.optional(v.string()),
+    avatarUrl: v.optional(v.string()),
   },
-  handler: async (ctx, { email, phone }) => {
+  handler: async (ctx, { email, phone, name, avatarUrl }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
     
@@ -67,11 +91,25 @@ export const createUserRecord = mutation({
       .query("users")
       .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
       .unique();
-      
+
+    const effectiveAvatar = avatarUrl || identity.pictureUrl || undefined;
+    const effectiveName = name || identity.name || (email ? email.split("@")[0] : "New user");
+
     if (existing) {
+      const updates: any = {};
+      if (!existing.avatarUrl && effectiveAvatar) {
+        updates.avatarUrl = effectiveAvatar;
+      }
+      if ((!existing.name || existing.name === "New user") && effectiveName) {
+        updates.name = effectiveName;
+      }
       const isSuperAdmin = existing.email && ["riderezzy@gmail.com", "osiobeprovidence@gmail.com"].includes(existing.email);
       if (isSuperAdmin && existing.role !== "super_admin") {
-        await ctx.db.patch(existing._id, { role: "super_admin", updatedAt: Date.now() });
+        updates.role = "super_admin";
+      }
+      if (Object.keys(updates).length > 0) {
+        updates.updatedAt = Date.now();
+        await ctx.db.patch(existing._id, updates);
       }
       return existing._id;
     }
@@ -81,14 +119,15 @@ export const createUserRecord = mutation({
       .replace(/[^a-z0-9]+/g, "")
       .slice(0, 20);
       
-    const isSuperAdmin = email === "riderezzy@gmail.com";
+    const isSuperAdmin = email === "riderezzy@gmail.com" || email === "osiobeprovidence@gmail.com";
 
     return await ctx.db.insert("users", {
       tokenIdentifier: identity.tokenIdentifier,
       email,
       phone,
-      name: email ? email.split("@")[0] : "New user",
+      name: effectiveName,
       username: baseUsername || `user${Date.now()}`,
+      avatarUrl: effectiveAvatar,
       onboardingStep: "pending",
       followersCount: 0,
       followingCount: 0,
@@ -96,6 +135,82 @@ export const createUserRecord = mutation({
       createdAt: Date.now(),
       updatedAt: Date.now(),
     } as any);
+  },
+});
+
+/**
+ * syncAuthProfile
+ * Syncs the avatar and name from Firebase/Google Auth if missing on the Convex user record.
+ */
+export const syncAuthProfile = mutation({
+  args: {
+    avatarUrl: v.optional(v.string()),
+    name: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) return null;
+
+    const updates: any = {};
+    const effectiveAvatar = args.avatarUrl || identity.pictureUrl;
+    if (effectiveAvatar && (!user.avatarUrl || user.avatarUrl !== effectiveAvatar)) {
+      updates.avatarUrl = effectiveAvatar;
+    }
+    const effectiveName = args.name || identity.name;
+    if (effectiveName && (!user.name || user.name === "New user")) {
+      updates.name = effectiveName;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      updates.updatedAt = Date.now();
+      await ctx.db.patch(user._id, updates);
+    }
+    return user._id;
+  },
+});
+
+/**
+ * updateUserProfile
+ * Updates profile fields (name, username, bio, locationName, avatarUrl) from Settings.
+ */
+export const updateUserProfile = mutation({
+  args: {
+    name:         v.optional(v.string()),
+    username:     v.optional(v.string()),
+    bio:          v.optional(v.string()),
+    locationName: v.optional(v.string()),
+    avatarUrl:    v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    if (args.username) {
+      const existing = await ctx.db
+        .query("users")
+        .withIndex("by_username", (q) => q.eq("username", args.username!))
+        .unique();
+      if (existing && existing._id !== userId) {
+        throw new Error("Username already taken");
+      }
+    }
+
+    const updates: any = { updatedAt: Date.now() };
+    if (args.name !== undefined) updates.name = args.name;
+    if (args.username !== undefined) updates.username = args.username;
+    if (args.bio !== undefined) updates.bio = args.bio;
+    if (args.locationName !== undefined) updates.locationName = args.locationName;
+    if (args.avatarUrl !== undefined) updates.avatarUrl = args.avatarUrl;
+
+    await ctx.db.patch(userId, updates);
+    return await ctx.db.get(userId);
   },
 });
 
