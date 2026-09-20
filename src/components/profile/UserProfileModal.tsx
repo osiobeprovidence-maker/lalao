@@ -31,6 +31,7 @@ import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
+import { PostItem } from '../feed/PostItem';
 import { Post, Rally } from '../../types';
 
 type ProfileTab = 'posts' | 'replies' | 'media' | 'rallies';
@@ -92,13 +93,28 @@ export const UserProfileModal: React.FC = () => {
   );
   const hasActiveCycle = Boolean(userCycle && userCycle.items && userCycle.items.length > 0);
 
-  // User's posts — fetched directly by author id, not from the feed window
+  // User's posts — fetched directly by author id & username, not from the feed window
   const userPostsQuery = useQuery(
     api.social.listUserPosts,
-    activeUserProfile ? { userId: activeUserProfile.id } : "skip"
+    activeUserProfile
+      ? { userId: activeUserProfile.id, username: activeUserProfile.username }
+      : "skip"
   );
-  const userPosts: Post[] = (userPostsQuery as any[]) ?? [];
+  const backendUserPosts = (userPostsQuery as Post[]) ?? [];
   const isPostsLoading = userPostsQuery === undefined;
+
+  // Merge backend posts with any local posts authored by activeUserProfile
+  const userPosts: Post[] = useMemo(() => {
+    if (!activeUserProfile) return [];
+    const backendIds = new Set(backendUserPosts.map((p) => p.id));
+    const localPosts = (posts || []).filter(
+      (p) =>
+        (p.author?.id === activeUserProfile.id ||
+         p.author?.username === activeUserProfile.username) &&
+        !backendIds.has(p.id)
+    );
+    return [...localPosts, ...backendUserPosts];
+  }, [backendUserPosts, posts, activeUserProfile]);
 
   // User's total cumulative likes across all posts & comments (live real-time subscription)
   const userLikesQuery = useQuery(
@@ -664,126 +680,7 @@ export const UserProfileModal: React.FC = () => {
                 ) : filteredPosts.length > 0 ? (
                   <div className="divide-y divide-neutral-100">
                     {filteredPosts.map((post) => (
-                      <article
-                        key={post.id}
-                        id={`user-post-${post.id}`}
-                        className="p-4 hover:bg-neutral-50/40 transition-colors"
-                      >
-                        <div className="flex items-start gap-3">
-                          {/* Author Avatar with mini Story Ring if active */}
-                          <Avatar
-                            src={post.author.avatar}
-                            alt={post.author.name}
-                            size="md"
-                            className="shrink-0"
-                          />
-
-                          <div className="flex-1 min-w-0">
-                            {/* Author Row */}
-                            <div className="flex items-center justify-between gap-1">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-bold text-sm text-neutral-900">
-                                  {post.author.name}
-                                </span>
-                                {post.author.isVerified && (
-                                  <CheckCircle className="w-3.5 h-3.5 text-[#5E43F3] fill-[#5E43F3]/20" />
-                                )}
-                                <span className="text-xs text-neutral-400">
-                                  @{post.author.username}
-                                </span>
-                                <span className="text-xs text-neutral-400">·</span>
-                                <span className="text-xs text-neutral-400">
-                                  {post.createdAt}
-                                </span>
-                              </div>
-
-                              <button
-                                onClick={() => triggerShareToast('Post link copied')}
-                                className="p-1 text-neutral-400 hover:text-neutral-700 rounded-full"
-                              >
-                                <MoreHorizontal className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-
-                            {/* Post Text */}
-                            <p className="text-sm text-neutral-900 mt-1.5 leading-relaxed whitespace-pre-line">
-                              {post.text}
-                            </p>
-
-                            {/* Location Tag */}
-                            {post.location && (
-                              <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600 text-[11px] font-medium">
-                                <MapPin className="w-2.5 h-2.5 text-[#5E43F3]" />
-                                <span>{post.location}</span>
-                              </div>
-                            )}
-
-                            {/* Attached Image / Media */}
-                            {post.mediaUrl && (
-                              <div className="mt-2.5 rounded-2xl overflow-hidden border border-neutral-100 shadow-2xs max-h-[360px] bg-neutral-100">
-                                <img
-                                  src={post.mediaUrl}
-                                  alt="Post attachment"
-                                  className="w-full h-auto object-cover max-h-[360px] cursor-pointer hover:scale-[1.01] transition-transform"
-                                  loading="lazy"
-                                  onClick={() =>
-                                    setLightboxMedia({
-                                      url: post.mediaUrl!,
-                                      alt: post.text,
-                                    })
-                                  }
-                                />
-                              </div>
-                            )}
-
-                            {/* Interaction Bar */}
-                            <div className="flex items-center gap-6 mt-3 pt-1 text-neutral-500">
-                              {/* Love / Heart */}
-                              <button
-                                onClick={() => toggleLikePost(post.id)}
-                                className={`flex items-center gap-1.5 text-xs font-semibold transition-colors group cursor-pointer ${
-                                  post.isLiked ? 'text-rose-600' : 'hover:text-rose-600'
-                                }`}
-                              >
-                                <Heart
-                                  className={`w-4 h-4 transition-transform group-active:scale-125 ${
-                                    post.isLiked ? 'fill-rose-600' : ''
-                                  }`}
-                                />
-                                <span>{post.likesCount}</span>
-                              </button>
-
-                              {/* Comment */}
-                              <button
-                                onClick={() => setActiveCommentsPostId(post.id)}
-                                className="flex items-center gap-1.5 text-xs font-semibold hover:text-[#5E43F3] transition-colors cursor-pointer"
-                              >
-                                <MessageCircle className="w-4 h-4" />
-                                <span>{post.commentsCount}</span>
-                              </button>
-
-                              {/* Repost */}
-                              <button
-                                onClick={() => toggleRepostPost(post.id)}
-                                className={`flex items-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-                                  post.isReposted ? 'text-emerald-600' : 'hover:text-emerald-600'
-                                }`}
-                              >
-                                <Repeat2 className="w-4 h-4" />
-                                <span>{post.repostsCount}</span>
-                              </button>
-
-                              {/* Share */}
-                              <button
-                                onClick={() => triggerShareToast('Post shared to clipboard')}
-                                className="flex items-center gap-1.5 text-xs font-semibold hover:text-neutral-900 transition-colors cursor-pointer ml-auto"
-                              >
-                                <Share2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </article>
+                      <PostItem key={post.id} post={post} />
                     ))}
                   </div>
                 ) : (
@@ -794,6 +691,8 @@ export const UserProfileModal: React.FC = () => {
                     <p className="text-xs text-neutral-400 mt-1">
                       {searchQuery
                         ? 'Try searching with different keywords'
+                        : isOwnProfile
+                        ? "You haven't posted yet. Tap the center + button to share with your local community."
                         : `When @${activeUserProfile.username} posts, their thoughts will show up here.`}
                     </p>
                   </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   MapPin,
   Calendar,
@@ -26,6 +26,7 @@ type ConnectionTab = 'community' | 'followers' | 'following';
 export const ProfileView: React.FC = () => {
   const {
     currentUser,
+    posts,
     cycles,
     openCycleStory,
     setIsCreateCycleOpen,
@@ -43,10 +44,28 @@ export const ProfileView: React.FC = () => {
   const [connectionTab, setConnectionTab] = useState<ConnectionTab>('community');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Fetch this user's posts directly — not limited by the feed window
-  const myPostsQuery = useQuery(api.social.listMyPosts);
-  const userPosts = (myPostsQuery as any[]) ?? [];
+  // Fetch this user's posts directly — querying strictly posts authored by this profile
+  const myPostsQuery = useQuery(
+    api.social.listUserPosts,
+    currentUser?.id
+      ? { userId: currentUser.id, username: currentUser.username }
+      : {}
+  );
+  const backendPosts = (myPostsQuery as any[]) ?? [];
   const isPostsLoading = myPostsQuery === undefined;
+
+  // Merge backend posts with any locally created posts authored by currentUser
+  const userPosts = useMemo(() => {
+    const backendIds = new Set(backendPosts.map((p) => p.id));
+    const localPosts = (posts || []).filter(
+      (p) =>
+        (p.author?.id === currentUser?.id ||
+         p.author?.username === currentUser?.username) &&
+        !backendIds.has(p.id)
+    );
+    return [...localPosts, ...backendPosts];
+  }, [backendPosts, posts, currentUser?.id, currentUser?.username]);
+
   const userMediaPosts = userPosts.filter((p: any) => Boolean(p.mediaUrl));
   const userReposts = userPosts.filter((p: any) => p.isReposted);
 

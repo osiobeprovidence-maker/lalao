@@ -502,160 +502,230 @@ export const listFeedPosts = query({
    ───────────────────────────────────────────────────────────────────────────── */
 
 /**
- * Returns all posts created by the currently authenticated user.
- * Uses the by_author index so it is not limited to the feed window.
+ * Shared helper to resolve posts created by a specific profile/user.
+ * Robustly matches by normalized Convex Id, username, custom id, or authenticated user.
  */
-export const listMyPosts = query({
-  args: {},
-  handler: async (ctx) => {
-    const currentUser = await getAuthedUser(ctx);
-    if (!currentUser) return [];
+async function fetchPostsForProfileUser(
+  ctx: any,
+  args: { userId?: string; username?: string }
+) {
+  const currentUser = await getAuthedUser(ctx);
 
-    const posts = await ctx.db
-      .query("posts")
-      .withIndex("by_author", (q: any) => q.eq("authorId", currentUser._id))
-      .order("desc")
-      .collect();
+  // 1. Resolve target user
+  let targetUser: any = null;
 
-    const results: any[] = [];
-    for (const post of posts) {
-      if (post.moderationStatus === "removed") continue;
+  if (args.userId) {
+    const normId = ctx.db.normalizeId("users", args.userId);
+    if (normId) {
+      targetUser = await ctx.db.get(normId);
+    }
+  }
 
-      const isLiked = !!(await ctx.db
+  if (!targetUser && args.username) {
+    const cleanUsername = args.username.replace(/^@/, "").trim().toLowerCase();
+    targetUser = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q: any) => q.eq("username", cleanUsername))
+      .unique();
+  }
+
+  if (!targetUser && args.userId) {
+    const cleanUserId = args.userId.replace(/^@/, "").trim().toLowerCase();
+    targetUser = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q: any) => q.eq("username", cleanUserId))
+      .unique();
+  }
+
+  if (!targetUser && args.userId) {
+    targetUser = await ctx.db
+      .query("users")
+      .collect()
+      .then((all: any[]) =>
+        all.find(
+          (u: any) =>
+            u._id === args.userId ||
+            u.username === args.userId ||
+            u.tokenIdentifier?.includes(args.userId)
+        )
+      );
+  }
+
+  if (!targetUser) {
+    targetUser = currentUser;
+  }
+
+  if (!targetUser) return [];
+
+  // 2. Query posts where author matches targetUser._id
+  const posts = await ctx.db
+    .query("posts")
+    .withIndex("by_author", (q: any) => q.eq("authorId", targetUser._id))
+    .order("desc")
+    .collect();
+
+  let isFollowing = false;
+  if (currentUser && currentUser._id !== targetUser._id) {
+    const follow = await ctx.db
+      .query("follows")
+      .withIndex("by_follower_following", (q: any) =>
+        q.eq("followerId", currentUser._id).eq("followingId", targetUser._id)
+      )
+      .unique();
+    isFollowing = !!follow;
+  }
+
+  const effectiveAvatar = targetUser.avatarUrl || (targetUser as any).avatar || "";
+  const authorObj = {
+    id: targetUser._id,
+    name: targetUser.name ?? "User",
+    username: targetUser.username ?? "user",
+    avatar: effectiveAvatar,
+    avatarUrl: effectiveAvatar,
+    userType: targetUser.userType ?? "person",
+    bio: targetUser.bio ?? "",
+    location: targetUser.locationName ?? "",
+    followersCount: targetUser.followersCount ?? 0,
+    followingCount: targetUser.followingCount ?? 0,
+    isFollowing,
+    isVerified: false,
+  };
+
+  const results: any[] = [];
+  for (const post of posts) {
+    if (post.moderationStatus === "removed") continue;
+
+    let isLiked = false;
+    if (currentUser) {
+      isLiked = !!(await ctx.db
         .query("likes")
         .withIndex("by_user_target", (q: any) =>
           q.eq("userId", currentUser._id).eq("targetType", "post").eq("targetId", post._id)
         )
         .unique());
-
-      results.push({
-        id: post._id,
-        author: {
-          id: currentUser._id,
-          name: currentUser.name ?? "User",
-          username: currentUser.username ?? "user",
-          avatar: currentUser.avatarUrl ?? "",
-          userType: currentUser.userType ?? "person",
-          bio: currentUser.bio ?? "",
-          location: currentUser.locationName ?? "",
-          followersCount: currentUser.followersCount ?? 0,
-          followingCount: currentUser.followingCount ?? 0,
-          isFollowing: false,
-          isVerified: false,
-        },
-        text: post.text,
-        mediaUrl: post.mediaUrl,
-        mediaType: post.mediaType,
-        location: post.location,
-        latitude: post.latitude,
-        longitude: post.longitude,
-        distanceMeters: 0,
-        createdAt: formatRelativeTime(post.createdAt),
-        likesCount: post.likesCount ?? 0,
-        commentsCount: post.commentsCount ?? 0,
-        repostsCount: post.repostsCount ?? 0,
-        isLiked,
-        isReposted: false,
-        comments: [],
-        audience: post.audience ?? "everyone",
-        replyPermission: post.replyPermission ?? "everyone",
-        gifUrl: post.gifUrl,
-        poll: post.pollQuestion
-          ? {
-              question: post.pollQuestion,
-              options: post.pollOptions ?? [],
-              votes: new Array((post.pollOptions ?? []).length).fill(0),
-            }
-          : undefined,
-        rallyRefId: post.rallyRefId,
-        pageRefId: post.pageRefId,
-      });
     }
-    return results;
+
+    // Top-level comments and direct replies for this post
+    const allComments = await ctx.db
+      .query("comments")
+      .withIndex("by_post", (q: any) => q.eq("postId", post._id))
+      .order("desc")
+      .take(20);
+
+    const topLevel = allComments.filter((c: any) => !c.parentCommentId);
+    const topLevelSlice = topLevel.slice(0, 10);
+
+    const commentPayload = await Promise.all(
+      topLevelSlice.map(async (comment: any) => {
+        const commentAuthorDoc = comment.authorId ? await ctx.db.get(comment.authorId) : null;
+        const commentAuthor = await resolveAuthor(ctx, commentAuthorDoc, currentUser?._id ?? null);
+        const commentLike = currentUser
+          ? await ctx.db
+              .query("likes")
+              .withIndex("by_user_target", (q: any) =>
+                q.eq("userId", currentUser._id).eq("targetType", "comment").eq("targetId", comment._id)
+              )
+              .unique()
+          : null;
+
+        const replies = allComments
+          .filter((c: any) => c.parentCommentId === comment._id)
+          .slice(0, 5);
+
+        return {
+          id: comment._id,
+          author: commentAuthor,
+          text: comment.text,
+          createdAt: formatRelativeTime(comment.createdAt),
+          likesCount: comment.likesCount ?? 0,
+          isLiked: !!commentLike,
+          replies: await Promise.all(
+            replies.map(async (reply: any) => {
+              const replyAuthorDoc = reply.authorId ? await ctx.db.get(reply.authorId) : null;
+              const replyAuthor = await resolveAuthor(ctx, replyAuthorDoc, currentUser?._id ?? null);
+              const replyLike = currentUser
+                ? await ctx.db
+                    .query("likes")
+                    .withIndex("by_user_target", (q: any) =>
+                      q.eq("userId", currentUser._id).eq("targetType", "comment").eq("targetId", reply._id)
+                    )
+                    .unique()
+                : null;
+              return {
+                id: reply._id,
+                author: replyAuthor,
+                text: reply.text,
+                createdAt: formatRelativeTime(reply.createdAt),
+                likesCount: reply.likesCount ?? 0,
+                isLiked: !!replyLike,
+                replyToUsername: (commentAuthorDoc as any)?.username ?? "user",
+              };
+            })
+          ),
+        };
+      })
+    );
+
+    results.push({
+      id: post._id,
+      author: authorObj,
+      text: post.text,
+      mediaUrl: post.mediaUrl,
+      mediaType: post.mediaType,
+      location: post.location,
+      latitude: post.latitude,
+      longitude: post.longitude,
+      distanceMeters: 0,
+      createdAt: formatRelativeTime(post.createdAt),
+      likesCount: post.likesCount ?? 0,
+      commentsCount: post.commentsCount ?? 0,
+      repostsCount: post.repostsCount ?? 0,
+      isLiked,
+      isReposted: false,
+      comments: commentPayload,
+      audience: post.audience ?? "everyone",
+      replyPermission: post.replyPermission ?? "everyone",
+      gifUrl: post.gifUrl,
+      poll: post.pollQuestion
+        ? {
+            question: post.pollQuestion,
+            options: post.pollOptions ?? [],
+            votes: new Array((post.pollOptions ?? []).length).fill(0),
+          }
+        : undefined,
+      rallyRefId: post.rallyRefId,
+      pageRefId: post.pageRefId,
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Returns all posts created by the currently authenticated user (or specified user).
+ * Uses the by_author index so it is not limited to the feed window.
+ */
+export const listMyPosts = query({
+  args: {
+    userId: v.optional(v.string()),
+    username: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    return await fetchPostsForProfileUser(ctx, args);
   },
 });
 
 /**
- * Returns all posts created by a specific user (by their user id).
- * Used when viewing another user's profile.
+ * Returns all posts created by a specific user (by their user id or username).
+ * Used when viewing another user's profile or own profile.
  */
 export const listUserPosts = query({
-  args: { userId: v.string() },
+  args: {
+    userId: v.optional(v.string()),
+    username: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
-    const currentUser = await getAuthedUser(ctx);
-
-    // Resolve the target user
-    const targetUser = await ctx.db
-      .query("users")
-      .collect()
-      .then((all: any[]) => all.find((u: any) => u._id === args.userId));
-
-    if (!targetUser) return [];
-
-    const posts = await ctx.db
-      .query("posts")
-      .withIndex("by_author", (q: any) => q.eq("authorId", targetUser._id))
-      .order("desc")
-      .collect();
-
-    const results: any[] = [];
-    for (const post of posts) {
-      if (post.moderationStatus === "removed") continue;
-
-      let isLiked = false;
-      if (currentUser) {
-        isLiked = !!(await ctx.db
-          .query("likes")
-          .withIndex("by_user_target", (q: any) =>
-            q.eq("userId", currentUser._id).eq("targetType", "post").eq("targetId", post._id)
-          )
-          .unique());
-      }
-
-      results.push({
-        id: post._id,
-        author: {
-          id: targetUser._id,
-          name: targetUser.name ?? "User",
-          username: targetUser.username ?? "user",
-          avatar: targetUser.avatarUrl ?? "",
-          userType: targetUser.userType ?? "person",
-          bio: targetUser.bio ?? "",
-          location: targetUser.locationName ?? "",
-          followersCount: targetUser.followersCount ?? 0,
-          followingCount: targetUser.followingCount ?? 0,
-          isFollowing: false,
-          isVerified: false,
-        },
-        text: post.text,
-        mediaUrl: post.mediaUrl,
-        mediaType: post.mediaType,
-        location: post.location,
-        latitude: post.latitude,
-        longitude: post.longitude,
-        distanceMeters: 0,
-        createdAt: formatRelativeTime(post.createdAt),
-        likesCount: post.likesCount ?? 0,
-        commentsCount: post.commentsCount ?? 0,
-        repostsCount: post.repostsCount ?? 0,
-        isLiked,
-        isReposted: false,
-        comments: [],
-        audience: post.audience ?? "everyone",
-        replyPermission: post.replyPermission ?? "everyone",
-        gifUrl: post.gifUrl,
-        poll: post.pollQuestion
-          ? {
-              question: post.pollQuestion,
-              options: post.pollOptions ?? [],
-              votes: new Array((post.pollOptions ?? []).length).fill(0),
-            }
-          : undefined,
-        rallyRefId: post.rallyRefId,
-        pageRefId: post.pageRefId,
-      });
-    }
-    return results;
+    return await fetchPostsForProfileUser(ctx, args);
   },
 });
 
@@ -1029,9 +1099,33 @@ export const createPost = mutation({
     rallyRefId: v.optional(v.string()),
     pageRefId: v.optional(v.string()),
     contentTopics: v.optional(v.array(v.string())),
+    authorUserId: v.optional(v.string()),
+    authorUsername: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const currentUser = await getAuthedUser(ctx);
+    let currentUser = await getAuthedUser(ctx);
+    if (!currentUser && (args.authorUserId || args.authorUsername)) {
+      if (args.authorUserId) {
+        const normId = ctx.db.normalizeId("users", args.authorUserId);
+        if (normId) {
+          currentUser = await ctx.db.get(normId);
+        }
+      }
+      if (!currentUser && args.authorUsername) {
+        const clean = args.authorUsername.replace(/^@/, "").trim().toLowerCase();
+        currentUser = await ctx.db
+          .query("users")
+          .withIndex("by_username", (q: any) => q.eq("username", clean))
+          .unique();
+      }
+      if (!currentUser && args.authorUserId) {
+        const clean = args.authorUserId.replace(/^@/, "").trim().toLowerCase();
+        currentUser = await ctx.db
+          .query("users")
+          .withIndex("by_username", (q: any) => q.eq("username", clean))
+          .unique();
+      }
+    }
     if (!currentUser) throw new Error("Not authenticated");
 
     let mediaUrl = args.mediaUrl;

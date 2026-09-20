@@ -50,22 +50,20 @@ export const Avatar: React.FC<AvatarProps> = ({
 
   // Online dot size scales with avatar
   const dotClass = {
-    xs: 'w-2 h-2 border',
-    sm: 'w-2.5 h-2.5 border',
+    xs: 'w-2 h-2 border-[1.5px]',
+    sm: 'w-2.5 h-2.5 border-[1.5px]',
     md: 'w-3 h-3 border-2',
     lg: 'w-3.5 h-3.5 border-2',
-    xl: 'w-4 h-4 border-2',
+    xl: 'w-4.5 h-4.5 border-2',
   }[size];
 
   const showImage = Boolean(imageSrc && !hasError);
 
   return (
-    // Outer wrapper: sizing + positioning anchor. NO overflow-hidden here
-    // so the online dot is never clipped.
     <div
       id={`avatar-${(alt || 'user').replace(/\s+/g, '-').toLowerCase()}`}
       onClick={onClick}
-      className={`relative shrink-0 select-none ${sizeClasses} ${
+      className={`relative shrink-0 select-none rounded-full ${sizeClasses} ${
         onClick ? 'cursor-pointer' : ''
       } ${className}`}
     >
@@ -93,10 +91,10 @@ export const Avatar: React.FC<AvatarProps> = ({
         )}
       </div>
 
-      {/* Online presence dot — positioned outside overflow-hidden, never clipped */}
+      {/* Online presence dot — positioned outside the circular photo, attached to bottom-right edge */}
       {online && (
         <span
-          className={`absolute bottom-0 right-0 rounded-full bg-emerald-500 border-white ${dotClass}`}
+          className={`absolute bottom-0 right-0 translate-x-[30%] translate-y-[30%] rounded-full bg-emerald-500 border-white shadow-xs pointer-events-none z-10 ${dotClass}`}
           aria-label="Online"
         />
       )}

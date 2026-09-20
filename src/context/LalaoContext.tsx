@@ -1533,6 +1533,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       pollOptions: poll?.options,
       rallyRefId,
       pageRefId,
+      authorUserId: currentUser?.id,
+      authorUsername: currentUser?.username,
     });
 
     const backendPost = created as Post | null;
