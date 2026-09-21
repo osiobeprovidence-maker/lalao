@@ -118,6 +118,7 @@ interface LalaoContextType {
     poll?: { question: string; options: string[] };
     rallyRefId?: string;
     pageRefId?: string;
+    muxUploadId?: string;
   }) => void | Promise<void>;
   
   generateUploadUrl: () => Promise<string>;
@@ -1502,6 +1503,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     poll,
     rallyRefId,
     pageRefId,
+    muxUploadId,
   }: {
     text: string;
     mediaUrl?: string;
@@ -1517,6 +1519,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     rallyRefId?: string;
     pageRefId?: string;
     mediaStorageId?: string;
+    muxUploadId?: string;
   }) => {
     if (!text.trim() && !mediaUrl && !mediaStorageId && !gifUrl && !poll) return;
 
@@ -1536,6 +1539,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       pollOptions: poll?.options,
       rallyRefId,
       pageRefId,
+      muxUploadId,
       authorUserId: currentUser?.id,
       authorUsername: currentUser?.username,
     });

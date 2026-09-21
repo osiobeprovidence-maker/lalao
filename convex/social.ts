@@ -1105,6 +1105,9 @@ export const createPost = mutation({
     contentTopics: v.optional(v.array(v.string())),
     authorUserId: v.optional(v.string()),
     authorUsername: v.optional(v.string()),
+    muxUploadId: v.optional(v.string()),
+    muxAssetId: v.optional(v.string()),
+    muxPlaybackId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     let currentUser = await getAuthedUser(ctx);
@@ -1170,6 +1173,9 @@ export const createPost = mutation({
       rallyRefId: args.rallyRefId,
       pageRefId: args.pageRefId,
       contentTopics: extractedTopics.length > 0 ? extractedTopics : undefined,
+      muxUploadId: args.muxUploadId,
+      muxAssetId: args.muxAssetId,
+      muxPlaybackId: args.muxPlaybackId,
     });
 
     return {

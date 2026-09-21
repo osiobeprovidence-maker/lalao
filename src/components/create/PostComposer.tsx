@@ -27,6 +27,8 @@ import { getTopicIcon } from '../../utils/topicIcons';
 import { EmojiPickerPopover } from './EmojiPickerPopover';
 import { GifPickerPopover } from './GifPickerPopover';
 import { uploadImageToCloudinary } from '../../lib/cloudinary';
+import { useAction } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 interface PostComposerProps {
   embedded?: boolean;
@@ -60,6 +62,9 @@ export const PostComposer: React.FC<PostComposerProps> = ({
     deleteDraft: deleteDraftFromConvex,
     generateCloudinarySignature,
   } = useLalao();
+  
+  const createMuxDirectUpload = useAction(api.mux.createDirectUpload);
+  const pollMuxStatus = useAction(api.mux.pollAndUpdatePost);
 
   // Core content states
   const [text, setText] = useState('');
@@ -68,6 +73,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [gifUrl, setGifUrl] = useState('');
+  const [muxUploadId, setMuxUploadId] = useState<string | undefined>(undefined);
 
   // Destination & Reply Permissions
   const [selectedAudience, setSelectedAudience] = useState<PostAudience>('everyone');
@@ -361,33 +367,55 @@ export const PostComposer: React.FC<PostComposerProps> = ({
     try {
       let finalMediaUrl = gifUrl || mediaUrl;
       let finalMediaStorageId: string | undefined = undefined;
+      let finalMuxUploadId: string | undefined = undefined;
 
       // If user picked a local file, upload it
       if (selectedFile) {
-        try {
-          const uploadUrl = await generateUploadUrl();
-          const uploadRes = await fetch(uploadUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': selectedFile.type },
-            body: selectedFile,
-          });
-          if (uploadRes.ok) {
-            const { storageId } = await uploadRes.json();
-            finalMediaStorageId = storageId;
-            finalMediaUrl = '';
-          } else {
-            throw new Error('Upload to storage failed');
-          }
-        } catch (storageErr) {
-          console.warn('Convex direct storage upload fallback to Cloudinary:', storageErr);
+        if (mediaType === 'video') {
+          // VIDEO → Upload to Mux
           try {
-            const sig = await generateCloudinarySignature('posts');
-            finalMediaUrl = await uploadImageToCloudinary(selectedFile, sig);
-          } catch (cloudErr) {
-            console.error('All media upload methods failed:', cloudErr);
-            triggerShareToast('Media upload failed, please retry.');
+            const { upload_url, upload_id } = await createMuxDirectUpload();
+            const uploadRes = await fetch(upload_url, {
+              method: 'PUT',
+              headers: { 'Content-Type': selectedFile.type },
+              body: selectedFile,
+            });
+            if (!uploadRes.ok) throw new Error('Mux upload failed');
+            finalMuxUploadId = upload_id;
+            finalMediaUrl = ''; // No URL yet — Mux will process it asynchronously
+          } catch (muxErr) {
+            console.error('Mux video upload failed:', muxErr);
+            triggerShareToast('Video upload failed. Please try again.');
             setIsSubmitting(false);
             return;
+          }
+        } else {
+          // IMAGE → Use existing Convex Storage / Cloudinary flow
+          try {
+            const uploadUrl = await generateUploadUrl();
+            const uploadRes = await fetch(uploadUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': selectedFile.type },
+              body: selectedFile,
+            });
+            if (uploadRes.ok) {
+              const { storageId } = await uploadRes.json();
+              finalMediaStorageId = storageId;
+              finalMediaUrl = '';
+            } else {
+              throw new Error('Upload to storage failed');
+            }
+          } catch (storageErr) {
+            console.warn('Convex direct storage upload fallback to Cloudinary:', storageErr);
+            try {
+              const sig = await generateCloudinarySignature('posts');
+              finalMediaUrl = await uploadImageToCloudinary(selectedFile, sig);
+            } catch (cloudErr) {
+              console.error('All media upload methods failed:', cloudErr);
+              triggerShareToast('Media upload failed, please retry.');
+              setIsSubmitting(false);
+              return;
+            }
           }
         }
       }
@@ -408,7 +436,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({
           }
         : undefined;
 
-      await createPost({
+      const created = await createPost({
         text: text.trim(),
         mediaUrl: finalMediaUrl || undefined,
         mediaStorageId: finalMediaStorageId,
@@ -421,7 +449,16 @@ export const PostComposer: React.FC<PostComposerProps> = ({
         rallyRefId: attachedRallyId ?? undefined,
         pageRefId: selectedAudience === 'community' ? selectedCommunityId ?? undefined : undefined,
         contentTopics: topics.length > 0 ? topics : undefined,
-      });
+        muxUploadId: finalMuxUploadId,
+      } as any);
+
+      // If video was uploaded to Mux, kick off background polling to update the post
+      // when Mux finishes processing the video
+      if (finalMuxUploadId && created?.id) {
+        pollMuxStatus({ postId: created.id as any, uploadId: finalMuxUploadId }).catch(
+          (e: any) => console.warn('Mux poll failed (non-critical):', e)
+        );
+      }
 
       // Clear draft if it was saved
       if (currentDraftId) {

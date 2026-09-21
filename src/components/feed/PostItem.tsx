@@ -24,6 +24,7 @@ import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
 import { getTopicIcon } from '../../utils/topicIcons';
+import { MuxVideoPlayer } from './MuxVideoPlayer';
 import { CommentThread } from '../common/CommentsModal';
 import { CommentComposer } from '../common/CommentComposer';
 import { ReportModal } from './ReportModal';
@@ -412,51 +413,12 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
 
           {/* Media Attachment (for normal post without rally or with independent media) */}
           {post?.mediaUrl && !linkedRally && (
-            <div className="mt-3 relative rounded-2xl overflow-hidden bg-neutral-900 border border-neutral-200/80 group">
+            <div className="mt-3 relative rounded-2xl overflow-hidden border border-neutral-200/80 group">
               {post.mediaType === 'video' ? (
-                <div className="relative aspect-video w-full flex items-center justify-center bg-neutral-900 overflow-hidden">
-                  {isPlaying ? (
-                    <video
-                      src={post.mediaUrl}
-                      autoPlay
-                      muted={isMuted}
-                      loop
-                      playsInline
-                      className="w-full h-full object-cover cursor-pointer"
-                      onClick={() => setIsPlaying(false)}
-                    />
-                  ) : (
-                    <img
-                      src={post.mediaUrl}
-                      alt="Video preview"
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover opacity-80 cursor-pointer"
-                      onClick={() => setIsPlaying(true)}
-                    />
-                  )}
-                  
-                  {/* Video Play Overlay */}
-                  {!isPlaying && (
-                    <button
-                      id={`btn-play-video-${post.id}`}
-                      onClick={() => setIsPlaying(true)}
-                      className="absolute z-10 w-14 h-14 rounded-full bg-black/60 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/80 hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer"
-                      aria-label="Play video"
-                    >
-                      <Play className="w-6 h-6 fill-white ml-0.5" />
-                    </button>
-                  )}
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsMuted(!isMuted);
-                    }}
-                    className="absolute bottom-3 right-3 p-1.5 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors cursor-pointer z-10"
-                  >
-                    {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
+                <MuxVideoPlayer
+                  muxPlaybackId={(post as any).muxPlaybackId}
+                  mediaUrl={post.mediaUrl}
+                />
               ) : (
                 <img
                   src={post.mediaUrl}
@@ -468,6 +430,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
               )}
             </div>
           )}
+
 
           {/* GIF Attachment */}
           {post?.gifUrl && !linkedRally && (

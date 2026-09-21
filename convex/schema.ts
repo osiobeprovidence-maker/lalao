@@ -122,6 +122,10 @@ export default defineSchema({
     violationLevel: v.optional(v.string()),
     moderationNote: v.optional(v.string()),
     contentTopics: v.optional(v.array(v.string())),
+    // Mux video fields
+    muxUploadId: v.optional(v.string()),
+    muxAssetId: v.optional(v.string()),
+    muxPlaybackId: v.optional(v.string()),
   })
     .index("by_author", ["authorId"])
     .index("by_created", ["createdAt"])
