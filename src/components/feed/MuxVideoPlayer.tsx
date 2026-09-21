@@ -1,35 +1,40 @@
 import React, { useState } from 'react';
 import MuxPlayer from '@mux/mux-player-react';
-import { Play, Loader2 } from 'lucide-react';
+import { Play, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface MuxVideoPlayerProps {
   muxPlaybackId?: string;
-  mediaUrl?: string; // Fallback for older Convex Storage videos
+  mediaUrl?: string; // Fallback or client-extracted poster preview
   poster?: string;
+  mediaStatus?: 'uploading' | 'processing' | 'ready' | 'failed';
   autoPlay?: boolean;
   loop?: boolean;
   muted?: boolean;
   className?: string;
   /** If true, show a small inline player. Otherwise full-width. */
   inline?: boolean;
+  onRetryProcessing?: () => void;
 }
 
 /**
  * MuxVideoPlayer
  *
  * Renders:
- * 1. A Mux Player (HLS adaptive streaming) if muxPlaybackId is present (or extractable from Mux URLs)
- * 2. A "processing" placeholder if the Mux upload is still being transcoded
- * 3. A basic <video> tag fallback for older Convex Storage videos
+ * 1. A Mux Player (HLS adaptive streaming) if muxPlaybackId is present (or extractable)
+ * 2. An instant poster frame with a subtle non-blocking processing badge while Mux transcodes in background
+ * 3. A friendly failure badge if processing failed
+ * 4. A basic <video> tag fallback for raw MP4 videos
  */
 export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
   muxPlaybackId,
   mediaUrl,
   poster,
+  mediaStatus = 'ready',
   autoPlay = false,
   loop = false,
   muted = false,
   className = '',
+  onRetryProcessing,
 }) => {
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [isMuted, setIsMuted] = useState(muted);
@@ -43,7 +48,7 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
     }
   }
 
-  // --- Case 1: Mux playback ID is present → use Mux HLS adaptive stream ---
+  // --- Case 1: Mux playback ID is present & ready → use Mux HLS adaptive stream ---
   if (effectivePlaybackId) {
     const posterUrl = poster ?? `https://image.mux.com/${effectivePlaybackId}/thumbnail.jpg?time=0`;
 
@@ -86,22 +91,64 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
     );
   }
 
-  // --- Case 2: muxUploadId present but no playbackId → still processing ---
-  if (!muxPlaybackId && !mediaUrl) {
+  // --- Case 2: Media processing in background but poster preview available ---
+  if (mediaStatus === 'processing' || (!effectivePlaybackId && mediaUrl)) {
     return (
-      <div className={`relative w-full aspect-video rounded-2xl bg-neutral-100 border border-neutral-200 flex flex-col items-center justify-center gap-3 ${className}`}>
-        <div className="w-12 h-12 rounded-full bg-[#5E43F3]/10 flex items-center justify-center">
-          <Loader2 className="w-6 h-6 text-[#5E43F3] animate-spin" />
-        </div>
-        <div className="text-center">
-          <p className="text-sm font-semibold text-neutral-700">Video processing…</p>
-          <p className="text-xs text-neutral-400 mt-0.5">This usually takes less than a minute</p>
+      <div className={`relative w-full overflow-hidden rounded-2xl bg-neutral-900 ${className}`}>
+        <div className="relative aspect-video w-full flex items-center justify-center bg-neutral-900 group">
+          {mediaUrl ? (
+            <img
+              src={mediaUrl}
+              alt="Video preview"
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover opacity-80"
+            />
+          ) : (
+            <div className="w-full h-full bg-neutral-900 flex items-center justify-center" />
+          )}
+
+          {/* Subtle non-blocking processing badge overlay */}
+          <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-md text-white text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-2 shadow-md">
+            <Loader2 className="w-3.5 h-3.5 text-[#5E43F3] animate-spin" />
+            <span>Processing HD Video...</span>
+          </div>
+
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-full bg-black/50 backdrop-blur-xs flex items-center justify-center shadow-md">
+              <Play className="w-6 h-6 text-white/80 ml-1" fill="currentColor" />
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
-  // --- Case 3: Fallback — basic HTML5 video (Convex Storage / Cloudinary) ---
+  // --- Case 3: Processing Failed ---
+  if (mediaStatus === 'failed') {
+    return (
+      <div className={`relative w-full aspect-video rounded-2xl bg-rose-950/20 border border-rose-200/40 flex flex-col items-center justify-center gap-3 p-4 text-center ${className}`}>
+        <div className="w-10 h-10 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500">
+          <AlertCircle className="w-5 h-5" />
+        </div>
+        <div>
+          <p className="text-xs font-bold text-rose-900">Media processing encountered an issue</p>
+          <p className="text-[11px] text-rose-600 mt-0.5">Your caption remains posted. Video preview will update shortly.</p>
+        </div>
+        {onRetryProcessing && (
+          <button
+            type="button"
+            onClick={onRetryProcessing}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-700 hover:text-rose-900 underline"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Retry processing
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // --- Case 4: Fallback — basic HTML5 video ---
   if (mediaUrl) {
     return (
       <div className={`relative w-full overflow-hidden rounded-2xl bg-neutral-900 ${className}`}>

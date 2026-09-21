@@ -95,7 +95,7 @@ export const pollAndUpdatePost = action({
     uploadId: v.string(),
     maxAttempts: v.optional(v.number()),
   },
-  handler: async (ctx, { postId, uploadId, maxAttempts = 20 }) => {
+  handler: async (ctx, { postId, uploadId, maxAttempts = 30 }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new ConvexError("Unauthenticated");
 
@@ -117,11 +117,23 @@ export const pollAndUpdatePost = action({
             muxPlaybackId: asset.playback_ids[0].id,
           });
           return { success: true, playbackId: asset.playback_ids[0].id };
+        } else if (asset.status === "errored") {
+          await ctx.runMutation(internal.muxInternal.updatePostMuxError, {
+            postId,
+            error: asset.errors?.messages?.[0] ?? "Video encoding failed",
+          });
+          return { success: false, playbackId: null };
         }
       } catch (e) {
         console.warn(`Mux poll attempt ${attempt + 1} failed:`, e);
       }
     }
+
+    // Timed out polling
+    await ctx.runMutation(internal.muxInternal.updatePostMuxError, {
+      postId,
+      error: "Video processing timed out",
+    });
 
     return { success: false, playbackId: null };
   },

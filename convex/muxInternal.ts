@@ -22,8 +22,26 @@ export const updatePostMuxStatus = internalMutation({
     await ctx.db.patch(postId, {
       muxAssetId,
       muxPlaybackId,
+      mediaStatus: "ready",
       // Set a stable Mux thumbnail as the mediaUrl for OG previews / fallback
       mediaUrl: `https://image.mux.com/${muxPlaybackId}/thumbnail.jpg`,
+    });
+  },
+});
+
+/**
+ * updatePostMuxError
+ * Called if Mux video processing fails or times out.
+ */
+export const updatePostMuxError = internalMutation({
+  args: {
+    postId: v.id("posts"),
+    error: v.optional(v.string()),
+  },
+  handler: async (ctx, { postId, error }) => {
+    await ctx.db.patch(postId, {
+      mediaStatus: "failed",
+      mediaProcessingError: error ?? "Video processing failed",
     });
   },
 });

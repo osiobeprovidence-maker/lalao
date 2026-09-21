@@ -77,6 +77,8 @@ export interface Post {
   muxUploadId?: string;
   muxAssetId?: string;
   muxPlaybackId?: string;
+  mediaStatus?: 'uploading' | 'processing' | 'ready' | 'failed';
+  mediaProcessingError?: string;
   mediaAspectRatio?: 'square' | 'wide' | 'tall';
   location: string;
   latitude?: number;

@@ -352,6 +352,70 @@ export const PostComposer: React.FC<PostComposerProps> = ({
     }
   };
 
+  // Upload progress state
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+
+  // Helper: Extract video frame poster client-side
+  const generateVideoPoster = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.src = URL.createObjectURL(file);
+      video.currentTime = 0.5;
+      video.muted = true;
+      video.playsInline = true;
+      video.onloadeddata = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 360;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          URL.revokeObjectURL(video.src);
+          resolve(dataUrl);
+        } else {
+          URL.revokeObjectURL(video.src);
+          resolve('');
+        }
+      };
+      video.onerror = () => {
+        URL.revokeObjectURL(video.src);
+        resolve('');
+      };
+    });
+  };
+
+  // Helper: XHR Upload with progress callback
+  const uploadFileWithProgress = (url: string, method: 'PUT' | 'POST', file: File, onProgress: (pct: number) => void): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open(method, url, true);
+      if (method === 'PUT') {
+        xhr.setRequestHeader('Content-Type', file.type);
+      }
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const percentComplete = Math.round((e.loaded / e.total) * 100);
+          onProgress(percentComplete);
+        }
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            resolve(xhr.responseText ? JSON.parse(xhr.responseText) : {});
+          } catch {
+            resolve({});
+          }
+        } else {
+          reject(new Error(`Upload failed with status ${xhr.status}`));
+        }
+      };
+      xhr.onerror = () => reject(new Error('Network error during upload'));
+      xhr.send(file);
+    });
+  };
+
   // Submit Post
   const handleSubmit = async () => {
     const hasText = text.trim().length > 0;
@@ -368,39 +432,40 @@ export const PostComposer: React.FC<PostComposerProps> = ({
       let finalMediaUrl = gifUrl || mediaUrl;
       let finalMediaStorageId: string | undefined = undefined;
       let finalMuxUploadId: string | undefined = undefined;
+      let generatedPosterUrl: string | undefined = undefined;
 
-      // If user picked a local file, upload it
+      // If user picked a local file, upload it with progress tracking
       if (selectedFile) {
+        setUploadProgress(5);
         if (mediaType === 'video') {
-          // VIDEO → Upload to Mux
+          // Extract instant poster frame before or during upload
+          try {
+            generatedPosterUrl = await generateVideoPoster(selectedFile);
+          } catch (posterErr) {
+            console.warn('Could not extract video poster:', posterErr);
+          }
+
+          // VIDEO → Upload to Mux via direct upload
           try {
             const { upload_url, upload_id } = await createMuxDirectUpload();
-            const uploadRes = await fetch(upload_url, {
-              method: 'PUT',
-              headers: { 'Content-Type': selectedFile.type },
-              body: selectedFile,
-            });
-            if (!uploadRes.ok) throw new Error('Mux upload failed');
+            await uploadFileWithProgress(upload_url, 'PUT', selectedFile, (pct) => setUploadProgress(pct));
             finalMuxUploadId = upload_id;
-            finalMediaUrl = ''; // No URL yet — Mux will process it asynchronously
+            // Use client-generated poster frame as temporary mediaUrl for instant feed preview
+            finalMediaUrl = generatedPosterUrl || mediaUrl || '';
           } catch (muxErr) {
             console.error('Mux video upload failed:', muxErr);
             triggerShareToast('Video upload failed. Please try again.');
             setIsSubmitting(false);
+            setUploadProgress(null);
             return;
           }
         } else {
-          // IMAGE → Use existing Convex Storage / Cloudinary flow
+          // IMAGE → Upload to Convex Storage with fallback
           try {
             const uploadUrl = await generateUploadUrl();
-            const uploadRes = await fetch(uploadUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': selectedFile.type },
-              body: selectedFile,
-            });
-            if (uploadRes.ok) {
-              const { storageId } = await uploadRes.json();
-              finalMediaStorageId = storageId;
+            const res = await uploadFileWithProgress(uploadUrl, 'POST', selectedFile, (pct) => setUploadProgress(pct));
+            if (res.storageId) {
+              finalMediaStorageId = res.storageId;
               finalMediaUrl = '';
             } else {
               throw new Error('Upload to storage failed');
@@ -414,11 +479,14 @@ export const PostComposer: React.FC<PostComposerProps> = ({
               console.error('All media upload methods failed:', cloudErr);
               triggerShareToast('Media upload failed, please retry.');
               setIsSubmitting(false);
+              setUploadProgress(null);
               return;
             }
           }
         }
       }
+
+      setUploadProgress(100);
 
       // Collect contentTopics
       const topics: string[] = [];
@@ -450,10 +518,10 @@ export const PostComposer: React.FC<PostComposerProps> = ({
         pageRefId: selectedAudience === 'community' ? selectedCommunityId ?? undefined : undefined,
         contentTopics: topics.length > 0 ? topics : undefined,
         muxUploadId: finalMuxUploadId,
+        mediaStatus: finalMuxUploadId ? 'processing' : 'ready',
       } as any);
 
-      // If video was uploaded to Mux, kick off background polling to update the post
-      // when Mux finishes processing the video
+      // Trigger background polling for Mux processing without blocking user UI
       if (finalMuxUploadId && created?.id) {
         pollMuxStatus({ postId: created.id as any, uploadId: finalMuxUploadId }).catch(
           (e: any) => console.warn('Mux poll failed (non-critical):', e)
@@ -472,7 +540,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({
         URL.revokeObjectURL(mediaUrl);
       }
 
-      // Reset composer
+      // Reset composer state
       setText('');
       setMediaUrl('');
       setGifUrl('');
@@ -484,19 +552,17 @@ export const PostComposer: React.FC<PostComposerProps> = ({
       setComposerInitialText('');
       setCreateFlowType(null);
       setIsCreateSheetOpen(false);
+      setUploadProgress(null);
+      setIsSubmitting(false);
 
-      triggerShareToast('Post published successfully!');
-
-      if (onClose) {
-        onClose();
-      } else if (embedded) {
-        setActiveTab('home');
-      }
+      triggerShareToast('Post published!');
+      handleClose();
     } catch (err: any) {
-      console.error('Failed to create post:', err);
-      triggerShareToast(err?.message || 'Failed to post. Please try again.');
+      console.error('Submit post failed:', err);
+      triggerShareToast(err?.message || 'Failed to publish post. Please try again.');
     } finally {
       setIsSubmitting(false);
+      setUploadProgress(null);
     }
   };
 

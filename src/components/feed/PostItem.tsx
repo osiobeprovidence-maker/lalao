@@ -418,6 +418,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
                 <MuxVideoPlayer
                   muxPlaybackId={(post as any).muxPlaybackId}
                   mediaUrl={post.mediaUrl}
+                  mediaStatus={(post as any).mediaStatus}
                 />
               ) : (
                 post.mediaUrl && (

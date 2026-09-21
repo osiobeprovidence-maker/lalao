@@ -1114,6 +1114,14 @@ export const createPost = mutation({
     muxUploadId: v.optional(v.string()),
     muxAssetId: v.optional(v.string()),
     muxPlaybackId: v.optional(v.string()),
+    mediaStatus: v.optional(
+      v.union(
+        v.literal("uploading"),
+        v.literal("processing"),
+        v.literal("ready"),
+        v.literal("failed")
+      )
+    ),
   },
   handler: async (ctx, args) => {
     let currentUser = await getAuthedUser(ctx);
@@ -1157,6 +1165,16 @@ export const createPost = mutation({
       }
     }
 
+    // Determine initial media status
+    let initialMediaStatus = args.mediaStatus;
+    if (!initialMediaStatus) {
+      if (args.muxUploadId && !args.muxPlaybackId) {
+        initialMediaStatus = "processing";
+      } else if (args.mediaUrl || args.mediaStorageId || args.muxPlaybackId || args.gifUrl) {
+        initialMediaStatus = "ready";
+      }
+    }
+
     const now = Date.now();
     const postId = await ctx.db.insert("posts", {
       authorId: currentUser._id,
@@ -1182,6 +1200,7 @@ export const createPost = mutation({
       muxUploadId: args.muxUploadId,
       muxAssetId: args.muxAssetId,
       muxPlaybackId: args.muxPlaybackId,
+      mediaStatus: initialMediaStatus,
     });
 
     return {
