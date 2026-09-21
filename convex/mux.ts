@@ -1,9 +1,8 @@
 "use node";
-import { action, internalMutation } from "./_generated/server";
+import { action } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v, ConvexError } from "convex/values";
 import Mux from "@mux/mux-node";
-import { Id } from "./_generated/dataModel";
 
 async function getMuxClient() {
   const tokenId = process.env.MUX_TOKEN_ID;
@@ -85,30 +84,10 @@ export const getMuxAssetStatus = action({
 });
 
 /**
- * updatePostMuxStatus (internal mutation)
- * Called from the getMuxAssetStatus action or a webhook to persist
- * the Mux playback ID onto the post record once the video is ready.
- */
-export const updatePostMuxStatus = internalMutation({
-  args: {
-    postId: v.id("posts"),
-    muxAssetId: v.string(),
-    muxPlaybackId: v.string(),
-  },
-  handler: async (ctx, { postId, muxAssetId, muxPlaybackId }) => {
-    await ctx.db.patch(postId, {
-      muxAssetId,
-      muxPlaybackId,
-      // Set a stable Mux thumbnail as the mediaUrl for OG previews
-      mediaUrl: `https://image.mux.com/${muxPlaybackId}/thumbnail.jpg`,
-    });
-  },
-});
-
-/**
  * pollAndUpdatePost
  * Action that polls Mux for the upload status and updates the post
  * record when the video is ready. Called from the frontend after uploading.
+ * Note: updatePostMuxStatus lives in muxInternal.ts (non-Node.js runtime).
  */
 export const pollAndUpdatePost = action({
   args: {
@@ -132,7 +111,7 @@ export const pollAndUpdatePost = action({
 
         const asset = await mux.video.assets.retrieve(upload.asset_id);
         if (asset.status === "ready" && asset.playback_ids?.[0]?.id) {
-          await ctx.runMutation(internal.mux.updatePostMuxStatus, {
+          await ctx.runMutation(internal.muxInternal.updatePostMuxStatus, {
             postId,
             muxAssetId: asset.id,
             muxPlaybackId: asset.playback_ids[0].id,

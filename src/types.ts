@@ -74,6 +74,9 @@ export interface Post {
   text: string;
   mediaUrl?: string;
   mediaType?: 'image' | 'video';
+  muxUploadId?: string;
+  muxAssetId?: string;
+  muxPlaybackId?: string;
   mediaAspectRatio?: 'square' | 'wide' | 'tall';
   location: string;
   latitude?: number;

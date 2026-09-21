@@ -5,7 +5,7 @@ import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from './Avatar';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { Id } from '../../../convex/_generated/dataModel';
+import { MuxVideoPlayer } from '../feed/MuxVideoPlayer';
 
 const QUICK_EMOJIS = ['❤️', '🙌', '🔥', '👏', '🎉', '😍', '🎊', '🍾'];
 
@@ -185,27 +185,14 @@ export const CommentsModal: React.FC = () => {
     }, 300);
   };
 
-  const mediaContent = post.mediaUrl ? (
+  const mediaContent = post.mediaUrl || (post as any).muxPlaybackId ? (
     <div className="relative flex h-full min-h-[220px] w-full items-center justify-center overflow-hidden bg-neutral-100 md:min-h-0">
       {post.mediaType === 'video' ? (
-        <div className="relative h-full w-full bg-black">
-          <video
-            src={post.mediaUrl}
-            controls={false}
-            autoPlay={isPlayingPreview}
-            muted={isMutedPreview}
-            playsInline
-            className="h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-          <button
-            type="button"
-            onClick={() => setIsPlayingPreview((prev) => !prev)}
-            className="absolute left-1/2 top-1/2 z-10 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white shadow-lg backdrop-blur-sm transition hover:bg-black/80"
-          >
-            {isPlayingPreview ? <Pause className="h-6 w-6 fill-white" /> : <Play className="ml-0.5 h-6 w-6 fill-white" />}
-          </button>
-        </div>
+        <MuxVideoPlayer
+          muxPlaybackId={(post as any).muxPlaybackId}
+          mediaUrl={post.mediaUrl}
+          className="h-full w-full"
+        />
       ) : (
         <img
           src={post.mediaUrl}

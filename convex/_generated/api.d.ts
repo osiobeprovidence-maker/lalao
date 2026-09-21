@@ -11,7 +11,10 @@
 import type * as admin from "../admin.js";
 import type * as cloudinary from "../cloudinary.js";
 import type * as community from "../community.js";
+import type * as debug from "../debug.js";
 import type * as moderation from "../moderation.js";
+import type * as mux from "../mux.js";
+import type * as muxInternal from "../muxInternal.js";
 import type * as pages from "../pages.js";
 import type * as platformSettings from "../platformSettings.js";
 import type * as push from "../push.js";
@@ -35,7 +38,10 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   cloudinary: typeof cloudinary;
   community: typeof community;
+  debug: typeof debug;
   moderation: typeof moderation;
+  mux: typeof mux;
+  muxInternal: typeof muxInternal;
   pages: typeof pages;
   platformSettings: typeof platformSettings;
   push: typeof push;

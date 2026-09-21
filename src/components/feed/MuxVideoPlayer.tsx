@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Play, Loader2, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import MuxPlayer from '@mux/mux-player-react';
+import { Play, Loader2 } from 'lucide-react';
 
 interface MuxVideoPlayerProps {
   muxPlaybackId?: string;
@@ -17,7 +18,7 @@ interface MuxVideoPlayerProps {
  * MuxVideoPlayer
  *
  * Renders:
- * 1. A Mux Player (HLS adaptive streaming) if muxPlaybackId is present and video is ready
+ * 1. A Mux Player (HLS adaptive streaming) if muxPlaybackId is present (or extractable from Mux URLs)
  * 2. A "processing" placeholder if the Mux upload is still being transcoded
  * 3. A basic <video> tag fallback for older Convex Storage videos
  */
@@ -33,23 +34,32 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [isMuted, setIsMuted] = useState(muted);
 
-  // --- Case 1: Mux playback ID is present → use Mux stream ---
-  if (muxPlaybackId) {
-    const streamUrl = `https://stream.mux.com/${muxPlaybackId}.m3u8`;
-    const posterUrl = poster ?? `https://image.mux.com/${muxPlaybackId}/thumbnail.jpg?time=0`;
+  // Auto-extract muxPlaybackId if mediaUrl is a Mux thumbnail URL
+  let effectivePlaybackId = muxPlaybackId;
+  if (!effectivePlaybackId && mediaUrl && mediaUrl.includes('image.mux.com')) {
+    const match = mediaUrl.match(/image\.mux\.com\/([^/]+)\/thumbnail/);
+    if (match && match[1]) {
+      effectivePlaybackId = match[1];
+    }
+  }
+
+  // --- Case 1: Mux playback ID is present → use Mux HLS adaptive stream ---
+  if (effectivePlaybackId) {
+    const posterUrl = poster ?? `https://image.mux.com/${effectivePlaybackId}/thumbnail.jpg?time=0`;
 
     return (
       <div className={`relative w-full overflow-hidden rounded-2xl bg-black ${className}`}>
         {isPlaying ? (
-          <video
-            src={streamUrl}
+          <MuxPlayer
+            playbackId={effectivePlaybackId}
             poster={posterUrl}
-            autoPlay
+            streamType="on-demand"
+            autoPlay={true}
             muted={isMuted}
             loop={loop}
             playsInline
-            controls
-            className="w-full h-full object-cover"
+            preload="auto"
+            className="w-full h-full object-cover aspect-video"
             onEnded={() => setIsPlaying(false)}
           />
         ) : (
@@ -57,6 +67,7 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
             <img
               src={posterUrl}
               alt="Video thumbnail"
+              loading="lazy"
               className="w-full h-full object-cover opacity-90 group-hover:opacity-75 transition-opacity duration-200"
             />
             {/* Play button overlay */}
@@ -101,8 +112,9 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
             muted={isMuted}
             loop={loop}
             playsInline
+            controls
+            preload="metadata"
             className="w-full h-full object-cover cursor-pointer"
-            onClick={() => setIsPlaying(false)}
           />
         ) : (
           <div className="relative aspect-video w-full flex items-center justify-center bg-neutral-900 cursor-pointer group" onClick={() => setIsPlaying(true)}>
@@ -110,6 +122,7 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
               src={mediaUrl}
               alt="Video preview"
               referrerPolicy="no-referrer"
+              loading="lazy"
               className="w-full h-full object-cover opacity-75 group-hover:opacity-60 transition-opacity"
             />
             <div className="absolute inset-0 flex items-center justify-center">
