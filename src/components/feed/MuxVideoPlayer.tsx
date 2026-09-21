@@ -92,13 +92,13 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
   }
 
   // --- Case 2: Media processing in background but poster preview available ---
-  if (mediaStatus === 'processing' || (!effectivePlaybackId && mediaUrl)) {
+  if (mediaStatus === 'processing' && !effectivePlaybackId) {
     return (
       <div className={`relative w-full overflow-hidden rounded-2xl bg-neutral-900 ${className}`}>
         <div className="relative aspect-video w-full flex items-center justify-center bg-neutral-900 group">
-          {mediaUrl ? (
+          {mediaUrl && (mediaUrl.startsWith('data:image') || mediaUrl.includes('image.mux.com') || poster) ? (
             <img
-              src={mediaUrl}
+              src={poster || mediaUrl}
               alt="Video preview"
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover opacity-80"
@@ -108,12 +108,12 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
           )}
 
           {/* Subtle non-blocking processing badge overlay */}
-          <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-md text-white text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-2 shadow-md">
+          <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-md text-white text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-2 shadow-md z-10">
             <Loader2 className="w-3.5 h-3.5 text-[#5E43F3] animate-spin" />
             <span>Processing HD Video...</span>
           </div>
 
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-14 h-14 rounded-full bg-black/50 backdrop-blur-xs flex items-center justify-center shadow-md">
               <Play className="w-6 h-6 text-white/80 ml-1" fill="currentColor" />
             </div>
@@ -148,37 +148,18 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
     );
   }
 
-  // --- Case 4: Fallback — basic HTML5 video ---
+  // --- Case 4: Fallback — basic HTML5 video (Convex Storage / Cloudinary / direct MP4) ---
   if (mediaUrl) {
     return (
       <div className={`relative w-full overflow-hidden rounded-2xl bg-neutral-900 ${className}`}>
-        {isPlaying ? (
-          <video
-            src={mediaUrl}
-            autoPlay
-            muted={isMuted}
-            loop={loop}
-            playsInline
-            controls
-            preload="metadata"
-            className="w-full h-full object-cover cursor-pointer"
-          />
-        ) : (
-          <div className="relative aspect-video w-full flex items-center justify-center bg-neutral-900 cursor-pointer group" onClick={() => setIsPlaying(true)}>
-            <img
-              src={mediaUrl}
-              alt="Video preview"
-              referrerPolicy="no-referrer"
-              loading="lazy"
-              className="w-full h-full object-cover opacity-75 group-hover:opacity-60 transition-opacity"
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-14 h-14 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center hover:bg-black/80 hover:scale-105 transition-all shadow-md">
-                <Play className="w-6 h-6 text-white ml-1" fill="white" />
-              </div>
-            </div>
-          </div>
-        )}
+        <video
+          src={mediaUrl}
+          poster={poster}
+          controls
+          playsInline
+          preload="metadata"
+          className="w-full h-full object-cover max-h-[500px]"
+        />
       </div>
     );
   }

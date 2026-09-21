@@ -445,7 +445,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({
             console.warn('Could not extract video poster:', posterErr);
           }
 
-          // VIDEO → Upload to Mux via direct upload
+          // VIDEO → Upload to Mux via direct upload (with Convex Storage fallback)
           try {
             const { upload_url, upload_id } = await createMuxDirectUpload();
             await uploadFileWithProgress(upload_url, 'PUT', selectedFile, (pct) => setUploadProgress(pct));
@@ -453,11 +453,23 @@ export const PostComposer: React.FC<PostComposerProps> = ({
             // Use client-generated poster frame as temporary mediaUrl for instant feed preview
             finalMediaUrl = generatedPosterUrl || mediaUrl || '';
           } catch (muxErr) {
-            console.error('Mux video upload failed:', muxErr);
-            triggerShareToast('Video upload failed. Please try again.');
-            setIsSubmitting(false);
-            setUploadProgress(null);
-            return;
+            console.warn('Mux direct upload unavailable/failed. Falling back to direct storage upload:', muxErr);
+            try {
+              const uploadUrl = await generateUploadUrl();
+              const res = await uploadFileWithProgress(uploadUrl, 'POST', selectedFile, (pct) => setUploadProgress(pct));
+              if (res.storageId) {
+                finalMediaStorageId = res.storageId;
+                finalMediaUrl = '';
+              } else {
+                throw new Error('Fallback storage upload failed');
+              }
+            } catch (fallbackErr) {
+              console.error('All video upload methods failed:', fallbackErr);
+              triggerShareToast('Video upload failed. Please try again.');
+              setIsSubmitting(false);
+              setUploadProgress(null);
+              return;
+            }
           }
         } else {
           // IMAGE → Upload to Convex Storage with fallback
