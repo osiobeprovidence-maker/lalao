@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, Search, Crown } from 'lucide-react';
+import { Menu, Search } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { MobileDrawer } from './MobileDrawer';
 
@@ -33,14 +33,7 @@ export const Header: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-1 z-10">
-            <button
-              onClick={() => setIsMySubscriptionsOpen(true)}
-              className="relative rounded-full p-2 text-[#5E43F3] transition hover:bg-[#5E43F3]/10 active:scale-95"
-              title="My Subscriptions"
-              aria-label="Open my subscriptions"
-            >
-              <Crown className="h-5 w-5 stroke-[2.2]" />
-            </button>
+
             <button
               id="btn-explore-open"
               onClick={() => setActiveTab('discover')}

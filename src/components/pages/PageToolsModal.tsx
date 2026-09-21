@@ -192,7 +192,7 @@ export const PageToolsModal: React.FC<PageToolsModalProps> = ({
             </div>
           )}
 
-          {/* CUSTOMER ENGAGEMENT SECTION */}
+          {/* CUSTOMER ENGAGEMENT SECTION - Temporarily hidden as backend schema is not implemented
           <div>
             <h3 className="text-sm font-bold text-neutral-400 uppercase tracking-wider mb-3">Customer Engagement</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -225,6 +225,7 @@ export const PageToolsModal: React.FC<PageToolsModalProps> = ({
               />
             </div>
           </div>
+          */}
           
         </div>
       </div>

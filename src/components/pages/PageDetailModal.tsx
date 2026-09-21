@@ -119,6 +119,7 @@ export const PageDetailModal: React.FC = () => {
   const [isPostComposerOpen, setIsPostComposerOpen] = useState(false);
 
   const activePlans = useQuery(api.subscriptions.getPageSubscriptions, activePageId && activePageId !== 'page_honorofkings' ? { pageId: activePageId as any } : 'skip') || [];
+  const myMemberships = useQuery(api.subscriptions.getMyMemberships) || [];
 
   const containerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -177,6 +178,9 @@ export const PageDetailModal: React.FC = () => {
       </div>
     );
   }
+
+  const hasSubscriptions = page.activeTools?.includes('subscriptions') || page.businessType === 'subscription' || page.businessType === 'hybrid';
+  const isSubscribed = myMemberships.some((m: any) => m.pageId === page.id && m.status === 'active');
 
   // Use Convex's authoritative isOwner flag for management mode
   const isManager = Boolean(page.isOwner);
@@ -296,6 +300,29 @@ export const PageDetailModal: React.FC = () => {
             </button>
 
             <div className="flex items-center gap-2">
+              {hasSubscriptions && (
+                <button
+                  id="btn-biz-page-subscriptions"
+                  type="button"
+                  onClick={() => {
+                    if (isSubscribed) {
+                      setIsMySubscriptionsOpen(true);
+                    } else {
+                      setActiveTab('subscriptions');
+                    }
+                  }}
+                  className={`relative p-2 rounded-full transition-all cursor-pointer shadow-md active:scale-95 ${
+                    isSubscribed
+                      ? 'bg-[#5E43F3] text-white hover:bg-[#4E34E0]'
+                      : 'bg-black/60 backdrop-blur-md text-white hover:bg-black/80'
+                  }`}
+                  title={isSubscribed ? "Subscribed" : "Subscriptions"}
+                  aria-label={isSubscribed ? "Subscribed" : "Subscriptions"}
+                >
+                  <Crown className={`w-4 h-4 ${isSubscribed ? 'stroke-[2.5] fill-white/20' : 'stroke-[2]'}`} />
+                </button>
+              )}
+
               {isBizPage && (
                 <>
                   <button
@@ -926,6 +953,89 @@ export const PageDetailModal: React.FC = () => {
               ) : (
                 <div className="p-8 text-center text-neutral-400 text-xs">
                   No products in this category yet.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB: SUBSCRIPTIONS */}
+          {activeTab === 'subscriptions' && (
+            <div id="page-subscriptions-section" className="p-3 sm:p-4 space-y-4">
+              <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-100 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#5E43F3]/10 flex items-center justify-center text-[#5E43F3]">
+                    <Crown className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-neutral-900">Premium Memberships</h3>
+                    <p className="text-[11px] text-neutral-500 max-w-sm">
+                      Support {page.name} and get exclusive perks, private content, and VIP slots.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {pageSubscriptionPlans && pageSubscriptionPlans.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {pageSubscriptionPlans.map((plan: any) => (
+                    <div key={plan._id} className="border border-neutral-200 rounded-2xl p-4 flex flex-col justify-between hover:shadow-md transition-all">
+                      <div>
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-bold text-neutral-900 text-sm">{plan.name}</h4>
+                          <span className="bg-[#5E43F3]/10 text-[#5E43F3] text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            LALAO POINTS
+                          </span>
+                        </div>
+                        <p className="text-xs text-neutral-500 mb-4 line-clamp-2">{plan.description}</p>
+                        
+                        <div className="flex items-center gap-2 mb-4">
+                          <div className="bg-neutral-100 rounded-lg px-2 py-1 flex items-center gap-1.5 text-[11px] font-semibold text-neutral-700">
+                            <Users className="w-3.5 h-3.5" />
+                            <span>{plan.availableSlots} / {plan.totalSlots} Slots</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-3 border-t border-neutral-100">
+                        <div>
+                          <span className="text-sm font-black text-[#5E43F3]">{plan.defaultSlotPrice?.toLocaleString() || 0} pts</span>
+                          <span className="text-[10px] text-neutral-400 font-medium ml-1">/ mo</span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setSelectedSubscriptionPlan(plan);
+                            setIsSubscriptionCheckoutOpen(true);
+                          }}
+                          className="px-4 py-1.5 bg-[#5E43F3] text-white rounded-xl text-xs font-bold hover:bg-[#4E34E0] shadow-sm active:scale-95 transition-all"
+                        >
+                          Join
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-10 text-center flex flex-col items-center justify-center space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center">
+                    <Crown className="w-5 h-5 text-neutral-400" />
+                  </div>
+                  {isManager ? (
+                    <>
+                      <h4 className="text-sm font-bold text-neutral-900">No Memberships Yet</h4>
+                      <p className="text-xs text-neutral-500 max-w-[200px]">Create your first premium tier in the Business Tools.</p>
+                      <button 
+                        onClick={() => setIsToolsModalOpen(true)}
+                        className="mt-2 px-4 py-2 bg-[#5E43F3] text-white text-xs font-bold rounded-xl"
+                      >
+                        Open Business Tools
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <h4 className="text-sm font-bold text-neutral-900">No Premium Memberships</h4>
+                      <p className="text-xs text-neutral-500 max-w-[200px]">This Page hasn't launched any premium slots yet.</p>
+                    </>
+                  )}
                 </div>
               )}
             </div>

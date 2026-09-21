@@ -12,13 +12,17 @@ import {
   X,
   CheckCircle2,
   ChevronRight,
+  Lightbulb,
+  Building2,
 } from 'lucide-react';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
+import { Badge } from '../common/Badge';
 import { PostItem } from '../feed/PostItem';
 import { User } from '../../types';
+import { SuggestCommunityModal } from './SuggestCommunityModal';
 
 type ProfileTab = 'posts' | 'replies' | 'media' | 'reposts';
 type ConnectionTab = 'community' | 'followers' | 'following';
@@ -88,6 +92,14 @@ export const ProfileView: React.FC = () => {
   );
   const myHasItems = myCycle && myCycle.items && myCycle.items.length > 0;
 
+  const [isSuggestOpen, setIsSuggestOpen] = useState(false);
+
+  // Real connection data from Convex
+  const myFollowers = useQuery(api.social.getMyFollowers) ?? [];
+  const myFollowing = useQuery(api.social.getMyFollowing);
+  const followingData = myFollowing ?? { people: [], pages: [], peopleCt: 0, pagesCt: 0 };
+  const totalFollowingCount = followingData.peopleCt + followingData.pagesCt;
+
   const tabs: { id: ProfileTab; label: string }[] = [
     { id: 'posts', label: 'Posts' },
     { id: 'replies', label: 'Replies' },
@@ -95,19 +107,12 @@ export const ProfileView: React.FC = () => {
     { id: 'reposts', label: 'Reposts' },
   ];
 
-  const otherUsers: User[] = [];
-
-  const filteredUsers = otherUsers.filter((u) => {
-    const matchesSearch =
-      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (u.bio && u.bio.toLowerCase().includes(searchQuery.toLowerCase()));
-
-    if (connectionTab === 'following') {
-      return matchesSearch && u.isFollowing;
-    }
-    return matchesSearch;
-  });
+  // Context-aware search placeholder
+  const searchPlaceholder = connectionTab === 'community'
+    ? 'Search communities...'
+    : connectionTab === 'followers'
+    ? 'Search followers...'
+    : 'Search people and Pages...';
 
   const handleOpenUserProfile = (user: User) => {
     setIsConnectionsOpen(false);
@@ -435,9 +440,10 @@ export const ProfileView: React.FC = () => {
           </div>
 
           <div className="flex-1 max-w-xl mx-auto w-full p-4 sm:p-6 space-y-5 pb-24 overflow-y-auto">
+            {/* Tabs */}
             <div className="flex border-b border-neutral-100">
               <button
-                onClick={() => setConnectionTab('community')}
+                onClick={() => { setConnectionTab('community'); setSearchQuery(''); }}
                 className={`py-2.5 px-3 text-xs font-bold transition-all relative cursor-pointer ${
                   connectionTab === 'community'
                     ? 'text-[#5E43F3]'
@@ -451,34 +457,35 @@ export const ProfileView: React.FC = () => {
               </button>
 
               <button
-                onClick={() => setConnectionTab('followers')}
+                onClick={() => { setConnectionTab('followers'); setSearchQuery(''); }}
                 className={`py-2.5 px-3 text-xs font-bold transition-all relative cursor-pointer ${
                   connectionTab === 'followers'
                     ? 'text-[#5E43F3]'
                     : 'text-neutral-500 hover:text-neutral-900'
                 }`}
               >
-                Followers ({currentUser.followersCount})
+                Followers ({myFollowers.length})
                 {connectionTab === 'followers' && (
                   <span className="absolute bottom-0 inset-x-3 h-0.5 bg-[#5E43F3] rounded-full" />
                 )}
               </button>
 
               <button
-                onClick={() => setConnectionTab('following')}
+                onClick={() => { setConnectionTab('following'); setSearchQuery(''); }}
                 className={`py-2.5 px-3 text-xs font-bold transition-all relative cursor-pointer ${
                   connectionTab === 'following'
                     ? 'text-[#5E43F3]'
                     : 'text-neutral-500 hover:text-neutral-900'
                 }`}
               >
-                Following ({currentUser.followingCount})
+                Following ({totalFollowingCount})
                 {connectionTab === 'following' && (
                   <span className="absolute bottom-0 inset-x-3 h-0.5 bg-[#5E43F3] rounded-full" />
                 )}
               </button>
             </div>
 
+            {/* Search */}
             <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
               <div className="flex items-center gap-2">
                 <Search className="w-4 h-4 text-neutral-400" />
@@ -486,7 +493,7 @@ export const ProfileView: React.FC = () => {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search creators by name, handle, or bio..."
+                  placeholder={searchPlaceholder}
                   className="w-full bg-transparent text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
                 />
                 {searchQuery && (
@@ -497,83 +504,209 @@ export const ProfileView: React.FC = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              {filteredUsers.length > 0 ? (
-                filteredUsers.map((user) => (
-                  <div
-                    key={user.id}
-                    className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white p-3 transition-colors hover:bg-neutral-50"
+            {/* === COMMUNITY TAB === */}
+            {connectionTab === 'community' && (
+              <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-8 text-center text-xs text-neutral-500">
+                <Users className="w-8 h-8 mx-auto text-neutral-300 mb-3" />
+                <p className="font-bold text-neutral-700">You haven&apos;t joined any communities yet.</p>
+                <p className="mt-1 text-neutral-500">Discover communities and people around you to get started.</p>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('discover')}
+                  className="mt-4 inline-flex rounded-full bg-[#5E43F3] px-4 py-2.5 text-[11px] font-bold text-white cursor-pointer hover:bg-[#4E34E0] transition-colors"
+                >
+                  Explore Communities
+                </button>
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsSuggestOpen(true)}
+                    className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-neutral-500 hover:text-[#5E43F3] transition-colors cursor-pointer"
                   >
-                    <button
-                      type="button"
-                      onClick={() => handleOpenUserProfile(user)}
-                      className="flex min-w-0 flex-1 items-center gap-3 text-left cursor-pointer"
+                    <Lightbulb className="w-3.5 h-3.5" />
+                    Suggest a Community
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* === FOLLOWERS TAB === */}
+            {connectionTab === 'followers' && (
+              <div className="space-y-2">
+                {(() => {
+                  const sq = searchQuery.toLowerCase();
+                  const filtered = sq
+                    ? myFollowers.filter((u: any) =>
+                        u.name.toLowerCase().includes(sq) ||
+                        u.username.toLowerCase().includes(sq) ||
+                        (u.bio && u.bio.toLowerCase().includes(sq))
+                      )
+                    : myFollowers;
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-8 text-center text-xs text-neutral-500">
+                        <Users className="w-8 h-8 mx-auto text-neutral-300 mb-3" />
+                        <p className="font-bold text-neutral-700">
+                          {sq ? 'No followers matching your search.' : "You don't have any followers yet."}
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return filtered.map((user: any) => (
+                    <div
+                      key={user.id}
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white p-3 transition-colors hover:bg-neutral-50"
                     >
-                      <div className="relative">
-                        <Avatar src={user.avatar} alt={user.name} size="md" />
-                        {user.isVerified && (
-                          <CheckCircle2 className="absolute bottom-0 right-0 w-3.5 h-3.5 fill-white text-[#5E43F3]" />
-                        )}
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="truncate text-xs sm:text-sm font-bold text-neutral-950">
-                            {user.name}
-                          </span>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenUserProfile(user as User)}
+                        className="flex min-w-0 flex-1 items-center gap-3 text-left cursor-pointer"
+                      >
+                        <div className="relative">
+                          <Avatar src={user.avatar} alt={user.name} size="md" />
                         </div>
-                        <span className="block truncate text-[11px] text-neutral-400">@{user.username} · {user.location}</span>
-                        {user.bio && (
-                          <p className="mt-0.5 line-clamp-1 text-[11px] font-normal text-neutral-600">
-                            {user.bio}
-                          </p>
-                        )}
-                      </div>
-                    </button>
-
-                    <div className="flex items-center gap-2 shrink-0">
+                        <div className="min-w-0 flex-1">
+                          <span className="truncate text-xs sm:text-sm font-bold text-neutral-950 block">{user.name}</span>
+                          <span className="block truncate text-[11px] text-neutral-400">@{user.username}{user.location ? ` · ${user.location}` : ''}</span>
+                          {user.bio && <p className="mt-0.5 line-clamp-1 text-[11px] text-neutral-600">{user.bio}</p>}
+                        </div>
+                      </button>
                       <button
                         type="button"
                         onClick={() => toggleFollowUser(user.id)}
-                        className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                        className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all cursor-pointer shrink-0 ${
                           user.isFollowing
                             ? 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
                             : 'bg-[#5E43F3] text-white hover:bg-[#4E34E0]'
                         }`}
                       >
-                        {user.isFollowing ? 'Following' : 'Follow'}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleOpenUserProfile(user)}
-                        className="rounded-full p-1.5 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 cursor-pointer"
-                        title="View Profile"
-                        aria-label="View profile"
-                      >
-                        <ChevronRight className="w-4 h-4" />
+                        {user.isFollowing ? 'Following' : 'Follow back'}
                       </button>
                     </div>
+                  ));
+                })()}
+              </div>
+            )}
+
+            {/* === FOLLOWING TAB === */}
+            {connectionTab === 'following' && (
+              <div className="space-y-4">
+                {totalFollowingCount === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-8 text-center text-xs text-neutral-500">
+                    <Users className="w-8 h-8 mx-auto text-neutral-300 mb-3" />
+                    <p className="font-bold text-neutral-700">You&apos;re not following anyone yet.</p>
+                    <p className="mt-1 text-neutral-500">Follow people, Pages, or communities to build your Lalao circle.</p>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('discover')}
+                      className="mt-4 inline-flex rounded-full bg-[#5E43F3] px-4 py-2.5 text-[11px] font-bold text-white cursor-pointer hover:bg-[#4E34E0] transition-colors"
+                    >
+                      Explore
+                    </button>
                   </div>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-8 text-center text-xs text-neutral-500">
-                  <p className="font-bold text-neutral-700">You haven&apos;t joined any communities yet.</p>
-                  <p className="mt-1 text-neutral-500">Discover communities and people around you to get started.</p>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('discover')}
-                    className="mt-3 inline-flex rounded-full bg-[#5E43F3] px-3 py-2 text-[11px] font-bold text-white cursor-pointer"
-                  >
-                    Explore Communities
-                  </button>
-                </div>
-              )}
-            </div>
+                ) : (
+                  <>
+                    {/* Breakdown */}
+                    <div className="flex items-center gap-3 text-[11px] text-neutral-500 font-medium">
+                      <span>{totalFollowingCount} total</span>
+                      <span>·</span>
+                      <span>People {followingData.peopleCt}</span>
+                      <span>·</span>
+                      <span>Pages {followingData.pagesCt}</span>
+                    </div>
+
+                    {/* People section */}
+                    {followingData.people.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">People</h4>
+                        {(() => {
+                          const sq = searchQuery.toLowerCase();
+                          const filtered = sq
+                            ? followingData.people.filter((u: any) =>
+                                u.name.toLowerCase().includes(sq) ||
+                                u.username.toLowerCase().includes(sq)
+                              )
+                            : followingData.people;
+                          return filtered.map((user: any) => (
+                            <div
+                              key={user.id}
+                              className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white p-3 transition-colors hover:bg-neutral-50"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => handleOpenUserProfile(user as User)}
+                                className="flex min-w-0 flex-1 items-center gap-3 text-left cursor-pointer"
+                              >
+                                <Avatar src={user.avatar} alt={user.name} size="md" />
+                                <div className="min-w-0 flex-1">
+                                  <span className="truncate text-xs sm:text-sm font-bold text-neutral-950 block">{user.name}</span>
+                                  <span className="block truncate text-[11px] text-neutral-400">@{user.username}</span>
+                                </div>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => toggleFollowUser(user.id)}
+                                className="rounded-full px-3 py-1.5 text-xs font-bold bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-all cursor-pointer shrink-0"
+                              >
+                                Following
+                              </button>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    )}
+
+                    {/* Pages section */}
+                    {followingData.pages.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Pages</h4>
+                        {(() => {
+                          const sq = searchQuery.toLowerCase();
+                          const filtered = sq
+                            ? followingData.pages.filter((p: any) =>
+                                p.name.toLowerCase().includes(sq) ||
+                                p.username.toLowerCase().includes(sq)
+                              )
+                            : followingData.pages;
+                          return filtered.map((page: any) => (
+                            <div
+                              key={page.id}
+                              className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white p-3 transition-colors hover:bg-neutral-50"
+                            >
+                              <div className="flex min-w-0 flex-1 items-center gap-3">
+                                <Avatar src={page.avatar} alt={page.name} size="md" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="truncate text-xs sm:text-sm font-bold text-neutral-950">{page.name}</span>
+                                    {page.badge && <Badge type={page.badge} />}
+                                  </div>
+                                  <span className="block truncate text-[11px] text-neutral-400">@{page.username}{page.location ? ` · ${page.location}` : ''}</span>
+                                  <span className="text-[10px] text-neutral-400">{page.followersCount} followers</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="rounded-full px-3 py-1.5 text-xs font-bold bg-neutral-100 text-neutral-700">
+                                  Following
+                                </span>
+                              </div>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
       )}
+
+      {/* Suggest a Community Modal */}
+      <SuggestCommunityModal isOpen={isSuggestOpen} onClose={() => setIsSuggestOpen(false)} />
     </div>
   );
 };

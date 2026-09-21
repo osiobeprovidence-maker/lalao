@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Check, ChevronRight, MonitorPlay, Users, Wallet, FileText, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Check, ChevronRight, MonitorPlay, Users, Wallet, FileText, BarChart3, AlertCircle } from 'lucide-react';
 import { Page, SubscriptionListing } from '../../types';
 import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
@@ -35,6 +35,8 @@ export const CreateSubscriptionWizard: React.FC<CreateSubscriptionWizardProps> =
   const [memberInstructions, setMemberInstructions] = useState<string>('');
   const [benefits, setBenefits] = useState<string[]>(['']);
 
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   if (!isOpen) return null;
 
   const handleNext = () => setStep(s => Math.min(s + 1, 5) as Step);
@@ -42,6 +44,7 @@ export const CreateSubscriptionWizard: React.FC<CreateSubscriptionWizardProps> =
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
+    setErrorMsg(null);
     try {
       const platform = subscriptionPlatforms.find(p => p.id === platformId);
       const listingId = await createListing({
@@ -63,9 +66,11 @@ export const CreateSubscriptionWizard: React.FC<CreateSubscriptionWizardProps> =
         benefits: benefits.filter(b => b.trim() !== ''),
       });
       onSuccess(listingId);
-    } catch (e) {
-      console.error(e);
-      alert('Failed to create subscription.');
+    } catch (e: any) {
+      console.error('Subscription creation backend error:', e);
+      // Convex errors thrown with ConvexError store the message in the `data` property.
+      const errorText = typeof e.data === 'string' ? e.data : (e.data?.message || e.message);
+      setErrorMsg(errorText || 'Unable to create this subscription. Please check the required fields.');
     } finally {
       setIsSubmitting(false);
     }
@@ -86,6 +91,13 @@ export const CreateSubscriptionWizard: React.FC<CreateSubscriptionWizardProps> =
         </div>
         <div className="text-sm font-semibold text-neutral-400">Step {step} of 5</div>
       </div>
+
+      {errorMsg && (
+        <div className="bg-red-50 border-b border-red-100 p-3 text-red-600 text-sm font-semibold text-center flex items-center justify-center gap-2">
+          <AlertCircle className="w-4 h-4" />
+          {errorMsg}
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24">

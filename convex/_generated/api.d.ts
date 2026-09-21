@@ -10,6 +10,7 @@
 
 import type * as admin from "../admin.js";
 import type * as cloudinary from "../cloudinary.js";
+import type * as community from "../community.js";
 import type * as moderation from "../moderation.js";
 import type * as pages from "../pages.js";
 import type * as platformSettings from "../platformSettings.js";
@@ -33,6 +34,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   cloudinary: typeof cloudinary;
+  community: typeof community;
   moderation: typeof moderation;
   pages: typeof pages;
   platformSettings: typeof platformSettings;

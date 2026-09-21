@@ -435,6 +435,33 @@ export default defineSchema({
     .index("by_actor", ["actorId"])
     .index("by_created", ["createdAt"]),
 
+  // ---- COMMUNITY SUGGESTIONS ----
+
+  communitySuggestions: defineTable({
+    suggestedByUserId: v.id("users"),
+    communityName: v.string(),
+    description: v.string(),
+    category: v.optional(v.string()),
+    location: v.optional(v.string()),
+    website: v.optional(v.string()),
+    reason: v.optional(v.string()),
+    additionalInfo: v.optional(v.string()),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("under_review"),
+      v.literal("approved"),
+      v.literal("rejected")
+    ),
+    reviewedAt: v.optional(v.number()),
+    reviewedBy: v.optional(v.id("users")),
+    adminNotes: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_status", ["status"])
+    .index("by_user", ["suggestedByUserId"])
+    .index("by_created", ["createdAt"]),
+
   adminSessions: defineTable({
     userId: v.id("users"),
     token: v.string(), // Secure randomly generated token

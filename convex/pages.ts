@@ -35,6 +35,8 @@ export const getMyPages = query({
       isOwner: true,
       category: page.category ?? "",
       aboutInfo: page.aboutInfo ?? {},
+      businessType: page.businessType,
+      activeTools: page.activeTools,
     }));
   },
 });

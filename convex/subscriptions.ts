@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 
 // Create a subscription listing and its slots (Admin only)
 export const createListing = mutation({
@@ -26,20 +26,32 @@ export const createListing = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthenticated");
+    if (!identity) throw new ConvexError("Unauthenticated");
 
     const user = await ctx.db
       .query("users")
       .filter((q) => q.eq(q.field("tokenIdentifier"), identity.tokenIdentifier))
       .first();
 
-    if (!user) throw new Error("User not found");
+    if (!user) throw new ConvexError("User not found");
 
     const page = await ctx.db.get(args.pageId);
-    if (!page) throw new Error("Page not found");
+    if (!page) throw new ConvexError("Page not found");
 
     if (page.ownerId !== user._id) {
-      throw new Error("Only the page owner can create subscriptions");
+      throw new ConvexError("Only the page owner can create subscriptions");
+    }
+
+    if (page.businessType === "commerce") {
+      throw new ConvexError("Commerce pages cannot create subscriptions. Please change your business type to Subscription or Hybrid.");
+    }
+
+    if (args.totalCapacity <= 0) {
+      throw new ConvexError("Total capacity must be greater than 0");
+    }
+
+    if (args.totalAccountCost < 0 || args.defaultSlotPrice < 0) {
+      throw new ConvexError("Costs and prices cannot be negative");
     }
 
     const listingId = await ctx.db.insert("subscriptionListings", {

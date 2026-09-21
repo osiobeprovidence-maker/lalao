@@ -861,6 +861,8 @@ export const getPage = query({
       isOwner,
       category: page.category ?? "General",
       aboutInfo: page.aboutInfo ?? {},
+      businessType: page.businessType,
+      activeTools: page.activeTools,
     };
   },
 });
@@ -901,6 +903,8 @@ export const listPages = query({
         isOwner: page.ownerId === currentUser._id,
         category: page.category ?? "General",
         aboutInfo: page.aboutInfo ?? {},
+        businessType: page.businessType,
+        activeTools: page.activeTools,
       });
     }
 
@@ -1721,6 +1725,132 @@ export const toggleFollowUser = mutation({
     });
 
     return { following: true };
+  },
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   CONNECTION LISTS (for Community panel)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Get the list of real users who follow the current user.
+ * Returns profile info + whether the current user follows them back.
+ */
+export const getMyFollowers = query({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return [];
+
+    // People who follow me
+    const followerRecords = await ctx.db
+      .query("follows")
+      .withIndex("by_following", (q: any) => q.eq("followingId", currentUser._id))
+      .collect();
+
+    // People I follow (for "follow back" state)
+    const myFollowing = await ctx.db
+      .query("follows")
+      .withIndex("by_follower", (q: any) => q.eq("followerId", currentUser._id))
+      .collect();
+    const myFollowingIds = new Set(myFollowing.map((f: any) => f.followingId));
+
+    const followers = await Promise.all(
+      followerRecords.map(async (f: any) => {
+        const user = await ctx.db.get(f.followerId);
+        if (!user) return null;
+        return {
+          id: user._id,
+          name: user.name ?? "User",
+          username: user.username ?? "user",
+          avatar: user.avatarUrl || user.avatar || "",
+          bio: user.bio ?? "",
+          location: user.locationName ?? "",
+          isFollowing: myFollowingIds.has(user._id), // do I follow them back?
+          followersCount: user.followersCount ?? 0,
+          followingCount: user.followingCount ?? 0,
+          isVerified: false,
+          followedAt: f.createdAt,
+        };
+      })
+    );
+
+    return followers.filter(Boolean);
+  },
+});
+
+/**
+ * Get the people and pages the current user follows.
+ * Returns { people: [...], pages: [...], peopleCt, pagesCt }.
+ */
+export const getMyFollowing = query({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return { people: [], pages: [], peopleCt: 0, pagesCt: 0 };
+
+    // Users I follow
+    const followingRecords = await ctx.db
+      .query("follows")
+      .withIndex("by_follower", (q: any) => q.eq("followerId", currentUser._id))
+      .collect();
+
+    const people = await Promise.all(
+      followingRecords.map(async (f: any) => {
+        const user = await ctx.db.get(f.followingId);
+        if (!user) return null;
+        return {
+          id: user._id,
+          type: "person" as const,
+          name: user.name ?? "User",
+          username: user.username ?? "user",
+          avatar: user.avatarUrl || user.avatar || "",
+          bio: user.bio ?? "",
+          location: user.locationName ?? "",
+          followersCount: user.followersCount ?? 0,
+          isFollowing: true,
+          isVerified: false,
+          followedAt: f.createdAt,
+        };
+      })
+    );
+
+    // Pages I follow
+    const pageFollowRecords = await ctx.db
+      .query("pageFollowers")
+      .filter((q: any) => q.eq(q.field("userId"), currentUser._id))
+      .collect();
+
+    const pages = await Promise.all(
+      pageFollowRecords.map(async (f: any) => {
+        const page = await ctx.db.get(f.pageId);
+        if (!page) return null;
+        return {
+          id: page._id,
+          type: "page" as const,
+          name: page.name ?? "Page",
+          username: page.username ?? "page",
+          avatar: page.avatar || "",
+          description: page.description ?? "",
+          location: page.location ?? "",
+          followersCount: page.followersCount ?? 0,
+          pageType: page.type,
+          badge: page.badge,
+          isFollowing: true,
+          followedAt: f.createdAt,
+        };
+      })
+    );
+
+    const filteredPeople = people.filter(Boolean);
+    const filteredPages = pages.filter(Boolean);
+
+    return {
+      people: filteredPeople,
+      pages: filteredPages,
+      peopleCt: filteredPeople.length,
+      pagesCt: filteredPages.length,
+    };
   },
 });
 
