@@ -15,6 +15,7 @@ export default defineSchema({
     username: v.optional(v.string()),
 
     avatarUrl: v.optional(v.string()),
+    avatarStorageId: v.optional(v.union(v.id("_storage"), v.null())),
     bio: v.optional(v.string()),
     pronouns: v.optional(v.string()),
     userType: v.optional(

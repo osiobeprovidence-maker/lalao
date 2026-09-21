@@ -241,31 +241,36 @@ export const getDashboardStats = query({
   handler: async (ctx) => {
     await requireAdmin(ctx, ["super_admin", "admin", "editor"]);
 
-    const [users, pages, listings, memberships, transactions] =
+    const [users, pages, listings, memberships, transactions, communitySuggestions] =
       await Promise.all([
         ctx.db.query("users").collect(),
         ctx.db.query("pages").collect(),
         ctx.db.query("subscriptionListings").collect(),
         ctx.db.query("subscriptionMemberships").collect(),
         ctx.db.query("walletTransactions").collect(),
+        ctx.db.query("communitySuggestions").collect(),
       ]);
 
-    const businesses = pages.filter((p: any) => p.type === "business");
-    const activeMembers = memberships.filter(
-      (m: any) => m.status === "active"
-    );
-    const totalTxAmount = transactions
+    const suspendedUsers = users.filter((u: any) => u.suspended || u.status === "suspended").length;
+    const businesses = pages.filter((p: any) => p.type === "business" || p.pageType === "business").length;
+    const activeListings = listings.filter((l: any) => l.status === "active" || l.active).length;
+    const activeMemberships = memberships.filter((m: any) => m.status === "active").length;
+    const totalCommunities = pages.filter((p: any) => p.type === "community" || p.pageType === "community").length;
+    const totalTransactionVolume = transactions
       .filter((t: any) => t.status === "completed")
       .reduce((sum: number, t: any) => sum + t.amount, 0);
 
     return {
       totalUsers: users.length,
       totalPages: pages.length,
-      totalBusinesses: businesses.length,
-      activeSubscriptions: activeMembers.length,
+      totalBusinesses: businesses,
+      activeListings,
+      activeMemberships,
+      totalTransactionVolume,
+      totalCommunities,
       totalTransactions: transactions.length,
-      totalTransactionAmount: totalTxAmount,
-      suspendedUsers: users.filter((u: any) => u.suspended).length,
+      totalTransactionAmount: totalTransactionVolume,
+      suspendedUsers,
     };
   },
 });
@@ -767,5 +772,67 @@ export const restorePost = mutation({
       target: `post/${args.postId}`,
       after: JSON.stringify({ status: "safe" }),
     });
+  },
+});
+
+// ─────────────────────────────────────────────────────────────
+// COMMUNITY MANAGEMENT
+// ─────────────────────────────────────────────────────────────
+
+export const getCommunityDashboardStats = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx, ["super_admin", "admin", "editor"]);
+
+    const [pages, suggestions, memberships] = await Promise.all([
+      ctx.db.query("pages").collect(),
+      ctx.db.query("communitySuggestions").collect(),
+      ctx.db.query("pageFollowers").collect(),
+    ]);
+
+    const communities = pages.filter(p => p.type === "community");
+    const activeCommunities = communities.filter(c => c.status !== "archived" && c.status !== "suspended");
+    const pendingSuggestions = suggestions.filter(s => s.status === "pending" || s.status === "under_review").length;
+
+    // Estimate members by counting pageFollowers for communities
+    const communityIds = new Set(communities.map(c => c._id));
+    const totalMembers = memberships.filter(m => communityIds.has(m.pageId)).length;
+
+    return {
+      totalCommunities: communities.length,
+      activeCommunities: activeCommunities.length,
+      totalMembers,
+      pendingSuggestions,
+    };
+  },
+});
+
+export const listCommunities = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx, ["super_admin", "admin", "editor"]);
+
+    const communities = await ctx.db
+      .query("pages")
+      .filter((q) => q.eq(q.field("type"), "community"))
+      .collect();
+
+    return Promise.all(
+      communities.map(async (community) => {
+        const creator = await ctx.db.get(community.ownerId);
+        
+        // Count members
+        const followers = await ctx.db
+          .query("pageFollowers")
+          .withIndex("by_page", (q) => q.eq("pageId", community._id))
+          .collect();
+
+        return {
+          ...community,
+          creator: creator ? { name: creator.name, username: creator.username, avatarUrl: creator.avatarUrl } : null,
+          memberCount: followers.length,
+        };
+      })
+    );
   },
 });

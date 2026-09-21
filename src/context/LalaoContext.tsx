@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import { Id } from '../../convex/_generated/dataModel';
 import { useAuth } from './AuthContext';
 import { getOrRequestWebPushSubscription } from '../lib/push';
 import {
@@ -320,6 +321,7 @@ interface LalaoContextType {
     bio?: string;
     locationName?: string;
     avatarUrl?: string;
+    avatarStorageId?: Id<"_storage"> | null;
   }) => Promise<void>;
 }
 
@@ -507,6 +509,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     bio?: string;
     locationName?: string;
     avatarUrl?: string;
+    avatarStorageId?: Id<"_storage"> | null;
   }) => {
     await updateUserProfileMutation(updates);
     setCurrentUser((prev) => ({

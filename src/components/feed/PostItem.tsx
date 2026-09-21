@@ -23,6 +23,7 @@ import { formatDistance, getProximityCategory } from '../../utils/locationUtils'
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
+import { getTopicIcon } from '../../utils/topicIcons';
 import { CommentThread } from '../common/CommentsModal';
 import { CommentComposer } from '../common/CommentComposer';
 import { ReportModal } from './ReportModal';
@@ -299,7 +300,11 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
           {post?.audience && post.audience !== 'everyone' && (
             <div className="mt-1.5 flex items-center gap-1.5">
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#5E43F3]/10 text-[#5E43F3]">
-                {post.audience === 'anime' && '✨ Anime'}
+                {post.audience === 'anime' && (
+                  <>
+                    {React.createElement(getTopicIcon('anime'), { className: "w-3 h-3" })} Anime
+                  </>
+                )}
                 {post.audience === 'nearby' && '📍 Nearby'}
                 {post.audience === 'community' && '💬 Community'}
                 {post.audience === 'interest' && '#Topic'}

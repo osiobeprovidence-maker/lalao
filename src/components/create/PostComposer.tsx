@@ -23,6 +23,7 @@ import {
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import type { PostAudience, PostReplyPermission } from '../../types';
+import { getTopicIcon } from '../../utils/topicIcons';
 import { EmojiPickerPopover } from './EmojiPickerPopover';
 import { GifPickerPopover } from './GifPickerPopover';
 import { uploadImageToCloudinary } from '../../lib/cloudinary';
@@ -176,7 +177,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({
       return { audienceLabel: 'Nearby', AudienceIcon: MapPin };
     }
     if (selectedAudience === 'anime') {
-      return { audienceLabel: 'Anime', AudienceIcon: Sparkles };
+      return { audienceLabel: 'Anime', AudienceIcon: getTopicIcon('anime') };
     }
     if (selectedAudience === 'community') {
       const found = communityPages.find((c) => c.id === selectedCommunityId);
@@ -563,7 +564,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({
                   >
                     <span className="flex items-center gap-2.5">
                       <div className="flex h-7 w-7 items-center justify-center rounded-full bg-purple-50 text-purple-600">
-                        <Sparkles className="h-4 w-4" />
+                        {React.createElement(getTopicIcon('anime'), { className: "h-4 w-4" })}
                       </div>
                       <div>
                         <div>Anime</div>

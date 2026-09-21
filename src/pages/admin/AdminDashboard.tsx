@@ -105,7 +105,7 @@ export const AdminDashboard: React.FC = () => {
           />
           <StatCard
             label="Active Subscriptions"
-            value={stats.activeSubscriptions}
+            value={stats.activeMemberships}
             icon={CreditCard}
             color="border-emerald-200"
             sub="Active membership slots"
@@ -136,6 +136,13 @@ export const AdminDashboard: React.FC = () => {
             icon={ArrowUpRight}
             color="border-teal-200"
             sub="Completed transactions only"
+          />
+          <StatCard
+            label="Total Communities"
+            value={stats.totalCommunities}
+            icon={Users}
+            color="border-purple-200"
+            sub="Active communities"
           />
         </div>
       )}

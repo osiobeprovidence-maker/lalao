@@ -58,6 +58,7 @@ export const SettingsPageView: React.FC = () => {
   
   const navigate = useNavigate();
   const role = useQuery(api.admin.getMyRole);
+  const generateConvexUploadUrl = useMutation(api.social.generateUploadUrl);
   const createAdminSession = useMutation(api.admin.createAdminSession);
   const [isCreatingAdminSession, setIsCreatingAdminSession] = useState(false);
 
@@ -104,6 +105,7 @@ export const SettingsPageView: React.FC = () => {
     setIsSaving(true);
     try {
       let finalAvatarUrl = avatar;
+      let finalStorageId: any = undefined;
 
       if (avatarFile) {
         try {
@@ -111,13 +113,19 @@ export const SettingsPageView: React.FC = () => {
           finalAvatarUrl = await uploadImageToCloudinary(avatarFile, sig);
         } catch (uploadErr) {
           console.warn('Cloudinary upload fallback:', uploadErr);
-          if (!finalAvatarUrl || finalAvatarUrl.startsWith('blob:')) {
-            const reader = new FileReader();
-            finalAvatarUrl = await new Promise<string>((resolve) => {
-              reader.onload = () => resolve(reader.result as string);
-              reader.readAsDataURL(avatarFile);
-            });
-          }
+          
+          // CONVEX FALLBACK
+          const uploadUrl = await generateConvexUploadUrl();
+          const result = await fetch(uploadUrl, {
+            method: "POST",
+            headers: { "Content-Type": avatarFile.type },
+            body: avatarFile,
+          });
+          if (!result.ok) throw new Error("Convex storage upload failed");
+          
+          const { storageId } = await result.json();
+          finalStorageId = storageId;
+          finalAvatarUrl = undefined; // Don't use the local blob URL; rely on backend resolution
         }
       }
 
@@ -127,7 +135,8 @@ export const SettingsPageView: React.FC = () => {
         bio: bio.trim(),
         locationName: userLocation.trim(),
         avatarUrl: finalAvatarUrl,
-      });
+        avatarStorageId: finalStorageId,
+      } as any);
 
       if (typeof window !== 'undefined') {
         localStorage.setItem('lalao_withdrawal_account', JSON.stringify(withdrawalAccount));

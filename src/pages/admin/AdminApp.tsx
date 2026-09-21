@@ -31,6 +31,7 @@ import { AdminSubPlatforms } from './AdminSubPlatforms';
 import { AdminComingSoon } from './AdminComingSoon';
 import { AdminReports } from './AdminReports';
 import { AdminCommunitySuggestions } from './AdminCommunitySuggestions';
+import { AdminCommunities } from './AdminCommunities';
 import { useAuth } from '../../context/AuthContext';
 import { useLalao } from '../../context/LalaoContext';
 import { useQuery, useMutation } from 'convex/react';
@@ -81,7 +82,8 @@ export const AdminApp: React.FC = () => {
       title: 'Operations',
       items: [
         { path: '/admin/reports', label: 'Reports', icon: FileText },
-        { path: '/admin/communities', label: 'Community Suggestions', icon: Users },
+        { path: '/admin/communities', label: 'Communities', icon: Users },
+        { path: '/admin/community-suggestions', label: 'Community Suggestions', icon: Users },
         { path: '/admin/moderation', label: 'Moderation', icon: ShieldAlert },
         { path: '/admin/notifications', label: 'Notifications', icon: BellRing },
       ]
@@ -216,7 +218,8 @@ export const AdminApp: React.FC = () => {
                 <Route path="/wallet" element={<AdminComingSoon title="Wallet Activity" />} />
                 <Route path="/monetization" element={<AdminComingSoon title="Creator Monetization" />} />
                 <Route path="/reports" element={<AdminReports />} />
-                <Route path="/communities" element={<AdminCommunitySuggestions />} />
+                <Route path="/communities" element={<AdminCommunities />} />
+                <Route path="/community-suggestions" element={<AdminCommunitySuggestions />} />
                 <Route path="/moderation" element={<AdminComingSoon title="Moderation Queue" />} />
                 <Route path="/notifications" element={<AdminComingSoon title="System Notifications" />} />
                 <Route path="/settings" element={<AdminPlatformSettings />} />

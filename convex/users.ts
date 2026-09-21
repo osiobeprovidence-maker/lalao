@@ -252,6 +252,7 @@ export const updateUserProfile = mutation({
     bio:          v.optional(v.string()),
     locationName: v.optional(v.string()),
     avatarUrl:    v.optional(v.string()),
+    avatarStorageId: v.optional(v.union(v.id("_storage"), v.null())),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -272,7 +273,36 @@ export const updateUserProfile = mutation({
     if (args.username !== undefined) updates.username = args.username;
     if (args.bio !== undefined) updates.bio = args.bio;
     if (args.locationName !== undefined) updates.locationName = args.locationName;
-    if (args.avatarUrl !== undefined) updates.avatarUrl = args.avatarUrl;
+    
+    // Resolve Convex Storage ID if provided
+    const existingUser = await ctx.db.get(userId);
+    if (args.avatarStorageId) {
+      const url = await ctx.storage.getUrl(args.avatarStorageId);
+      if (url) {
+        updates.avatarUrl = url;
+        updates.avatarStorageId = args.avatarStorageId;
+        
+        // Clean up old storage if it exists and is different
+        if (existingUser?.avatarStorageId && existingUser.avatarStorageId !== args.avatarStorageId) {
+          try {
+            await ctx.storage.delete(existingUser.avatarStorageId);
+          } catch (e) {
+            console.warn("Failed to delete old avatar storage", e);
+          }
+        }
+      }
+    } else if (args.avatarUrl !== undefined) {
+      updates.avatarUrl = args.avatarUrl;
+      // If replaced with a Cloudinary URL or cleared, clean up old Convex Storage avatar if it exists
+      if (existingUser?.avatarStorageId && existingUser.avatarUrl !== args.avatarUrl) {
+        updates.avatarStorageId = null;
+        try {
+          await ctx.storage.delete(existingUser.avatarStorageId);
+        } catch (e) {
+          console.warn("Failed to delete old avatar storage", e);
+        }
+      }
+    }
 
     await ctx.db.patch(userId, updates);
     return await ctx.db.get(userId);
