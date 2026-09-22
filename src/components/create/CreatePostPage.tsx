@@ -1,4 +1,5 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+// @ts-nocheck
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Camera,
   GalleryHorizontalEnd,

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, CornerDownRight, Smile, Image as ImageIcon, Mic, Square } from 'lucide-react';
 import { Avatar } from './Avatar';

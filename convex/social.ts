@@ -1,6 +1,6 @@
 import { query, mutation } from "./_generated/server";
-import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    AUTH HELPERS
@@ -1981,17 +1981,20 @@ export const markAllNotificationsRead = mutation({
    DRAFTS
    ───────────────────────────────────────────────────────────────────────────── */
 
-export const listMyDrafts = query({
+export const getDrafts = query({
   args: {},
   handler: async (ctx) => {
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) return [];
 
-    return await ctx.db
+    const drafts = await ctx.db
       .query("drafts")
       .withIndex("by_author", (q: any) => q.eq("authorId", currentUser._id))
-      .order("desc")
-      .take(10);
+      .collect();
+
+    return drafts
+      .sort((a: any, b: any) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+      .slice(0, 10);
   },
 });
 
@@ -2304,108 +2307,3 @@ export const markConversationRead = mutation({
   },
 });
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   DRAFTS
-   ───────────────────────────────────────────────────────────────────────────── */
-
-export const saveDraft = mutation({
-  args: {
-    text: v.string(),
-    mediaUrl: v.optional(v.string()),
-    mediaType: v.optional(v.union(v.literal("image"), v.literal("video"))),
-    audience: v.optional(
-      v.union(
-        v.literal("everyone"),
-        v.literal("closeFriends"),
-        v.literal("community"),
-        v.literal("page"),
-        v.literal("nearby"),
-        v.literal("anime"),
-        v.literal("interest"),
-      )
-    ),
-    replyPermission: v.optional(
-      v.union(
-        v.literal("everyone"),
-        v.literal("followers"),
-        v.literal("following"),
-        v.literal("friends"),
-        v.literal("closeFriends"),
-        v.literal("sameInterests"),
-        v.literal("mentioned"),
-      )
-    ),
-    gifUrl: v.optional(v.string()),
-    pollQuestion: v.optional(v.string()),
-    pollOptions: v.optional(v.array(v.string())),
-    pageRefId: v.optional(v.string()),
-    draftId: v.optional(v.id("drafts")),
-  },
-  handler: async (ctx, args) => {
-    const user = await getAuthedUser(ctx);
-    if (!user) throw new Error("Unauthenticated");
-
-    if (args.draftId) {
-      const existing = await ctx.db.get(args.draftId);
-      if (!existing || existing.authorId !== user._id) {
-        throw new Error("Draft not found or unauthorized");
-      }
-      await ctx.db.patch(args.draftId, {
-        text: args.text,
-        mediaUrl: args.mediaUrl,
-        mediaType: args.mediaType,
-        audience: args.audience,
-        replyPermission: args.replyPermission,
-        gifUrl: args.gifUrl,
-        pollQuestion: args.pollQuestion,
-        pollOptions: args.pollOptions,
-        pageRefId: args.pageRefId,
-        updatedAt: Date.now(),
-      });
-      return args.draftId;
-    } else {
-      const newDraftId = await ctx.db.insert("drafts", {
-        authorId: user._id,
-        text: args.text,
-        mediaUrl: args.mediaUrl,
-        mediaType: args.mediaType,
-        audience: args.audience,
-        replyPermission: args.replyPermission,
-        gifUrl: args.gifUrl,
-        pollQuestion: args.pollQuestion,
-        pollOptions: args.pollOptions,
-        pageRefId: args.pageRefId,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      });
-      return newDraftId;
-    }
-  },
-});
-
-export const getDrafts = query({
-  args: {},
-  handler: async (ctx) => {
-    const user = await getAuthedUser(ctx);
-    if (!user) return [];
-
-    return await ctx.db
-      .query("drafts")
-      .withIndex("by_author", (q: any) => q.eq("authorId", user._id))
-      .order("desc")
-      .collect();
-  },
-});
-
-export const deleteDraft = mutation({
-  args: { draftId: v.id("drafts") },
-  handler: async (ctx, args) => {
-    const user = await getAuthedUser(ctx);
-    if (!user) throw new Error("Unauthenticated");
-
-    const existing = await ctx.db.get(args.draftId);
-    if (existing && existing.authorId === user._id) {
-      await ctx.db.delete(args.draftId);
-    }
-  },
-});

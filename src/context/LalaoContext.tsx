@@ -49,6 +49,7 @@ export type NavTab =
   | 'profile'
   | 'following'
   | 'saved'
+  | 'create-page'
   | 'liked';
 export type FeedTab = 'for_you' | 'following' | 'nearby';
 export type CreateOption = 'post' | 'rally' | 'page' | 'cycle' | null;
@@ -340,10 +341,14 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return false;
       }
 
+      const subJson: any = subscription.toJSON();
+      const p256dh = subJson.keys?.p256dh || (subscription as any).keys?.p256dh;
+      const auth = subJson.keys?.auth || (subscription as any).keys?.auth;
+
       await upsertWebPushSubscription({
         endpoint: subscription.endpoint,
-        p256dh: subscription.keys.p256dh,
-        auth: subscription.keys.auth,
+        p256dh,
+        auth,
         userAgent: navigator.userAgent,
       });
 

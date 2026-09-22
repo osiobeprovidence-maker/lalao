@@ -65,8 +65,8 @@ export const PostComposer: React.FC<PostComposerProps> = ({ embedded = false, on
   const [showPoll, setShowPoll] = useState(false);
   
   // Real drafts check
-  const draftsData = useQuery(api.social.getDrafts);
-  const hasDrafts = draftsData && draftsData.length > 0;
+  const draftsData = useQuery(api.social.getDrafts, currentUser ? {} : ('skip' as any));
+  const hasDrafts = Boolean(draftsData && draftsData.length > 0);
   const [showDraftsModal, setShowDraftsModal] = useState(false);
 
   // File pickers
