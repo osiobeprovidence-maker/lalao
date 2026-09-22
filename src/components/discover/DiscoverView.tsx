@@ -140,7 +140,7 @@ export const DiscoverView: React.FC = () => {
   }, [users, location, currentUser.id, maxRadiusMeters]);
 
   const filteredPeople = useMemo(() => {
-    return nearbyPeople
+    return (nearbyPeople || [])
       .filter((p) => {
         if (locationMode === 'global') return true;
         return p.distanceMeters <= maxRadiusMeters;
@@ -150,7 +150,7 @@ export const DiscoverView: React.FC = () => {
 
   // Filtered lists based on discovery radius
   const filteredPages = useMemo(() => {
-    return pages
+    return (pages || [])
       .filter((p: any) => {
         // Global or national businesses are always visible
         if (locationMode === 'global' || p.globalDiscoveryStatus === "global" || p.globalDiscoveryStatus === "national") {
@@ -175,14 +175,14 @@ export const DiscoverView: React.FC = () => {
   }, [pages, locationMode, maxRadiusMeters]);
 
   const nearbyPosts = useMemo(() => {
-    return posts
+    return (posts || [])
       .filter((post) => post.distanceMeters <= maxRadiusMeters)
       .sort((a, b) => a.distanceMeters - b.distanceMeters)
       .slice(0, 2);
   }, [posts, maxRadiusMeters]);
 
   const videoPosts = useMemo(() => {
-    return posts.filter(
+    return (posts || []).filter(
       (post) => post.mediaType === 'video' && post.distanceMeters <= maxRadiusMeters
     );
   }, [posts, maxRadiusMeters]);
