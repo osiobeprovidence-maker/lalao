@@ -16,7 +16,7 @@ import {
   Briefcase,
   FileText
 } from 'lucide-react';
-import { useAction, useQuery } from 'convex/react';
+import { useAction, useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
@@ -45,7 +45,6 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
     setIsCreateSheetOpen,
     setIsLocationModalOpen,
     setActiveTab,
-    triggerShareToast,
     triggerShareToast,
     generateCloudinarySignature,
   } = useLalao();
