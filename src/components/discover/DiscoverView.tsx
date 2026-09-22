@@ -37,7 +37,6 @@ import { api } from '../../../convex/_generated/api';
 export const DiscoverView: React.FC = () => {
   const {
     currentUser,
-    users,
     location,
     locationPrivacy,
     setIsLocationModalOpen,
@@ -54,6 +53,9 @@ export const DiscoverView: React.FC = () => {
     toggleFollowUser,
     setActiveCommentsPostId,
   } = useLalao();
+
+  const rawUsers = useQuery(api.social.listUsersForExplore);
+  const users = rawUsers || [];
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
