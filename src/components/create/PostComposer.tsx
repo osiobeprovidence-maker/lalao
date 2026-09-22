@@ -46,10 +46,11 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
     setIsLocationModalOpen,
     setActiveTab,
     triggerShareToast,
-    generateUploadUrl,
+    triggerShareToast,
     generateCloudinarySignature,
   } = useLalao();
 
+  const generateUploadUrl = useMutation(api.social.generateUploadUrl);
   const createMuxDirectUpload = useAction(api.mux.createDirectUpload);
   const pollMuxStatus = useAction(api.mux.pollAndUpdatePost);
 
@@ -188,7 +189,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
     new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open(method, url, true);
-      if (method === 'PUT') xhr.setRequestHeader('Content-Type', file.type);
+      xhr.setRequestHeader('Content-Type', file.type);
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
           onProgress(Math.round((e.loaded / e.total) * 100));
@@ -229,15 +230,15 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
             finalMuxUploadId = upload_id;
             finalMediaUrl = posterUrl || mediaUrl;
           } catch (muxErr) {
-            console.warn('Mux upload failed, falling back to storage:', muxErr);
+            console.error('[Lalao Media Upload] Mux upload failed, falling back to storage:', muxErr);
             try {
               const uploadUrl = await generateUploadUrl();
               const res = await uploadFileWithProgress(uploadUrl, 'POST', selectedFile, () => undefined);
               finalMediaStorageId = res.storageId;
               finalMediaUrl = '';
             } catch (fallbackErr) {
-              console.error('All upload methods failed:', fallbackErr);
-              triggerShareToast('Media upload failed. Please try again.');
+              console.error('[Lalao Media Upload] Video upload failed. All upload methods failed:', fallbackErr);
+              triggerShareToast('Video upload failed. Check your connection and try again.');
               setIsSubmitting(false);
               return;
             }
@@ -249,13 +250,13 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
             finalMediaStorageId = res.storageId;
             finalMediaUrl = '';
           } catch (storageErr) {
-            console.warn('Storage upload failed; falling back to Cloudinary:', storageErr);
+            console.warn('[Lalao Media Upload] Storage upload failed; falling back to Cloudinary:', storageErr);
             try {
               const sig = await generateCloudinarySignature('posts');
               finalMediaUrl = await uploadImageToCloudinary(selectedFile, sig);
             } catch (cloudErr) {
-              console.error('Cloudinary upload failed:', cloudErr);
-              triggerShareToast('Media upload failed. Please try again.');
+              console.error('[Lalao Media Upload] Image upload failed:', cloudErr);
+              triggerShareToast('Image upload failed. Please try again.');
               setIsSubmitting(false);
               return;
             }
@@ -266,6 +267,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
       const created = await createPost({
         text: text.trim(),
         mediaUrl: finalMediaUrl || undefined,
+        mediaStorageId: finalMediaStorageId,
         mediaType,
         location: attachedLocation || location.name || 'Local',
         audience,
