@@ -12,6 +12,7 @@ import { ProfileView } from './components/profile/ProfileView';
 // Modals, Sheets, and Full-Page Subviews
 import { LocationRadiusModal } from './components/location/LocationRadiusModal';
 import { PostComposer } from './components/create/PostComposer';
+import { RallyComposerModal } from './components/create/RallyComposerModal';
 import { CreateCycleModal } from './components/cycles/CreateCycleModal';
 import { CycleStoryViewerModal } from './components/cycles/CycleStoryViewerModal';
 import { CycleDetailModal } from './components/cycles/CycleDetailModal';

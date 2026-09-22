@@ -86,7 +86,10 @@ interface LalaoContextType {
   toggleRepostPost: (postId: string) => void;
   addComment: (postId: string, text: string, parentCommentId?: string, replyToUsername?: string) => void;
   toggleLikeComment: (postId: string, commentId: string, replyId?: string) => void;
-  createPost: (post: { text: string; mediaUrl?: string; mediaType?: 'image' | 'video'; location: string; visibility?: 'public' | 'followers' }) => void;
+  createPost: (post: { text: string; mediaUrl?: string; mediaType?: 'image' | 'video'; location: string; audience?: string; replyPermission?: string; gifUrl?: string; pollQuestion?: string; pollOptions?: string[]; rallyRefId?: string; pageRefId?: string; }) => Promise<any>;
+  saveDraft: (draft: any) => Promise<any>;
+  getDrafts: () => Promise<any>;
+  deleteDraft: (draftId: string) => Promise<any>;
   
   toggleJoinRally: (rallyId: string) => void;
   joinRally: (rallyId: string) => void;
@@ -242,6 +245,7 @@ interface LalaoContextType {
   triggerShareToast: (message?: string) => void;
   isEditProfileOpen: boolean;
   setIsEditProfileOpen: (open: boolean) => void;
+  [key: string]: any;
 }
 
 const LalaoContext = createContext<LalaoContextType | undefined>(undefined);
@@ -306,6 +310,9 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const currentUserQuery = useQuery(api.users.getCurrentUser);
   const pushEnabledQuery = useQuery(api.push.hasActivePushToken);
   const upsertWebPushSubscription = useMutation(api.push.upsertWebPushSubscription);
+  const createPostMutation = useMutation(api.social.createPost);
+  const saveDraftMutation = useMutation(api.social.saveDraft);
+  const deleteDraftMutation = useMutation(api.social.deleteDraft);
   const [pushEnabled, setPushEnabled] = useState<boolean>(false);
 
   useEffect(() => {
@@ -1198,41 +1205,58 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     );
   };
 
-  const createPost = ({
-    text,
-    mediaUrl,
-    mediaType = 'image',
-    location: postLocation,
-    visibility = 'public',
-  }: {
+  const createPost = async (args: {
     text: string;
     mediaUrl?: string;
     mediaType?: 'image' | 'video';
     location: string;
-    visibility?: 'public' | 'followers';
+    audience?: string;
+    replyPermission?: string;
+    gifUrl?: string;
+    pollQuestion?: string;
+    pollOptions?: string[];
+    rallyRefId?: string;
+    pageRefId?: string;
+    visibility?: string;
   }) => {
-    const newPost: Post = {
-      id: `post_${Date.now()}`,
-      author: currentUser,
-      text,
-      mediaUrl,
-      mediaType,
-      location: postLocation || location.name,
-      visibility,
-      distanceMeters: 10,
-      createdAt: 'Just now',
-      likesCount: 0,
-      commentsCount: 0,
-      repostsCount: 0,
-      isLiked: false,
-      isReposted: false,
-      comments: [],
-    };
-    setPosts([newPost, ...posts]);
-    setCreateFlowType(null);
-    setIsCreateSheetOpen(false);
-    setActiveTab('home');
-    triggerShareToast('Post published to nearby feed');
+    try {
+      const postId = await createPostMutation({
+        text: args.text,
+        mediaUrl: args.mediaUrl,
+        mediaType: args.mediaType as 'image' | 'video' | undefined,
+        location: args.location || location.name,
+        audience: args.audience as any,
+        replyPermission: args.replyPermission as any,
+        gifUrl: args.gifUrl,
+        pollQuestion: args.pollQuestion,
+        pollOptions: args.pollOptions,
+        rallyRefId: args.rallyRefId,
+        pageRefId: args.pageRefId,
+      });
+
+      setCreateFlowType(null);
+      setIsCreateSheetOpen(false);
+      setActiveTab('home');
+      triggerShareToast('Post published!');
+      
+      return { id: postId };
+    } catch (error) {
+      console.error('Failed to create post:', error);
+      throw error;
+    }
+  };
+
+  const saveDraft = async (draft: any) => {
+    return await saveDraftMutation(draft);
+  };
+
+  const getDrafts = async () => {
+    // Actually, getDrafts is better as a useQuery or just fetched directly, but we can return empty for now, or the component can use useQuery(api.social.getDrafts) directly.
+    return [];
+  };
+
+  const deleteDraft = async (draftId: string) => {
+    return await deleteDraftMutation({ draftId: draftId as any });
   };
 
   const toggleJoinRally = (rallyId: string) => {
@@ -2060,6 +2084,9 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         addComment,
         toggleLikeComment,
         createPost,
+        saveDraft,
+        getDrafts,
+        deleteDraft,
         toggleJoinRally,
         joinRally: toggleJoinRally,
         createRally,

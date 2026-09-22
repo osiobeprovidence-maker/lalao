@@ -139,7 +139,7 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
     const posterUrl = poster ?? `https://image.mux.com/${effectivePlaybackId}/thumbnail.jpg?time=0`;
 
     return (
-      <div className={`relative w-full overflow-hidden rounded-2xl bg-black ${className}`}>
+      <div className={`relative w-full overflow-hidden rounded-[18px] bg-black ${className}`}>
         {isPlaying ? (
           <MuxPlayer
             playbackId={effectivePlaybackId}
@@ -150,7 +150,7 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
             loop={loop}
             playsInline
             preload="auto"
-            className={`w-full h-full object-cover ${aspectClass}`}
+            className={`block w-full h-full object-cover ${aspectClass}`}
             onEnded={() => setIsPlaying(false)}
           />
         ) : (
@@ -161,13 +161,11 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
               loading="lazy"
               className="w-full h-full object-cover opacity-90 group-hover:opacity-75 transition-opacity duration-200"
             />
-            {/* Play button overlay */}
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-16 h-16 rounded-full bg-black/70 backdrop-blur-sm flex items-center justify-center group-hover:bg-black/85 group-hover:scale-110 transition-all duration-200 shadow-lg">
                 <Play className="w-7 h-7 text-white ml-1" fill="white" />
               </div>
             </div>
-            {/* Mux quality badge */}
             <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
               HD
             </div>
@@ -180,14 +178,14 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
   // 5. STATE: READY → Basic HTML5 Video (Convex Storage / MP4)
   if (mediaUrl && mediaUrl.length > 0) {
     return (
-      <div className={`relative w-full overflow-hidden rounded-2xl bg-neutral-900 ${className}`}>
+      <div className={`relative w-full overflow-hidden rounded-[18px] bg-neutral-900 ${className}`}>
         <video
           src={mediaUrl}
           poster={poster}
           controls
           playsInline
           preload="metadata"
-          className={`w-full h-full object-cover ${aspectClass} max-h-[500px]`}
+          className={`block w-full h-full object-cover ${aspectClass} max-h-[500px]`}
         />
       </div>
     );

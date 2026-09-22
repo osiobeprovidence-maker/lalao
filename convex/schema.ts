@@ -73,6 +73,22 @@ export default defineSchema({
     .searchIndex("search_email", { searchField: "email" })
     .searchIndex("search_phone", { searchField: "phone" }),
 
+  drafts: defineTable({
+    authorId: v.id("users"),
+    text: v.string(),
+    mediaUrl: v.optional(v.string()),
+    mediaStorageId: v.optional(v.id("_storage")),
+    mediaType: v.optional(v.union(v.literal("image"), v.literal("video"))),
+    audience: v.optional(v.string()),
+    replyPermission: v.optional(v.string()),
+    gifUrl: v.optional(v.string()),
+    pollQuestion: v.optional(v.string()),
+    pollOptions: v.optional(v.array(v.string())),
+    pageRefId: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_author", ["authorId"]),
+
   posts: defineTable({
     authorId: v.id("users"),
     text: v.string(),

@@ -413,41 +413,40 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
 
           {/* Media Attachment (for normal post without rally or with independent media) */}
           {((post?.mediaUrl || (post as any)?.muxUploadId) && !linkedRally) && (
-            <div className="mt-3 relative rounded-2xl overflow-hidden border border-neutral-200/80 group">
+            <> 
               {post.mediaType === 'video' ? (
-                <MuxVideoPlayer
-                  muxPlaybackId={(post as any).muxPlaybackId}
-                  mediaUrl={post.mediaUrl}
-                  mediaStatus={(post as any).mediaStatus}
-                  aspect="square"
-                  className="mx-auto max-w-[560px]"
-                />
+                <div className="mt-3">
+                  <MuxVideoPlayer
+                    muxPlaybackId={(post as any).muxPlaybackId}
+                    mediaUrl={post.mediaUrl}
+                    mediaStatus={(post as any).mediaStatus}
+                    aspect="video"
+                    className="mx-auto w-full"
+                  />
+                </div>
               ) : (
                 post.mediaUrl && (
                   <img
                     src={post.mediaUrl}
                     alt="Post attachment"
                     referrerPolicy="no-referrer"
-                    className="w-full max-h-96 object-cover hover:scale-[1.01] transition-transform duration-300"
+                    className="mt-3 w-full max-h-[420px] rounded-[18px] object-cover"
                     loading="lazy"
                   />
                 )
               )}
-            </div>
+            </>
           )}
-
 
           {/* GIF Attachment */}
           {post?.gifUrl && !linkedRally && (
-            <div className="mt-3 relative rounded-2xl overflow-hidden bg-neutral-100 border border-neutral-200/80">
-              <img
-                src={post.gifUrl}
-                alt="GIF attachment"
-                referrerPolicy="no-referrer"
-                className="w-full max-h-96 object-cover"
-                loading="lazy"
-              />
-            </div>
+            <img
+              src={post.gifUrl}
+              alt="GIF attachment"
+              referrerPolicy="no-referrer"
+              className="mt-3 w-full max-h-[420px] rounded-[18px] object-cover"
+              loading="lazy"
+            />
           )}
 
           {/* Unified Action Row */}

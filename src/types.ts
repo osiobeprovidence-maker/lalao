@@ -19,6 +19,7 @@ export interface User {
   relationship?: "none" | "following" | "follower" | "friends";
   isVerified?: boolean;
   mutualInfo?: string;
+  [key: string]: any;
 }
 
 export interface CommentReply {
