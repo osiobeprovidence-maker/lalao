@@ -140,37 +140,16 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
 
     return (
       <div className={`relative w-full overflow-hidden rounded-[18px] bg-black ${className}`}>
-        {isPlaying ? (
-          <MuxPlayer
-            playbackId={effectivePlaybackId}
-            poster={posterUrl}
-            streamType="on-demand"
-            autoPlay={true}
-            muted={isMuted}
-            loop={loop}
-            playsInline
-            preload="auto"
-            className={`block w-full h-full object-cover ${aspectClass}`}
-            onEnded={() => setIsPlaying(false)}
-          />
-        ) : (
-          <div className={`relative ${aspectClass} w-full cursor-pointer group`} onClick={() => setIsPlaying(true)}>
-            <img
-              src={posterUrl}
-              alt="Video thumbnail"
-              loading="lazy"
-              className="w-full h-full object-cover opacity-90 group-hover:opacity-75 transition-opacity duration-200"
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-16 h-16 rounded-full bg-black/70 backdrop-blur-sm flex items-center justify-center group-hover:bg-black/85 group-hover:scale-110 transition-all duration-200 shadow-lg">
-                <Play className="w-7 h-7 text-white ml-1" fill="white" />
-              </div>
-            </div>
-            <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-              HD
-            </div>
-          </div>
-        )}
+        <MuxPlayer
+          playbackId={effectivePlaybackId}
+          poster={posterUrl}
+          streamType="on-demand"
+          muted={isMuted}
+          loop={loop}
+          playsInline
+          preload="metadata"
+          className={`block w-full h-full object-cover ${aspectClass}`}
+        />
       </div>
     );
   }

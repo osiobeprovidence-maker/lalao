@@ -21,14 +21,19 @@ import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { Popover } from '../common/Popover';
+import { ErrorBoundary } from '../common/ErrorBoundary';
 import { uploadImageToCloudinary } from '../../lib/cloudinary';
+
+const MAX_CHARS = 280;
 
 interface PostComposerProps {
   embedded?: boolean;
   onClose?: () => void;
+  initialAudience?: string;
+  onSuccess?: () => void;
 }
 
-export const PostComposer: React.FC<PostComposerProps> = ({ embedded = false, onClose }) => {
+function PostComposerInner({ embedded = false, onClose, initialAudience = 'everyone', onSuccess }: PostComposerProps) {
   const {
     currentUser,
     pages,
@@ -723,5 +728,21 @@ export const PostComposer: React.FC<PostComposerProps> = ({ embedded = false, on
         </div>
       )}
     </div>
+  );
+}
+
+export function PostComposer(props: PostComposerProps) {
+  return (
+    <ErrorBoundary fallback={
+      <div className="bg-white rounded-2xl p-6 border border-neutral-200 shadow-sm text-center">
+        <h3 className="font-bold text-neutral-800 mb-2">Composer Unavailable</h3>
+        <p className="text-sm text-neutral-500 mb-4">We're having trouble connecting to the server.</p>
+        <button onClick={() => window.location.reload()} className="px-4 py-2 bg-[#5E43F3] text-white rounded-full font-medium text-sm">
+          Refresh Page
+        </button>
+      </div>
+    }>
+      <PostComposerInner {...props} />
+    </ErrorBoundary>
   );
 };

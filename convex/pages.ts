@@ -56,13 +56,12 @@ export const getMyFollowedCommunities = query({
 
     const follows = await ctx.db
       .query("pageFollowers")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
-    const followedPageIds = follows
-      .filter((follow: any) => follow.userId === user._id)
-      .map((follow: any) => follow.pageId);
+    if (follows.length === 0) return [];
 
-    if (followedPageIds.length === 0) return [];
+    const followedPageIds = follows.map((follow: any) => follow.pageId);
 
     const pages = await Promise.all(
       followedPageIds.map(async (pageId) => await ctx.db.get(pageId))

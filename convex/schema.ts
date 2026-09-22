@@ -212,7 +212,8 @@ export default defineSchema({
     pageId: v.id("pages"),
     createdAt: v.number(),
   })
-    .index("by_page_user", ["pageId", "userId"]),
+    .index("by_page_user", ["pageId", "userId"])
+    .index("by_user", ["userId"]),
 
   conversations: defineTable({
     userA: v.id("users"),

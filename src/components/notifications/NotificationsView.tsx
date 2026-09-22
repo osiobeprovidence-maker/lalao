@@ -32,12 +32,13 @@ export const NotificationsView: React.FC = () => {
   const now = Date.now();
   const oneDayMs = 24 * 60 * 60 * 1000;
 
-  const todayNotifs = notifications.filter((n) => {
+  const safeNotifications = notifications || [];
+  const todayNotifs = safeNotifications.filter((n) => {
     if (n.createdAt) return now - n.createdAt < oneDayMs;
     return n.timestamp.includes('m ago') || n.timestamp.includes('h ago');
   });
 
-  const earlierNotifs = notifications.filter((n) => {
+  const earlierNotifs = safeNotifications.filter((n) => {
     if (n.createdAt) return now - n.createdAt >= oneDayMs;
     return !n.timestamp.includes('m ago') && !n.timestamp.includes('h ago');
   });
@@ -80,7 +81,7 @@ export const NotificationsView: React.FC = () => {
     setActiveTab('home');
   };
 
-  const visibleSuggested = activeFilter === 'suggested' || activeFilter === 'all' ? suggestedUsers : [];
+  const visibleSuggested = (activeFilter === 'suggested' || activeFilter === 'all') ? (suggestedUsers || []) : [];
   const shouldShowActivity = activeFilter === 'activity' || activeFilter === 'all';
 
   return (
