@@ -16,6 +16,10 @@ import { Page } from '../../types';
 import { useLalao } from '../../context/LalaoContext';
 import { uploadImageToCloudinary } from '../../lib/cloudinary';
 
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
+
 interface EditPageModalProps {
   page: Page;
   isOpen: boolean;
@@ -60,12 +64,24 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
   const { updatePage, generateCloudinarySignature, triggerShareToast } = useLalao();
 
   const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<'profile' | 'locations'>('profile');
+
+  // Queries & Mutations for Locations
+  const locations = useQuery(api.pages.getPageLocations, { pageId: page.id as Id<"pages"> }) || [];
+  const addLocation = useMutation(api.pages.addPageLocation);
+  const removeLocation = useMutation(api.pages.removePageLocation);
 
   const [name, setName] = useState(page.name);
   const [username, setUsername] = useState(page.username);
   const [category, setCategory] = useState(page.category || 'Community & Hub');
   const [description, setDescription] = useState(page.description);
   const [location, setLocation] = useState(page.location || '');
+  
+  // Global Business Fields
+  const [globalDiscoveryStatus, setGlobalDiscoveryStatus] = useState<"global" | "national" | "regional" | "local">(page.globalDiscoveryStatus || "global");
+  const [serviceAreas, setServiceAreas] = useState<string>(page.serviceAreas?.join(', ') || '');
+  const [isOnlineBusiness, setIsOnlineBusiness] = useState(page.isOnlineBusiness || false);
+
   const [coverImage, setCoverImage] = useState(page.coverImage);
   const [avatar, setAvatar] = useState(page.avatar);
 
@@ -108,6 +124,9 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
         category,
         description: description.trim(),
         location: location.trim(),
+        globalDiscoveryStatus,
+        serviceAreas: serviceAreas.split(',').map(s => s.trim()).filter(Boolean),
+        isOnlineBusiness,
         coverImage: finalCoverImage,
         avatar: finalAvatar,
         aboutInfo: {
@@ -169,23 +188,50 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
           </div>
         </div>
 
+        {activeTab === 'profile' && (
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving}
+            className="px-4 py-2 rounded-xl bg-[#5E43F3] text-white text-xs font-bold hover:bg-[#4E34E0] disabled:opacity-50 shadow-sm flex items-center gap-1.5 cursor-pointer"
+          >
+            {isSaving ? (
+              <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+            ) : (
+              <Check className="w-4 h-4 stroke-[2.5]" />
+            )}
+            <span>{isSaving ? 'Saving...' : 'Save'}</span>
+          </button>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-neutral-100 px-4 sm:px-6 sticky top-[60px] bg-white/95 backdrop-blur-md z-10 shrink-0 flex gap-4">
         <button
-          type="button"
-          onClick={handleSave}
-          disabled={isSaving}
-          className="px-4 py-2 rounded-xl bg-[#5E43F3] text-white text-xs font-bold hover:bg-[#4E34E0] disabled:opacity-50 shadow-sm flex items-center gap-1.5 cursor-pointer"
+          onClick={() => setActiveTab('profile')}
+          className={`py-3 text-sm font-bold border-b-2 transition-colors ${
+            activeTab === 'profile'
+              ? 'border-[#5E43F3] text-[#5E43F3]'
+              : 'border-transparent text-neutral-500 hover:text-neutral-900'
+          }`}
         >
-          {isSaving ? (
-            <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-          ) : (
-            <Check className="w-4 h-4 stroke-[2.5]" />
-          )}
-          <span>{isSaving ? 'Saving...' : 'Save'}</span>
+          Profile Details
+        </button>
+        <button
+          onClick={() => setActiveTab('locations')}
+          className={`py-3 text-sm font-bold border-b-2 transition-colors ${
+            activeTab === 'locations'
+              ? 'border-[#5E43F3] text-[#5E43F3]'
+              : 'border-transparent text-neutral-500 hover:text-neutral-900'
+          }`}
+        >
+          Branches & Locations
         </button>
       </div>
 
       {/* Page Content Container */}
       <div className="w-full max-w-2xl mx-auto p-4 sm:p-6 pb-24 flex-1">
+        {activeTab === 'profile' ? (
         <form onSubmit={handleSave} className="space-y-6">
           {/* Visual Branding Section: Cover & Avatar with Upload Controls */}
           <div className="bg-neutral-50/80 p-4 sm:p-5 rounded-2xl border border-neutral-100 space-y-4">
@@ -403,6 +449,50 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
                 />
               </div>
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                  Discovery Visibility
+                </label>
+                <select
+                  value={globalDiscoveryStatus}
+                  onChange={(e) => setGlobalDiscoveryStatus(e.target.value as any)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm font-semibold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3] bg-white"
+                >
+                  <option value="global">Global (Worldwide)</option>
+                  <option value="national">National</option>
+                  <option value="regional">Regional</option>
+                  <option value="local">Local Only (Nearby)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                  Service Areas (Comma separated)
+                </label>
+                <input
+                  type="text"
+                  value={serviceAreas}
+                  onChange={(e) => setServiceAreas(e.target.value)}
+                  placeholder="e.g. Lagos, Abuja, London"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 mt-2">
+              <input
+                type="checkbox"
+                id="isOnlineBusiness"
+                checked={isOnlineBusiness}
+                onChange={(e) => setIsOnlineBusiness(e.target.checked)}
+                className="w-4 h-4 rounded border-neutral-300 text-[#5E43F3] focus:ring-[#5E43F3]"
+              />
+              <label htmlFor="isOnlineBusiness" className="text-sm font-semibold text-neutral-700">
+                This is an online business (operates remotely)
+              </label>
+            </div>
           </div>
 
           {/* Contact & Physical Details Section */}
@@ -511,7 +601,156 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
             </button>
           </div>
         </form>
+        ) : (
+          <LocationsManager 
+            pageId={page.id} 
+            locations={locations} 
+            addLocation={addLocation} 
+            removeLocation={removeLocation} 
+            triggerShareToast={triggerShareToast} 
+          />
+        )}
       </div>
+    </div>
+  );
+};
+
+const LocationsManager = ({ pageId, locations, addLocation, removeLocation, triggerShareToast }: any) => {
+  const [isAdding, setIsAdding] = useState(false);
+  const [name, setName] = useState('');
+  const [locationStr, setLocationStr] = useState('');
+  const [address, setAddress] = useState('');
+  const [phone, setPhone] = useState('');
+  const [hours, setHours] = useState('');
+  const [isPrimary, setIsPrimary] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !locationStr.trim()) return;
+
+    try {
+      setSubmitting(true);
+      await addLocation({
+        pageId,
+        name: name.trim(),
+        location: locationStr.trim(),
+        address: address.trim() || undefined,
+        phone: phone.trim() || undefined,
+        hours: hours.trim() || undefined,
+        isPrimary,
+      });
+      setIsAdding(false);
+      setName('');
+      setLocationStr('');
+      setAddress('');
+      setPhone('');
+      setHours('');
+      setIsPrimary(false);
+      triggerShareToast("Location added successfully");
+    } catch (error) {
+      console.error(error);
+      triggerShareToast("Failed to add location");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRemove = async (id: string) => {
+    if (!confirm("Are you sure you want to remove this location?")) return;
+    try {
+      await removeLocation({ locationId: id as any });
+      triggerShareToast("Location removed");
+    } catch (error) {
+      triggerShareToast("Failed to remove location");
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h4 className="text-sm font-bold text-neutral-900">Business Locations</h4>
+          <p className="text-xs text-neutral-500 mt-0.5">Manage physical branches for your business.</p>
+        </div>
+        {!isAdding && (
+          <button
+            onClick={() => setIsAdding(true)}
+            className="px-3.5 py-2 rounded-xl bg-neutral-900 text-white text-xs font-bold hover:bg-neutral-800 transition-colors"
+          >
+            Add Branch
+          </button>
+        )}
+      </div>
+
+      {isAdding && (
+        <form onSubmit={handleAdd} className="bg-neutral-50 border border-neutral-200 rounded-2xl p-4 sm:p-5 space-y-4 animate-in fade-in zoom-in-95">
+          <h5 className="text-xs font-black uppercase tracking-wider text-neutral-500">New Branch Details</h5>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-neutral-700 block mb-1">Branch Name *</label>
+              <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Lagos HQ" required className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:border-[#5E43F3]" />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-neutral-700 block mb-1">City / Region *</label>
+              <input type="text" value={locationStr} onChange={e => setLocationStr(e.target.value)} placeholder="e.g. Lagos, Nigeria" required className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:border-[#5E43F3]" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="text-xs font-bold text-neutral-700 block mb-1">Street Address</label>
+              <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="e.g. 123 Business Way" className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:border-[#5E43F3]" />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-neutral-700 block mb-1">Phone Number</label>
+              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+234..." className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:border-[#5E43F3]" />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-neutral-700 block mb-1">Operating Hours</label>
+              <input type="text" value={hours} onChange={e => setHours(e.target.value)} placeholder="e.g. 9 AM - 5 PM" className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:border-[#5E43F3]" />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 pt-2">
+            <input type="checkbox" id="isPrimaryBranch" checked={isPrimary} onChange={e => setIsPrimary(e.target.checked)} className="w-4 h-4 rounded text-[#5E43F3]" />
+            <label htmlFor="isPrimaryBranch" className="text-sm font-semibold text-neutral-700">This is the primary headquarters</label>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 rounded-lg text-xs font-bold text-neutral-600 hover:bg-neutral-200">Cancel</button>
+            <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg bg-[#5E43F3] text-white text-xs font-bold hover:bg-[#4E34E0] disabled:opacity-50">
+              {submitting ? 'Saving...' : 'Save Branch'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {locations.length === 0 && !isAdding ? (
+        <div className="text-center py-12 bg-neutral-50 rounded-2xl border border-neutral-100">
+          <Building2 className="w-8 h-8 text-neutral-300 mx-auto mb-3" />
+          <p className="text-sm text-neutral-500 font-medium">No physical branches added yet.</p>
+        </div>
+      ) : (
+        <div className="grid gap-3">
+          {locations.map((loc: any) => (
+            <div key={loc._id} className="bg-white border border-neutral-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h6 className="font-bold text-neutral-900">{loc.name}</h6>
+                  {loc.isPrimary && <span className="px-2 py-0.5 rounded text-[10px] font-black bg-[#5E43F3]/10 text-[#5E43F3] uppercase tracking-wider">Primary HQ</span>}
+                </div>
+                <div className="flex flex-col gap-0.5 text-xs text-neutral-500">
+                  <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {loc.address ? `${loc.address}, ${loc.location}` : loc.location}</span>
+                  {loc.hours && <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {loc.hours}</span>}
+                  {loc.phone && <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {loc.phone}</span>}
+                </div>
+              </div>
+              <button onClick={() => handleRemove(loc._id)} className="text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors shrink-0">
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

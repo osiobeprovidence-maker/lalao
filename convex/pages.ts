@@ -37,6 +37,9 @@ export const getMyPages = query({
       aboutInfo: page.aboutInfo ?? {},
       businessType: page.businessType,
       activeTools: page.activeTools,
+      globalDiscoveryStatus: page.globalDiscoveryStatus ?? "global",
+      serviceAreas: page.serviceAreas ?? [],
+      isOnlineBusiness: page.isOnlineBusiness ?? false,
     }));
   },
 });
@@ -99,6 +102,9 @@ export const createPage = mutation({
     location: v.string(),
     avatar: v.optional(v.string()),
     coverImage: v.optional(v.string()),
+    globalDiscoveryStatus: v.optional(v.union(v.literal("global"), v.literal("national"), v.literal("regional"), v.literal("local"))),
+    serviceAreas: v.optional(v.array(v.string())),
+    isOnlineBusiness: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -130,6 +136,9 @@ export const createPage = mutation({
       avatar: args.avatar,
       coverImage: args.coverImage,
       category: args.category,
+      globalDiscoveryStatus: args.globalDiscoveryStatus ?? "global",
+      serviceAreas: args.serviceAreas ?? [],
+      isOnlineBusiness: args.isOnlineBusiness ?? false,
       followersCount: 1, // Default followers (owner)
       createdAt: now,
       updatedAt: now,
@@ -164,6 +173,9 @@ export const updatePage = mutation({
       hours: v.optional(v.string()),
       founded: v.optional(v.string()),
     })),
+    globalDiscoveryStatus: v.optional(v.union(v.literal("global"), v.literal("national"), v.literal("regional"), v.literal("local"))),
+    serviceAreas: v.optional(v.array(v.string())),
+    isOnlineBusiness: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -193,6 +205,9 @@ export const updatePage = mutation({
         ...args.aboutInfo,
       };
     }
+    if (args.globalDiscoveryStatus !== undefined) updates.globalDiscoveryStatus = args.globalDiscoveryStatus;
+    if (args.serviceAreas !== undefined) updates.serviceAreas = args.serviceAreas;
+    if (args.isOnlineBusiness !== undefined) updates.isOnlineBusiness = args.isOnlineBusiness;
 
     await ctx.db.patch(args.pageId, updates);
   },
@@ -306,5 +321,125 @@ export const toggleFollowPage = mutation({
     });
 
     return { isFollowing: true };
+  }
+});
+
+// Location management for pages
+export const getPageLocations = query({
+  args: { pageId: v.id("pages") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("pageLocations")
+      .withIndex("by_page", (q) => q.eq("pageId", args.pageId))
+      .collect();
+  }
+});
+
+export const addPageLocation = mutation({
+  args: {
+    pageId: v.id("pages"),
+    name: v.string(),
+    location: v.string(),
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
+    isPrimary: v.boolean(),
+    address: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    hours: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+    if (!user) throw new Error("User not found");
+
+    const page = await ctx.db.get(args.pageId);
+    if (!page) throw new Error("Page not found");
+    if (page.ownerId !== user._id) throw new Error("Unauthorized");
+
+    // If setting as primary, we should probably clear other primaries, but skipping for simplicity unless needed
+    return await ctx.db.insert("pageLocations", {
+      pageId: args.pageId,
+      name: args.name,
+      location: args.location,
+      latitude: args.latitude,
+      longitude: args.longitude,
+      isPrimary: args.isPrimary,
+      address: args.address,
+      phone: args.phone,
+      hours: args.hours,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  }
+});
+
+export const updatePageLocation = mutation({
+  args: {
+    locationId: v.id("pageLocations"),
+    name: v.optional(v.string()),
+    location: v.optional(v.string()),
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
+    isPrimary: v.optional(v.boolean()),
+    address: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    hours: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+    if (!user) throw new Error("User not found");
+
+    const locationDoc = await ctx.db.get(args.locationId);
+    if (!locationDoc) throw new Error("Location not found");
+    
+    const page = await ctx.db.get(locationDoc.pageId);
+    if (!page || page.ownerId !== user._id) throw new Error("Unauthorized");
+
+    const updates: any = { updatedAt: Date.now() };
+    if (args.name !== undefined) updates.name = args.name;
+    if (args.location !== undefined) updates.location = args.location;
+    if (args.latitude !== undefined) updates.latitude = args.latitude;
+    if (args.longitude !== undefined) updates.longitude = args.longitude;
+    if (args.isPrimary !== undefined) updates.isPrimary = args.isPrimary;
+    if (args.address !== undefined) updates.address = args.address;
+    if (args.phone !== undefined) updates.phone = args.phone;
+    if (args.hours !== undefined) updates.hours = args.hours;
+
+    await ctx.db.patch(args.locationId, updates);
+  }
+});
+
+export const removePageLocation = mutation({
+  args: {
+    locationId: v.id("pageLocations"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+    if (!user) throw new Error("User not found");
+
+    const locationDoc = await ctx.db.get(args.locationId);
+    if (!locationDoc) throw new Error("Location not found");
+    
+    const page = await ctx.db.get(locationDoc.pageId);
+    if (!page || page.ownerId !== user._id) throw new Error("Unauthorized");
+
+    await ctx.db.delete(args.locationId);
   }
 });

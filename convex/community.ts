@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { getAuthedUser } from "./social";
+import { Id } from "./_generated/dataModel";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    COMMUNITY SUGGESTIONS
@@ -106,7 +107,7 @@ export const listSuggestions = query({
     // Resolve suggester profiles
     const detailed = await Promise.all(
       suggestions.map(async (s) => {
-        const suggester = await ctx.db.get(s.suggestedByUserId);
+        const suggester = await ctx.db.get(s.suggestedByUserId as Id<"users">);
         return {
           ...s,
           suggester: suggester
@@ -114,7 +115,7 @@ export const listSuggestions = query({
                 id: suggester._id,
                 name: suggester.name ?? "User",
                 username: suggester.username ?? "user",
-                avatar: suggester.avatarUrl || suggester.avatar || "",
+                avatar: suggester.avatarUrl || "",
               }
             : null,
         };
@@ -154,12 +155,41 @@ export const reviewSuggestion = mutation({
     const oldStatus = suggestion.status;
     const now = Date.now();
 
+    let publishedPageId = suggestion.publishedPageId;
+
+    // Idempotent community creation on approval
+    if (args.newStatus === "approved" && !publishedPageId) {
+      const slugBase = suggestion.communityName.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const username = slugBase.length > 0 ? slugBase : `community${Date.now()}`;
+      
+      publishedPageId = await ctx.db.insert("pages", {
+        ownerId: suggestion.suggestedByUserId,
+        name: suggestion.communityName,
+        username: username,
+        type: "community",
+        badge: "COMMUNITY",
+        description: suggestion.description,
+        category: suggestion.category,
+        location: suggestion.location || "Global",
+        followersCount: 1,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await ctx.db.insert("pageFollowers", {
+        userId: suggestion.suggestedByUserId,
+        pageId: publishedPageId,
+        createdAt: now,
+      });
+    }
+
     await ctx.db.patch(args.suggestionId, {
       status: args.newStatus,
       reviewedAt: now,
       reviewedBy: user._id,
       adminNotes: args.adminNotes ?? suggestion.adminNotes,
       updatedAt: now,
+      publishedPageId,
     });
 
     // Audit log

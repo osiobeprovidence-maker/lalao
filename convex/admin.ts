@@ -791,7 +791,7 @@ export const getCommunityDashboardStats = query({
     ]);
 
     const communities = pages.filter(p => p.type === "community");
-    const activeCommunities = communities.filter(c => c.status !== "archived" && c.status !== "suspended");
+    const activeCommunities = communities; // Pages don't have a status field yet
     const pendingSuggestions = suggestions.filter(s => s.status === "pending" || s.status === "under_review").length;
 
     // Estimate members by counting pageFollowers for communities
@@ -824,7 +824,7 @@ export const listCommunities = query({
         // Count members
         const followers = await ctx.db
           .query("pageFollowers")
-          .withIndex("by_page", (q) => q.eq("pageId", community._id))
+          .withIndex("by_page_user", (q) => q.eq("pageId", community._id))
           .collect();
 
         return {

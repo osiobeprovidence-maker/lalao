@@ -268,6 +268,9 @@ export interface Page {
   analytics?: PageAnalytics;
   businessType?: 'commerce' | 'subscription' | 'hybrid';
   activeTools?: string[];
+  globalDiscoveryStatus?: 'global' | 'national' | 'regional' | 'local';
+  serviceAreas?: string[];
+  isOnlineBusiness?: boolean;
 }
 
 export type EventType = 'tournament' | 'community' | 'live';
@@ -592,4 +595,72 @@ export interface SubscriptionMembership {
   currentPeriodStart?: number;
   currentPeriodEnd?: number;
   cancelAtPeriodEnd: boolean;
+}
+
+export interface RoomyProfile {
+  _id: string;
+  userId: string;
+  university?: string;
+  campus?: string;
+  preferredLocation?: string;
+  preferredAreas?: string[];
+  budget?: number;
+  currency?: string;
+  roomType?: string;
+  moveInPeriod?: string;
+  roommatePreferences?: string;
+  roommatesWanted?: number;
+  lifestyle?: string[];
+  bio?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface RoomyListing {
+  _id: string;
+  userId: string;
+  type: 'room_offered' | 'room_wanted' | 'roommate_wanted';
+  status: 'active' | 'filled' | 'inactive' | 'removed';
+  title?: string;
+  description: string;
+  price?: number;
+  currency?: string;
+  location: string;
+  university?: string;
+  campus?: string;
+  area?: string;
+  roomType?: string;
+  availabilityDate?: string;
+  amenities?: string[];
+  photos?: string[];
+  roommatesNeeded?: number;
+  preferences?: string;
+  createdAt: number;
+  updatedAt: number;
+  owner?: {
+    _id: string;
+    name: string;
+    username: string;
+    avatarUrl?: string;
+    avatarStorageId?: string;
+  };
+}
+
+export interface RoomyInspection {
+  _id: string;
+  requesterId: string;
+  ownerId: string;
+  listingId: string;
+  status: 'pending' | 'accepted' | 'declined' | 'rescheduled';
+  proposedDate: string;
+  message?: string;
+  createdAt: number;
+  updatedAt: number;
+  listing?: RoomyListing;
+  otherUser?: {
+    _id: string;
+    name: string;
+    username: string;
+    avatarUrl?: string;
+  };
 }

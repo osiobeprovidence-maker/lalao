@@ -912,6 +912,9 @@ export const listPages = query({
         aboutInfo: page.aboutInfo ?? {},
         businessType: page.businessType,
         activeTools: page.activeTools,
+        globalDiscoveryStatus: page.globalDiscoveryStatus ?? "global",
+        serviceAreas: page.serviceAreas ?? [],
+        isOnlineBusiness: page.isOnlineBusiness ?? false,
       });
     }
 
@@ -1179,7 +1182,9 @@ export const createPost = mutation({
     // Authorization checks for destinations
     if (args.audience === "page" || args.audience === "community") {
       if (!args.pageRefId) throw new Error("Missing pageRefId for destination");
-      const page = await ctx.db.get(ctx.db.normalizeId("pages", args.pageRefId) as any);
+      const normalizedId = ctx.db.normalizeId("pages", args.pageRefId);
+      if (!normalizedId) throw new Error("Invalid destination ID");
+      const page = await ctx.db.get(normalizedId);
       if (!page) throw new Error("Destination not found");
 
       if (args.audience === "page") {
@@ -1330,7 +1335,7 @@ export const deletePost = mutation({
     // 3. Delete notifications referencing this post
     const notifications = await ctx.db
       .query("notifications")
-      .filter((q: any) => q.eq(q.field("postId"), postId))
+      .withIndex("by_post", (q: any) => q.eq("postId", postId))
       .collect();
     for (const notification of notifications) {
       await ctx.db.delete(notification._id);
@@ -1338,7 +1343,11 @@ export const deletePost = mutation({
 
     // 4. Delete Convex Storage media
     if (post.mediaStorageId) {
-      await ctx.storage.delete(post.mediaStorageId);
+      try {
+        await ctx.storage.delete(post.mediaStorageId);
+      } catch (err) {
+        console.warn("Failed to delete storage media:", err);
+      }
     }
 
     // 5. External Media cleanup
@@ -1829,13 +1838,13 @@ export const getMyFollowers = query({
 
     const followers = await Promise.all(
       followerRecords.map(async (f: any) => {
-        const user = await ctx.db.get(f.followerId);
+        const user = await ctx.db.get(f.followerId as Id<"users">);
         if (!user) return null;
         return {
           id: user._id,
           name: user.name ?? "User",
           username: user.username ?? "user",
-          avatar: user.avatarUrl || user.avatar || "",
+          avatar: user.avatarUrl || "",
           bio: user.bio ?? "",
           location: user.locationName ?? "",
           isFollowing: myFollowingIds.has(user._id), // do I follow them back?
@@ -2083,8 +2092,9 @@ export const saveDraft = mutation({
 
     // Authorization checks for destinations
     if (args.audience === "page" || args.audience === "community") {
-      if (!args.pageRefId) throw new Error("Missing pageRefId for destination");
-      const page = await ctx.db.get(ctx.db.normalizeId("pages", args.pageRefId) as any);
+      const normalizedId = ctx.db.normalizeId("pages", args.pageRefId);
+      if (!normalizedId) throw new Error("Invalid destination ID");
+      const page = await ctx.db.get(normalizedId);
       if (!page) throw new Error("Destination not found");
 
       if (args.audience === "page") {

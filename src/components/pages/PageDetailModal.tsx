@@ -41,6 +41,7 @@ import {
   Briefcase,
   Crown,
   Repeat,
+  Heart,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
@@ -66,8 +67,27 @@ import { PageEventModal } from './PageEventModal';
 import { EventAttendeesModal } from './EventAttendeesModal';
 import { PageManageProductsModal } from './PageManageProductsModal';
 import { PagePostComposerModal } from './PagePostComposerModal';
+import { RoomyTab } from './roomy/RoomyTab';
 
-type PageTab = 'posts' | 'shop' | 'subscriptions' | 'media' | 'events' | 'about';
+type PageTab = 'posts' | 'shop' | 'subscriptions' | 'media' | 'events' | 'about' | 'roomy' | 'locations';
+
+const ROOMY_PAGE: Page = {
+  _id: 'roomy' as any,
+  _creationTime: Date.now(),
+  id: 'roomy',
+  ownerId: 'system' as any,
+  name: 'Roomy',
+  username: 'roomy',
+  description: 'The community-driven marketplace built right into Lalao to help you find rooms, roommates, and accommodation options around you.',
+  category: 'Housing',
+  coverUrl: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=2070&auto=format&fit=crop',
+  avatarUrl: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=200&auto=format&fit=crop',
+  isVerified: true,
+  followersCount: 1,
+  activeTools: ['roomy'],
+  businessType: 'service',
+  locationMode: 'Global',
+};
 
 export const PageDetailModal: React.FC = () => {
   const {
@@ -119,8 +139,11 @@ export const PageDetailModal: React.FC = () => {
   const [selectedEventForAttendees, setSelectedEventForAttendees] = useState<OrgEvent | null>(null);
   const [isPostComposerOpen, setIsPostComposerOpen] = useState(false);
 
-  const activePlans = useQuery(api.subscriptions.getPageSubscriptions, activePageId && activePageId !== 'page_honorofkings' ? { pageId: activePageId as any } : 'skip') || [];
+  const isVirtualPage = activePageId === 'page_honorofkings' || activePageId === 'roomy';
+
+  const activePlans = useQuery(api.subscriptions.getPageSubscriptions, activePageId && !isVirtualPage ? { pageId: activePageId as any } : 'skip') || [];
   const myMemberships = useQuery(api.subscriptions.getMyMemberships) || [];
+  const pageLocations = useQuery(api.pages.getPageLocations, activePageId && !isVirtualPage ? { pageId: activePageId as any } : 'skip') || [];
 
   const containerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -154,7 +177,7 @@ export const PageDetailModal: React.FC = () => {
   if (!activePageId) return null;
 
   // Use the definitive currentPage from Convex. If it's undefined, it's loading.
-  if (currentPage === undefined && activePageId !== 'page_honorofkings') {
+  if (currentPage === undefined && !isVirtualPage) {
     return (
       <div className="flex w-full h-full min-h-[50vh] items-center justify-center">
         <div className="w-8 h-8 rounded-full border-4 border-[#5E43F3]/30 border-t-[#5E43F3] animate-spin" />
@@ -163,6 +186,7 @@ export const PageDetailModal: React.FC = () => {
   }
 
   const page =
+    activePageId === 'roomy' ? ROOMY_PAGE :
     activePageId === 'page_honorofkings' ? HOK_ORGANIZATION_PAGE : currentPage;
     
   if (!page) {
@@ -236,6 +260,14 @@ export const PageDetailModal: React.FC = () => {
 
   if (hasEvents) {
     tabs.push({ id: 'events', label: 'Events' });
+  }
+
+  if (page.username === 'roomy' || activeTools.includes('roomy')) {
+    tabs.push({ id: 'roomy', label: 'Roomy' });
+  }
+
+  if (pageLocations.length > 0) {
+    tabs.push({ id: 'locations', label: 'Locations' });
   }
 
   tabs.push({ id: 'about', label: 'About' });
@@ -405,6 +437,24 @@ export const PageDetailModal: React.FC = () => {
                 <div className="flex items-center gap-1 text-xs text-neutral-500 font-medium">
                   <MapPin className="w-3.5 h-3.5" />
                   <span>{page.location}</span>
+                </div>
+              )}
+              {page.globalDiscoveryStatus === 'global' && (
+                <div className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-medium">
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>Global</span>
+                </div>
+              )}
+              {page.isOnlineBusiness && (
+                <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-medium">
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>Online Business</span>
+                </div>
+              )}
+              {page.serviceAreas && page.serviceAreas.length > 0 && (
+                <div className="flex items-center gap-1 text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full font-medium">
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Serves: {page.serviceAreas.join(', ')}</span>
                 </div>
               )}
             </div>
@@ -797,6 +847,13 @@ export const PageDetailModal: React.FC = () => {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* TAB: ROOMY */}
+          {activeTab === 'roomy' && (
+            <div id="page-roomy-section" className="p-3 sm:p-4 space-y-4">
+              <RoomyTab page={page} />
             </div>
           )}
 
@@ -1286,119 +1343,216 @@ export const PageDetailModal: React.FC = () => {
             </div>
           )}
 
+          {/* TAB: LOCATIONS */}
+          {activeTab === 'locations' && (
+            <div className="p-3 sm:p-4 space-y-3">
+              <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-100 flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-black text-neutral-900 flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-[#5E43F3]" />
+                    Physical Branches
+                  </h4>
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    Find {page.name} in multiple locations.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3">
+                {pageLocations.map((loc: any) => (
+                  <div key={loc._id} className="bg-white border border-neutral-200 rounded-xl p-4 hover:border-neutral-300 transition-colors shadow-xs">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <h6 className="font-bold text-neutral-900">{loc.name}</h6>
+                        {loc.isPrimary && (
+                          <span className="px-2 py-0.5 rounded text-[9px] font-black bg-[#5E43F3]/10 text-[#5E43F3] uppercase tracking-wider">
+                            Headquarters
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-neutral-600">
+                      <div className="space-y-2">
+                        <div className="flex items-start gap-2">
+                          <MapPin className="w-3.5 h-3.5 text-neutral-400 mt-0.5 shrink-0" />
+                          <span>{loc.address ? `${loc.address}, ${loc.location}` : loc.location}</span>
+                        </div>
+                        {loc.hours && (
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                            <span>{loc.hours}</span>
+                          </div>
+                        )}
+                        {loc.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                            <span>{loc.phone}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* TAB: ABOUT */}
           {activeTab === 'about' && (
             <div className="p-4 sm:p-5 space-y-4 text-xs">
-              {/* Organization Description */}
-              <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-100">
-                <div className="flex items-center justify-between mb-1.5">
-                  <h4 className="font-extrabold text-neutral-900 text-sm flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-[#5E43F3]" />
-                    About the Organization
-                  </h4>
-                  {isManager && (
-                    <button
-                      type="button"
-                      onClick={() => setIsEditModalOpen(true)}
-                      className="text-xs font-bold text-[#5E43F3] hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                      <span>Edit</span>
-                    </button>
-                  )}
-                </div>
-                <p className="text-neutral-700 leading-relaxed text-xs sm:text-[13px]">
-                  {page.description}
-                </p>
-              </div>
-
-              {/* Statistics */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100 text-center">
-                  <p className="text-base sm:text-lg font-black text-neutral-900">
-                    {page.followersCount || 1}
-                  </p>
-                  <p className="text-[10px] uppercase font-bold text-neutral-400 mt-0.5">Followers</p>
-                </div>
-                <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100 text-center">
-                  <p className="text-base sm:text-lg font-black text-[#5E43F3]">
-                    {(events || []).filter((e) => e?.pageId === page.id || page.id === 'page_honorofkings').length}
-                  </p>
-                  <p className="text-[10px] uppercase font-bold text-neutral-400 mt-0.5">Events</p>
-                </div>
-                {page.aboutInfo?.founded && (
-                  <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100 text-center">
-                    <p className="text-base sm:text-lg font-black text-amber-600">
-                      {page.aboutInfo.founded}
+              {page.activeTools?.includes('roomy') ? (
+                // Custom Roomy About Tab
+                <div className="space-y-6">
+                  <div className="bg-gradient-to-br from-[#5E43F3]/10 to-[#4E34E0]/5 rounded-2xl p-5 border border-[#5E43F3]/20">
+                    <h4 className="font-black text-[#5E43F3] text-lg mb-2">Welcome to Roomy</h4>
+                    <p className="text-neutral-700 leading-relaxed text-sm">
+                      Roomy is a community-driven marketplace built right into Lalao. It is designed to help you find rooms, roommates, and accommodation options around you. 
+                      Our mission is to make housing search transparent, safe, and entirely free for the community.
                     </p>
-                    <p className="text-[10px] uppercase font-bold text-neutral-400 mt-0.5">Est. Year</p>
                   </div>
-                )}
-                <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100 text-center">
-                  <p className="text-base sm:text-lg font-black text-emerald-600">
-                    Verified
-                  </p>
-                  <p className="text-[10px] uppercase font-bold text-neutral-400 mt-0.5">Status</p>
-                </div>
-              </div>
+                  
+                  <div className="bg-white rounded-2xl p-5 border border-neutral-100 shadow-sm">
+                    <h4 className="font-extrabold text-neutral-900 text-sm mb-3 flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-emerald-500" />
+                      Community Rules
+                    </h4>
+                    <ul className="space-y-2.5 text-neutral-600">
+                      <li className="flex gap-2"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /> <strong>Free forever:</strong> We don't charge listing fees or commissions.</li>
+                      <li className="flex gap-2"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /> <strong>Honesty:</strong> Ensure all photos and descriptions accurately represent the listing.</li>
+                      <li className="flex gap-2"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /> <strong>Safety first:</strong> Always meet in public places for inspections and verify identities before making payments.</li>
+                    </ul>
+                  </div>
 
-              {/* Location & Details */}
-              <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-100 space-y-3">
-                <h4 className="font-extrabold text-neutral-900 text-sm flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-[#5E43F3]" />
-                  Location & Operating Hours
-                </h4>
-                {page.aboutInfo?.address && (
-                  <div>
-                    <p className="font-bold text-neutral-900 text-xs">Physical Address / Venue</p>
-                    <p className="text-neutral-600 mt-0.5">{page.aboutInfo.address}</p>
-                  </div>
-                )}
-                {page.aboutInfo?.hours && (
-                  <div>
-                    <p className="font-bold text-neutral-900 text-xs">Operating Hours</p>
-                    <p className="text-neutral-600 mt-0.5">{page.aboutInfo.hours}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Contact & Social Links */}
-              <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-100 space-y-2.5">
-                <h4 className="font-extrabold text-neutral-900 text-sm flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-[#5E43F3]" />
-                  Official Contact & Channels
-                </h4>
-                {page.aboutInfo?.website && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-neutral-500">Website</span>
-                    <a
-                      href={`https://${page.aboutInfo.website}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[#5E43F3] font-bold hover:underline flex items-center gap-1"
+                  <div className="bg-neutral-950 rounded-2xl p-5 text-white flex flex-col items-center text-center">
+                    <Heart className="w-8 h-8 text-rose-500 mb-3" />
+                    <h4 className="font-black text-white text-base mb-2">Support Roomy</h4>
+                    <p className="text-neutral-400 text-xs leading-relaxed mb-4 max-w-xs">
+                      Roomy is maintained by the community and is completely free to use. If you found your perfect room or roommate through us, consider leaving a small donation to help keep the servers running.
+                    </p>
+                    <button 
+                      onClick={() => alert("Thank you for your support! Donation integration coming soon.")}
+                      className="px-6 py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl text-sm transition-colors cursor-pointer"
                     >
-                      <span>{page.aboutInfo.website}</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
+                      Donate to Roomy
+                    </button>
                   </div>
-                )}
-                {page.aboutInfo?.email && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-neutral-500">Email</span>
-                    <span className="text-neutral-900 font-bold">{page.aboutInfo.email}</span>
-                  </div>
-                )}
-                {page.aboutInfo?.phone && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-neutral-500">Phone Desk</span>
-                    <span className="text-neutral-900 font-bold">{page.aboutInfo.phone}</span>
-                  </div>
-                )}
-                <div className="flex items-center justify-between">
-                  <span className="text-neutral-500">Lao Line Handle</span>
-                  <span className="text-neutral-900 font-bold">@{page.username}</span>
                 </div>
-              </div>
+              ) : (
+                // Standard Organization About Tab
+                <>
+                  {/* Organization Description */}
+                  <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-100">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <h4 className="font-extrabold text-neutral-900 text-sm flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-[#5E43F3]" />
+                        About the Organization
+                      </h4>
+                      {isManager && (
+                        <button
+                          type="button"
+                          onClick={() => setIsEditModalOpen(true)}
+                          className="text-xs font-bold text-[#5E43F3] hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-neutral-700 leading-relaxed text-xs sm:text-[13px]">
+                      {page.description}
+                    </p>
+                  </div>
+
+                  {/* Statistics */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100 text-center">
+                      <p className="text-base sm:text-lg font-black text-neutral-900">
+                        {page.followersCount || 1}
+                      </p>
+                      <p className="text-[10px] uppercase font-bold text-neutral-400 mt-0.5">Followers</p>
+                    </div>
+                    <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100 text-center">
+                      <p className="text-base sm:text-lg font-black text-[#5E43F3]">
+                        {(events || []).filter((e) => e?.pageId === page.id || page.id === 'page_honorofkings').length}
+                      </p>
+                      <p className="text-[10px] uppercase font-bold text-neutral-400 mt-0.5">Events</p>
+                    </div>
+                    {page.aboutInfo?.founded && (
+                      <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100 text-center">
+                        <p className="text-base sm:text-lg font-black text-amber-600">
+                          {page.aboutInfo.founded}
+                        </p>
+                        <p className="text-[10px] uppercase font-bold text-neutral-400 mt-0.5">Est. Year</p>
+                      </div>
+                    )}
+                    <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100 text-center">
+                      <p className="text-base sm:text-lg font-black text-emerald-600">
+                        Verified
+                      </p>
+                      <p className="text-[10px] uppercase font-bold text-neutral-400 mt-0.5">Status</p>
+                    </div>
+                  </div>
+
+                  {/* Location & Details */}
+                  <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-100 space-y-3">
+                    <h4 className="font-extrabold text-neutral-900 text-sm flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-[#5E43F3]" />
+                      Location & Operating Hours
+                    </h4>
+                    {page.aboutInfo?.address && (
+                      <div>
+                        <p className="font-bold text-neutral-900 text-xs">Physical Address / Venue</p>
+                        <p className="text-neutral-600 mt-0.5">{page.aboutInfo.address}</p>
+                      </div>
+                    )}
+                    {page.aboutInfo?.hours && (
+                      <div>
+                        <p className="font-bold text-neutral-900 text-xs">Operating Hours</p>
+                        <p className="text-neutral-600 mt-0.5">{page.aboutInfo.hours}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contact & Social Links */}
+                  <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-100 space-y-2.5">
+                    <h4 className="font-extrabold text-neutral-900 text-sm flex items-center gap-2">
+                      <Globe className="w-4 h-4 text-[#5E43F3]" />
+                      Official Contact & Channels
+                    </h4>
+                    {page.aboutInfo?.website && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-500">Website</span>
+                        <a
+                          href={`https://${page.aboutInfo.website}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[#5E43F3] font-bold hover:underline flex items-center gap-1"
+                        >
+                          <span>{page.aboutInfo.website}</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    )}
+                    {page.aboutInfo?.email && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-500">Email</span>
+                        <span className="text-neutral-900 font-bold">{page.aboutInfo.email}</span>
+                      </div>
+                    )}
+                    {page.aboutInfo?.phone && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-500">Phone Desk</span>
+                        <span className="text-neutral-900 font-bold">{page.aboutInfo.phone}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-neutral-500">Lao Line Handle</span>
+                      <span className="text-neutral-900 font-bold">@{page.username}</span>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

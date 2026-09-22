@@ -421,6 +421,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
                     mediaUrl={post.mediaUrl}
                     mediaStatus={(post as any).mediaStatus}
                     aspect="video"
+                    autoPlay={true}
                     className="mx-auto w-full"
                   />
                 </div>

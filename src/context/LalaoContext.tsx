@@ -85,6 +85,7 @@ interface LalaoContextType {
   // Actions
   toggleLikePost: (postId: string) => void;
   toggleRepostPost: (postId: string) => void;
+  deletePost: (postId: string) => Promise<void>;
   addComment: (postId: string, text: string, parentCommentId?: string, replyToUsername?: string) => void;
   toggleLikeComment: (postId: string, commentId: string, replyId?: string) => void;
   createPost: (post: { text: string; mediaUrl?: string; mediaStorageId?: string; mediaType?: 'image' | 'video'; location: string; audience?: string; replyPermission?: string; gifUrl?: string; pollQuestion?: string; pollOptions?: string[]; rallyRefId?: string; pageRefId?: string; contentTopics?: string[]; }) => Promise<any>;
@@ -158,7 +159,7 @@ interface LalaoContextType {
   // Drilldown modals
   activeChatId: string | null;
   setActiveChatId: (id: string | null) => void;
-  openChatWithUser: (user: User) => void;
+  openChatWithUser: (user: User, initialMessage?: string) => void;
   activeCycleId: string | null;
   setActiveCycleId: (id: string | null) => void;
   activePageId: string | null;
@@ -311,6 +312,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const currentUserQuery = useQuery(api.users.getCurrentUser);
   const pushEnabledQuery = useQuery(api.push.hasActivePushToken);
   const upsertWebPushSubscription = useMutation(api.push.upsertWebPushSubscription);
+  const toggleRepostPostMutation = useMutation(api.social.toggleRepost);
+  const deletePostMutation = useMutation(api.social.deletePost);
   const createPostMutation = useMutation(api.social.createPost);
   const saveDraftMutation = useMutation(api.social.saveDraft);
   const deleteDraftMutation = useMutation(api.social.deleteDraft);
@@ -486,6 +489,21 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return EMPTY_NOTIFICATIONS;
     }
   });
+
+  const deletePost = async (postId: string) => {
+    if (!currentUser) return;
+    try {
+      await deletePostMutation({ postId: postId as any });
+      
+      // Update local state immediately so feed reflects deletion
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+      
+      triggerShareToast('Post deleted successfully');
+    } catch (err: any) {
+      console.error('Error deleting post:', err);
+      triggerShareToast('Failed to delete post: ' + err.message);
+    }
+  };
 
   // Modal States
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
@@ -1242,6 +1260,28 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         pageRefId: args.pageRefId,
         contentTopics: args.contentTopics,
       });
+
+      // Create a local post object to push to feed instantly
+      const newPost: Post = {
+        id: postId as string,
+        author: currentUser,
+        text: args.text,
+        mediaUrl: args.mediaUrl,
+        mediaType: args.mediaType as 'image' | 'video' | undefined,
+        location: args.location || location.name,
+        distanceMeters: 0,
+        createdAt: 'Just now',
+        likesCount: 0,
+        repostsCount: 0,
+        commentsCount: 0,
+        isLiked: false,
+        isReposted: false,
+        comments: [],
+        rallyRefId: args.rallyRefId,
+        pageRefId: args.pageRefId,
+      };
+
+      setPosts((prev) => [newPost, ...prev]);
 
       setCreateFlowType(null);
       setIsCreateSheetOpen(false);
@@ -2038,24 +2078,32 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
 
-  const openChatWithUser = (user: User) => {
+  const openChatWithUser = (user: User, initialMessage?: string) => {
+    let targetChatId: string;
     const existing = conversations.find(
       (c) => c.participant.id === user.id || c.participant.username === user.username
     );
     if (existing) {
-      setActiveChatId(existing.id);
+      targetChatId = existing.id;
     } else {
       const newConv: Conversation = {
         id: `conv_${user.id}_${Date.now()}`,
         participant: user,
-        lastMessage: 'Say hello by sending a sticker',
+        lastMessage: initialMessage || 'Say hello by sending a sticker',
         timestamp: 'Just now',
         unreadCount: 0,
         messages: [],
       };
       setConversations((prev) => [newConv, ...prev]);
-      setActiveChatId(newConv.id);
+      targetChatId = newConv.id;
     }
+    setActiveChatId(targetChatId);
+    
+    // If an initialMessage is provided, send it
+    if (initialMessage) {
+      sendDirectMessage(targetChatId, initialMessage);
+    }
+    
     setActiveTab('messages');
   };
 
@@ -2090,6 +2138,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         unreadNotifsCount,
         toggleLikePost,
         toggleRepostPost,
+        deletePost,
         addComment,
         toggleLikeComment,
         createPost,

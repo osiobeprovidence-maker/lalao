@@ -192,7 +192,10 @@ export const CommentsModal: React.FC = () => {
         <MuxVideoPlayer
           muxPlaybackId={(post as any).muxPlaybackId}
           mediaUrl={post.mediaUrl}
-          className="h-full w-full"
+          mediaStatus={(post as any).mediaStatus}
+          aspect="square"
+          autoPlay={true}
+          className="mx-auto w-full max-h-[400px]"
         />
       ) : (
         <img

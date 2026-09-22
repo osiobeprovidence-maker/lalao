@@ -389,7 +389,7 @@ export const CycleStoryViewerModal: React.FC = () => {
               <MuxVideoPlayer
                 muxPlaybackId={(currentItem as any).muxPlaybackId}
                 mediaUrl={currentItem.mediaUrl}
-                autoPlay
+                autoPlay={true}
                 loop
                 muted
                 className="w-full h-full object-cover"

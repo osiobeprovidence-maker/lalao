@@ -20,6 +20,7 @@ import type * as platformSettings from "../platformSettings.js";
 import type * as push from "../push.js";
 import type * as pushActions from "../pushActions.js";
 import type * as reports from "../reports.js";
+import type * as roomy from "../roomy.js";
 import type * as search from "../search.js";
 import type * as shop from "../shop.js";
 import type * as social from "../social.js";
@@ -47,6 +48,7 @@ declare const fullApi: ApiFromModules<{
   push: typeof push;
   pushActions: typeof pushActions;
   reports: typeof reports;
+  roomy: typeof roomy;
   search: typeof search;
   shop: typeof shop;
   social: typeof social;

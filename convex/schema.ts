@@ -186,6 +186,12 @@ export default defineSchema({
     businessType: v.optional(v.union(v.literal("commerce"), v.literal("subscription"), v.literal("hybrid"))),
     activeTools: v.optional(v.array(v.string())),
     description: v.optional(v.string()),
+    
+    // Global Business Extensions
+    globalDiscoveryStatus: v.optional(v.union(v.literal("global"), v.literal("national"), v.literal("regional"), v.literal("local"))),
+    serviceAreas: v.optional(v.array(v.string())),
+    isOnlineBusiness: v.optional(v.boolean()),
+
     location: v.string(),
     avatar: v.optional(v.string()),
     coverImage: v.optional(v.string()),
@@ -206,6 +212,20 @@ export default defineSchema({
     .index("by_username", ["username"])
     .searchIndex("search_name", { searchField: "name" })
     .searchIndex("search_category", { searchField: "category" }),
+
+  pageLocations: defineTable({
+    pageId: v.id("pages"),
+    name: v.string(),
+    location: v.string(),
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
+    isPrimary: v.boolean(),
+    address: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    hours: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_page", ["pageId"]),
 
   pageFollowers: defineTable({
     userId: v.id("users"),
@@ -265,7 +285,8 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_recipient", ["recipientId"])
-    .index("by_recipient_read", ["recipientId", "isRead"]),
+    .index("by_recipient_read", ["recipientId", "isRead"])
+    .index("by_post", ["postId"]),
 
   /**
    * Real user drafts — persisted in Convex so they survive device switches.
@@ -472,6 +493,7 @@ export default defineSchema({
     reviewedAt: v.optional(v.number()),
     reviewedBy: v.optional(v.id("users")),
     adminNotes: v.optional(v.string()),
+    publishedPageId: v.optional(v.id("pages")),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -531,6 +553,7 @@ export default defineSchema({
       v.literal("product"),
       v.literal("event"),
       v.literal("message"),
+      v.literal("roomyListing"),
       v.literal("other")
     ),
     targetId: v.string(), 
@@ -594,4 +617,74 @@ export default defineSchema({
   })
     .index("by_slug", ["slug"])
     .index("by_active_order", ["active", "displayOrder"]),
+
+  // ---- ROOMY HOUSING MARKETPLACE ----
+  roomyProfiles: defineTable({
+    userId: v.id("users"),
+    university: v.optional(v.string()),
+    campus: v.optional(v.string()),
+    preferredLocation: v.optional(v.string()),
+    preferredAreas: v.optional(v.array(v.string())),
+    budget: v.optional(v.number()),
+    currency: v.optional(v.string()),
+    roomType: v.optional(v.string()),
+    moveInPeriod: v.optional(v.string()),
+    roommatePreferences: v.optional(v.string()),
+    roommatesWanted: v.optional(v.number()),
+    lifestyle: v.optional(v.array(v.string())),
+    bio: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  roomyListings: defineTable({
+    userId: v.id("users"),
+    type: v.union(v.literal("room_offered"), v.literal("room_wanted"), v.literal("roommate_wanted")),
+    status: v.union(v.literal("active"), v.literal("filled"), v.literal("inactive"), v.literal("removed")),
+    title: v.optional(v.string()), // Optional since 'room_wanted' might not have a formal title
+    description: v.string(),
+    price: v.optional(v.number()),
+    currency: v.optional(v.string()),
+    location: v.string(), // e.g., "University of Benin - Ugbowo"
+    university: v.optional(v.string()),
+    campus: v.optional(v.string()),
+    area: v.optional(v.string()),
+    roomType: v.optional(v.string()),
+    availabilityDate: v.optional(v.string()),
+    amenities: v.optional(v.array(v.string())),
+    photos: v.optional(v.array(v.string())), // URLs or storage IDs
+    roommatesNeeded: v.optional(v.number()),
+    preferences: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_type", ["type"])
+    .index("by_status", ["status"])
+    .index("by_location", ["location"])
+    .searchIndex("search_location", { searchField: "location" })
+    .searchIndex("search_description", { searchField: "description" }),
+
+  roomySaves: defineTable({
+    userId: v.id("users"),
+    listingId: v.id("roomyListings"),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_listing", ["listingId"])
+    .index("by_user_listing", ["userId", "listingId"]),
+
+  roomyInspections: defineTable({
+    requesterId: v.id("users"),
+    ownerId: v.id("users"),
+    listingId: v.id("roomyListings"),
+    status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("declined"), v.literal("rescheduled")),
+    proposedDate: v.string(), // ISO string or human readable
+    message: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_requester", ["requesterId"])
+    .index("by_owner", ["ownerId"])
+    .index("by_listing", ["listingId"]),
 });

@@ -141,6 +141,18 @@ const LalaoAppContent: React.FC = () => {
     }
   }, [location.pathname]);
 
+  const platformSettings = useQuery(api.platformSettings.getBrandingSettings);
+
+  useEffect(() => {
+    if (platformSettings?.faviconUrl) {
+      const link: HTMLLinkElement = document.querySelector("link[rel*='icon']") || document.createElement('link');
+      link.type = 'image/png';
+      link.rel = 'icon';
+      link.href = platformSettings.faviconUrl;
+      document.getElementsByTagName('head')[0].appendChild(link);
+    }
+  }, [platformSettings?.faviconUrl]);
+
   useEffect(() => {
     if (activePageId && !location.pathname.startsWith(`/app/page/${activePageId}`)) {
       navigate(`/app/page/${activePageId}`);

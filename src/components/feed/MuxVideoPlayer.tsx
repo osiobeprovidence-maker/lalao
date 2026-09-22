@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import MuxPlayer from '@mux/mux-player-react';
 import { Play, Loader2, AlertCircle, RefreshCw, Film } from 'lucide-react';
 
@@ -21,26 +21,81 @@ interface MuxVideoPlayerProps {
  * MuxVideoPlayer
  *
  * Renders:
- * 1. A large polished video placeholder ("Uploading video..." / "Video processing...") while media is being uploaded/transcoded.
- * 2. Never renders native <video> controls or 0:00 until playable asset is confirmed ready.
- * 3. A Mux Player (HLS adaptive streaming) once muxPlaybackId is present and ready.
- * 4. A friendly failure placeholder if transcoding encounters an error.
+ * 1. A large polished video placeholder while uploading/transcoding.
+ * 2. Off-screen: lightweight poster image only.
+ * 3. Near-screen: Mounts <MuxPlayer> with preload="metadata".
+ * 4. In-screen: Plays the video if autoPlay is true.
  */
-export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
+export const MuxVideoPlayer = React.memo<MuxVideoPlayerProps>(({
   muxPlaybackId,
   mediaUrl,
   poster,
   mediaStatus = 'ready',
   autoPlay = false,
   loop = false,
-  muted = false,
+  muted = true, // Default to muted for safe autoplay
   className = '',
   aspect = 'video',
   onRetryProcessing,
 }) => {
-  const [isPlaying, setIsPlaying] = useState(autoPlay);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<any>(null);
+  
+  const [isNearViewport, setIsNearViewport] = useState(false);
+  const [isInViewport, setIsInViewport] = useState(false);
   const [isMuted, setIsMuted] = useState(muted);
   const aspectClass = aspect === 'square' ? 'aspect-square' : 'aspect-video';
+
+  // Viewport detection
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const nearObserver = new IntersectionObserver(
+      ([entry]) => setIsNearViewport(entry.isIntersecting),
+      { rootMargin: '100% 0px' } // 1 viewport height in advance
+    );
+
+    const inObserver = new IntersectionObserver(
+      ([entry]) => setIsInViewport(entry.isIntersecting),
+      { threshold: 0.5 } // At least 50% visible
+    );
+
+    nearObserver.observe(containerRef.current);
+    inObserver.observe(containerRef.current);
+
+    return () => {
+      nearObserver.disconnect();
+      inObserver.disconnect();
+    };
+  }, []);
+
+  // Manage playback state based on viewport visibility
+  useEffect(() => {
+    if (autoPlay && playerRef.current) {
+      if (isInViewport) {
+        // Only attempt to play if we're actually mounted and ready
+        try {
+          const playPromise = playerRef.current.play();
+          if (playPromise !== undefined) {
+            playPromise.catch((e: any) => {
+              // Ignore autoplay restrictions and 'no supported sources' errors which happen during mount
+              if (e.name !== 'NotSupportedError' && e.name !== 'NotAllowedError') {
+                console.warn("Autoplay prevented by browser:", e);
+              }
+            });
+          }
+        } catch (e) {
+          // Ignore
+        }
+      } else {
+        try {
+          playerRef.current.pause();
+        } catch (e) {
+          // Ignore
+        }
+      }
+    }
+  }, [isInViewport, autoPlay, isNearViewport]);
 
   // Auto-extract muxPlaybackId if mediaUrl is a Mux thumbnail URL
   let effectivePlaybackId = muxPlaybackId;
@@ -53,7 +108,8 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
 
   // Determine true status
   const isMuxReady = Boolean(effectivePlaybackId);
-  const isVideoReady = isMuxReady || (mediaStatus === 'ready' && mediaUrl && mediaUrl.length > 0 && !mediaUrl.startsWith('data:image'));
+  const isFallbackVideo = !isMuxReady && mediaUrl && mediaUrl.length > 0 && !mediaUrl.startsWith('data:image') && !mediaUrl.includes('image.mux.com');
+  const isVideoReady = isMuxReady || isFallbackVideo || (mediaStatus === 'ready' && mediaUrl && mediaUrl.length > 0 && !mediaUrl.startsWith('data:image'));
   const isProcessing = !isVideoReady && (mediaStatus === 'processing' || mediaStatus === 'uploading' || !mediaStatus);
   const isFailed = mediaStatus === 'failed';
 
@@ -139,17 +195,29 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
     const posterUrl = poster ?? `https://image.mux.com/${effectivePlaybackId}/thumbnail.jpg?time=0`;
 
     return (
-      <div className={`relative w-full overflow-hidden rounded-[18px] bg-black ${className}`}>
-        <MuxPlayer
-          playbackId={effectivePlaybackId}
-          poster={posterUrl}
-          streamType="on-demand"
-          muted={isMuted}
-          loop={loop}
-          playsInline
-          preload="metadata"
-          className={`block w-full h-full object-cover ${aspectClass}`}
-        />
+      <div ref={containerRef} className={`relative w-full overflow-hidden rounded-[18px] bg-black ${className}`}>
+        {!isNearViewport ? (
+          // Lightweight off-screen state: just the poster image
+          <img
+            src={posterUrl}
+            alt="Video poster"
+            className={`block w-full h-full object-cover ${aspectClass}`}
+            loading="lazy"
+          />
+        ) : (
+          // Near viewport: mount player and load metadata
+          <MuxPlayer
+            ref={playerRef}
+            playbackId={effectivePlaybackId}
+            poster={posterUrl}
+            streamType="on-demand"
+            muted={isMuted}
+            loop={loop}
+            playsInline
+            preload="metadata"
+            className={`block w-full h-full object-cover ${aspectClass}`}
+          />
+        )}
       </div>
     );
   }
@@ -157,18 +225,38 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
   // 5. STATE: READY → Basic HTML5 Video (Convex Storage / MP4)
   if (mediaUrl && mediaUrl.length > 0) {
     return (
-      <div className={`relative w-full overflow-hidden rounded-[18px] bg-neutral-900 ${className}`}>
-        <video
-          src={mediaUrl}
-          poster={poster}
-          controls
-          playsInline
-          preload="metadata"
-          className={`block w-full h-full object-cover ${aspectClass} max-h-[500px]`}
-        />
+      <div ref={containerRef} className={`relative w-full overflow-hidden rounded-[18px] bg-neutral-900 ${className}`}>
+        {!isNearViewport ? (
+           <img
+             src={poster || mediaUrl}
+             alt="Video poster"
+             className={`block w-full h-full object-cover ${aspectClass}`}
+             loading="lazy"
+           />
+        ) : (
+          <video
+            ref={playerRef}
+            src={mediaUrl}
+            poster={poster}
+            controls={!autoPlay} // Hide controls if it's meant to autoplay like a feed item
+            playsInline
+            muted={isMuted}
+            loop={loop}
+            preload="metadata"
+            className={`block w-full h-full object-cover ${aspectClass} max-h-[500px]`}
+          />
+        )}
       </div>
     );
   }
 
   return null;
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison to avoid re-rendering purely because of parent state changes
+  return (
+    prevProps.muxPlaybackId === nextProps.muxPlaybackId &&
+    prevProps.mediaStatus === nextProps.mediaStatus &&
+    prevProps.mediaUrl === nextProps.mediaUrl &&
+    prevProps.poster === nextProps.poster
+  );
+});

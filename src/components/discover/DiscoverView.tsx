@@ -17,6 +17,8 @@ import {
   Check,
   Play,
   Plus,
+  Home,
+  ChevronRight,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
@@ -56,7 +58,8 @@ export const DiscoverView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'people' | 'pages' | 'video' | 'trending'>('all');
-  const [nearbyOnly, setNearbyOnly] = useState(true);
+  const [locationMode, setLocationMode] = useState<'current' | 'selected' | 'global'>('current');
+  const [isLocationModeMenuOpen, setIsLocationModeMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   // Debounce search query
@@ -137,25 +140,37 @@ export const DiscoverView: React.FC = () => {
   const filteredPeople = useMemo(() => {
     return nearbyPeople
       .filter((p) => {
-        if (nearbyOnly) {
-          return p.distanceMeters <= maxRadiusMeters;
-        }
-        return true;
+        if (locationMode === 'global') return true;
+        return p.distanceMeters <= maxRadiusMeters;
       })
       .sort((a, b) => a.distanceMeters - b.distanceMeters);
-  }, [nearbyPeople, nearbyOnly, maxRadiusMeters]);
+  }, [nearbyPeople, locationMode, maxRadiusMeters]);
 
   // Filtered lists based on discovery radius
   const filteredPages = useMemo(() => {
     return pages
-      .filter((p) => {
-        if (nearbyOnly && p.distanceMeters !== undefined) {
+      .filter((p: any) => {
+        // Global or national businesses are always visible
+        if (locationMode === 'global' || p.globalDiscoveryStatus === "global" || p.globalDiscoveryStatus === "national") {
+          return true;
+        }
+        // Online businesses might be globally visible too
+        if (p.isOnlineBusiness) {
+          return true;
+        }
+
+        if (p.distanceMeters !== undefined) {
           return p.distanceMeters <= maxRadiusMeters;
         }
         return true;
       })
-      .sort((a, b) => (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0));
-  }, [pages, nearbyOnly, maxRadiusMeters]);
+      .sort((a: any, b: any) => {
+        // Boost local/nearby businesses, but also show global ones
+        const aDist = a.distanceMeters ?? Infinity;
+        const bDist = b.distanceMeters ?? Infinity;
+        return aDist - bDist;
+      });
+  }, [pages, locationMode, maxRadiusMeters]);
 
   const nearbyPosts = useMemo(() => {
     return posts
@@ -197,16 +212,76 @@ export const DiscoverView: React.FC = () => {
             )}
           </div>
 
-          <button
-            type="button"
-            id="btn-discover-location-radius"
-            onClick={() => setIsLocationModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50/90 hover:bg-indigo-100 text-xs font-bold text-[#5E43F3] border border-indigo-200/80 active:scale-95 transition-all shrink-0 cursor-pointer shadow-xs"
-            title={`Location: ${location.name} (≤ ${location.radiusKm} km). Tap to change location or radius.`}
-          >
-            <MapPin className="w-3.5 h-3.5 text-[#5E43F3] shrink-0" />
-            <span className="font-bold tracking-tight">≤ {location.radiusKm} km</span>
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              id="btn-discover-location-mode"
+              onClick={() => setIsLocationModeMenuOpen(!isLocationModeMenuOpen)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50/90 hover:bg-indigo-100 text-xs font-bold text-[#5E43F3] border border-indigo-200/80 active:scale-95 transition-all shrink-0 cursor-pointer shadow-xs"
+            >
+              {locationMode === 'global' ? (
+                <Compass className="w-3.5 h-3.5 text-[#5E43F3] shrink-0" />
+              ) : (
+                <MapPin className="w-3.5 h-3.5 text-[#5E43F3] shrink-0" />
+              )}
+              <span className="font-bold tracking-tight">
+                {locationMode === 'global' ? 'Global' : locationMode === 'selected' ? 'Selected Area' : `≤ ${location.radiusKm} km`}
+              </span>
+            </button>
+
+            {isLocationModeMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-neutral-100 overflow-hidden z-50">
+                <div className="p-2 space-y-1">
+                  <button
+                    onClick={() => {
+                      setLocationMode('current');
+                      setIsLocationModeMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                      locationMode === 'current' ? 'bg-[#5E43F3]/10 text-[#5E43F3]' : 'text-neutral-700 hover:bg-neutral-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      <span>Nearby (≤ {location.radiusKm} km)</span>
+                    </div>
+                    {locationMode === 'current' && <Check className="w-3.5 h-3.5" />}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setLocationMode('selected');
+                      setIsLocationModeMenuOpen(false);
+                      setIsLocationModalOpen(true);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                      locationMode === 'selected' ? 'bg-[#5E43F3]/10 text-[#5E43F3]' : 'text-neutral-700 hover:bg-neutral-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Search className="w-4 h-4" />
+                      <span>Custom Area</span>
+                    </div>
+                    {locationMode === 'selected' && <Check className="w-3.5 h-3.5" />}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setLocationMode('global');
+                      setIsLocationModeMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                      locationMode === 'global' ? 'bg-[#5E43F3]/10 text-[#5E43F3]' : 'text-neutral-700 hover:bg-neutral-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Compass className="w-4 h-4" />
+                      <span>Global</span>
+                    </div>
+                    {locationMode === 'global' && <Check className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Filter Pills */}
@@ -234,6 +309,35 @@ export const DiscoverView: React.FC = () => {
           <span>
             <strong>Ghost Mode is active:</strong> You are invisible in &ldquo;People Near You&rdquo; while exploring.
           </span>
+        </div>
+      )}
+
+      {/* Roomy Banner - Only show if not searching */}
+      {!isSearching && (
+        <div className="px-4 mt-4">
+          <div 
+            onClick={() => {
+              navigate('/app/page/roomy');
+            }}
+            className="bg-gradient-to-br from-[#5E43F3] to-[#4E34E0] rounded-2xl p-5 cursor-pointer hover:shadow-lg hover:shadow-indigo-500/20 transition-all flex items-center justify-between group overflow-hidden relative"
+          >
+            {/* Background decoration */}
+            <div className="absolute -right-6 -top-6 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl group-hover:scale-110 transition-transform"></div>
+            
+            <div>
+              <h3 className="text-white font-black text-xl mb-1 flex items-center gap-2">
+                <Home className="w-5 h-5" />
+                Roomy
+              </h3>
+              <p className="text-indigo-100 text-xs max-w-[200px] leading-relaxed">
+                Find rooms, roommates, and housing around you.
+              </p>
+            </div>
+            
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0 backdrop-blur-sm group-hover:bg-white/30 transition-colors">
+              <ChevronRight className="w-5 h-5 text-white" />
+            </div>
+          </div>
         </div>
       )}
 
@@ -498,7 +602,7 @@ export const DiscoverView: React.FC = () => {
                     </p>
                     <button
                       type="button"
-                      onClick={() => setNearbyOnly(false)}
+                      onClick={() => setLocationMode('global')}
                       className="text-xs font-bold text-[#5E43F3] hover:underline cursor-pointer"
                     >
                       Show people everywhere
@@ -598,7 +702,7 @@ export const DiscoverView: React.FC = () => {
                     
                     <button
                       type="button"
-                      onClick={() => setNearbyOnly(false)}
+                      onClick={() => setLocationMode('global')}
                       className="block mx-auto text-[11px] font-bold text-[#5E43F3] hover:underline"
                     >
                       Show pages everywhere

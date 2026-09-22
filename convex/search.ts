@@ -244,6 +244,9 @@ export const globalSearch = query({
           category: p.category,
           followersCount: p.followersCount ?? 0,
           isFollowing,
+          globalDiscoveryStatus: p.globalDiscoveryStatus ?? "global",
+          serviceAreas: p.serviceAreas ?? [],
+          isOnlineBusiness: p.isOnlineBusiness ?? false,
         });
       }
     }
