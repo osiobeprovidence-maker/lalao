@@ -1,4 +1,5 @@
-import { query, mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 
@@ -1828,7 +1829,7 @@ export const getMyFollowing = query({
 
     const people = await Promise.all(
       followingRecords.map(async (f: any) => {
-        const user = await ctx.db.get(f.followingId);
+        const user: any = await ctx.db.get(f.followingId);
         if (!user) return null;
         return {
           id: user._id,
@@ -1854,7 +1855,7 @@ export const getMyFollowing = query({
 
     const pages = await Promise.all(
       pageFollowRecords.map(async (f: any) => {
-        const page = await ctx.db.get(f.pageId);
+        const page: any = await ctx.db.get(f.pageId);
         if (!page) return null;
         return {
           id: page._id,
