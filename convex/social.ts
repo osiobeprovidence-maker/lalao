@@ -1985,17 +1985,22 @@ export const markAllNotificationsRead = mutation({
 export const getDrafts = query({
   args: {},
   handler: async (ctx) => {
-    const currentUser = await getAuthedUser(ctx);
-    if (!currentUser) return [];
+    try {
+      const currentUser = await getAuthedUser(ctx);
+      if (!currentUser) return [];
 
-    const drafts = await ctx.db
-      .query("drafts")
-      .withIndex("by_author", (q: any) => q.eq("authorId", currentUser._id))
-      .collect();
+      const drafts = await ctx.db
+        .query("drafts")
+        .withIndex("by_author", (q: any) => q.eq("authorId", currentUser._id))
+        .collect();
 
-    return drafts
-      .sort((a: any, b: any) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
-      .slice(0, 10);
+      return drafts
+        .sort((a: any, b: any) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+        .slice(0, 10);
+    } catch (error) {
+      console.error("Error fetching drafts:", error);
+      return [];
+    }
   },
 });
 
