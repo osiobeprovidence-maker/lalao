@@ -87,7 +87,7 @@ interface LalaoContextType {
   toggleRepostPost: (postId: string) => void;
   addComment: (postId: string, text: string, parentCommentId?: string, replyToUsername?: string) => void;
   toggleLikeComment: (postId: string, commentId: string, replyId?: string) => void;
-  createPost: (post: { text: string; mediaUrl?: string; mediaType?: 'image' | 'video'; location: string; audience?: string; replyPermission?: string; gifUrl?: string; pollQuestion?: string; pollOptions?: string[]; rallyRefId?: string; pageRefId?: string; }) => Promise<any>;
+  createPost: (post: { text: string; mediaUrl?: string; mediaStorageId?: string; mediaType?: 'image' | 'video'; location: string; audience?: string; replyPermission?: string; gifUrl?: string; pollQuestion?: string; pollOptions?: string[]; rallyRefId?: string; pageRefId?: string; }) => Promise<any>;
   saveDraft: (draft: any) => Promise<any>;
   getDrafts: () => Promise<any>;
   deleteDraft: (draftId: string) => Promise<any>;
@@ -1213,6 +1213,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const createPost = async (args: {
     text: string;
     mediaUrl?: string;
+    mediaStorageId?: string;
     mediaType?: 'image' | 'video';
     location: string;
     audience?: string;
@@ -1228,6 +1229,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const postId = await createPostMutation({
         text: args.text,
         mediaUrl: args.mediaUrl,
+        mediaStorageId: args.mediaStorageId as any,
         mediaType: args.mediaType as 'image' | 'video' | undefined,
         location: args.location || location.name,
         audience: args.audience as any,
