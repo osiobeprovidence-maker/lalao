@@ -451,11 +451,44 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           return parsed;
         }
       }
-      return EMPTY_PAGES;
-    } catch {
-      return EMPTY_PAGES;
+    } catch (e) {
+      // ignore
     }
+    return EMPTY_PAGES;
   });
+
+  // Fetch live discoverable pages from Convex and sync with local state
+  const backendPages = useQuery(api.pages.listDiscoverablePages);
+  useEffect(() => {
+    if (backendPages && backendPages.length > 0) {
+      const userCoords = {
+        lat: location.latitude ?? getCoordinatesForLocation(location.name).lat,
+        lng: location.longitude ?? getCoordinatesForLocation(location.name).lng,
+      };
+
+      setPages((prev) => {
+        const merged = [...prev];
+        for (const bp of backendPages) {
+          const coords =
+            bp.latitude && bp.longitude
+              ? { lat: bp.latitude, lng: bp.longitude }
+              : getCoordinatesForLocation(bp.location);
+          const dist = calculateDistanceMeters(userCoords.lat, userCoords.lng, coords.lat, coords.lng);
+          const pageWithDist = { ...bp, distanceMeters: dist };
+
+          // Prevent duplicates by ID
+          if (!merged.find(p => p.id === bp.id)) {
+            merged.push(pageWithDist as any);
+          } else {
+            // Update existing with fresh backend data
+            const idx = merged.findIndex(p => p.id === bp.id);
+            merged[idx] = { ...merged[idx], ...pageWithDist };
+          }
+        }
+        return merged;
+      });
+    }
+  }, [backendPages, location.latitude, location.longitude, location.name]);
 
   const [cycles, setCycles] = useState<Cycle[]>(() => {
     try {

@@ -44,6 +44,34 @@ export const getMyPages = query({
   },
 });
 
+export const listDiscoverablePages = query({
+  args: {},
+  handler: async (ctx) => {
+    // Fetch all pages (businesses, communities, clubs, orgs) for the discovery feed
+    const pages = await ctx.db.query("pages").collect();
+    
+    // In a real app, this might be filtered by moderation status, visibility, etc.
+    return pages.map(page => ({
+      id: page._id,
+      name: page.name,
+      username: page.username,
+      type: page.type,
+      badge: page.badge,
+      businessType: page.businessType,
+      globalDiscoveryStatus: page.globalDiscoveryStatus,
+      isOnlineBusiness: page.isOnlineBusiness,
+      location: page.location,
+      latitude: page.latitude,
+      longitude: page.longitude,
+      avatar: page.avatar,
+      coverImage: page.coverImage,
+      category: page.category,
+      aboutInfo: page.aboutInfo,
+      followersCount: page.followersCount ?? 0,
+    }));
+  },
+});
+
 export const getMyFollowedCommunities = query({
   args: {},
   handler: async (ctx) => {
