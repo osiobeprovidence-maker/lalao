@@ -81,6 +81,7 @@ export interface Post {
   mediaProcessingError?: string;
   mediaAspectRatio?: 'square' | 'wide' | 'tall';
   location: string;
+  visibility?: 'public' | 'followers';
   latitude?: number;
   longitude?: number;
   distanceMeters: number; // in meters, e.g. 21 -> 21m, 1200 -> 1.2 km

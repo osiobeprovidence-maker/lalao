@@ -1,8 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import { useQuery, useMutation, useAction } from 'convex/react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import { Id } from '../../convex/_generated/dataModel';
-import { useAuth } from './AuthContext';
 import { getOrRequestWebPushSubscription } from '../lib/push';
 import {
   User,
@@ -16,8 +14,6 @@ import {
   Conversation,
   DirectMessage,
   NotificationItem,
-  PostAudience,
-  PostReplyPermission,
   LocationConfig,
   LocationPrivacySettings,
   DevicePermissions,
@@ -53,13 +49,11 @@ export type NavTab =
   | 'profile'
   | 'following'
   | 'saved'
-  | 'liked'
-  | 'create-page';
-export type FeedTab = 'for_you' | 'following' | 'nearby' | string;
+  | 'liked';
+export type FeedTab = 'for_you' | 'following' | 'nearby';
 export type CreateOption = 'post' | 'rally' | 'page' | 'cycle' | null;
 
 interface LalaoContextType {
-  platformSettings: any;
   currentUser: User;
   setCurrentUser: React.Dispatch<React.SetStateAction<User>>;
   activeTab: NavTab;
@@ -79,80 +73,35 @@ interface LalaoContextType {
   isDetectingGps: boolean;
   
   // Content state
-  users: User[];
   posts: Post[];
-  isFeedLoading: boolean;
   rallies: Rally[];
   pages: Page[];
-  myPages: Page[];
   cycles: Cycle[];
   conversations: Conversation[];
-  messageContacts: User[];
   notifications: NotificationItem[];
   unreadNotifsCount: number;
-  suggestedUsers: User[];
-  drafts: any[]; // using any for simplicity, can type as Draft
-  markAllNotificationsRead: () => void;
-  saveDraft: (draft: any) => Promise<string | undefined>;
-  deleteDraft: (draftId: string) => Promise<void>;
 
   // Actions
-  toggleLikePost: (postId: string) => void | Promise<void>;
+  toggleLikePost: (postId: string) => void;
   toggleRepostPost: (postId: string) => void;
-  toggleFollowUser: (userId: string) => void | Promise<void>;
-  addComment: (postId: string, text: string, parentCommentId?: string, mediaStorageId?: string, mediaType?: 'image' | 'voice' | 'gif' | 'sticker') => void | Promise<void>;
-  deleteComment: (commentId: string) => Promise<void>;
-  toggleLikeComment: (postId: string, commentId: string, replyId?: string) => void | Promise<void>;
-  createPost: (post: {
-    text: string;
-    mediaUrl?: string;
-    mediaStorageId?: string;
-    mediaType?: 'image' | 'video';
-    location: string;
-    latitude?: number;
-    longitude?: number;
-    contentTopics?: string[];
-    audience?: PostAudience;
-    replyPermission?: PostReplyPermission;
-    gifUrl?: string;
-    poll?: { question: string; options: string[] };
-    rallyRefId?: string;
-    pageRefId?: string;
-    muxUploadId?: string;
-  }) => void | Promise<void>;
-  
-  generateUploadUrl: () => Promise<string>;
-  generateCloudinarySignature: (folder?: string) => Promise<{ signature: string; timestamp: number; apiKey: string }>;
-  deletePost: (postId: string) => Promise<void>;
+  addComment: (postId: string, text: string, parentCommentId?: string, replyToUsername?: string) => void;
+  toggleLikeComment: (postId: string, commentId: string, replyId?: string) => void;
+  createPost: (post: { text: string; mediaUrl?: string; mediaType?: 'image' | 'video'; location: string; visibility?: 'public' | 'followers' }) => void;
   
   toggleJoinRally: (rallyId: string) => void;
   joinRally: (rallyId: string) => void;
   createRally: (rally: { title: string; description: string; location: string; timeDate: string; category: Rally['category'] }) => void;
 
   toggleFollowPage: (pageId: string) => void;
-  createPage: (pageData: {
-    name: string;
-    username: string;
-    category: string;
-    description: string;
-    type: Page['type'];
-    location: string;
-    avatar?: string;
-    coverImage?: string;
-  }) => Promise<string | undefined>;
+  createPage: (pageData: { name: string; username: string; category: string; description: string; type: Page['type']; location: string; avatar?: string; coverImage?: string }) => void;
   updatePage: (pageId: string, updatedData: Partial<Page>) => void;
   createPagePost: (pageId: string, postData: { text: string; mediaUrl?: string; mediaType?: 'image' | 'video'; location?: string }) => void;
   createPageEvent: (pageId: string, eventData: Partial<OrgEvent>) => void;
   updatePageEvent: (eventId: string, eventData: Partial<OrgEvent>) => void;
   deletePageEvent: (eventId: string) => void;
   updatePageMonetization: (pageId: string, monetization: Partial<PageMonetization>) => void;
-  
-  currentPage: Page | null | undefined;
-  
-  // Real Convex product integration
-  pageProducts: ShopProduct[];
-  addPageProduct: (pageId: string, product: Partial<ShopProduct>) => Promise<void>;
-  deletePageProduct: (pageId: string, productId: string) => Promise<void>;
+  addPageProduct: (pageId: string, product: Partial<ShopProduct>) => void;
+  deletePageProduct: (pageId: string, productId: string) => void;
 
   toggleJoinCycle: (cycleId: string) => void;
   createCycle: (cycleData: { name: string; description: string; category: string; location: string }) => void;
@@ -166,6 +115,8 @@ interface LalaoContextType {
   setIsPermissionsModalOpen: (open: boolean) => void;
   requestPermission: (type: PermissionPromptType, options?: { precise?: boolean }) => Promise<boolean>;
   updatePermission: (type: keyof DevicePermissions, value: PermissionState | boolean) => void;
+  pushEnabled: boolean;
+  enablePushNotifications: () => Promise<boolean>;
 
   // Cycle (Status / Story) Actions
   activeStoryIndex: number;
@@ -188,8 +139,6 @@ interface LalaoContextType {
   setIsCreateCycleOpen: (open: boolean) => void;
 
   sendDirectMessage: (conversationId: string, text: string, stickerId?: string) => void;
-  markConversationRead: (conversationId: string) => void;
-  startPageConversation: (pageId: string) => Promise<void>;
   markNotificationsAsRead: () => void;
 
   // Modal / Navigation Overlay States
@@ -201,14 +150,6 @@ interface LalaoContextType {
   setIsLocationModalOpen: (open: boolean) => void;
   isNotificationsOpen: boolean;
   setIsNotificationsOpen: (open: boolean) => void;
-  isMySubscriptionsOpen: boolean;
-  setIsMySubscriptionsOpen: (open: boolean) => void;
-  isManageSubscriptionsOpen: boolean;
-  setIsManageSubscriptionsOpen: (open: boolean) => void;
-  isSubscriptionCheckoutOpen: boolean;
-  setIsSubscriptionCheckoutOpen: (open: boolean) => void;
-  selectedSubscriptionPlan: any;
-  setSelectedSubscriptionPlan: (plan: any) => void;
   
   // Drilldown modals
   activeChatId: string | null;
@@ -220,6 +161,7 @@ interface LalaoContextType {
   setActivePageId: (id: string | null) => void;
   activeUserProfile: User | null;
   setActiveUserProfile: (user: User | null) => void;
+  toggleFollowUser: (userId: string) => void;
   composerInitialText: string;
   setComposerInitialText: (text: string) => void;
   activeCommentsPostId: string | null;
@@ -283,14 +225,6 @@ interface LalaoContextType {
   addTeamRegistration: (reg: TeamRegistration) => void;
   openHonorOfKingsPage: () => void;
 
-  // Subscriptions
-  mySubscriptions: any[];
-  pageSubscriptionPlans: any[];
-  createSubscriptionPlan: (plan: any) => Promise<string>;
-  updateSubscriptionPlan: (planId: string, updates: any) => Promise<void>;
-  subscribeToPlan: (planId: string) => Promise<string>;
-  cancelSubscription: (subscriptionId: string) => Promise<void>;
-
   // Teams & Roster Storage
   savedTeams: PlayerTeam[];
   saveTeam: (team: PlayerTeam) => void;
@@ -308,22 +242,6 @@ interface LalaoContextType {
   triggerShareToast: (message?: string) => void;
   isEditProfileOpen: boolean;
   setIsEditProfileOpen: (open: boolean) => void;
-
-  // Push Notifications
-  enablePushNotifications: () => Promise<boolean>;
-  pushEnabled: boolean;
-
-  // Topics & Preferences
-  activeTopics: any[];
-  updateHomePreference: (slug: string, enabled: boolean) => Promise<void>;
-  updateUserProfile: (updates: {
-    name?: string;
-    username?: string;
-    bio?: string;
-    locationName?: string;
-    avatarUrl?: string;
-    avatarStorageId?: Id<"_storage"> | null;
-  }) => Promise<void>;
 }
 
 const LalaoContext = createContext<LalaoContextType | undefined>(undefined);
@@ -364,16 +282,14 @@ const EMPTY_CONVERSATIONS: Conversation[] = [];
 const EMPTY_NOTIFICATIONS: NotificationItem[] = [];
 const EMPTY_ORDERS: Order[] = [];
 
-const normalizeConvexUser = (user: Record<string, any> | null | undefined, fallbackAvatar?: string): User => {
+const normalizeConvexUser = (user: Record<string, any> | null | undefined): User => {
   if (!user) return EMPTY_CURRENT_USER;
-
-  const avatar = user.avatarUrl || user.avatar || fallbackAvatar || EMPTY_CURRENT_USER.avatar;
 
   return {
     id: user._id ?? user.id ?? EMPTY_CURRENT_USER.id,
     name: user.name ?? 'New user',
     username: user.username ?? 'newuser',
-    avatar,
+    avatar: user.avatarUrl ?? EMPTY_CURRENT_USER.avatar,
     userType: (user.userType ?? 'person') as User['userType'],
     bio: user.bio ?? undefined,
     location: user.locationName ?? user.location ?? EMPTY_CURRENT_USER.location,
@@ -387,9 +303,93 @@ const normalizeConvexUser = (user: Record<string, any> | null | undefined, fallb
 };
 
 export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const currentUserQuery = useQuery(api.users.getCurrentUser);
+  const pushEnabledQuery = useQuery(api.push.hasActivePushToken);
+  const upsertWebPushSubscription = useMutation(api.push.upsertWebPushSubscription);
+  const [pushEnabled, setPushEnabled] = useState<boolean>(false);
+
+  useEffect(() => {
+    setPushEnabled(Boolean(pushEnabledQuery));
+  }, [pushEnabledQuery]);
+
+  const enablePushNotifications = async (): Promise<boolean> => {
+    if (typeof window === 'undefined' || !( 'Notification' in window ) || !( 'serviceWorker' in navigator )) {
+      updatePermission('notifications', 'denied');
+      return false;
+    }
+
+    if (Notification.permission === 'denied') {
+      updatePermission('notifications', 'denied');
+      return false;
+    }
+
+    try {
+      const granted = await requestPermission('notifications');
+      if (!granted) return false;
+
+      const subscription = await getOrRequestWebPushSubscription();
+      if (!subscription) {
+        updatePermission('notifications', 'denied');
+        return false;
+      }
+
+      await upsertWebPushSubscription({
+        endpoint: subscription.endpoint,
+        p256dh: subscription.keys.p256dh,
+        auth: subscription.keys.auth,
+        userAgent: navigator.userAgent,
+      });
+
+      setPushEnabled(true);
+      updatePermission('notifications', 'granted');
+      return true;
+    } catch (err) {
+      console.error('[LalaoContext] Failed to enable push notifications:', err);
+      updatePermission('notifications', 'prompt');
+      return false;
+    }
+  };
+
+  const [currentUser, setCurrentUser] = useState<User>(() => {
+    try {
+      const saved = localStorage.getItem('lalao_current_user');
+      if (saved) {
+        const parsed = JSON.parse(saved) as User;
+        if (parsed && parsed.id) return parsed;
+      }
+    } catch {
+      // ignore storage issues
+    }
+    return EMPTY_CURRENT_USER;
+  });
+
+  const hydratedCurrentUser = useMemo(
+    () => normalizeConvexUser(currentUserQuery),
+    [currentUserQuery]
+  );
+
+  useEffect(() => {
+    if (currentUserQuery) {
+      setCurrentUser((prev) => ({
+        ...prev,
+        ...hydratedCurrentUser,
+        id: hydratedCurrentUser.id || prev.id,
+      }));
+    }
+  }, [currentUserQuery, hydratedCurrentUser]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('lalao_current_user', JSON.stringify(currentUser));
+    } catch {
+      // ignore storage issues
+    }
+  }, [currentUser]);
+
   const [activeTab, setActiveTab] = useState<NavTab>('home');
-  const startPageConversationMutation = useMutation(api.social.startPageConversation);
   const [feedTab, setFeedTab] = useState<FeedTab>('for_you');
+  const [nearbySort, setNearbySort] = useState<'closest' | 'recent'>('closest');
+  const [isDetectingGps, setIsDetectingGps] = useState(false);
 
   const [location, setLocation] = useState<LocationConfig>(() => {
     try {
@@ -409,197 +409,14 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
-  const currentUserQuery = useQuery(api.users.getCurrentUser);
-  const feedPostsQuery = useQuery(api.social.listFeedPosts, {
-    feedType: feedTab,
-    latitude: location.latitude,
-    longitude: location.longitude,
-    radiusKm: location.radiusKm,
-    locationName: location.name,
-  });
-  const activeTopicsQuery = useQuery((api as any).topics?.listActiveTopics) || [];
-  const updateUserHomePreferenceMutation = useMutation((api as any).topics?.updateUserHomePreference || api.social.toggleLikePost); // fallback while compiling
-  const exploreUsersQuery = useQuery(api.social.listUsersForExplore);
-  const pagesQuery = useQuery(api.social.listPages);
-  const myPagesQuery = useQuery(api.pages.getMyPages);
-  const conversationsQuery = useQuery(api.social.listConversations);
-
-  const [users, setUsers] = useState<User[]>([]);
-  const [myPages, setMyPages] = useState<Page[]>([]);
-
-  const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
-  const addCommentMutation = useMutation(api.social.addCommentToPost);
-  const toggleFollowUserMutation = useMutation(api.social.toggleFollowUser);
-  const toggleFollowPageMutation = useMutation(api.pages.toggleFollowPage);
-  const markAllNotificationsReadMutation = useMutation(api.social.markAllNotificationsRead);
-  const toggleLikeCommentMutation = useMutation(api.social.toggleLikeComment);
-  const saveDraftMutation = useMutation(api.social.saveDraft);
-  const deleteDraftMutation = useMutation(api.social.deleteDraft);
-  const addProductMutation = useMutation(api.shop.addProduct);
-  const deleteProductMutation = useMutation(api.shop.deleteProduct);
-  const upsertWebPushSubscriptionMutation = useMutation(api.push.upsertWebPushSubscription);
-  const hasActivePushTokenQuery = useQuery(
-    api.push.hasActivePushToken,
-    currentUserQuery ? {} : "skip"
-  );
-
-  const [activePageId, setActivePageId] = useState<string | null>(null);
-  
-  const currentPageQuery = useQuery(
-    api.social.getPage,
-    activePageId ? { pageId: activePageId } : "skip"
-  );
-  
-  // Use a query specifically for the active page's products
-  const pageProductsQuery = useQuery(
-    api.shop.getProductsByPage, 
-    activePageId ? { pageId: activePageId } : "skip"
-  );
-
-  const notificationsQuery = useQuery(api.social.listNotifications);
-  const unreadNotifsCountQuery = useQuery(api.social.getUnreadNotificationCount);
-  const suggestedUsersQuery = useQuery(api.social.listSuggestedUsers);
-  const messageContactsQuery = useQuery(api.social.getMessageContacts);
-  const draftsQuery = useQuery(api.social.listMyDrafts);
-  const platformSettingsQuery = useQuery((api as any).platformSettings?.getBrandingSettings);
-
-  // Subscriptions — these are now queried directly by PageDetailModal & MySubscriptionsModal
-  // Only keep the calls that have real matching Convex functions
-  const pageSubscriptionPlansQuery = useQuery(
-    api.subscriptions.getListingsByPage,
-    activePageId ? { pageId: activePageId as any } : "skip"
-  );
-  const mySubscriptionsQuery = useQuery(api.subscriptions.getMySubscriptions);
-
-  const [currentUser, setCurrentUser] = useState<User>(() => {
+  const [posts, setPosts] = useState<Post[]>(() => {
     try {
-      const saved = localStorage.getItem('lalao_current_user');
-      if (saved) {
-        const parsed = JSON.parse(saved) as User;
-        if (parsed && parsed.id) return parsed;
-      }
+      const saved = localStorage.getItem('lalao_posts');
+      return saved ? JSON.parse(saved) : EMPTY_POSTS;
     } catch {
-      // ignore storage issues
+      return EMPTY_POSTS;
     }
-    return EMPTY_CURRENT_USER;
   });
-
-  const { user: authUser } = useAuth();
-  const syncAuthProfileMutation = useMutation(api.users.syncAuthProfile);
-  const updateUserProfileMutation = useMutation(api.users.updateUserProfile);
-
-  useEffect(() => {
-    if (authUser && (authUser.photoURL || authUser.displayName)) {
-      if (!currentUserQuery?.avatarUrl && authUser.photoURL) {
-        syncAuthProfileMutation({
-          avatarUrl: authUser.photoURL,
-          name: authUser.displayName || undefined,
-        }).catch(() => {});
-      }
-    }
-  }, [authUser, currentUserQuery, syncAuthProfileMutation]);
-
-  const hydratedCurrentUser = useMemo(
-    () => normalizeConvexUser(currentUserQuery, authUser?.photoURL || undefined),
-    [currentUserQuery, authUser?.photoURL]
-  );
-
-  const updateUserProfile = useCallback(async (updates: {
-    name?: string;
-    username?: string;
-    bio?: string;
-    locationName?: string;
-    avatarUrl?: string;
-    avatarStorageId?: Id<"_storage"> | null;
-  }) => {
-    await updateUserProfileMutation(updates);
-    setCurrentUser((prev) => ({
-      ...prev,
-      name: updates.name ?? prev.name,
-      username: updates.username ?? prev.username,
-      bio: updates.bio ?? prev.bio,
-      location: updates.locationName ?? prev.location,
-      avatar: updates.avatarUrl ?? prev.avatar,
-    }));
-  }, [updateUserProfileMutation]);
-
-  useEffect(() => {
-    if (currentUserQuery) {
-      setCurrentUser((prev) => ({
-        ...prev,
-        ...hydratedCurrentUser,
-        id: hydratedCurrentUser.id || prev.id,
-      }));
-    }
-  }, [currentUserQuery, hydratedCurrentUser]);
-
-  useEffect(() => {
-    if (suggestedUsersQuery !== undefined) {
-      setSuggestedUsers(suggestedUsersQuery as User[]);
-    }
-    if (messageContactsQuery !== undefined) {
-      setMessageContacts(messageContactsQuery as User[]);
-    }
-  }, [
-    exploreUsersQuery,
-    feedPostsQuery,
-    pagesQuery,
-    conversationsQuery,
-    notificationsQuery,
-    unreadNotifsCountQuery,
-    suggestedUsersQuery,
-    messageContactsQuery,
-  ]);
-
-  useEffect(() => {
-    if (exploreUsersQuery) {
-      setUsers(exploreUsersQuery as User[]);
-    }
-  }, [exploreUsersQuery]);
-
-  useEffect(() => {
-    if (feedPostsQuery) {
-      setPosts(feedPostsQuery as Post[]);
-    }
-  }, [feedPostsQuery]);
-
-  useEffect(() => {
-    if (pagesQuery) {
-      setPages(pagesQuery as Page[]);
-    }
-  }, [pagesQuery]);
-
-  useEffect(() => {
-    if (myPagesQuery) {
-      setMyPages(myPagesQuery as Page[]);
-    }
-  }, [myPagesQuery]);
-
-  useEffect(() => {
-    if (conversationsQuery) {
-      setConversations(conversationsQuery as Conversation[]);
-    }
-  }, [conversationsQuery]);
-
-  useEffect(() => {
-    try {
-      localStorage.removeItem('lalao_posts');
-      localStorage.removeItem('lalao_rallies');
-      localStorage.removeItem('lalao_pages');
-      localStorage.removeItem('lalao_cycles');
-      localStorage.removeItem('lalao_conversations');
-      localStorage.removeItem('lalao_notifications');
-      localStorage.setItem('lalao_current_user', JSON.stringify(currentUser));
-    } catch {
-      // ignore storage issues
-    }
-  }, [currentUser]);
-
-  const [nearbySort, setNearbySort] = useState<'closest' | 'recent'>('closest');
-  const [isDetectingGps, setIsDetectingGps] = useState(false);
-
-
-  const [posts, setPosts] = useState<Post[]>(EMPTY_POSTS);
 
   const [rallies, setRallies] = useState<Rally[]>(() => {
     try {
@@ -610,7 +427,20 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
-  const [pages, setPages] = useState<Page[]>(EMPTY_PAGES);
+  const [pages, setPages] = useState<Page[]>(() => {
+    try {
+      const saved = localStorage.getItem('lalao_pages');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+      return EMPTY_PAGES;
+    } catch {
+      return EMPTY_PAGES;
+    }
+  });
 
   const [cycles, setCycles] = useState<Cycle[]>(() => {
     try {
@@ -636,81 +466,20 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
-  const notifications = (notificationsQuery as NotificationItem[]) || [];
-  const [unreadNotifsCount, setUnreadNotifsCount] = useState<number>(() => (unreadNotifsCountQuery as number) || 0);
-  const [messageContacts, setMessageContacts] = useState<User[]>([]);
-  const [suggestedUsers, setSuggestedUsers] = useState<User[]>(() => (suggestedUsersQuery as User[]) || []);
-  const drafts = (draftsQuery as any[]) || [];
-
-  useEffect(() => {
-    if (unreadNotifsCountQuery !== undefined) {
-      setUnreadNotifsCount((unreadNotifsCountQuery as number) || 0);
-    }
-  }, [unreadNotifsCountQuery]);
-
-  useEffect(() => {
-    if (suggestedUsersQuery !== undefined) {
-      setSuggestedUsers((suggestedUsersQuery as User[]) || []);
-    }
-  }, [suggestedUsersQuery]);
-
-  useEffect(() => {
-    if (platformSettingsQuery) {
-      if (platformSettingsQuery.browserTitle) {
-        document.title = platformSettingsQuery.browserTitle;
-      }
-      if (platformSettingsQuery.faviconUrl) {
-        let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
-        if (!link) {
-          link = document.createElement('link');
-          link.rel = 'icon';
-          document.head.appendChild(link);
-        }
-        link.href = platformSettingsQuery.faviconUrl;
-      }
-      if (platformSettingsQuery.primaryColor) {
-        document.documentElement.style.setProperty('--color-primary', platformSettingsQuery.primaryColor);
-      }
-      if (platformSettingsQuery.accentColor) {
-        document.documentElement.style.setProperty('--color-accent', platformSettingsQuery.accentColor);
-      }
-      if (platformSettingsQuery.backgroundColor) {
-        document.documentElement.style.setProperty('--color-background', platformSettingsQuery.backgroundColor);
-      }
-    }
-  }, [platformSettingsQuery]);
-
-  const markAllNotificationsRead = async () => {
+  const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
     try {
-      await markAllNotificationsReadMutation();
-    } catch {}
-  };
-
-  const saveDraft = async (draft: any) => {
-    try {
-      return await saveDraftMutation(draft);
+      const saved = localStorage.getItem('lalao_notifications');
+      return saved ? JSON.parse(saved) : EMPTY_NOTIFICATIONS;
     } catch {
-      return undefined;
+      return EMPTY_NOTIFICATIONS;
     }
-  };
-
-  const deleteDraft = async (draftId: string) => {
-    try {
-      await deleteDraftMutation({ draftId: draftId as any });
-    } catch {}
-  };
+  });
 
   // Modal States
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [createFlowType, setCreateFlowType] = useState<CreateOption>(null);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  
-  // Subscription UI states
-  const [isMySubscriptionsOpen, setIsMySubscriptionsOpen] = useState(false);
-  const [isManageSubscriptionsOpen, setIsManageSubscriptionsOpen] = useState(false);
-  const [isSubscriptionCheckoutOpen, setIsSubscriptionCheckoutOpen] = useState(false);
-  const [selectedSubscriptionPlan, setSelectedSubscriptionPlan] = useState<any>(null);
 
   // Device Permissions State
   const [permissions, setPermissions] = useState<DevicePermissions>(() => {
@@ -776,10 +545,6 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const res = await Notification.requestPermission();
           const state: PermissionState = res === 'granted' ? 'granted' : res === 'denied' ? 'denied' : 'prompt';
           updatePermission('notifications', state);
-          if (state === 'granted') {
-            // Auto-register FCM token after permission is granted
-            enablePushNotifications().catch(() => {});
-          }
           return state === 'granted';
         }
       } catch {
@@ -818,71 +583,17 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return false;
   };
 
-  /**
-   * Request native Web Push permission + register push subscription in Convex.
-   * Returns true if push was successfully enabled.
-   */
-  const enablePushNotifications = useCallback(async (): Promise<boolean> => {
-    try {
-      const subscription = await getOrRequestWebPushSubscription();
-      if (!subscription) return false;
-      
-      const subJson = subscription.toJSON();
-      
-      await upsertWebPushSubscriptionMutation({
-        endpoint: subscription.endpoint,
-        p256dh: subJson.keys?.p256dh || '',
-        auth: subJson.keys?.auth || '',
-        userAgent: navigator.userAgent.slice(0, 200),
-      });
-      
-      updatePermission('notifications', 'granted');
-      return true;
-    } catch (err) {
-      console.error('[push] enablePushNotifications error:', err);
-      return false;
-    }
-  }, [upsertWebPushSubscriptionMutation]);
-
-  const pushEnabled = hasActivePushTokenQuery === true;
-
   // Drilldowns
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [activeCycleId, setActiveCycleId] = useState<string | null>(null);
   const [activeStoryIndex, setActiveStoryIndex] = useState<number>(0);
   const [isCreateCycleOpen, setIsCreateCycleOpen] = useState(false);
+  const [activePageId, setActivePageId] = useState<string | null>(null);
   const [activeUserProfile, setActiveUserProfile] = useState<User | null>(null);
   const [composerInitialText, setComposerInitialText] = useState<string>('');
   const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [shareToast, setShareToast] = useState<string | null>(null);
-
-  // Handle URL deep links from Web Push notifications or external links
-  useEffect(() => {
-    const handleUrlDeepLink = () => {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const tabParam = params.get('tab');
-        const postParam = params.get('post');
-
-        if (
-          tabParam &&
-          ['home', 'discover', 'create', 'create-post', 'messages', 'notifications', 'profile', 'following', 'saved', 'liked', 'create-page'].includes(tabParam)
-        ) {
-          setActiveTab(tabParam as NavTab);
-        }
-        if (postParam) {
-          setActiveCommentsPostId(postParam);
-        }
-      } catch (err) {
-        console.error('Failed to parse URL deep link:', err);
-      }
-    };
-
-    handleUrlDeepLink();
-    window.addEventListener('popstate', handleUrlDeepLink);
-    return () => window.removeEventListener('popstate', handleUrlDeepLink);
-  }, []);
 
   // Shopping, Cart & Saved Products
   const [cart, setCart] = useState<CartItem[]>(() => {
@@ -1361,46 +1072,20 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setTimeout(() => setShareToast(null), 2500);
   };
 
-  const toggleLikePost = async (postId: string) => {
-    const prevPost = posts.find((post) => post.id === postId);
-    const optimisticLiked = !(prevPost?.isLiked ?? false);
-
+  const toggleLikePost = (postId: string) => {
     setPosts((prev) =>
       prev.map((post) => {
-        if (post.id !== postId) return post;
-        const isLiked = !post.isLiked;
-        return {
-          ...post,
-          isLiked,
-          likesCount: isLiked ? post.likesCount + 1 : Math.max(0, post.likesCount - 1),
-        };
+        if (post.id === postId) {
+          const isLiked = !post.isLiked;
+          return {
+            ...post,
+            isLiked,
+            likesCount: isLiked ? post.likesCount + 1 : Math.max(0, post.likesCount - 1),
+          };
+        }
+        return post;
       })
     );
-
-    try {
-      const result = await toggleLikePostMutation({ postId: postId as any });
-      setPosts((prev) =>
-        prev.map((post) => {
-          if (post.id !== postId) return post;
-          return {
-            ...post,
-            isLiked: Boolean(result?.liked),
-            likesCount: typeof result?.likesCount === 'number' ? result.likesCount : post.likesCount,
-          };
-        })
-      );
-    } catch {
-      setPosts((prev) =>
-        prev.map((post) => {
-          if (post.id !== postId) return post;
-          return {
-            ...post,
-            isLiked: optimisticLiked ? false : true,
-            likesCount: prevPost ? (prevPost.likesCount ?? 0) : post.likesCount,
-          };
-        })
-      );
-    }
   };
 
   const toggleRepostPost = (postId: string) => {
@@ -1420,138 +1105,120 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     triggerShareToast('Reposted to your local feed');
   };
 
-  const addComment = async (
+  const addComment = (
     postId: string,
     text: string,
     parentCommentId?: string,
-    mediaStorageId?: string,
-    mediaType?: 'image' | 'voice' | 'gif' | 'sticker',
-    duration?: number
+    replyToUsername?: string
   ) => {
-    try {
-      await addCommentMutation({
-        postId: postId as any,
-        text: text.trim(),
-        parentCommentId: parentCommentId as any,
-        mediaStorageId: mediaStorageId as any,
-        mediaType,
-        duration,
-      });
-    } catch (error) {
-      console.error("Failed to add comment:", error);
-      throw error;
-    }
+    if (!text.trim()) return;
+
+    setPosts((prev) =>
+      prev.map((p) => {
+        if (p.id !== postId) return p;
+
+        if (parentCommentId) {
+          const updatedComments = p.comments.map((comm) => {
+            if (comm.id !== parentCommentId) return comm;
+            const newReply: CommentReply = {
+              id: `rep_${Date.now()}`,
+              author: currentUser,
+              text: text.trim(),
+              createdAt: 'Just now',
+              likesCount: 0,
+              isLiked: false,
+              replyToUsername: replyToUsername || comm.author.username,
+              isAuthor: p.author.id === currentUser.id,
+            };
+            return {
+              ...comm,
+              replies: [...(comm.replies || []), newReply],
+            };
+          });
+
+          return {
+            ...p,
+            commentsCount: p.commentsCount + 1,
+            comments: updatedComments,
+          };
+        } else {
+          const newComment: PostComment = {
+            id: `comm_${Date.now()}`,
+            author: currentUser,
+            text: text.trim(),
+            createdAt: 'Just now',
+            likesCount: 0,
+            isLiked: false,
+            replies: [],
+          };
+          return {
+            ...p,
+            commentsCount: p.commentsCount + 1,
+            comments: [newComment, ...p.comments],
+          };
+        }
+      })
+    );
   };
 
-  const toggleLikeComment = async (postId: string, commentId: string, replyId?: string) => {
-    const targetId = replyId || commentId;
-    try {
-      await toggleLikeCommentMutation({ commentId: targetId as any });
-    } catch (error) {
-      console.error("Failed to toggle comment like:", error);
-    }
+  const toggleLikeComment = (postId: string, commentId: string, replyId?: string) => {
+    setPosts((prev) =>
+      prev.map((p) => {
+        if (p.id !== postId) return p;
+
+        const updatedComments = p.comments.map((comm) => {
+          if (replyId && comm.replies) {
+            const updatedReplies = comm.replies.map((rep) => {
+              if (rep.id === replyId) {
+                const isLiked = !rep.isLiked;
+                return {
+                  ...rep,
+                  isLiked,
+                  likesCount: isLiked ? rep.likesCount + 1 : Math.max(0, rep.likesCount - 1),
+                };
+              }
+              return rep;
+            });
+            return { ...comm, replies: updatedReplies };
+          }
+
+          if (comm.id === commentId) {
+            const isLiked = !comm.isLiked;
+            return {
+              ...comm,
+              isLiked,
+              likesCount: isLiked ? comm.likesCount + 1 : Math.max(0, comm.likesCount - 1),
+            };
+          }
+          return comm;
+        });
+
+        return { ...p, comments: updatedComments };
+      })
+    );
   };
 
-  const deleteCommentMutation = useMutation(api.social.deleteComment);
-  const deleteComment = async (commentId: string) => {
-    try {
-      await deleteCommentMutation({ commentId: commentId as any });
-    } catch (e) {
-      console.error("Failed to delete comment:", e);
-      throw e;
-    }
-  };
-
-  const generateUploadUrlMutation = useMutation(api.social.generateUploadUrl);
-  const generateCloudinarySignatureMutation = useAction(api.cloudinary.generateSignature);
-
-  const generateUploadUrl = async () => {
-    return await generateUploadUrlMutation();
-  };
-
-  const generateCloudinarySignature = async (folder?: string) => {
-    return await generateCloudinarySignatureMutation({ folder });
-  };
-
-  const createPostMutation = useMutation(api.social.createPost);
-  const deletePostMutation = useMutation(api.social.deletePost);
-
-  const deletePost = async (postId: string) => {
-    try {
-      await deletePostMutation({ postId: postId as any });
-      // Optimistic UI update can be optional since feedPostsQuery is reactive, 
-      // but doing it makes the UI feel instantly responsive.
-      setPosts((prev) => prev.filter((p) => p.id !== postId));
-    } catch (err) {
-      console.error("Failed to delete post:", err);
-      triggerShareToast("Failed to delete post");
-    }
-  };
-
-  const createPost = async ({
+  const createPost = ({
     text,
     mediaUrl,
-    mediaStorageId,
     mediaType = 'image',
     location: postLocation,
-    audience = 'everyone',
-    replyPermission = 'everyone',
-    gifUrl,
-    latitude,
-    longitude,
-    contentTopics,
-    poll,
-    rallyRefId,
-    pageRefId,
-    muxUploadId,
+    visibility = 'public',
   }: {
     text: string;
     mediaUrl?: string;
     mediaType?: 'image' | 'video';
     location: string;
-    latitude?: number;
-    longitude?: number;
-    contentTopics?: string[];
-    audience?: PostAudience;
-    replyPermission?: PostReplyPermission;
-    gifUrl?: string;
-    poll?: { question: string; options: string[] };
-    rallyRefId?: string;
-    pageRefId?: string;
-    mediaStorageId?: string;
-    muxUploadId?: string;
+    visibility?: 'public' | 'followers';
   }) => {
-    if (!text.trim() && !mediaUrl && !mediaStorageId && !gifUrl && !poll) return;
-
-    const created = await createPostMutation({
-      text: text.trim(),
-      mediaUrl,
-      mediaStorageId: mediaStorageId as any,
-      mediaType,
-      location: postLocation || location.name,
-      latitude,
-      longitude,
-      contentTopics,
-      audience,
-      replyPermission,
-      gifUrl,
-      pollQuestion: poll?.question,
-      pollOptions: poll?.options,
-      rallyRefId,
-      pageRefId,
-      muxUploadId,
-      authorUserId: currentUser?.id,
-      authorUsername: currentUser?.username,
-    });
-
-    const backendPost = created as Post | null;
-    const newPost: Post = backendPost || {
+    const newPost: Post = {
       id: `post_${Date.now()}`,
       author: currentUser,
-      text: text.trim(),
+      text,
       mediaUrl,
       mediaType,
       location: postLocation || location.name,
+      visibility,
       distanceMeters: 10,
       createdAt: 'Just now',
       likesCount: 0,
@@ -1560,14 +1227,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       isLiked: false,
       isReposted: false,
       comments: [],
-      audience,
-      replyPermission,
-      gifUrl,
-      poll,
-      rallyRefId,
     };
-
-    setPosts((prev) => [newPost, ...prev]);
+    setPosts([newPost, ...posts]);
     setCreateFlowType(null);
     setIsCreateSheetOpen(false);
     setActiveTab('home');
@@ -1651,31 +1312,25 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     triggerShareToast('Rally created! Broadcasting to people nearby');
   };
 
-  const toggleFollowPage = async (pageId: string) => {
-    try {
-      const { isFollowing } = await toggleFollowPageMutation({ pageId: pageId as any });
-      
-      setPages((prev) =>
-        prev.map((page) => {
-          if (page.id === pageId) {
-            return {
-              ...page,
-              isFollowing,
-              followersCount: isFollowing
-                ? (page.followersCount ?? 0) + 1
-                : Math.max(0, (page.followersCount ?? 0) - 1),
-            };
-          }
-          return page;
-        })
-      );
-    } catch (error: any) {
-      triggerShareToast(error.message || 'Failed to toggle follow');
-      console.error(error);
-    }
+  const toggleFollowPage = (pageId: string) => {
+    setPages((prev) =>
+      prev.map((page) => {
+        if (page.id === pageId) {
+          const isFollowing = !page.isFollowing;
+          return {
+            ...page,
+            isFollowing,
+            followersCount: isFollowing
+              ? page.followersCount + 1
+              : Math.max(0, page.followersCount - 1),
+          };
+        }
+        return page;
+      })
+    );
   };
 
-  const toggleFollowUser = async (userId: string) => {
+  const toggleFollowUser = (userId: string) => {
     let nowFollowing = false;
     let targetUsername = '';
 
@@ -1733,22 +1388,14 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setCurrentUser((prev) => ({
       ...prev,
       followingCount: nowFollowing
-        ? prev.followingCount + 1
-        : Math.max(0, prev.followingCount - 1),
+        ? (prev.followingCount ?? 0) + 1
+        : Math.max(0, (prev.followingCount ?? 0) - 1),
     }));
 
-    try {
-      const res = await toggleFollowUserMutation({ targetUserId: userId as any });
-      triggerShareToast(res.following ? `Following @${targetUsername || 'user'}` : `Unfollowed @${targetUsername || 'user'}`);
-    } catch {
-      triggerShareToast("Failed to update follow status.");
-    }
+    triggerShareToast(nowFollowing ? `Following @${targetUsername || 'user'}` : `Unfollowed @${targetUsername || 'user'}`);
   };
 
-  const createPageMutation = useMutation(api.pages.createPage);
-  const updatePageMutation = useMutation(api.pages.updatePage);
-
-  const createPage = async ({
+  const createPage = ({
     name,
     username,
     category,
@@ -1760,39 +1407,50 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }: {
     name: string;
     username: string;
-    category?: string;
-    description?: string;
-    type: 'business' | 'organization' | 'club' | 'community';
+    category: string;
+    description: string;
+    type: Page['type'];
     location: string;
     avatar?: string;
     coverImage?: string;
   }) => {
-    try {
-      const newPageId = await createPageMutation({
-        name,
-        username,
-        category,
-        description,
-        type,
-        location: pageLoc || `${location.name}, ${location.subArea}`,
-        avatar,
-        coverImage,
-      });
+    const badgeMap: Record<Page['type'], Page['badge']> = {
+      business: 'BIZ',
+      organization: 'ORG',
+      club: 'CLUB',
+      community: 'COMMUNITY',
+    };
 
-      setCreateFlowType(null);
-      setIsCreateSheetOpen(false);
-      
-      triggerShareToast(`Page "${name}" successfully created!`);
-      return newPageId;
-    } catch (err) {
-      console.error(err);
-      triggerShareToast('Failed to create page');
-      return undefined;
-    }
+    const newPage: Page = {
+      id: `page_${Date.now()}`,
+      name,
+      username: username.replace('@', ''),
+      type,
+      badge: badgeMap[type],
+      avatar: avatar || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&auto=format&fit=crop&q=80',
+      coverImage: coverImage || 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=1200&auto=format&fit=crop&q=80',
+      description,
+      location: pageLoc || `${location.name}, ${location.subArea}`,
+      followersCount: 1,
+      isFollowing: true,
+      isOwner: true,
+      ownerId: currentUser.id,
+      category,
+      aboutInfo: {
+        address: `${pageLoc || location.name}, Delta State`,
+        hours: 'Standard local operating hours',
+        founded: '2026',
+      },
+    };
+
+    setPages([newPage, ...pages]);
+    setCreateFlowType(null);
+    setIsCreateSheetOpen(false);
+    setActivePageId(newPage.id);
+    triggerShareToast(`Page "${name}" successfully created!`);
   };
 
-  const updatePage = async (pageId: string, updatedData: Partial<Page>) => {
-    // Update local state optimistically
+  const updatePage = (pageId: string, updatedData: Partial<Page>) => {
     setPages((prev) =>
       prev.map((p) => {
         if (p.id !== pageId) return p;
@@ -1807,25 +1465,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return updated;
       })
     );
-
-    // Update backend via Convex mutation
-    try {
-      await updatePageMutation({
-        pageId: pageId as any,
-        name: updatedData.name,
-        username: updatedData.username,
-        category: updatedData.category,
-        description: updatedData.description,
-        location: updatedData.location,
-        avatar: updatedData.avatar,
-        coverImage: updatedData.coverImage,
-        aboutInfo: updatedData.aboutInfo,
-      });
-      triggerShareToast('Page details updated successfully!');
-    } catch (err) {
-      console.error('Failed to update page', err);
-      triggerShareToast('Failed to update page backend');
-    }
+    triggerShareToast('Page details updated successfully!');
   };
 
   const createPagePost = (
@@ -1968,82 +1608,44 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     triggerShareToast('Monetization settings saved!');
   };
 
-  const createSubscriptionPlan = async (planData: any) => {
-    try {
-      // @ts-ignore
-      const planId = await createSubscriptionPlanMutation(planData);
-      triggerShareToast('Subscription plan created!');
-      return planId;
-    } catch (error: any) {
-      triggerShareToast(`Error: ${error.message}`);
-      throw error;
-    }
+  const addPageProduct = (pageId: string, productData: Partial<ShopProduct>) => {
+    const newProduct: ShopProduct = {
+      id: `prod_${Date.now()}`,
+      name: productData.name || 'New Product',
+      price: productData.price || 0,
+      currency: productData.currency || 'NGN',
+      image:
+        productData.image ||
+        'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80',
+      description: productData.description || '',
+      category: productData.category || 'General',
+      inStock: productData.inStock ?? true,
+      rating: 5.0,
+      reviewsCount: 1,
+    };
+
+    setPages((prev) =>
+      prev.map((p) =>
+        p.id === pageId
+          ? { ...p, products: [newProduct, ...(p.products || [])] }
+          : p
+      )
+    );
+    triggerShareToast('Product added to storefront!');
   };
 
-  const updateSubscriptionPlan = async (planId: string, updates: any) => {
-    try {
-      // @ts-ignore
-      await updateSubscriptionPlanMutation({ planId, ...updates });
-      triggerShareToast('Subscription plan updated!');
-    } catch (error: any) {
-      triggerShareToast(`Error: ${error.message}`);
-      throw error;
-    }
-  };
-
-  const subscribeToPlan = async (planId: string) => {
-    try {
-      // @ts-ignore
-      const subId = await subscribeToPlanMutation({ planId });
-      triggerShareToast('Subscription initiated! Complete payment to activate.');
-      return subId;
-    } catch (error: any) {
-      triggerShareToast(`Error: ${error.message}`);
-      throw error;
-    }
-  };
-
-  const cancelSubscription = async (subscriptionId: string) => {
-    try {
-      // @ts-ignore
-      await cancelSubscriptionMutation({ subscriptionId });
-      triggerShareToast('Subscription will be cancelled at the end of the billing period.');
-    } catch (error: any) {
-      triggerShareToast(`Error: ${error.message}`);
-      throw error;
-    }
-  };
-
-  const addPageProduct = async (pageId: string, productData: Partial<ShopProduct>) => {
-    try {
-      await addProductMutation({
-        pageId: pageId as any,
-        name: productData.name || 'New Product',
-        description: productData.description || '',
-        price: productData.price || 0,
-        currency: productData.currency || 'NGN',
-        category: productData.category,
-        inStock: productData.inStock ?? true,
-        image: productData.image,
-      });
-      triggerShareToast('Product added successfully!');
-    } catch (e) {
-      console.error('Failed to add product', e);
-      triggerShareToast('Failed to add product');
-    }
-  };
-
-  const deletePageProduct = async (pageId: string, productId: string) => {
-    try {
-      await deleteProductMutation({
-        pageId: pageId as any,
-        productId: productId as any,
-      });
-      triggerShareToast('Product removed');
-    } catch (e) {
-      console.error('Failed to delete product', e);
-      triggerShareToast('Failed to delete product');
-    }
+  const deletePageProduct = (pageId: string, productId: string) => {
+    setPages((prev) =>
+      prev.map((p) =>
+        p.id === pageId
+          ? {
+              ...p,
+              products: (p.products || []).filter((prod) => prod.id !== productId),
+            }
+          : p
+      )
+    );
+    triggerShareToast('Product removed from storefront');
   };
 
   const toggleJoinCycle = (cycleId: string) => {
@@ -2334,21 +1936,10 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     triggerShareToast('Status removed from Cycle');
   };
 
-  const sendMessageMutation = useMutation(api.social.sendMessage);
-  
-  const sendDirectMessage = async (conversationId: string, text: string, stickerId?: string) => {
+  const sendDirectMessage = (conversationId: string, text: string, stickerId?: string) => {
     if (!text.trim() && !stickerId) return;
     const msgText = stickerId ? (text.trim() || 'Sent a sticker') : text.trim();
     const msgId = `dm_${Date.now()}`;
-    
-    const conv = conversations.find(c => c.id === conversationId);
-    let pageSenderId: string | undefined = undefined;
-    
-    // If it's a page convo and I am not UserA, I must be the Page owner
-    if (conv && (conv as any).isPageConvo && !(conv as any).amIUserA) {
-      pageSenderId = (conv as any).pageId;
-    }
-
     const newMsg: DirectMessage = {
       id: msgId,
       senderId: currentUser.id,
@@ -2361,84 +1952,57 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     setConversations((prev) =>
-      prev.map((c) => {
-        if (c.id === conversationId) {
+      prev.map((conv) => {
+        if (conv.id === conversationId) {
           return {
-            ...c,
+            ...conv,
             lastMessage: msgText,
             timestamp: 'Just now',
-            messages: [...c.messages, newMsg],
+            messages: [...conv.messages, newMsg],
           };
         }
-        return c;
+        return conv;
       })
     );
-    
-    try {
-      await sendMessageMutation({
-        conversationId: conversationId as any,
-        text: msgText,
-        pageSenderId: pageSenderId as any,
-      });
-      
-      // Simulate delivered status
-      setTimeout(() => {
-        setConversations((prev) =>
-          prev.map((c) => {
-            if (c.id === conversationId) {
-              return {
-                ...c,
-                messages: c.messages.map((m) =>
-                  m.id === msgId ? { ...m, status: 'delivered' } : m
-                ),
-              };
-            }
-            return c;
-          })
-        );
-      }, 500);
-    } catch (err) {
-      console.error('Failed to send message', err);
-    }
-  };
 
-  const markConversationReadMutation = useMutation(api.social.markConversationRead);
-
-  const markConversationRead = async (conversationId: string) => {
-    try {
-      await markConversationReadMutation({ conversationId: conversationId as any });
-      // Optimistically clear unreadCount locally
+    // Simulate realistic delivery and read receipt status transitions
+    setTimeout(() => {
       setConversations((prev) =>
-        prev.map((c) => {
-          if (c.id === conversationId) {
+        prev.map((conv) => {
+          if (conv.id === conversationId) {
             return {
-              ...c,
-              unreadCount: 0,
+              ...conv,
+              messages: conv.messages.map((m) =>
+                m.id === msgId && m.status === 'sent' ? { ...m, status: 'delivered' } : m
+              ),
             };
           }
-          return c;
+          return conv;
         })
       );
-    } catch (err) {
-      console.error('Failed to mark conversation read', err);
-    }
-  };
+    }, 1000);
 
-  const startPageConversation = async (pageId: string) => {
-    try {
-      const conversationId = await startPageConversationMutation({ pageId });
-      setActiveChatId(conversationId);
-      setActiveTab('messages');
-    } catch (err) {
-      console.error('Failed to start page conversation:', err);
-      triggerShareToast('Could not start conversation');
-    }
+    setTimeout(() => {
+      setConversations((prev) =>
+        prev.map((conv) => {
+          if (conv.id === conversationId) {
+            return {
+              ...conv,
+              messages: conv.messages.map((m) =>
+                m.id === msgId && (m.status === 'delivered' || m.status === 'sent')
+                  ? { ...m, status: 'read' }
+                  : m
+              ),
+            };
+          }
+          return conv;
+        })
+      );
+    }, 2400);
   };
 
   const markNotificationsAsRead = () => {
-    try {
-      markAllNotificationsReadMutation();
-    } catch {}
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
 
   const openChatWithUser = (user: User) => {
@@ -2462,15 +2026,11 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setActiveTab('messages');
   };
 
+  const unreadNotifsCount = notifications.filter((n) => !n.isRead).length;
 
   return (
     <LalaoContext.Provider
       value={{
-        activeTopics: activeTopicsQuery,
-        updateHomePreference: async (slug, enabled) => {
-          await updateUserHomePreferenceMutation({ slug, enabled });
-        },
-        users,
         currentUser,
         setCurrentUser,
         activeTab,
@@ -2489,34 +2049,21 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         detectGpsLocation,
         isDetectingGps,
         posts,
-        isFeedLoading: feedPostsQuery === undefined,
         rallies,
         pages,
         cycles,
         conversations,
         notifications,
         unreadNotifsCount,
-        suggestedUsers,
-        messageContacts,
-        drafts,
-        markAllNotificationsRead,
-        saveDraft,
-        deleteDraft,
         toggleLikePost,
         toggleRepostPost,
         addComment,
-        deleteComment,
         toggleLikeComment,
         createPost,
-        generateUploadUrl,
-        generateCloudinarySignature,
-        platformSettings: platformSettingsQuery || {},
-        deletePost,
         toggleJoinRally,
         joinRally: toggleJoinRally,
         createRally,
         toggleFollowPage,
-        myPages,
         createPage,
         updatePage,
         createPagePost,
@@ -2524,8 +2071,6 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updatePageEvent,
         deletePageEvent,
         updatePageMonetization,
-        currentPage: currentPageQuery as Page | null | undefined,
-        pageProducts: (pageProductsQuery || []) as ShopProduct[],
         addPageProduct,
         deletePageProduct,
         toggleJoinCycle,
@@ -2538,6 +2083,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setIsPermissionsModalOpen,
         requestPermission,
         updatePermission,
+        pushEnabled,
+        enablePushNotifications,
         activeStoryIndex,
         setActiveStoryIndex,
         openCycleStory,
@@ -2549,8 +2096,6 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isCreateCycleOpen,
         setIsCreateCycleOpen,
         sendDirectMessage,
-        markConversationRead,
-        startPageConversation,
         markNotificationsAsRead,
         isCreateSheetOpen,
         setIsCreateSheetOpen,
@@ -2560,20 +2105,6 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setIsLocationModalOpen,
         isNotificationsOpen,
         setIsNotificationsOpen,
-        isMySubscriptionsOpen,
-        setIsMySubscriptionsOpen,
-        isManageSubscriptionsOpen,
-        setIsManageSubscriptionsOpen,
-        isSubscriptionCheckoutOpen,
-        setIsSubscriptionCheckoutOpen,
-        selectedSubscriptionPlan,
-        setSelectedSubscriptionPlan,
-        mySubscriptions: (mySubscriptionsQuery || []) as any[],
-        pageSubscriptionPlans: (pageSubscriptionPlansQuery || []) as any[],
-        createSubscriptionPlan,
-        updateSubscriptionPlan,
-        subscribeToPlan,
-        cancelSubscription,
         activeChatId,
         setActiveChatId,
         openChatWithUser,
@@ -2647,9 +2178,6 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setIsWalletModalOpen,
         topUpWallet,
         payWithWallet,
-        enablePushNotifications,
-        pushEnabled,
-        updateUserProfile,
       }}
     >
       {children}

@@ -419,6 +419,8 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
                   muxPlaybackId={(post as any).muxPlaybackId}
                   mediaUrl={post.mediaUrl}
                   mediaStatus={(post as any).mediaStatus}
+                  aspect="square"
+                  className="mx-auto max-w-[560px]"
                 />
               ) : (
                 post.mediaUrl && (

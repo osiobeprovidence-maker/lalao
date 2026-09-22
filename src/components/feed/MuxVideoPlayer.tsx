@@ -11,6 +11,7 @@ interface MuxVideoPlayerProps {
   loop?: boolean;
   muted?: boolean;
   className?: string;
+  aspect?: 'video' | 'square';
   /** If true, show a small inline player. Otherwise full-width. */
   inline?: boolean;
   onRetryProcessing?: () => void;
@@ -34,10 +35,12 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
   loop = false,
   muted = false,
   className = '',
+  aspect = 'video',
   onRetryProcessing,
 }) => {
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [isMuted, setIsMuted] = useState(muted);
+  const aspectClass = aspect === 'square' ? 'aspect-square' : 'aspect-video';
 
   // Auto-extract muxPlaybackId if mediaUrl is a Mux thumbnail URL
   let effectivePlaybackId = muxPlaybackId;
@@ -57,7 +60,7 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
   // 1. STATE: UPLOADING
   if (mediaStatus === 'uploading') {
     return (
-      <div className={`relative w-full aspect-video rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col items-center justify-center p-6 gap-3 text-center ${className}`}>
+      <div className={`relative w-full ${aspectClass} rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col items-center justify-center p-6 gap-3 text-center ${className}`}>
         <div className="w-14 h-14 rounded-full bg-[#5E43F3]/15 flex items-center justify-center border border-[#5E43F3]/30 shadow-inner">
           <Loader2 className="w-7 h-7 text-[#5E43F3] animate-spin" />
         </div>
@@ -74,7 +77,7 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
     const previewPoster = poster || (mediaUrl && (mediaUrl.startsWith('data:image') || mediaUrl.includes('image.mux.com')) ? mediaUrl : undefined);
 
     return (
-      <div className={`relative w-full aspect-video rounded-2xl bg-neutral-900 border border-neutral-800/80 overflow-hidden flex flex-col items-center justify-center p-6 text-center ${className}`}>
+      <div className={`relative w-full ${aspectClass} rounded-2xl bg-neutral-900 border border-neutral-800/80 overflow-hidden flex flex-col items-center justify-center p-6 text-center ${className}`}>
         {/* Background Poster Blur if present */}
         {previewPoster && (
           <img
@@ -109,7 +112,7 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
   // 3. STATE: FAILED
   if (isFailed) {
     return (
-      <div className={`relative w-full aspect-video rounded-2xl bg-neutral-900 border border-rose-900/40 flex flex-col items-center justify-center gap-3 p-6 text-center ${className}`}>
+      <div className={`relative w-full ${aspectClass} rounded-2xl bg-neutral-900 border border-rose-900/40 flex flex-col items-center justify-center gap-3 p-6 text-center ${className}`}>
         <div className="w-12 h-12 rounded-full bg-rose-500/15 flex items-center justify-center text-rose-500 border border-rose-500/30">
           <AlertCircle className="w-6 h-6" />
         </div>
@@ -147,11 +150,11 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
             loop={loop}
             playsInline
             preload="auto"
-            className="w-full h-full object-cover aspect-video"
+            className={`w-full h-full object-cover ${aspectClass}`}
             onEnded={() => setIsPlaying(false)}
           />
         ) : (
-          <div className="relative aspect-video w-full cursor-pointer group" onClick={() => setIsPlaying(true)}>
+          <div className={`relative ${aspectClass} w-full cursor-pointer group`} onClick={() => setIsPlaying(true)}>
             <img
               src={posterUrl}
               alt="Video thumbnail"
@@ -184,7 +187,7 @@ export const MuxVideoPlayer: React.FC<MuxVideoPlayerProps> = ({
           controls
           playsInline
           preload="metadata"
-          className="w-full h-full object-cover max-h-[500px]"
+          className={`w-full h-full object-cover ${aspectClass} max-h-[500px]`}
         />
       </div>
     );
