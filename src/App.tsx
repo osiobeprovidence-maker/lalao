@@ -11,11 +11,7 @@ import { ProfileView } from './components/profile/ProfileView';
 
 // Modals, Sheets, and Full-Page Subviews
 import { LocationRadiusModal } from './components/location/LocationRadiusModal';
-import { CreateBottomSheet } from './components/create/CreateBottomSheet';
-import { CreatePostPage } from './components/create/CreatePostPage';
-import { PostComposerModal } from './components/create/PostComposerModal';
-import { RallyComposerModal } from './components/create/RallyComposerModal';
-import { CreatePageView } from './components/pages/CreatePageView';
+import { PostComposer } from './components/create/PostComposer';
 import { CreateCycleModal } from './components/cycles/CreateCycleModal';
 import { CycleStoryViewerModal } from './components/cycles/CycleStoryViewerModal';
 import { CycleDetailModal } from './components/cycles/CycleDetailModal';
@@ -218,14 +214,8 @@ const LalaoAppContent: React.FC = () => {
             {!activePageId ? (
               <>
             {activeTab === 'create-post' && (
-              <div key="tab-create-post" className="animate-in fade-in duration-200 relative min-h-full w-full overflow-hidden bg-[#f6f3ee]">
-                <div className="absolute inset-0">
-                  <HomeFeed />
-                </div>
-                <div className="absolute inset-0 z-10 bg-[#f6f3ee]/70 backdrop-blur-[1px]" />
-                <div className="relative z-20">
-                  <CreatePostPage />
-                </div>
+              <div key="tab-create-post" className="animate-in fade-in duration-200 min-h-full w-full bg-[#f6f3ee]">
+                <PostComposer embedded />
               </div>
             )}
             {activeTab === 'home' && (
@@ -323,7 +313,6 @@ const LalaoAppContent: React.FC = () => {
       <CommentsModal />
       <NotificationsModal />
 
-      {!['create-post'].includes(activeTab) && <CreateBottomSheet />}
       {!['create-post'].includes(activeTab) && <CycleStoryViewerModal />}
       {!['create-post'].includes(activeTab) && <PermissionPromptModal />}
       {!['create-post'].includes(activeTab) && <DevicePermissionsModal />}
