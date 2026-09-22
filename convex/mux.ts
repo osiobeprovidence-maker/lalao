@@ -29,18 +29,27 @@ export const createDirectUpload = action({
 
     const mux = await getMuxClient();
 
-    const upload = await mux.video.uploads.create({
-      cors_origin: "*", // Allow browser direct upload from any origin
-      new_asset_settings: {
-        playback_policy: ["public"],
-        encoding_tier: "baseline", // Faster processing, good for social media
-      },
-    });
+    try {
+      const upload = await mux.video.uploads.create({
+        cors_origin: "*", // Allow browser direct upload from any origin
+        new_asset_settings: {
+          playback_policy: ["public"],
+          encoding_tier: "baseline", // Faster processing, good for social media
+        },
+      });
 
-    return {
-      upload_url: upload.url,
-      upload_id: upload.id,
-    };
+      return {
+        upload_url: upload.url,
+        upload_id: upload.id,
+      };
+    } catch (error: any) {
+      console.error("[MUX API ERROR in createDirectUpload]:", error?.message || error);
+      throw new ConvexError(
+        error?.message?.includes("401") || error?.message?.includes("Unauthorized") 
+          ? "Mux authentication failed. Invalid MUX_TOKEN_ID or MUX_SECRET_KEY." 
+          : "Mux API Error: Failed to create direct upload"
+      );
+    }
   },
 });
 
@@ -59,27 +68,32 @@ export const getMuxAssetStatus = action({
 
     const mux = await getMuxClient();
 
-    const upload = await mux.video.uploads.retrieve(uploadId);
-    
-    if (!upload.asset_id) {
-      return { status: "waiting", playbackId: null, assetId: null };
-    }
+    try {
+      const upload = await mux.video.uploads.retrieve(uploadId);
+      
+      if (!upload.asset_id) {
+        return { status: "waiting", playbackId: null, assetId: null };
+      }
 
-    const asset = await mux.video.assets.retrieve(upload.asset_id);
+      const asset = await mux.video.assets.retrieve(upload.asset_id);
 
-    if (asset.status === "ready" && asset.playback_ids?.[0]?.id) {
+      if (asset.status === "ready" && asset.playback_ids?.[0]?.id) {
+        return {
+          status: "ready",
+          playbackId: asset.playback_ids[0].id,
+          assetId: asset.id,
+        };
+      }
+
       return {
-        status: "ready",
-        playbackId: asset.playback_ids[0].id,
-        assetId: asset.id,
+        status: asset.status ?? "preparing",
+        playbackId: null,
+        assetId: asset.id ?? null,
       };
+    } catch (error: any) {
+      console.error("[MUX API ERROR in getMuxAssetStatus]:", error?.message || error);
+      throw new ConvexError("Mux API Error: Failed to retrieve asset status");
     }
-
-    return {
-      status: asset.status ?? "preparing",
-      playbackId: null,
-      assetId: asset.id ?? null,
-    };
   },
 });
 
@@ -99,7 +113,13 @@ export const pollAndUpdatePost = action({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new ConvexError("Unauthenticated");
 
-    const mux = await getMuxClient();
+    let mux;
+    try {
+      mux = await getMuxClient();
+    } catch (e: any) {
+      console.error("[MUX INIT ERROR in pollAndUpdatePost]:", e?.message || e);
+      throw new ConvexError("Mux Client initialization failed");
+    }
 
     // Poll every 3 seconds up to maxAttempts times
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -124,8 +144,8 @@ export const pollAndUpdatePost = action({
           });
           return { success: false, playbackId: null };
         }
-      } catch (e) {
-        console.warn(`Mux poll attempt ${attempt + 1} failed:`, e);
+      } catch (e: any) {
+        console.warn(`[MUX API ERROR] poll attempt ${attempt + 1} failed:`, e?.message || e);
       }
     }
 

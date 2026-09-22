@@ -87,7 +87,7 @@ interface LalaoContextType {
   toggleRepostPost: (postId: string) => void;
   addComment: (postId: string, text: string, parentCommentId?: string, replyToUsername?: string) => void;
   toggleLikeComment: (postId: string, commentId: string, replyId?: string) => void;
-  createPost: (post: { text: string; mediaUrl?: string; mediaStorageId?: string; mediaType?: 'image' | 'video'; location: string; audience?: string; replyPermission?: string; gifUrl?: string; pollQuestion?: string; pollOptions?: string[]; rallyRefId?: string; pageRefId?: string; }) => Promise<any>;
+  createPost: (post: { text: string; mediaUrl?: string; mediaStorageId?: string; mediaType?: 'image' | 'video'; location: string; audience?: string; replyPermission?: string; gifUrl?: string; pollQuestion?: string; pollOptions?: string[]; rallyRefId?: string; pageRefId?: string; contentTopics?: string[]; }) => Promise<any>;
   saveDraft: (draft: any) => Promise<any>;
   getDrafts: () => Promise<any>;
   deleteDraft: (draftId: string) => Promise<any>;
@@ -1224,6 +1224,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     rallyRefId?: string;
     pageRefId?: string;
     visibility?: string;
+    contentTopics?: string[];
   }) => {
     try {
       const postId = await createPostMutation({
@@ -1239,6 +1240,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         pollOptions: args.pollOptions,
         rallyRefId: args.rallyRefId,
         pageRefId: args.pageRefId,
+        contentTopics: args.contentTopics,
       });
 
       setCreateFlowType(null);
