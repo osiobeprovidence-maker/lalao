@@ -41,6 +41,55 @@ export const getMyPages = query({
   },
 });
 
+export const getMyFollowedCommunities = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) return [];
+
+    const follows = await ctx.db
+      .query("pageFollowers")
+      .collect();
+
+    const followedPageIds = follows
+      .filter((follow: any) => follow.userId === user._id)
+      .map((follow: any) => follow.pageId);
+
+    if (followedPageIds.length === 0) return [];
+
+    const pages = await Promise.all(
+      followedPageIds.map(async (pageId) => await ctx.db.get(pageId))
+    );
+
+    return pages
+      .filter((page: any) => page && page.type === "community")
+      .map((page: any) => ({
+        _id: page._id,
+        id: page._id,
+        name: page.name,
+        username: page.username,
+        type: page.type,
+        badge: page.badge ?? "COMMUNITY",
+        avatar: page.avatar ?? "",
+        coverImage: page.coverImage ?? "",
+        description: page.description ?? "",
+        location: page.location ?? "",
+        followersCount: page.followersCount ?? 0,
+        isFollowing: true,
+        isOwner: false,
+        category: page.category ?? "",
+        aboutInfo: page.aboutInfo ?? {},
+      }));
+  },
+});
+
 export const createPage = mutation({
   args: {
     name: v.string(),

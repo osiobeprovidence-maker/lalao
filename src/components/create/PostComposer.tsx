@@ -20,6 +20,7 @@ import { useAction, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
+import { Popover } from '../common/Popover';
 import { uploadImageToCloudinary } from '../../lib/cloudinary';
 
 interface PostComposerProps {
@@ -58,12 +59,19 @@ export const PostComposer: React.FC<PostComposerProps> = ({ embedded = false, on
   // New features states
   const [audience, setAudience] = useState('everyone');
   const [showAudienceDropdown, setShowAudienceDropdown] = useState(false);
+  const [audienceStep, setAudienceStep] = useState<'main' | 'communities' | 'pages' | 'topics'>('main');
+  const [selectedPageRefId, setSelectedPageRefId] = useState<string | null>(null);
+  const [selectedTopicSlugs, setSelectedTopicSlugs] = useState<string[]>([]);
   const [replyPermission, setReplyPermission] = useState('everyone');
   const [showReplyDropdown, setShowReplyDropdown] = useState(false);
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState<string[]>([]);
   const [showPoll, setShowPoll] = useState(false);
   
+  // Data for audience
+  const topicsData = useQuery(api.topics.listActiveTopics, currentUser ? {} : ('skip' as any));
+  const followedCommunities = useQuery(api.pages.getMyFollowedCommunities, currentUser ? {} : ('skip' as any));
+
   // Real drafts check
   const draftsData = useQuery(api.social.getDrafts, currentUser ? {} : ('skip' as any));
   const hasDrafts = Boolean(draftsData && draftsData.length > 0);
@@ -91,6 +99,9 @@ export const PostComposer: React.FC<PostComposerProps> = ({ embedded = false, on
     setMediaType('image');
     setAttachedLocation(location.name || null);
     setAudience('everyone');
+    setSelectedPageRefId(null);
+    setSelectedTopicSlugs([]);
+    setAudienceStep('main');
     setReplyPermission('everyone');
     setShowPoll(false);
     setPollQuestion('');
@@ -113,6 +124,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ embedded = false, on
             replyPermission,
             pollQuestion: showPoll ? pollQuestion : undefined,
             pollOptions: showPoll ? pollOptions : undefined,
+            pageRefId: selectedPageRefId || undefined,
           });
           triggerShareToast('Draft saved!');
         } catch (err) {
@@ -255,6 +267,8 @@ export const PostComposer: React.FC<PostComposerProps> = ({ embedded = false, on
         replyPermission,
         pollQuestion: showPoll ? pollQuestion.trim() : undefined,
         pollOptions: showPoll ? pollOptions.filter(o => o.trim() !== '') : undefined,
+        pageRefId: selectedPageRefId || undefined,
+        contentTopics: selectedTopicSlugs.length > 0 ? selectedTopicSlugs : undefined,
       });
 
       if (finalMuxUploadId && created?.id) {
@@ -272,6 +286,19 @@ export const PostComposer: React.FC<PostComposerProps> = ({ embedded = false, on
   };
 
   const getAudienceLabel = () => {
+    if (audience === 'community' && selectedPageRefId) {
+      const comm = followedCommunities?.find((c: any) => c._id === selectedPageRefId);
+      if (comm) return comm.name;
+    }
+    if (audience === 'page' && selectedPageRefId) {
+      const pg = pages?.find((p: any) => p._id === selectedPageRefId);
+      if (pg) return pg.name;
+    }
+    if (audience === 'interest' && selectedTopicSlugs.length > 0) {
+      const top = topicsData?.find((t: any) => t.slug === selectedTopicSlugs[0]);
+      if (top) return top.displayName;
+    }
+
     switch (audience) {
       case 'everyone': return 'Everyone';
       case 'nearby': return 'Nearby';
@@ -280,6 +307,117 @@ export const PostComposer: React.FC<PostComposerProps> = ({ embedded = false, on
       case 'page': return 'Page';
       default: return 'Everyone';
     }
+  };
+
+  const renderAudienceSelector = () => {
+    if (audienceStep === 'communities') {
+      return (
+        <div className="p-2 w-64">
+          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-neutral-100">
+            <button onClick={() => setAudienceStep('main')} className="p-1 hover:bg-neutral-100 rounded-full"><ChevronDown className="w-4 h-4 rotate-90" /></button>
+            <span className="font-semibold text-sm">Select Community</span>
+          </div>
+          {followedCommunities === undefined ? <div className="p-4 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-neutral-400" /></div> :
+           followedCommunities.length === 0 ? <div className="p-4 text-center text-xs text-neutral-500">No communities joined.</div> :
+           followedCommunities.map((c: any) => (
+             <button key={c._id} onClick={() => { setAudience('community'); setSelectedPageRefId(c._id); setShowAudienceDropdown(false); setAudienceStep('main'); }} className="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-100 rounded-lg flex items-center gap-2">
+               <Avatar src={c.avatar || ''} alt={c.name} size="sm" />
+               <span className="font-semibold truncate">{c.name}</span>
+             </button>
+           ))
+          }
+        </div>
+      );
+    }
+    
+    if (audienceStep === 'pages') {
+      const myOwnedPages = pages?.filter((p: any) => p.type !== 'community') || [];
+      return (
+        <div className="p-2 w-64">
+          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-neutral-100">
+            <button onClick={() => setAudienceStep('main')} className="p-1 hover:bg-neutral-100 rounded-full"><ChevronDown className="w-4 h-4 rotate-90" /></button>
+            <span className="font-semibold text-sm">Post as Page</span>
+          </div>
+          {myOwnedPages.length === 0 ? <div className="p-4 text-center text-xs text-neutral-500">No eligible Pages.</div> :
+           myOwnedPages.map((p: any) => (
+             <button key={p._id} onClick={() => { setAudience('page'); setSelectedPageRefId(p._id); setShowAudienceDropdown(false); setAudienceStep('main'); }} className="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-100 rounded-lg flex items-center gap-2">
+               <Avatar src={p.avatar || ''} alt={p.name} size="sm" />
+               <span className="font-semibold truncate">{p.name}</span>
+             </button>
+           ))
+          }
+        </div>
+      );
+    }
+
+    if (audienceStep === 'topics') {
+      return (
+        <div className="p-2 w-64">
+          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-neutral-100">
+            <button onClick={() => setAudienceStep('main')} className="p-1 hover:bg-neutral-100 rounded-full"><ChevronDown className="w-4 h-4 rotate-90" /></button>
+            <span className="font-semibold text-sm">Select Topic</span>
+          </div>
+          {topicsData === undefined ? <div className="p-4 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-neutral-400" /></div> :
+           topicsData.length === 0 ? <div className="p-4 text-center text-xs text-neutral-500">No topics available.</div> :
+           topicsData.map((t: any) => (
+             <button key={t.slug} onClick={() => { setAudience('interest'); setSelectedTopicSlugs([t.slug]); setShowAudienceDropdown(false); setAudienceStep('main'); }} className="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-100 rounded-lg flex items-center gap-2">
+               <Hash className="w-4 h-4 text-neutral-500" />
+               <span className="font-semibold truncate">{t.displayName}</span>
+             </button>
+           ))
+          }
+        </div>
+      );
+    }
+
+    // Main step
+    const hasPages = pages && pages.some((p: any) => p.type !== 'community');
+    
+    return (
+      <div className="p-2 w-64">
+        <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider px-2 py-1 mb-1">Choose Audience</div>
+        <button onClick={() => { setAudience('everyone'); setSelectedPageRefId(null); setSelectedTopicSlugs([]); setShowAudienceDropdown(false); }} className={`w-full text-left px-3 py-2 text-sm hover:bg-neutral-100 rounded-lg flex items-center gap-2 ${audience === 'everyone' ? 'bg-[#5E43F3]/5 text-[#5E43F3]' : 'text-neutral-800'}`}>
+          <Globe className="w-4 h-4" />
+          <div>
+            <div className="font-semibold">Everyone</div>
+            <div className="text-[10px] opacity-70">Public algorithmic feed</div>
+          </div>
+        </button>
+        <button onClick={() => { setAudience('nearby'); setSelectedPageRefId(null); setSelectedTopicSlugs([]); setShowAudienceDropdown(false); }} className={`w-full text-left px-3 py-2 text-sm hover:bg-neutral-100 rounded-lg flex items-center gap-2 ${audience === 'nearby' ? 'bg-[#5E43F3]/5 text-[#5E43F3]' : 'text-neutral-800'}`}>
+          <MapPin className="w-4 h-4" />
+          <div>
+            <div className="font-semibold">Nearby</div>
+            <div className="text-[10px] opacity-70">Local feed for your selected area</div>
+          </div>
+        </button>
+        <button onClick={() => setAudienceStep('communities')} className={`w-full text-left px-3 py-2 text-sm hover:bg-neutral-100 rounded-lg flex items-center gap-2 ${audience === 'community' ? 'bg-[#5E43F3]/5 text-[#5E43F3]' : 'text-neutral-800'}`}>
+          <Users className="w-4 h-4" />
+          <div className="flex-1">
+            <div className="font-semibold">Communities</div>
+            <div className="text-[10px] opacity-70">Post to a specific community</div>
+          </div>
+          <ChevronDown className="w-4 h-4 -rotate-90 opacity-50" />
+        </button>
+        <button onClick={() => setAudienceStep('topics')} className={`w-full text-left px-3 py-2 text-sm hover:bg-neutral-100 rounded-lg flex items-center gap-2 ${audience === 'interest' ? 'bg-[#5E43F3]/5 text-[#5E43F3]' : 'text-neutral-800'}`}>
+          <Hash className="w-4 h-4" />
+          <div className="flex-1">
+            <div className="font-semibold">Interests & Topics</div>
+            <div className="text-[10px] opacity-70">Post to a specific topic or interest</div>
+          </div>
+          <ChevronDown className="w-4 h-4 -rotate-90 opacity-50" />
+        </button>
+        {hasPages && (
+          <button onClick={() => setAudienceStep('pages')} className={`w-full text-left px-3 py-2 text-sm hover:bg-neutral-100 rounded-lg flex items-center gap-2 ${audience === 'page' ? 'bg-[#5E43F3]/5 text-[#5E43F3]' : 'text-neutral-800'}`}>
+            <Briefcase className="w-4 h-4" />
+            <div className="flex-1">
+              <div className="font-semibold">Post as Page</div>
+              <div className="text-[10px] opacity-70">Post as your eligible Page</div>
+            </div>
+            <ChevronDown className="w-4 h-4 -rotate-90 opacity-50" />
+          </button>
+        )}
+      </div>
+    );
   };
   
   const getReplyLabel = () => {
@@ -303,57 +441,21 @@ export const PostComposer: React.FC<PostComposerProps> = ({ embedded = false, on
         <div className="flex items-center justify-between gap-3 border-b border-neutral-100 px-4 py-3">
           <div className="flex items-center gap-2">
             <Avatar src={currentUser.avatar} alt={currentUser.name} size="sm" />
-            <div className="relative">
-              <button 
-                onClick={() => setShowAudienceDropdown(!showAudienceDropdown)}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-neutral-200 text-sm font-semibold text-[#5E43F3] hover:bg-[#5E43F3]/5 transition"
-              >
-                {getAudienceLabel()}
-                <ChevronDown className="w-3.5 h-3.5" />
-              </button>
-              {showAudienceDropdown && (
-                <div className="absolute top-full left-0 mt-1 w-56 rounded-xl border border-neutral-200 bg-white shadow-lg p-2 z-[60]">
-                  <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider px-2 py-1 mb-1">Choose Audience</div>
-                  <button onClick={() => { setAudience('everyone'); setShowAudienceDropdown(false); }} className="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-100 rounded-lg flex items-center gap-2">
-                    <Globe className="w-4 h-4 text-neutral-500" />
-                    <div>
-                      <div className="font-semibold">Everyone</div>
-                      <div className="text-[10px] text-neutral-500">Public algorithmic feed</div>
-                    </div>
-                  </button>
-                  <button onClick={() => { setAudience('nearby'); setShowAudienceDropdown(false); }} className="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-100 rounded-lg flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-neutral-500" />
-                    <div>
-                      <div className="font-semibold">Nearby</div>
-                      <div className="text-[10px] text-neutral-500">Local feed for your selected area</div>
-                    </div>
-                  </button>
-                  <button onClick={() => { setAudience('community'); setShowAudienceDropdown(false); }} className="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-100 rounded-lg flex items-center gap-2">
-                    <Users className="w-4 h-4 text-neutral-500" />
-                    <div>
-                      <div className="font-semibold">Communities</div>
-                      <div className="text-[10px] text-neutral-500">Post to a specific community</div>
-                    </div>
-                  </button>
-                  <button onClick={() => { setAudience('interest'); setShowAudienceDropdown(false); }} className="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-100 rounded-lg flex items-center gap-2">
-                    <Hash className="w-4 h-4 text-neutral-500" />
-                    <div>
-                      <div className="font-semibold">Interests & Topics</div>
-                      <div className="text-[10px] text-neutral-500">Post to a specific topic or interest</div>
-                    </div>
-                  </button>
-                  {pages && pages.length > 0 && (
-                    <button onClick={() => { setAudience('page'); setShowAudienceDropdown(false); }} className="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-100 rounded-lg flex items-center gap-2">
-                      <Briefcase className="w-4 h-4 text-neutral-500" />
-                      <div>
-                        <div className="font-semibold">Post as Page</div>
-                        <div className="text-[10px] text-neutral-500">Post as your eligible Page</div>
-                      </div>
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
+            <Popover
+              isOpen={showAudienceDropdown}
+              onClose={() => { setShowAudienceDropdown(false); setAudienceStep('main'); }}
+              width={256}
+              trigger={
+                <button 
+                  onClick={() => setShowAudienceDropdown(!showAudienceDropdown)}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-neutral-200 text-sm font-semibold text-[#5E43F3] hover:bg-[#5E43F3]/5 transition max-w-[200px]"
+                >
+                  <span className="truncate">{getAudienceLabel()}</span>
+                  <ChevronDown className="w-3.5 h-3.5 shrink-0" />
+                </button>
+              }
+              content={renderAudienceSelector()}
+            />
           </div>
           <div className="flex items-center gap-3">
             <button

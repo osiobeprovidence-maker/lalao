@@ -1176,6 +1176,46 @@ export const createPost = mutation({
       }
     }
 
+    // Authorization checks for destinations
+    if (args.audience === "page" || args.audience === "community") {
+      if (!args.pageRefId) throw new Error("Missing pageRefId for destination");
+      const page = await ctx.db.get(ctx.db.normalizeId("pages", args.pageRefId) as any);
+      if (!page) throw new Error("Destination not found");
+
+      if (args.audience === "page") {
+        if (page.ownerId !== currentUser._id) {
+          throw new Error("You do not have permission to post as this page");
+        }
+      } else if (args.audience === "community") {
+        if (page.ownerId !== currentUser._id) {
+          const isMember = await ctx.db
+            .query("pageFollowers")
+            .withIndex("by_page_user", (q: any) =>
+              q.eq("pageId", page._id).eq("userId", currentUser._id)
+            )
+            .first();
+          if (!isMember) {
+            throw new Error("You must join this community to save drafts to it");
+          }
+        }
+      }
+    }
+
+    if (args.audience === "interest") {
+      if (!args.contentTopics || args.contentTopics.length === 0) {
+        throw new Error("Missing topic for interest destination");
+      }
+      for (const slug of args.contentTopics) {
+        const topic = await ctx.db
+          .query("topics")
+          .filter((q: any) => q.eq(q.field("slug"), slug))
+          .first();
+        if (!topic || !topic.active) {
+          throw new Error(`Topic ${slug} is not valid or active`);
+        }
+      }
+    }
+
     const now = Date.now();
     const postId = await ctx.db.insert("posts", {
       authorId: currentUser._id,
@@ -2040,6 +2080,31 @@ export const saveDraft = mutation({
   handler: async (ctx, args) => {
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
+
+    // Authorization checks for destinations
+    if (args.audience === "page" || args.audience === "community") {
+      if (!args.pageRefId) throw new Error("Missing pageRefId for destination");
+      const page = await ctx.db.get(ctx.db.normalizeId("pages", args.pageRefId) as any);
+      if (!page) throw new Error("Destination not found");
+
+      if (args.audience === "page") {
+        if (page.ownerId !== currentUser._id) {
+          throw new Error("You do not have permission to post as this page");
+        }
+      } else if (args.audience === "community") {
+        if (page.ownerId !== currentUser._id) {
+          const isMember = await ctx.db
+            .query("pageFollowers")
+            .withIndex("by_page_user", (q: any) =>
+              q.eq("pageId", page._id).eq("userId", currentUser._id)
+            )
+            .first();
+          if (!isMember) {
+            throw new Error("You must join this community to save drafts to it");
+          }
+        }
+      }
+    }
 
     const now = Date.now();
     const { draftId, ...data } = args;
