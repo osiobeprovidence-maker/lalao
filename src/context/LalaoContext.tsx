@@ -324,6 +324,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const deletePostMutation = useMutation(api.social.deletePost);
   const createPostMutation = useMutation(api.social.createPost);
   const addCommentToPostMutation = useMutation(api.social.addCommentToPost);
+  const toggleLikeCommentMutation = useMutation(api.social.toggleLikeComment);
   const saveDraftMutation = useMutation(api.social.saveDraft);
   const deleteDraftMutation = useMutation(api.social.deleteDraft);
 
@@ -1277,42 +1278,19 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const toggleLikeComment = (postId: string, commentId: string, replyId?: string) => requireAuth(() => {
-    setPosts((prev) =>
-      prev.map((p) => {
-        if (p.id !== postId) return p;
-
-        const updatedComments = p.comments.map((comm) => {
-          if (replyId && comm.replies) {
-            const updatedReplies = comm.replies.map((rep) => {
-              if (rep.id === replyId) {
-                const isLiked = !rep.isLiked;
-                return {
-                  ...rep,
-                  isLiked,
-                  likesCount: isLiked ? rep.likesCount + 1 : Math.max(0, rep.likesCount - 1),
-                };
-              }
-              return rep;
-            });
-            return { ...comm, replies: updatedReplies };
-          }
-
-          if (comm.id === commentId) {
-            const isLiked = !comm.isLiked;
-            return {
-              ...comm,
-              isLiked,
-              likesCount: isLiked ? comm.likesCount + 1 : Math.max(0, comm.likesCount - 1),
-            };
-          }
-          return comm;
-        });
-
-        return { ...p, comments: updatedComments };
-      })
-    );
-  }, 'Sign in to like this comment');
+  const toggleLikeComment = async (postId: string, commentId: string, replyId?: string) => {
+    if (!isAuthenticated) {
+      showAuthPrompt('Sign in to like this comment');
+      return;
+    }
+    try {
+      // If replyId is provided, we're liking a reply (this matches the old signature, though the UI just passes comment.id to commentId now)
+      const targetId = replyId || commentId;
+      await toggleLikeCommentMutation({ commentId: targetId as any });
+    } catch (err) {
+      console.error('Failed to toggle like on comment:', err);
+    }
+  };
 
   const createPost = async (args: {
     text: string;
