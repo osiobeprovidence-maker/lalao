@@ -32,6 +32,7 @@ export const HomeFeed: React.FC = () => {
     nearbySort,
     setNearbySort,
     triggerShareToast,
+    activeTopics,
   } = useLalao();
 
   // Pull to refresh state
@@ -160,14 +161,13 @@ export const HomeFeed: React.FC = () => {
         
         return true;
       }
-      if (feedTab === 'drama') {
-        return post.contentTopics?.some(t => t.toLowerCase() === 'drama');
-      }
       if (feedTab === 'nearby') {
         const maxMeters = location.radiusKm * 1000;
         return (post.distanceMeters ?? 0) <= maxMeters;
       }
-      return true; // 'for_you'
+      
+      // For dynamic topic tabs or 'for_you', the backend already filtered the posts
+      return true;
     })
     .sort((a, b) => {
       if (feedTab === 'nearby' && nearbySort === 'closest') {
@@ -176,12 +176,24 @@ export const HomeFeed: React.FC = () => {
       return 0; // preserve original chronological order
     });
 
-  const hasDramaActivated = currentUser?.interests?.some(i => i.toLowerCase() === 'drama') ?? false;
+  const activeTopicTabs = (activeTopics || [])
+    .filter((topic: any) => {
+      if (topic.defaultEnabled) {
+        return currentUser?.homeFeedPreferences?.[topic.slug] !== false;
+      } else {
+        return !!(currentUser?.interests?.includes(topic.slug) && currentUser?.homeFeedPreferences?.[topic.slug] !== false);
+      }
+    })
+    .sort((a: any, b: any) => a.displayOrder - b.displayOrder)
+    .map((topic: any) => ({
+      id: topic.slug as FeedTab,
+      label: topic.displayName
+    }));
 
   const tabs: { id: FeedTab; label: string }[] = [
     { id: 'for_you', label: 'For You' },
     { id: 'following', label: 'Following' },
-    ...(hasDramaActivated ? [{ id: 'drama' as FeedTab, label: 'Drama' }] : []),
+    ...activeTopicTabs,
     { id: 'nearby', label: 'Nearby' },
   ];
 
