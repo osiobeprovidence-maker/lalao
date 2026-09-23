@@ -141,17 +141,8 @@ export const HomeFeed: React.FC = () => {
 
   const hasJoinedCommunities = joinedCommunityIds.length > 0;
 
-  const communityFeedPosts = hasJoinedCommunities
-    ? posts.filter((post) => {
-        if (post.author.id === currentUser.id) return true;
-        if (post.pageRefId && joinedCommunityIds.includes(post.pageRefId)) return true;
-        if (joinedCommunityIds.includes(post.author.id)) return true;
-        return false;
-      })
-    : [];
-
-  // Filter posts according to feed tab and user membership state
-  const filteredPosts = communityFeedPosts
+  // Filter posts according to feed tab
+  const filteredPosts = posts
     .filter((post) => {
       if (feedTab === 'following') {
         return post.author.isFollowing || post.author.id === currentUser.id;
@@ -468,29 +459,7 @@ export const HomeFeed: React.FC = () => {
       )}
 
       {/* Posts Stream */}
-      {!hasJoinedCommunities ? (
-        <div className="min-h-[62vh] flex items-center justify-center px-6 pb-8 pt-10">
-          <div className="flex max-w-sm flex-col items-center text-center gap-2.5">
-            <div className="w-11 h-11 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center">
-              <Compass className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-neutral-900 text-sm leading-snug">
-              You haven&apos;t joined a community yet.
-            </h3>
-            <p className="text-[11px] text-neutral-500 leading-relaxed">
-              Discover communities to find people and conversations that interest you.
-            </p>
-            <div className="pt-1 flex flex-wrap items-center justify-center gap-2">
-              <button
-                onClick={() => setActiveTab('discover')}
-                className="px-3.5 py-2 rounded-full bg-[#5E43F3] text-[11px] font-bold text-white hover:bg-[#4E34E0] cursor-pointer"
-              >
-                Discover Communities
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : filteredPosts.length > 0 ? (
+      {filteredPosts.length > 0 ? (
         <div className="divide-y divide-neutral-100">
           {filteredPosts.map((post) => (
             <PostItem key={post.id} post={post} />

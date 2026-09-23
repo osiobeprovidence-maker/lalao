@@ -74,6 +74,7 @@ interface LalaoContextType {
   isDetectingGps: boolean;
   
   // Content state
+  isFeedLoading: boolean;
   posts: Post[];
   rallies: Rally[];
   pages: Page[];
@@ -319,6 +320,13 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const saveDraftMutation = useMutation(api.social.saveDraft);
   const deleteDraftMutation = useMutation(api.social.deleteDraft);
   const messageContactsQuery = useQuery(api.social.getMessageContacts);
+  const feedPostsQuery = useQuery(api.social.listFeedPosts, {
+    feedType: feedTab,
+    latitude: location.latitude,
+    longitude: location.longitude,
+    radiusKm: location.radiusKm,
+    locationName: location.name,
+  });
   const [pushEnabled, setPushEnabled] = useState<boolean>(false);
 
   useEffect(() => {
@@ -532,6 +540,12 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return EMPTY_NOTIFICATIONS;
     }
   });
+
+  useEffect(() => {
+    if (feedPostsQuery) {
+      setPosts(feedPostsQuery as Post[]);
+    }
+  }, [feedPostsQuery]);
 
   const deletePost = async (postId: string) => {
     if (!currentUser) return;
@@ -2172,6 +2186,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setNearbySort,
         detectGpsLocation,
         isDetectingGps,
+        isFeedLoading: feedPostsQuery === undefined,
         posts,
         rallies,
         pages,
