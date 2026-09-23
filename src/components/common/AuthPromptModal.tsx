@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { brand } from '../../config/brand';
 import { X } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 export const AuthPromptModal: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthPromptOpen, authPromptMessage, closeAuthPrompt } = useLalao();
+  const settings = useQuery((api as any).platformSettings.getBrandingSettings);
 
   if (!isAuthPromptOpen) return null;
 
@@ -23,9 +26,19 @@ export const AuthPromptModal: React.FC = () => {
             <X className="h-5 w-5" />
           </button>
 
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#5E43F3]/10">
-            <span className="lalao-wordmark text-[32px] text-[#5E43F3] leading-none translate-y-1">lalao</span>
-          </div>
+          {settings?.authLogoUrl ? (
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center overflow-hidden">
+              <img src={settings.authLogoUrl} alt="Authentication Logo" className="w-full h-full object-contain" />
+            </div>
+          ) : settings?.authWordmark ? (
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#5E43F3]/10">
+              <span className="lalao-wordmark text-[24px] text-[#5E43F3] leading-none translate-y-1">{settings.authWordmark}</span>
+            </div>
+          ) : (
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#5E43F3]/10">
+              <span className="lalao-wordmark text-[32px] text-[#5E43F3] leading-none translate-y-1">lalao</span>
+            </div>
+          )}
 
           <h2 className="mb-2 text-xl font-bold tracking-tight text-neutral-900">
             {authPromptMessage || 'Sign in to continue'}

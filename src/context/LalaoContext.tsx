@@ -52,7 +52,7 @@ export type NavTab =
   | 'saved'
   | 'create-page'
   | 'liked';
-export type FeedTab = 'for_you' | 'following' | 'nearby';
+export type FeedTab = 'for_you' | 'following' | 'drama' | 'nearby';
 export type CreateOption = 'post' | 'rally' | 'page' | 'cycle' | null;
 
 interface LalaoContextType {
@@ -89,7 +89,7 @@ interface LalaoContextType {
   toggleLikePost: (postId: string) => void;
   toggleRepostPost: (postId: string) => void;
   deletePost: (postId: string) => Promise<void>;
-  addComment: (postId: string, text: string, parentCommentId?: string, replyToUsername?: string) => void;
+  addComment: (postId: string, text: string, parentCommentId?: string, mediaStorageId?: string, mediaType?: 'image' | 'voice' | 'gif' | 'sticker') => Promise<void>;
   toggleLikeComment: (postId: string, commentId: string, replyId?: string) => void;
   createPost: (post: { text: string; mediaUrl?: string; mediaStorageId?: string; mediaType?: 'image' | 'video'; location: string; audience?: string; replyPermission?: string; gifUrl?: string; pollQuestion?: string; pollOptions?: string[]; rallyRefId?: string; pageRefId?: string; contentTopics?: string[]; }) => Promise<any>;
   saveDraft: (draft: any) => Promise<any>;
@@ -323,6 +323,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const toggleRepostPostMutation = useMutation(api.social.toggleRepost);
   const deletePostMutation = useMutation(api.social.deletePost);
   const createPostMutation = useMutation(api.social.createPost);
+  const addCommentToPostMutation = useMutation(api.social.addCommentToPost);
   const saveDraftMutation = useMutation(api.social.saveDraft);
   const deleteDraftMutation = useMutation(api.social.deleteDraft);
 
@@ -1248,61 +1249,33 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     triggerShareToast('Reposted to your local feed');
   }, 'Sign in to repost this');
 
-  const addComment = (
+  const addComment = async (
     postId: string,
     text: string,
     parentCommentId?: string,
-    replyToUsername?: string
-  ) => requireAuth(() => {
-    if (!text.trim()) return;
+    mediaStorageId?: string,
+    mediaType?: 'image' | 'voice' | 'gif' | 'sticker'
+  ) => {
+    if (!isAuthenticated) {
+      showAuthPrompt('Sign in to comment');
+      return;
+    }
+    
+    if (!text.trim() && !mediaStorageId) return;
 
-    setPosts((prev) =>
-      prev.map((p) => {
-        if (p.id !== postId) return p;
-
-        if (parentCommentId) {
-          const updatedComments = p.comments.map((comm) => {
-            if (comm.id !== parentCommentId) return comm;
-            const newReply: CommentReply = {
-              id: `rep_${Date.now()}`,
-              author: currentUser,
-              text: text.trim(),
-              createdAt: 'Just now',
-              likesCount: 0,
-              isLiked: false,
-              replyToUsername: replyToUsername || comm.author.username,
-              isAuthor: p.author.id === currentUser.id,
-            };
-            return {
-              ...comm,
-              replies: [...(comm.replies || []), newReply],
-            };
-          });
-
-          return {
-            ...p,
-            commentsCount: p.commentsCount + 1,
-            comments: updatedComments,
-          };
-        } else {
-          const newComment: PostComment = {
-            id: `comm_${Date.now()}`,
-            author: currentUser,
-            text: text.trim(),
-            createdAt: 'Just now',
-            likesCount: 0,
-            isLiked: false,
-            replies: [],
-          };
-          return {
-            ...p,
-            commentsCount: p.commentsCount + 1,
-            comments: [newComment, ...p.comments],
-          };
-        }
-      })
-    );
-  }, 'Sign in to comment');
+    try {
+      await addCommentToPostMutation({
+        postId: postId as any,
+        text: text.trim(),
+        parentCommentId: parentCommentId as any,
+        mediaStorageId: mediaStorageId as any,
+        mediaType
+      });
+    } catch (err) {
+      console.error('Failed to add comment:', err);
+      throw err;
+    }
+  };
 
   const toggleLikeComment = (postId: string, commentId: string, replyId?: string) => requireAuth(() => {
     setPosts((prev) =>

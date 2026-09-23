@@ -23,6 +23,8 @@ export const AdminPlatformSettings: React.FC = () => {
     browserDescription: '',
     pwaName: '',
     pwaShortName: '',
+    authLogoUrl: '',
+    authWordmark: '',
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -90,6 +92,8 @@ export const AdminPlatformSettings: React.FC = () => {
         browserDescription: 'Join the community on Lalao',
         pwaName: 'Lalao App',
         pwaShortName: 'Lalao',
+        authLogoUrl: '',
+        authWordmark: '',
       });
     }
   };
@@ -205,6 +209,44 @@ export const AdminPlatformSettings: React.FC = () => {
                   </label>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Authentication / Sign-in Branding Section */}
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <h2 className="text-sm font-bold text-neutral-900 mb-6 uppercase tracking-wider">Authentication / Sign-in Branding</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-xs font-bold text-neutral-500 mb-1.5">Auth Wordmark (Text)</label>
+              <input
+                type="text"
+                name="authWordmark"
+                value={formData.authWordmark}
+                onChange={handleChange}
+                placeholder="e.g. lalao"
+                className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-neutral-900 text-sm focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-neutral-500 mb-1.5">Auth Logo (Image)</label>
+              <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+                <div className="w-full sm:w-48 h-16 rounded-xl border border-neutral-200 bg-neutral-50 flex items-center justify-center overflow-hidden shrink-0">
+                  {formData.authLogoUrl ? (
+                    <img src={formData.authLogoUrl} alt="Auth Logo preview" className="max-h-12 object-contain" />
+                  ) : (
+                    <span className="text-xs text-neutral-400">No logo uploaded</span>
+                  )}
+                </div>
+                <div className="flex-1 w-full sm:w-auto">
+                  <label className="w-full sm:w-auto cursor-pointer inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-sm font-bold transition-colors">
+                    <Upload className="w-4 h-4" />
+                    Upload Image
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e, 'authLogoUrl')} />
+                  </label>
+                </div>
+              </div>
+              <p className="text-xs text-neutral-500 mt-2">If both are set, the logo image will take precedence.</p>
             </div>
           </div>
         </div>

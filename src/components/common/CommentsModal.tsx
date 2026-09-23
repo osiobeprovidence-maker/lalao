@@ -73,7 +73,7 @@ export const CommentThread = ({
               {comment.author.username}
             </span>
             {isVerified && <CheckCircle className="h-3.5 w-3.5 text-[#5E43F3] fill-[#5E43F3]/20" />}
-            {isAuthor && <span className="rounded bg-neutral-200 px-1.5 py-0.2 text-[9px] font-medium text-neutral-600">Author</span>}
+            {isPostAuthor && <span className="rounded bg-neutral-200 px-1.5 py-0.2 text-[9px] font-medium text-neutral-600">Author</span>}
             <span className="text-[10px] text-neutral-400">{comment.createdAt}</span>
           </div>
           {comment.text && <p className="mt-1 whitespace-pre-line text-[11px] leading-relaxed text-neutral-800">{comment.text}</p>}

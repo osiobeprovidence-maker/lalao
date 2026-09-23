@@ -120,24 +120,41 @@ export const DiscoverView: React.FC = () => {
   const nearbyPeople = useMemo(() => {
     if (!users || !location) return [];
 
-    const userCoords = getCoordinatesForLocation(location.name);
-    if (!userCoords) return [];
+    const activeCoords = {
+      lat: location.latitude ?? getCoordinatesForLocation(location.name).lat,
+      lng: location.longitude ?? getCoordinatesForLocation(location.name).lng,
+    };
+
+    if (!activeCoords.lat || !activeCoords.lng) return [];
 
     return users
-      .filter((user) => user.id !== currentUser.id)
+      .filter((user) => user.id !== currentUser?.id)
       .map((user) => {
-        if (!user.latitude || !user.longitude) return null;
+        let uLat = user.latitude;
+        let uLng = user.longitude;
+        
+        // Fallback to resolving the location name if no exact coordinates
+        if (!uLat || !uLng) {
+            if (user.location) {
+                const fallbackCoords = getCoordinatesForLocation(user.location);
+                uLat = fallbackCoords.lat;
+                uLng = fallbackCoords.lng;
+            }
+        }
+
+        if (!uLat || !uLng) return null;
+
         const distance = calculateDistanceMeters(
-          userCoords.lat,
-          userCoords.lng,
-          user.latitude,
-          user.longitude
+          activeCoords.lat,
+          activeCoords.lng,
+          uLat,
+          uLng
         );
         return { ...user, distanceMeters: distance };
       })
       .filter((user): user is User & { distanceMeters: number } => user !== null && user.distanceMeters <= maxRadiusMeters)
       .sort((a, b) => a.distanceMeters - b.distanceMeters);
-  }, [users, location, currentUser.id, maxRadiusMeters]);
+  }, [users, location, currentUser?.id, maxRadiusMeters]);
 
   const filteredPeople = useMemo(() => {
     return (nearbyPeople || [])

@@ -39,6 +39,8 @@ export const updateBrandingSettings = mutation({
       browserDescription: v.optional(v.string()),
       pwaName: v.optional(v.string()),
       pwaShortName: v.optional(v.string()),
+      authLogoUrl: v.optional(v.string()),
+      authWordmark: v.optional(v.string()),
     }),
   },
   handler: async (ctx, args) => {

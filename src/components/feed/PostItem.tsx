@@ -142,10 +142,8 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
   const isTextOnly = associatedPost && !associatedPost.mediaUrl && !linkedRally;
 
   const handleComment = () => {
-    if (isTextOnly) {
+    if (associatedPost) {
       setShowInlineComments((prev) => !prev);
-    } else if (associatedPost) {
-      setActiveCommentsPostId(associatedPost.id);
     } else if (linkedRally) {
       triggerShareToast('Opening Rally thread...');
     }
@@ -543,7 +541,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
             )}
           </div>
 
-          {/* Inline Comments Section for Text-Only Posts */}
+          {/* Inline Comments Section */}
           {showInlineComments && associatedPost && (
             <div className="mt-4 pt-3 border-t border-neutral-100 animate-in fade-in slide-in-from-top-2">
               <InlineComments 

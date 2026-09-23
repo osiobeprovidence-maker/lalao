@@ -64,7 +64,7 @@ export const OTPVerifyPage: React.FC = () => {
       return;
     }
     setVerified(true);
-    setTimeout(() => navigate('/onboarding/welcome'), 1500);
+    setTimeout(() => navigate('/app'), 1500);
   };
 
   const handleResend = () => {

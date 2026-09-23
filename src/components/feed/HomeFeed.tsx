@@ -160,6 +160,9 @@ export const HomeFeed: React.FC = () => {
         
         return true;
       }
+      if (feedTab === 'drama') {
+        return post.contentTopics?.some(t => t.toLowerCase() === 'drama');
+      }
       if (feedTab === 'nearby') {
         const maxMeters = location.radiusKm * 1000;
         return (post.distanceMeters ?? 0) <= maxMeters;
@@ -173,9 +176,12 @@ export const HomeFeed: React.FC = () => {
       return 0; // preserve original chronological order
     });
 
+  const hasDramaActivated = currentUser?.interests?.some(i => i.toLowerCase() === 'drama') ?? false;
+
   const tabs: { id: FeedTab; label: string }[] = [
     { id: 'for_you', label: 'For You' },
     { id: 'following', label: 'Following' },
+    ...(hasDramaActivated ? [{ id: 'drama' as FeedTab, label: 'Drama' }] : []),
     { id: 'nearby', label: 'Nearby' },
   ];
 
