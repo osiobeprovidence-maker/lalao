@@ -318,10 +318,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const createPostMutation = useMutation(api.social.createPost);
   const saveDraftMutation = useMutation(api.social.saveDraft);
   const deleteDraftMutation = useMutation(api.social.deleteDraft);
-  const notificationsQuery = useQuery(api.social.listNotifications);
-  const unreadNotifsCountQuery = useQuery(api.social.getUnreadNotificationCount);
   const messageContactsQuery = useQuery(api.social.getMessageContacts);
-  const draftsQuery = useQuery(api.social.listMyDrafts);
   const [pushEnabled, setPushEnabled] = useState<boolean>(false);
 
   useEffect(() => {
