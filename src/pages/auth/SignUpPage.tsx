@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Zap, MapPin, Users, Calendar, Chrome, Loader2 } from 'lucide-react';
+import { ArrowRight, MapPin, Users, Calendar, Chrome, Loader2 } from 'lucide-react';
+import { AppIcon } from '../../components/common/AppIcon';
 import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
@@ -68,7 +69,7 @@ export const SignUpPage: React.FC = () => {
           {/* Logo */}
           <div className="flex items-center gap-2 mb-16">
             <div className="w-10 h-10 rounded-xl bg-[#3823A4] flex items-center justify-center">
-              <Zap className="w-5 h-5 text-white fill-white" />
+              <AppIcon className="w-5 h-5" fallbackClassName="text-white fill-white" />
             </div>
             <span className="lalao-wordmark text-2xl text-neutral-900">lalao</span>
           </div>
@@ -111,7 +112,7 @@ export const SignUpPage: React.FC = () => {
         {/* Mobile Header */}
         <div className="lg:hidden w-full max-w-sm mb-10 flex items-center gap-2">
           <div className="w-10 h-10 rounded-xl bg-[#3823A4] flex items-center justify-center">
-            <Zap className="w-5 h-5 text-white fill-white" />
+            <AppIcon className="w-5 h-5" fallbackClassName="text-white fill-white" />
           </div>
           <span className="lalao-wordmark text-2xl text-neutral-900">lalao</span>
         </div>

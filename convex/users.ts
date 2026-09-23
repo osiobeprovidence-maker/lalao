@@ -36,7 +36,20 @@ export const getCurrentUser = query({
 
     if (!user) return null;
 
-    const effectiveAvatar = user.avatarUrl || (user as any).avatar || identity.pictureUrl || "";
+    // Resolve avatar URL. If stored in Convex storage, generate a signed URL on each request.
+    let effectiveAvatar = user.avatarUrl || identity.pictureUrl || "";
+    if (!effectiveAvatar && (user as any).avatarStorageId) {
+      try {
+        const signed = await ctx.storage.getUrl((user as any).avatarStorageId);
+        if (signed) effectiveAvatar = signed;
+      } catch (e) {
+        console.warn('Failed to generate signed avatar URL', e);
+      }
+    }
+    // Fallback to legacy avatar field if present (for backward compatibility).
+    if (!effectiveAvatar && (user as any).avatar) {
+      effectiveAvatar = (user as any).avatar;
+    }
 
     return {
       ...user,
@@ -59,7 +72,20 @@ export const getUserByUsername = query({
       .unique();
 
     if (!user) return null;
-    const effectiveAvatar = user.avatarUrl || (user as any).avatar || "";
+    // Resolve avatar URL for public user profiles.
+    let effectiveAvatar = user.avatarUrl || "";
+    if (!effectiveAvatar && (user as any).avatarStorageId) {
+      try {
+        const signed = await ctx.storage.getUrl((user as any).avatarStorageId);
+        if (signed) effectiveAvatar = signed;
+      } catch (e) {
+        console.warn('Failed to generate signed avatar URL for public profile', e);
+      }
+    }
+    // Legacy fallback.
+    if (!effectiveAvatar && (user as any).avatar) {
+      effectiveAvatar = (user as any).avatar;
+    }
     return {
       ...user,
       avatarUrl: effectiveAvatar,

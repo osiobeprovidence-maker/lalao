@@ -102,7 +102,20 @@ async function resolveAuthor(ctx: any, authorDoc: any, currentUserId: string | n
     isFollowing = !!follow;
   }
 
-  const avatar = authorDoc.avatarUrl || authorDoc.avatar || "";
+  // Resolve avatar URL. Prefer stored Convex storage URL if available.
+  let avatar = authorDoc.avatarUrl || "";
+  if (!avatar && (authorDoc as any).avatarStorageId) {
+    try {
+      const signed = await ctx.storage.getUrl((authorDoc as any).avatarStorageId);
+      if (signed) avatar = signed;
+    } catch (e) {
+      console.warn('Failed to generate signed avatar URL', e);
+    }
+  }
+  // Fallback to legacy avatar field.
+  if (!avatar && (authorDoc as any).avatar) {
+    avatar = (authorDoc as any).avatar;
+  }
 
   return {
     id: authorDoc._id,
@@ -385,11 +398,11 @@ export const listFeedPosts = query({
         } else {
           // Fallback if page was deleted
           const authorDoc = post.authorId ? await ctx.db.get(post.authorId) : null;
-          author = await resolveAuthor(ctx, authorDoc, currentUser._id);
+          author = await resolveAuthor(ctx, authorDoc, currentUserId || null);
         }
       } else {
         const authorDoc = post.authorId ? await ctx.db.get(post.authorId) : null;
-        author = await resolveAuthor(ctx, authorDoc, currentUser._id);
+        author = await resolveAuthor(ctx, authorDoc, currentUserId || null);
       }
 
       // Top-level comments only (parentCommentId is undefined/null)
@@ -405,14 +418,17 @@ export const listFeedPosts = query({
       const commentPayload = await Promise.all(
         topLevelSlice.map(async (comment: any) => {
           const commentAuthorDoc = comment.authorId ? await ctx.db.get(comment.authorId) : null;
-          const commentAuthor = await resolveAuthor(ctx, commentAuthorDoc, currentUser._id);
+          const commentAuthor = await resolveAuthor(ctx, commentAuthorDoc, currentUserId || null);
 
-          const commentLike = await ctx.db
-            .query("likes")
-            .withIndex("by_user_target", (q: any) =>
-              q.eq("userId", currentUser._id).eq("targetType", "comment").eq("targetId", comment._id)
-            )
-            .unique();
+          let commentLike = null;
+          if (currentUserId) {
+            commentLike = await ctx.db
+              .query("likes")
+              .withIndex("by_user_target", (q: any) =>
+                q.eq("userId", currentUserId).eq("targetType", "comment").eq("targetId", comment._id)
+              )
+              .unique();
+          }
 
           // Direct replies to this comment
           const replies = allComments
@@ -429,13 +445,16 @@ export const listFeedPosts = query({
             replies: await Promise.all(
               replies.map(async (reply: any) => {
                 const replyAuthorDoc = reply.authorId ? await ctx.db.get(reply.authorId) : null;
-                const replyAuthor = await resolveAuthor(ctx, replyAuthorDoc, currentUser._id);
-                const replyLike = await ctx.db
-                  .query("likes")
-                  .withIndex("by_user_target", (q: any) =>
-                    q.eq("userId", currentUser._id).eq("targetType", "comment").eq("targetId", reply._id)
-                  )
-                  .unique();
+                const replyAuthor = await resolveAuthor(ctx, replyAuthorDoc, currentUserId || null);
+                let replyLike = null;
+                if (currentUserId) {
+                  replyLike = await ctx.db
+                    .query("likes")
+                    .withIndex("by_user_target", (q: any) =>
+                      q.eq("userId", currentUserId).eq("targetType", "comment").eq("targetId", reply._id)
+                    )
+                    .unique();
+                }
                 return {
                   id: reply._id,
                   author: replyAuthor,
@@ -451,12 +470,16 @@ export const listFeedPosts = query({
         })
       );
 
-      const isLiked = !!(await ctx.db
-        .query("likes")
-        .withIndex("by_user_target", (q: any) =>
-          q.eq("userId", currentUser._id).eq("targetType", "post").eq("targetId", post._id)
-        )
-        .unique());
+      let isLiked = false;
+      if (currentUserId) {
+        const postLike = await ctx.db
+          .query("likes")
+          .withIndex("by_user_target", (q: any) =>
+            q.eq("userId", currentUserId).eq("targetType", "post").eq("targetId", post._id)
+          )
+          .unique();
+        isLiked = !!postLike;
+      }
 
       results.push({
         id: post._id,

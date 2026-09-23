@@ -28,7 +28,7 @@ export const DesktopSidebar: React.FC = () => {
     setCreateFlowType,
     conversations,
   } = useLalao();
-  const { logout } = useAuth();
+  const { logout, isAuthenticated } = useAuth();
 
   const unreadMessagesCount = conversations.reduce(
     (acc, conv) => acc + (conv.unreadCount || 0),
@@ -214,37 +214,51 @@ export const DesktopSidebar: React.FC = () => {
         </div>
 
         <div className="mt-auto pt-4 border-t border-neutral-200/80">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('profile');
-              const mainEl = document.querySelector('main');
-              if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'instant' });
-            }}
-            className="flex w-full items-center justify-between gap-2 rounded-full px-2 py-2 text-left cursor-pointer transition hover:bg-[#f8f6f3]"
-          >
-            <div className="flex min-w-0 items-center gap-2.5">
-              <Avatar src={currentUser.avatar} alt={currentUser.name} size="sm" />
-              <div className="min-w-0">
-                <div className="truncate text-[12px] font-bold text-neutral-900">{currentUser.name}</div>
-                <div className="truncate text-[11px] text-neutral-500">@{currentUser.username}</div>
-              </div>
-            </div>
-          </button>
+          {isAuthenticated ? (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('profile');
+                  const mainEl = document.querySelector('main');
+                  if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'instant' });
+                }}
+                className="flex w-full items-center justify-between gap-2 rounded-full px-2 py-2 text-left cursor-pointer transition hover:bg-[#f8f6f3]"
+              >
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <Avatar src={currentUser?.avatar} alt={currentUser?.name} size="sm" />
+                  <div className="min-w-0">
+                    <div className="truncate text-[12px] font-bold text-neutral-900">{currentUser?.name}</div>
+                    <div className="truncate text-[11px] text-neutral-500">@{currentUser?.username}</div>
+                  </div>
+                </div>
+              </button>
 
-          <div className="mt-2 flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={async () => {
-                await logout();
-              }}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-rose-500 transition hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
-              aria-label="Log out"
-              title="Log out"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
+              <div className="mt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await logout();
+                  }}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-rose-500 transition hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
+                  aria-label="Log out"
+                  title="Log out"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => window.location.href = '/onboarding/welcome'}
+                className="w-full rounded-full bg-[#5E43F3] px-4 py-2.5 text-[14px] font-bold text-white transition hover:bg-[#5E43F3]/90"
+              >
+                Sign In / Sign Up
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </aside>

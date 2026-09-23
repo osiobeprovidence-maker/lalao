@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, ArrowRight, Loader2, Zap, Check, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Loader2, Check, ShieldCheck } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { AppIcon } from '../../components/common/AppIcon';
 
 export const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ export const ResetPasswordPage: React.FC = () => {
       <div className="w-full max-w-sm space-y-8">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-[#5E43F3] flex items-center justify-center">
-            <Zap className="w-4 h-4 text-white fill-white" />
+            <AppIcon className="w-4 h-4" fallbackClassName="text-white fill-white" />
           </div>
           <span className="lalao-wordmark text-xl text-neutral-900">lalao</span>
         </div>

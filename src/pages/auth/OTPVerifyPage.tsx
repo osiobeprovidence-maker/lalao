@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { ArrowLeft, Loader2, Zap, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { AppIcon } from '../../components/common/AppIcon';
 
 const OTP_LENGTH = 6;
 
@@ -99,7 +100,7 @@ export const OTPVerifyPage: React.FC = () => {
             </div>
           ) : (
             <div className="w-20 h-20 rounded-3xl bg-[#5E43F3]/10 flex items-center justify-center">
-              <Zap className="w-10 h-10 text-[#5E43F3] fill-[#5E43F3]" />
+              <AppIcon className="w-10 h-10" fallbackClassName="text-[#5E43F3] fill-[#5E43F3]" />
             </div>
           )}
         </div>

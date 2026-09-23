@@ -19,7 +19,7 @@ import {
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../common/Avatar';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useNavigate } from 'react-router-dom';
 import { uploadImageToCloudinary } from '../../lib/cloudinary';
@@ -38,8 +38,12 @@ export const SettingsPageView: React.FC = () => {
     activeTopics,
     updateHomePreference,
     updateUserProfile,
-    generateCloudinarySignature,
   } = useLalao();
+  
+  const generateCloudinarySignatureAction = useAction(api.cloudinary.generateSignature);
+  const generateCloudinarySignature = async (folder?: string) => {
+    return await generateCloudinarySignatureAction({ folder });
+  };
   const { logout } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -109,12 +113,19 @@ export const SettingsPageView: React.FC = () => {
 
       if (avatarFile) {
         try {
+          if (typeof generateCloudinarySignature !== 'function') {
+            console.error('generateCloudinarySignature is undefined from Context. Is it properly exported?');
+            throw new Error('generateCloudinarySignature is not a function');
+          }
           const sig = await generateCloudinarySignature('avatars');
           finalAvatarUrl = await uploadImageToCloudinary(avatarFile, sig);
         } catch (uploadErr) {
-          console.warn('Cloudinary upload fallback:', uploadErr);
+          console.warn('Cloudinary upload fallback triggered due to error:', uploadErr);
           
           // CONVEX FALLBACK
+          if (typeof generateConvexUploadUrl !== 'function') {
+            throw new Error('generateConvexUploadUrl is not a function');
+          }
           const uploadUrl = await generateConvexUploadUrl();
           const result = await fetch(uploadUrl, {
             method: "POST",

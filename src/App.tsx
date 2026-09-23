@@ -23,6 +23,7 @@ import { UserProfileModal } from './components/profile/UserProfileModal';
 import { SettingsPageView } from './components/profile/SettingsPageView';
 import { CommentsModal } from './components/common/CommentsModal';
 import { NotificationsModal } from './components/common/NotificationsModal';
+import { AuthPromptModal } from './components/common/AuthPromptModal';
 import { PermissionPromptModal } from './components/permissions/PermissionPromptModal';
 import { DevicePermissionsModal } from './components/permissions/DevicePermissionsModal';
 import { CartDrawer } from './components/shop/CartDrawer';
@@ -354,6 +355,7 @@ const LalaoAppContent: React.FC = () => {
       {!['create-post'].includes(activeTab) && <MyTicketsModal />}
       {!['create-post'].includes(activeTab) && <WalletModal />}
       {!['create-post'].includes(activeTab) && <MySubscriptionsModal />}
+      <AuthPromptModal />
 
 
       {shareToast && (
@@ -378,7 +380,7 @@ const LalaoApp: React.FC = () => (
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/onboarding/welcome" replace />} />
+      <Route path="/" element={<Navigate to="/app" replace />} />
 
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignUpPage />} />
@@ -394,8 +396,8 @@ export default function App() {
       <Route path="/onboarding/interests" element={<InterestsPage />} />
       <Route path="/onboarding/complete" element={<CompletePage />} />
 
-      <Route path="/app" element={<ProtectedRoute><LalaoApp /></ProtectedRoute>} />
-      <Route path="/app/*" element={<ProtectedRoute><LalaoApp /></ProtectedRoute>} />
+      <Route path="/app" element={<LalaoApp />} />
+      <Route path="/app/*" element={<LalaoApp />} />
 
       <Route path="/admin/*" element={
         <AdminRoute>
@@ -405,7 +407,7 @@ export default function App() {
         </AdminRoute>
       } />
 
-      <Route path="*" element={<Navigate to="/onboarding/welcome" replace />} />
+      <Route path="*" element={<Navigate to="/app" replace />} />
     </Routes>
   );
 }

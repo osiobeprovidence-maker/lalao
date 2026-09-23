@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Loader2, Zap, CheckCircle2, Mail } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, CheckCircle2, Mail } from 'lucide-react';
+import { AppIcon } from '../../components/common/AppIcon';
 
 export const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ export const ForgotPasswordPage: React.FC = () => {
         {/* Logo */}
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-[#5E43F3] flex items-center justify-center">
-            <Zap className="w-4 h-4 text-white fill-white" />
+            <AppIcon className="w-4 h-4" fallbackClassName="text-white fill-white" />
           </div>
           <span className="lalao-wordmark text-xl text-neutral-900">lalao</span>
         </div>

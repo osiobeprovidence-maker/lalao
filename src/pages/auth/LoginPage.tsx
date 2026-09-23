@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ArrowRight, Loader2, Zap } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
+import { AppIcon } from '../../components/common/AppIcon';
 import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
@@ -72,7 +73,7 @@ export const LoginPage: React.FC = () => {
         {/* Logo */}
         <div className="relative z-10 flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center border border-white/20">
-            <Zap className="w-5 h-5 text-white fill-white" />
+            <AppIcon className="w-5 h-5" fallbackClassName="text-white fill-white" />
           </div>
           <span className="lalao-wordmark text-white text-2xl">lalao</span>
         </div>
@@ -121,7 +122,7 @@ export const LoginPage: React.FC = () => {
         {/* Mobile logo */}
         <div className="lg:hidden flex items-center gap-2.5 mb-10">
           <div className="w-9 h-9 rounded-xl bg-[#5E43F3] flex items-center justify-center">
-            <Zap className="w-4 h-4 text-white fill-white" />
+            <AppIcon className="w-4 h-4" fallbackClassName="text-white fill-white" />
           </div>
           <span className="lalao-wordmark text-xl text-neutral-900">lalao</span>
         </div>

@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { useMutation, useQuery } from 'convex/react';
+import { useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { getOrRequestWebPushSubscription } from '../lib/push';
+import { useAuth } from './AuthContext';
 import {
   User,
   Post,
@@ -249,6 +250,11 @@ interface LalaoContextType {
   triggerShareToast: (message?: string) => void;
   isEditProfileOpen: boolean;
   setIsEditProfileOpen: (open: boolean) => void;
+  isAuthPromptOpen: boolean;
+  authPromptMessage: string;
+  showAuthPrompt: (message?: string) => void;
+  closeAuthPrompt: () => void;
+  requireAuth: (action: () => void, message?: string) => void;
   [key: string]: any;
 }
 
@@ -319,6 +325,25 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const createPostMutation = useMutation(api.social.createPost);
   const saveDraftMutation = useMutation(api.social.saveDraft);
   const deleteDraftMutation = useMutation(api.social.deleteDraft);
+
+  // ---- Topics / Home Feed Preferences ----
+  const activeTopics = useQuery(api.topics.listActiveTopics) ?? [];
+  const updateHomePreferenceMutation = useMutation(api.topics.updateUserHomePreference);
+  const updateHomePreference = (slug: string, enabled: boolean) => {
+    updateHomePreferenceMutation({ slug, enabled });
+  };
+
+  // ---- Profile Update ----
+  const updateUserProfileMutation = useMutation(api.users.updateUserProfile);
+  const updateUserProfile = async (args: { name?: string; username?: string; bio?: string; locationName?: string; avatarUrl?: string; avatarStorageId?: any }) => {
+    return await updateUserProfileMutation(args);
+  };
+
+  // ---- Cloudinary Signature ----
+  const generateCloudinarySignatureAction = useAction(api.cloudinary.generateSignature);
+  const generateCloudinarySignature = async (folder?: string) => {
+    return await generateCloudinarySignatureAction({ folder });
+  };
   const messageContactsQuery = useQuery(api.social.getMessageContacts);
   const [pushEnabled, setPushEnabled] = useState<boolean>(false);
 
@@ -404,7 +429,37 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [currentUser]);
 
-  const [activeTab, setActiveTab] = useState<NavTab>('home');
+  const [activeTab, setRawActiveTab] = useState<NavTab>('home');
+  const { isAuthenticated } = useAuth();
+
+  const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
+  const [authPromptMessage, setAuthPromptMessage] = useState('');
+
+  const showAuthPrompt = (message = 'Sign in to continue') => {
+    setAuthPromptMessage(message);
+    setIsAuthPromptOpen(true);
+  };
+
+  const closeAuthPrompt = () => {
+    setIsAuthPromptOpen(false);
+  };
+
+  const requireAuth = (action: () => void, message?: string) => {
+    if (isAuthenticated) {
+      action();
+    } else {
+      showAuthPrompt(message);
+    }
+  };
+
+  const setActiveTab = (tab: NavTab) => {
+    const protectedTabs = ['messages', 'profile', 'notifications', 'create-post', 'following', 'saved', 'liked', 'create-page'];
+    if (protectedTabs.includes(tab) && !isAuthenticated) {
+      showAuthPrompt(`Sign in to view ${tab.replace('-', ' ')}`);
+      return;
+    }
+    setRawActiveTab(tab);
+  };
   const [feedTab, setFeedTab] = useState<FeedTab>('for_you');
   const [nearbySort, setNearbySort] = useState<'closest' | 'recent'>('closest');
   const [isDetectingGps, setIsDetectingGps] = useState(false);
@@ -1160,7 +1215,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setTimeout(() => setShareToast(null), 2500);
   };
 
-  const toggleLikePost = (postId: string) => {
+  const toggleLikePost = (postId: string) => requireAuth(() => {
     setPosts((prev) =>
       prev.map((post) => {
         if (post.id === postId) {
@@ -1174,9 +1229,9 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return post;
       })
     );
-  };
+  }, 'Sign in to like this post');
 
-  const toggleRepostPost = (postId: string) => {
+  const toggleRepostPost = (postId: string) => requireAuth(() => {
     setPosts((prev) =>
       prev.map((post) => {
         if (post.id === postId) {
@@ -1191,14 +1246,14 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       })
     );
     triggerShareToast('Reposted to your local feed');
-  };
+  }, 'Sign in to repost this');
 
   const addComment = (
     postId: string,
     text: string,
     parentCommentId?: string,
     replyToUsername?: string
-  ) => {
+  ) => requireAuth(() => {
     if (!text.trim()) return;
 
     setPosts((prev) =>
@@ -1247,9 +1302,9 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       })
     );
-  };
+  }, 'Sign in to comment');
 
-  const toggleLikeComment = (postId: string, commentId: string, replyId?: string) => {
+  const toggleLikeComment = (postId: string, commentId: string, replyId?: string) => requireAuth(() => {
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id !== postId) return p;
@@ -1284,7 +1339,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return { ...p, comments: updatedComments };
       })
     );
-  };
+  }, 'Sign in to like this comment');
 
   const createPost = async (args: {
     text: string;
@@ -1302,6 +1357,10 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     visibility?: string;
     contentTopics?: string[];
   }) => {
+    if (!isAuthenticated) {
+      showAuthPrompt('Sign in to create a post');
+      return;
+    }
     try {
       const postId = await createPostMutation({
         text: args.text,
@@ -1443,7 +1502,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     triggerShareToast('Rally created! Broadcasting to people nearby');
   };
 
-  const toggleFollowPage = (pageId: string) => {
+  const toggleFollowPage = (pageId: string) => requireAuth(() => {
     setPages((prev) =>
       prev.map((page) => {
         if (page.id === pageId) {
@@ -1459,9 +1518,9 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return page;
       })
     );
-  };
+  }, 'Sign in to follow this page');
 
-  const toggleFollowUser = (userId: string) => {
+  const toggleFollowUser = (userId: string) => requireAuth(() => {
     let nowFollowing = false;
     let targetUsername = '';
 
@@ -1524,7 +1583,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }));
 
     triggerShareToast(nowFollowing ? `Following @${targetUsername || 'user'}` : `Unfollowed @${targetUsername || 'user'}`);
-  };
+  }, 'Sign in to follow this user');
 
   const createPage = ({
     name,
@@ -2174,6 +2233,11 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setCurrentUser,
         activeTab,
         setActiveTab,
+        isAuthPromptOpen,
+        authPromptMessage,
+        showAuthPrompt,
+        closeAuthPrompt,
+        requireAuth,
         feedTab,
         setFeedTab,
         location,
@@ -2323,6 +2387,10 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setIsWalletModalOpen,
         topUpWallet,
         payWithWallet,
+        activeTopics,
+        updateHomePreference,
+        updateUserProfile,
+        generateCloudinarySignature,
       }}
     >
       {children}

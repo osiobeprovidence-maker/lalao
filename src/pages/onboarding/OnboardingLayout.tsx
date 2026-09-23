@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Zap } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 interface OnboardingLayoutProps {
   children: React.ReactNode;
