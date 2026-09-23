@@ -35,6 +35,7 @@ export const HomeFeed: React.FC = () => {
   } = useLalao();
 
   // Pull to refresh state
+  const [followingSubTab, setFollowingSubTab] = useState<string>('All');
   const [pullDistance, setPullDistance] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isPulling, setIsPulling] = useState(false);
@@ -145,7 +146,19 @@ export const HomeFeed: React.FC = () => {
   const filteredPosts = posts
     .filter((post) => {
       if (feedTab === 'following') {
-        return post.author.isFollowing || post.author.id === currentUser.id;
+        const isFollowedPersonOrPage = post.author.isFollowing || post.author.id === currentUser?.id;
+        const postTopics = post.contentTopics || [];
+        const matchesSelectedInterest = currentUser?.interests?.some(i => postTopics.includes(i));
+        
+        const isFollowingContent = isFollowedPersonOrPage || matchesSelectedInterest;
+
+        if (!isFollowingContent) return false;
+
+        if (followingSubTab !== 'All') {
+          return postTopics.includes(followingSubTab);
+        }
+        
+        return true;
       }
       if (feedTab === 'nearby') {
         const maxMeters = location.radiusKm * 1000;
@@ -222,6 +235,30 @@ export const HomeFeed: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Sub-filters for Following Tab Interests */}
+      {feedTab === 'following' && currentUser?.interests && currentUser.interests.length > 0 && (
+        <div className="bg-[#f6f3ee] border-b border-neutral-200/60 overflow-x-auto hide-scrollbar">
+          <div className="flex items-center gap-2 px-3 py-2 min-w-max">
+            {['All', ...currentUser.interests].map((interest) => {
+              const isActive = followingSubTab === interest;
+              return (
+                <button
+                  key={interest}
+                  onClick={() => setFollowingSubTab(interest)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                    isActive
+                      ? 'bg-[#5E43F3] text-white'
+                      : 'bg-white text-neutral-600 border border-neutral-200 hover:border-[#5E43F3]/30 hover:bg-[#5E43F3]/5'
+                  }`}
+                >
+                  {interest}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Pull-to-Refresh Visual Indicator Banner */}
       <div

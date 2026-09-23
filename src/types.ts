@@ -96,6 +96,7 @@ export interface Post {
   audience?: PostAudience;
   replyPermission?: PostReplyPermission;
   gifUrl?: string;
+  contentTopics?: string[];
   poll?: {
     question: string;
     options: string[];

@@ -193,13 +193,15 @@ export const listFeedPosts = query({
         .collect();
       const followedPageIds = new Set(followedPages.map((f: any) => f.pageId));
 
-      // Strictly accounts the user actively follows: if following nobody, return empty
-      if (followedUserIds.size === 0 && followedPageIds.size === 0) {
+      const interests = currentUser.interests || [];
+
+      // Strictly accounts or topics the user actively follows: if following nobody and no interests, return empty
+      if (followedUserIds.size === 0 && followedPageIds.size === 0 && interests.length === 0) {
         return [];
       }
 
       let candidatePosts: any[] = [];
-      if (followedUserIds.size + followedPageIds.size <= 30) {
+      if (followedUserIds.size + followedPageIds.size <= 30 && interests.length === 0) {
         // Query author/page posts directly by index for high accuracy
         const userPromises = Array.from(followedUserIds).map((authorId) =>
           ctx.db
@@ -236,6 +238,7 @@ export const listFeedPosts = query({
           if (p.moderationStatus === "removed") return false;
           if (p.pageRefId && followedPageIds.has(p.pageRefId)) return true;
           if (!p.pageRefId && followedUserIds.has(p.authorId)) return true;
+          if (interests.length > 0 && p.contentTopics?.some((t: string) => interests.includes(t))) return true;
           return false;
         });
       }
@@ -508,6 +511,7 @@ export const listFeedPosts = query({
         audience: post.audience ?? "everyone",
         replyPermission: post.replyPermission ?? "everyone",
         gifUrl: post.gifUrl,
+        contentTopics: post.contentTopics || [],
         poll: post.pollQuestion
           ? {
               question: post.pollQuestion,
