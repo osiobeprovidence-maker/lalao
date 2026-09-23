@@ -320,13 +320,6 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const saveDraftMutation = useMutation(api.social.saveDraft);
   const deleteDraftMutation = useMutation(api.social.deleteDraft);
   const messageContactsQuery = useQuery(api.social.getMessageContacts);
-  const feedPostsQuery = useQuery(api.social.listFeedPosts, {
-    feedType: feedTab,
-    latitude: location.latitude,
-    longitude: location.longitude,
-    radiusKm: location.radiusKm,
-    locationName: location.name,
-  });
   const [pushEnabled, setPushEnabled] = useState<boolean>(false);
 
   useEffect(() => {
@@ -423,6 +416,14 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch {
       return DEFAULT_LOCATION;
     }
+  });
+
+  const feedPostsQuery = useQuery(api.social.listFeedPosts, {
+    feedType: feedTab,
+    latitude: location.latitude,
+    longitude: location.longitude,
+    radiusKm: location.radiusKm,
+    locationName: location.name,
   });
 
   const [locationPrivacy, setLocationPrivacy] = useState<LocationPrivacySettings>(() => {
