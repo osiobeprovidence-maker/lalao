@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import MuxPlayer from '@mux/mux-player-react';
-import { Play, Loader2, AlertCircle, RefreshCw, Film } from 'lucide-react';
+import { Play, Pause, Loader2, AlertCircle, RefreshCw, Film, Volume2, VolumeX, Rewind, FastForward, Maximize2, Minimize2 } from 'lucide-react';
 
 interface MuxVideoPlayerProps {
   muxPlaybackId?: string;
@@ -44,6 +44,14 @@ export const MuxVideoPlayer = React.memo<MuxVideoPlayerProps>(({
   const [isNearViewport, setIsNearViewport] = useState(false);
   const [isInViewport, setIsInViewport] = useState(false);
   const [isMuted, setIsMuted] = useState(muted);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolume] = useState(1);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const aspectClass = aspect === 'square' ? 'aspect-square' : 'aspect-video';
 
   // Viewport detection
@@ -69,33 +77,126 @@ export const MuxVideoPlayer = React.memo<MuxVideoPlayerProps>(({
     };
   }, []);
 
-  // Manage playback state based on viewport visibility
+  // Manage playback based on viewport visibility (autoplay)
   useEffect(() => {
     if (autoPlay && playerRef.current) {
       if (isInViewport) {
-        // Only attempt to play if we're actually mounted and ready
         try {
           const playPromise = playerRef.current.play();
           if (playPromise !== undefined) {
             playPromise.catch((e: any) => {
-              // Ignore autoplay restrictions and 'no supported sources' errors which happen during mount
               if (e.name !== 'NotSupportedError' && e.name !== 'NotAllowedError') {
-                console.warn("Autoplay prevented by browser:", e);
+                console.warn('Autoplay prevented by browser:', e);
               }
             });
           }
-        } catch (e) {
-          // Ignore
-        }
+        } catch (e) {}
       } else {
-        try {
-          playerRef.current.pause();
-        } catch (e) {
-          // Ignore
-        }
+        try { playerRef.current.pause(); } catch (e) {}
       }
     }
   }, [isInViewport, autoPlay, isNearViewport]);
+
+  // Attach media event listeners for state sync
+  useEffect(() => {
+    const videoEl = playerRef.current?.getInternalPlayer?.() || playerRef.current;
+    if (!videoEl) return;
+    const onLoadedMetadata = () => {
+      setDuration(videoEl.duration);
+      setIsLoading(false);
+    };
+    const onTimeUpdate = () => setCurrentTime(videoEl.currentTime);
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    const onEnded = () => setIsPlaying(false);
+    const onVolumeChange = () => {
+      setVolume(videoEl.volume);
+      setIsMuted(videoEl.muted);
+    };
+    const onWaiting = () => setIsLoading(true);
+    const onCanPlay = () => setIsLoading(false);
+    const onError = () => setHasError(true);
+    videoEl.addEventListener('loadedmetadata', onLoadedMetadata);
+    videoEl.addEventListener('timeupdate', onTimeUpdate);
+    videoEl.addEventListener('play', onPlay);
+    videoEl.addEventListener('pause', onPause);
+    videoEl.addEventListener('ended', onEnded);
+    videoEl.addEventListener('volumechange', onVolumeChange);
+    videoEl.addEventListener('waiting', onWaiting);
+    videoEl.addEventListener('canplay', onCanPlay);
+    videoEl.addEventListener('error', onError);
+    return () => {
+      videoEl.removeEventListener('loadedmetadata', onLoadedMetadata);
+      videoEl.removeEventListener('timeupdate', onTimeUpdate);
+      videoEl.removeEventListener('play', onPlay);
+      videoEl.removeEventListener('pause', onPause);
+      videoEl.removeEventListener('ended', onEnded);
+      videoEl.removeEventListener('volumechange', onVolumeChange);
+      videoEl.removeEventListener('waiting', onWaiting);
+      videoEl.removeEventListener('canplay', onCanPlay);
+      videoEl.removeEventListener('error', onError);
+    };
+  }, [playerRef.current]);
+
+  // Show controls on interaction
+  const showControls = () => {
+    setControlsVisible(true);
+    if (isPlaying) {
+      const timeout = setTimeout(() => setControlsVisible(false), 2000);
+      return () => clearTimeout(timeout);
+    }
+  };
+
+  // Control actions
+  const togglePlayPause = () => {
+    if (!playerRef.current) return;
+    if (isPlaying) {
+      playerRef.current.pause();
+    } else {
+      playerRef.current.play();
+    }
+  };
+  const toggleMute = () => {
+    if (!playerRef.current) return;
+    playerRef.current.muted = !isMuted;
+    setIsMuted(!isMuted);
+  };
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const vol = parseFloat(e.target.value);
+    if (playerRef.current) playerRef.current.volume = vol;
+    setVolume(vol);
+    if (vol === 0) setIsMuted(true);
+    else setIsMuted(false);
+  };
+  const seekTo = (time: number) => {
+    if (playerRef.current) playerRef.current.currentTime = time;
+  };
+  const skip = (seconds: number) => {
+    if (playerRef.current) {
+      const newTime = Math.min(Math.max(playerRef.current.currentTime + seconds, 0), duration);
+      playerRef.current.currentTime = newTime;
+    }
+  };
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return;
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  // Progress bar click/drag handler
+  const handleBarClick = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    if (!playerRef.current) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickPos = e.clientX - rect.left;
+    const percent = clickPos / rect.width;
+    const newTime = percent * duration;
+    playerRef.current.currentTime = newTime;
+  };
 
   // Auto-extract muxPlaybackId if mediaUrl is a Mux thumbnail URL
   let effectivePlaybackId = muxPlaybackId;
@@ -190,14 +291,17 @@ export const MuxVideoPlayer = React.memo<MuxVideoPlayerProps>(({
     );
   }
 
-  // 4. STATE: READY → Mux Player HLS adaptive stream
+  // 4. STATE: READY → Mux Player HLS adaptive stream with custom controls
   if (effectivePlaybackId) {
     const posterUrl = poster ?? `https://image.mux.com/${effectivePlaybackId}/thumbnail.jpg?time=0`;
-
     return (
-      <div ref={containerRef} className={`relative w-full overflow-hidden rounded-[18px] bg-black ${className}`}>
+      <div
+        ref={containerRef}
+        className={`relative w-full overflow-hidden rounded-[18px] bg-black ${className}`}
+        onMouseMove={showControls}
+        onTouchStart={showControls}
+      >
         {!isNearViewport ? (
-          // Lightweight off-screen state: just the poster image
           <img
             src={posterUrl}
             alt="Video poster"
@@ -205,7 +309,6 @@ export const MuxVideoPlayer = React.memo<MuxVideoPlayerProps>(({
             loading="lazy"
           />
         ) : (
-          // Near viewport: mount player and load metadata
           <MuxPlayer
             ref={playerRef}
             playbackId={effectivePlaybackId}
@@ -215,37 +318,136 @@ export const MuxVideoPlayer = React.memo<MuxVideoPlayerProps>(({
             loop={loop}
             playsInline
             preload="metadata"
-            className={`block w-full h-full object-cover ${aspectClass}`}
+            className={`block w-full h-full object-contain ${aspectClass}`}
           />
         )}
+        {/* Controls Overlay */}
+        <div
+          className={`absolute inset-x-0 bottom-0 flex items-center justify-between p-2 bg-black/60 backdrop-blur-sm transition-opacity ${controlsVisible ? 'opacity-100' : 'opacity-0'}`}
+        >
+          {/* Play / Pause */}
+          <button
+            onClick={togglePlayPause}
+            aria-label={isPlaying ? 'Pause' : 'Play'}
+            className="text-white"
+          >
+            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+          </button>
+          {/* Rewind / Forward */}
+          <div className="flex items-center space-x-1">
+            <button onClick={() => skip(-10)} aria-label="Rewind 10 seconds" className="text-white">
+              <Rewind className="w-5 h-5" />
+            </button>
+            <button onClick={() => skip(10)} aria-label="Forward 10 seconds" className="text-white">
+              <FastForward className="w-5 h-5" />
+            </button>
+          </div>
+          {/* Progress Bar */}
+          <div className="flex-1 mx-2" onClick={handleBarClick}>
+            <div className="relative h-1 bg-neutral-600/40 rounded">
+              <div
+                className="absolute h-1 bg-[#5E43F3] rounded"
+                style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
+              />
+            </div>
+          </div>
+          {/* Time */}
+          <div className="text-xs text-white whitespace-nowrap mr-2">
+            {`${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')} / ${Math.floor(duration / 60)}:${String(Math.floor(duration % 60)).padStart(2, '0')}`}
+          </div>
+          {/* Volume */}
+          <button onClick={toggleMute} aria-label={isMuted ? 'Unmute' : 'Mute'} className="text-white">
+            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={volume}
+            onChange={handleVolumeChange}
+            className="w-20 h-1 bg-neutral-600/40 rounded"
+          />
+          {/* Fullscreen */}
+          <button onClick={toggleFullscreen} aria-label="Toggle Fullscreen" className="text-white">
+            {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
     );
   }
 
-  // 5. STATE: READY → Basic HTML5 Video (Convex Storage / MP4)
+  // 5. STATE: READY → Basic HTML5 Video (Convex Storage / MP4) with custom controls
   if (mediaUrl && mediaUrl.length > 0) {
     return (
-      <div ref={containerRef} className={`relative w-full overflow-hidden rounded-[18px] bg-neutral-900 ${className}`}>
+      <div
+        ref={containerRef}
+        className={`relative w-full overflow-hidden rounded-[18px] bg-neutral-900 ${className}`}
+        onMouseMove={showControls}
+        onTouchStart={showControls}
+      >
         {!isNearViewport ? (
-           <img
-             src={poster || mediaUrl}
-             alt="Video poster"
-             className={`block w-full h-full object-cover ${aspectClass}`}
-             loading="lazy"
-           />
+          <img
+            src={poster || mediaUrl}
+            alt="Video poster"
+            className={`block w-full h-full object-cover ${aspectClass}`}
+            loading="lazy"
+          />
         ) : (
           <video
             ref={playerRef}
             src={mediaUrl}
             poster={poster}
-            controls={!autoPlay} // Hide controls if it's meant to autoplay like a feed item
+            controls={false}
             playsInline
             muted={isMuted}
             loop={loop}
             preload="metadata"
-            className={`block w-full h-full object-cover ${aspectClass} max-h-[500px]`}
+            className={`block w-full h-full object-contain ${aspectClass} max-h-[500px]`}
           />
         )}
+        {/* Controls Overlay */}
+        <div
+          className={`absolute inset-x-0 bottom-0 flex items-center justify-between p-2 bg-black/60 backdrop-blur-sm transition-opacity ${controlsVisible ? 'opacity-100' : 'opacity-0'}`}
+        >
+          <button onClick={togglePlayPause} aria-label={isPlaying ? 'Pause' : 'Play'} className="text-white">
+            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+          </button>
+          <div className="flex items-center space-x-1">
+            <button onClick={() => skip(-10)} aria-label="Rewind 10 seconds" className="text-white">
+              <Rewind className="w-5 h-5" />
+            </button>
+            <button onClick={() => skip(10)} aria-label="Forward 10 seconds" className="text-white">
+              <FastForward className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex-1 mx-2" onClick={handleBarClick}>
+            <div className="relative h-1 bg-neutral-600/40 rounded">
+              <div
+                className="absolute h-1 bg-[#5E43F3] rounded"
+                style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
+              />
+            </div>
+          </div>
+          <div className="text-xs text-white whitespace-nowrap mr-2">
+            {`${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')} / ${Math.floor(duration / 60)}:${String(Math.floor(duration % 60)).padStart(2, '0')}`}
+          </div>
+          <button onClick={toggleMute} aria-label={isMuted ? 'Unmute' : 'Mute'} className="text-white">
+            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={volume}
+            onChange={handleVolumeChange}
+            className="w-20 h-1 bg-neutral-600/40 rounded"
+          />
+          <button onClick={toggleFullscreen} aria-label="Toggle Fullscreen" className="text-white">
+            {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
     );
   }

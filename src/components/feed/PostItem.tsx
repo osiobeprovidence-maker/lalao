@@ -24,7 +24,7 @@ import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
 import { getTopicIcon } from '../../utils/topicIcons';
-import { MuxVideoPlayer } from './MuxVideoPlayer';
+import { VideoPlayer } from './VideoPlayer';
 import { CommentThread } from '../common/CommentsModal';
 import { CommentComposer } from '../common/CommentComposer';
 import { ReportModal } from './ReportModal';
@@ -416,7 +416,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
             <> 
               {post.mediaType === 'video' ? (
                 <div className="mt-3">
-                  <MuxVideoPlayer
+                  <VideoPlayer
                     muxPlaybackId={(post as any).muxPlaybackId}
                     mediaUrl={post.mediaUrl}
                     mediaStatus={(post as any).mediaStatus}

@@ -6,7 +6,7 @@ import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from './Avatar';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { MuxVideoPlayer } from '../feed/MuxVideoPlayer';
+import { VideoPlayer } from '../feed/VideoPlayer';
 
 const QUICK_EMOJIS = ['❤️', '🙌', '🔥', '👏', '🎉', '😍', '🎊', '🍾'];
 
@@ -189,13 +189,13 @@ export const CommentsModal: React.FC = () => {
   const mediaContent = post.mediaUrl || (post as any).muxPlaybackId ? (
     <div className="relative flex h-full min-h-[220px] w-full items-center justify-center overflow-hidden bg-neutral-100 md:min-h-0">
       {post.mediaType === 'video' ? (
-        <MuxVideoPlayer
+        <VideoPlayer
           muxPlaybackId={(post as any).muxPlaybackId}
           mediaUrl={post.mediaUrl}
           mediaStatus={(post as any).mediaStatus}
           aspect="square"
           autoPlay={true}
-          className="mx-auto w-full max-h-[400px]"
+          className="mx-auto w-full max-h-[400px] object-contain"
         />
       ) : (
         <img

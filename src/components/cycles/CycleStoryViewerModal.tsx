@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
-import { MuxVideoPlayer } from '../feed/MuxVideoPlayer';
+import { VideoPlayer } from '../feed/VideoPlayer';
 
 export const CycleStoryViewerModal: React.FC = () => {
   const {
@@ -386,14 +386,14 @@ export const CycleStoryViewerModal: React.FC = () => {
             </div>
           ) : currentItem.mediaType === 'video' && (currentItem.mediaUrl || (currentItem as any).muxPlaybackId) ? (
             <div className="w-full h-full relative flex items-center justify-center">
-              <MuxVideoPlayer
-                muxPlaybackId={(currentItem as any).muxPlaybackId}
-                mediaUrl={currentItem.mediaUrl}
-                autoPlay={true}
-                loop
-                muted
-                className="w-full h-full object-cover"
-              />
+              <VideoPlayer
+                  muxPlaybackId={(currentItem as any).muxPlaybackId}
+                  mediaUrl={currentItem.mediaUrl}
+                  autoPlay={true}
+                  loop
+                  muted
+                  className="w-full h-full object-contain"
+                />
               <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/85 via-black/40 to-transparent pointer-events-none" />
             </div>
           ) : (
