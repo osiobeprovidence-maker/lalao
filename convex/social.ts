@@ -358,7 +358,9 @@ export const listFeedPosts = query({
         recentPosts = recentPosts.filter((p) => p.createdAt < args.cursor!);
       }
 
-      // Algorithmic discovery score: recency blended with engagement
+      const activeInterests = currentUser?.interests || [];
+
+      // Algorithmic discovery score: recency blended with engagement and interest matching
       const scoredPosts = recentPosts
         .filter((p) => p.moderationStatus !== "removed")
         .map((p) => {
@@ -367,7 +369,37 @@ export const listFeedPosts = query({
             (p.commentsCount || 0) * 4 +
             (p.repostsCount || 0) * 5;
           const ageHours = Math.max(0.1, (Date.now() - p.createdAt) / (1000 * 60 * 60));
-          const score = (engagement + 1) / Math.pow(ageHours + 2, 1.2);
+          
+          let interestBoost = 1;
+          
+          if (activeInterests.length > 0) {
+            let isMatch = false;
+            
+            // 1. Check contentTopics array
+            if (p.contentTopics && Array.isArray(p.contentTopics)) {
+              const lowerTopics = p.contentTopics.map((t: string) => t.toLowerCase());
+              if (activeInterests.some((interest: string) => lowerTopics.includes(interest.toLowerCase()))) {
+                isMatch = true;
+              }
+            }
+            
+            // 2. Check hashtags and keywords in text
+            if (!isMatch && p.text) {
+              const textLower = p.text.toLowerCase();
+              if (activeInterests.some((interest: string) => 
+                textLower.includes(`#${interest.toLowerCase()}`) || 
+                textLower.includes(interest.toLowerCase())
+              )) {
+                isMatch = true;
+              }
+            }
+            
+            if (isMatch) {
+              interestBoost = 3; // Significant boost for matching interests
+            }
+          }
+
+          const score = ((engagement + 1) * interestBoost) / Math.pow(ageHours + 2, 1.2);
           return { post: p, score };
         });
 
