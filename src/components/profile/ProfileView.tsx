@@ -25,7 +25,7 @@ import { User } from '../../types';
 import { SuggestCommunityModal } from './SuggestCommunityModal';
 
 type ProfileTab = 'posts' | 'replies' | 'media' | 'reposts';
-type ConnectionTab = 'community' | 'followers' | 'following';
+type ConnectionTab = 'followers' | 'following';
 
 export const ProfileView: React.FC = () => {
   const {
@@ -45,7 +45,7 @@ export const ProfileView: React.FC = () => {
 
   const [profileTab, setProfileTab] = useState<ProfileTab>('posts');
   const [isConnectionsOpen, setIsConnectionsOpen] = useState(false);
-  const [connectionTab, setConnectionTab] = useState<ConnectionTab>('community');
+  const [connectionTab, setConnectionTab] = useState<ConnectionTab>('followers');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch this user's posts directly — querying strictly posts authored by this profile
@@ -108,11 +108,9 @@ export const ProfileView: React.FC = () => {
   ];
 
   // Context-aware search placeholder
-  const searchPlaceholder = connectionTab === 'community'
-    ? 'Search communities...'
-    : connectionTab === 'followers'
+  const searchPlaceholder = connectionTab === 'followers'
     ? 'Search followers...'
-    : 'Search people and Pages...';
+    : 'Search following...';
 
   const handleOpenUserProfile = (user: User) => {
     setIsConnectionsOpen(false);
@@ -127,19 +125,6 @@ export const ProfileView: React.FC = () => {
           Profile
         </h1>
         <div className="flex items-center gap-1">
-          {/* Browse Community Profiles Button */}
-          <button
-            id="btn-profile-browse-community"
-            onClick={() => {
-              setConnectionTab('community');
-              setIsConnectionsOpen(true);
-            }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold text-[#5E43F3] bg-[#5E43F3]/10 hover:bg-[#5E43F3]/20 transition-colors cursor-pointer"
-            title="Discover community profiles"
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span>Community</span>
-          </button>
 
           {/* Notifications Button */}
           <button
@@ -297,24 +282,6 @@ export const ProfileView: React.FC = () => {
           </button>
         </div>
 
-        {/* Community Profiles Carousel */}
-        <div className="pt-2 border-t border-neutral-100">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-neutral-900">Community</span>
-            <button
-              onClick={() => {
-                setConnectionTab('community');
-                setIsConnectionsOpen(true);
-              }}
-              className="text-[11px] font-bold text-[#5E43F3] hover:underline cursor-pointer"
-            >
-              Explore
-            </button>
-          </div>
-          <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-4 text-center text-[11px] text-neutral-500">
-            You haven&apos;t joined any communities yet.
-          </div>
-        </div>
       </div>
 
       {/* Tabs */}
@@ -443,20 +410,6 @@ export const ProfileView: React.FC = () => {
             {/* Tabs */}
             <div className="flex border-b border-neutral-100">
               <button
-                onClick={() => { setConnectionTab('community'); setSearchQuery(''); }}
-                className={`py-2.5 px-3 text-xs font-bold transition-all relative cursor-pointer ${
-                  connectionTab === 'community'
-                    ? 'text-[#5E43F3]'
-                    : 'text-neutral-500 hover:text-neutral-900'
-                }`}
-              >
-                Community (0)
-                {connectionTab === 'community' && (
-                  <span className="absolute bottom-0 inset-x-3 h-0.5 bg-[#5E43F3] rounded-full" />
-                )}
-              </button>
-
-              <button
                 onClick={() => { setConnectionTab('followers'); setSearchQuery(''); }}
                 className={`py-2.5 px-3 text-xs font-bold transition-all relative cursor-pointer ${
                   connectionTab === 'followers'
@@ -504,31 +457,6 @@ export const ProfileView: React.FC = () => {
               </div>
             </div>
 
-            {/* === COMMUNITY TAB === */}
-            {connectionTab === 'community' && (
-              <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-8 text-center text-xs text-neutral-500">
-                <Users className="w-8 h-8 mx-auto text-neutral-300 mb-3" />
-                <p className="font-bold text-neutral-700">You haven&apos;t joined any communities yet.</p>
-                <p className="mt-1 text-neutral-500">Discover communities and people around you to get started.</p>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('discover')}
-                  className="mt-4 inline-flex rounded-full bg-[#5E43F3] px-4 py-2.5 text-[11px] font-bold text-white cursor-pointer hover:bg-[#4E34E0] transition-colors"
-                >
-                  Explore Communities
-                </button>
-                <div className="mt-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsSuggestOpen(true)}
-                    className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-neutral-500 hover:text-[#5E43F3] transition-colors cursor-pointer"
-                  >
-                    <Lightbulb className="w-3.5 h-3.5" />
-                    Suggest a Community
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* === FOLLOWERS TAB === */}
             {connectionTab === 'followers' && (

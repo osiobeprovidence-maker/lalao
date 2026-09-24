@@ -16,6 +16,8 @@ import {
   Check,
 } from 'lucide-react';
 
+import { CommunityDirectory } from './CommunityDirectory';
+
 export const HomeFeed: React.FC = () => {
   const {
     posts,
@@ -32,7 +34,6 @@ export const HomeFeed: React.FC = () => {
     nearbySort,
     setNearbySort,
     triggerShareToast,
-    activeTopics,
   } = useLalao();
 
   // Pull to refresh state
@@ -165,8 +166,12 @@ export const HomeFeed: React.FC = () => {
         const maxMeters = location.radiusKm * 1000;
         return (post.distanceMeters ?? 0) <= maxMeters;
       }
+      if (feedTab === 'community') {
+        // Handled separately, but if we render posts here just in case:
+        return post.pageRefId !== undefined;
+      }
       
-      // For dynamic topic tabs or 'for_you', the backend already filtered the posts
+      // For 'for_you', the backend already filtered the posts
       return true;
     })
     .sort((a, b) => {
@@ -176,25 +181,17 @@ export const HomeFeed: React.FC = () => {
       return 0; // preserve original chronological order
     });
 
-  const activeTopicTabs = (activeTopics || [])
-    .filter((topic: any) => {
-      if (topic.defaultEnabled) {
-        return currentUser?.homeFeedPreferences?.[topic.slug] !== false;
-      } else {
-        return !!(currentUser?.interests?.includes(topic.slug) && currentUser?.homeFeedPreferences?.[topic.slug] !== false);
-      }
-    })
-    .sort((a: any, b: any) => a.displayOrder - b.displayOrder)
-    .map((topic: any) => ({
-      id: topic.slug as FeedTab,
-      label: topic.displayName
-    }));
+  const activeTopicTabs = (currentUser?.interests || []).map((t: string) => ({
+    id: t,
+    label: t.charAt(0).toUpperCase() + t.slice(1)
+  }));
 
   const tabs: { id: FeedTab; label: string }[] = [
     { id: 'for_you', label: 'For You' },
     { id: 'following', label: 'Following' },
-    ...activeTopicTabs,
+    { id: 'community', label: 'Community' },
     { id: 'nearby', label: 'Nearby' },
+    ...activeTopicTabs,
   ];
 
   const radiusPresets = [1, 3, 5, 10, 25, 50];
@@ -513,46 +510,53 @@ export const HomeFeed: React.FC = () => {
         </div>
       )}
 
-      {/* Posts Stream */}
-      {filteredPosts.length > 0 ? (
-        <div className="divide-y divide-neutral-100">
-          {filteredPosts.map((post) => (
-            <PostItem key={post.id} post={post} />
-          ))}
-        </div>
+      {/* Content Area */}
+      {feedTab === 'community' ? (
+        <CommunityDirectory />
       ) : (
-        /* Empty State */
-        <div className="min-h-[62vh] flex items-center justify-center px-6 pb-8 pt-10">
-          <div className="flex max-w-sm flex-col items-center text-center gap-2.5">
-            <div className="w-11 h-11 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center">
-              <Compass className="w-5 h-5" />
+        <>
+          {/* Posts Stream */}
+          {filteredPosts.length > 0 ? (
+            <div className="divide-y divide-neutral-100">
+              {filteredPosts.map((post) => (
+                <PostItem key={post.id} post={post} />
+              ))}
             </div>
-            <h3 className="font-bold text-neutral-900 text-sm leading-snug">
-              No posts found within {location.radiusKm} km of {location.name}
-            </h3>
-            <p className="text-[11px] text-neutral-500 leading-relaxed">
-              Try expanding your discovery radius to 10 km or 25 km, or share the first update from this neighborhood.
-            </p>
-            <div className="pt-1 flex flex-wrap items-center justify-center gap-2">
-              <button
-                onClick={() => updateRadius(Math.min(50, (location.radiusKm || 5) * 2))}
-                className="px-3.5 py-2 rounded-full border border-neutral-300 text-[11px] font-semibold text-neutral-700 hover:bg-neutral-100 cursor-pointer"
-              >
-                Expand Radius ({Math.min(50, (location.radiusKm || 5) * 2)} km)
-              </button>
-              <button
-                onClick={() => {
-                  setCreateFlowType(null);
-                  setIsCreateSheetOpen(false);
-                  setActiveTab('create-post');
-                }}
-                className="px-3.5 py-2 rounded-full bg-[#5E43F3] text-[11px] font-bold text-white hover:bg-[#4E34E0] cursor-pointer"
-              >
-                Create Post
-              </button>
+          ) : (
+            /* Empty State */
+            <div className="min-h-[62vh] flex items-center justify-center px-6 pb-8 pt-10">
+              <div className="flex max-w-sm flex-col items-center text-center gap-2.5">
+                <div className="w-11 h-11 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center">
+                  <Compass className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-neutral-900 text-sm leading-snug">
+                  No posts found within {location.radiusKm} km of {location.name}
+                </h3>
+                <p className="text-[11px] text-neutral-500 leading-relaxed">
+                  Try expanding your discovery radius to 10 km or 25 km, or share the first update from this neighborhood.
+                </p>
+                <div className="pt-1 flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    onClick={() => updateRadius(Math.min(50, (location.radiusKm || 5) * 2))}
+                    className="px-3.5 py-2 rounded-full border border-neutral-300 text-[11px] font-semibold text-neutral-700 hover:bg-neutral-100 cursor-pointer"
+                  >
+                    Expand Radius ({Math.min(50, (location.radiusKm || 5) * 2)} km)
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCreateFlowType(null);
+                      setIsCreateSheetOpen(false);
+                      setActiveTab('create-post');
+                    }}
+                    className="px-3.5 py-2 rounded-full bg-[#5E43F3] text-[11px] font-bold text-white hover:bg-[#4E34E0] cursor-pointer"
+                  >
+                    Create Post
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          )}
+        </>
       )}
     </div>
   );

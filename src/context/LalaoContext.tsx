@@ -52,7 +52,7 @@ export type NavTab =
   | 'saved'
   | 'create-page'
   | 'liked';
-export type FeedTab = string;
+export type FeedTab = 'for_you' | 'following' | 'community' | 'nearby' | (string & {});
 export type CreateOption = 'post' | 'rally' | 'page' | 'cycle' | null;
 
 interface LalaoContextType {

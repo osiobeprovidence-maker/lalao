@@ -358,7 +358,27 @@ export const listFeedPosts = query({
         recentPosts = recentPosts.filter((p) => p.createdAt < args.cursor!);
       }
 
-      const activeInterests = currentUser?.interests || [];
+      let activeInterests = [...(currentUser?.interests || [])];
+
+      if (currentUserId) {
+        // Add categories from followed communities as active interests for algorithmic discovery
+        const followedPages = await ctx.db
+          .query("pageFollowers")
+          .withIndex("by_page_user")
+          .filter((q) => q.eq(q.field("userId"), currentUserId))
+          .collect();
+        const followedPageIds = new Set(followedPages.map((f: any) => f.pageId));
+        
+        for (const pageId of followedPageIds) {
+           const page: any = await ctx.db.get(pageId);
+           if (page && page.type === "community" && page.category) {
+              const catSlug = page.category.toLowerCase().trim();
+              if (!activeInterests.includes(catSlug)) {
+                activeInterests.push(catSlug);
+              }
+           }
+        }
+      }
 
       // Algorithmic discovery score: recency blended with engagement and interest matching
       const scoredPosts = recentPosts
