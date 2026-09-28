@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 
 import { CommunityDirectory } from './CommunityDirectory';
+import { useEventDistribution } from '../../services/events/EventDistributionContext';
+import { EventFeedCard } from '../events/EventFeedCard';
 
 export const HomeFeed: React.FC = () => {
   const {
@@ -34,7 +36,11 @@ export const HomeFeed: React.FC = () => {
     nearbySort,
     setNearbySort,
     triggerShareToast,
+    featureFlags,
   } = useLalao();
+
+  const { externalEvents } = useEventDistribution();
+  const activeEvents = externalEvents.filter(e => e.status === 'active');
 
   // Pull to refresh state
   const [followingSubTab, setFollowingSubTab] = useState<string>('All');
@@ -149,14 +155,11 @@ export const HomeFeed: React.FC = () => {
     .filter((post) => {
       if (feedTab === 'following') {
         const isFollowedPersonOrPage = post.author.isFollowing || post.author.id === currentUser?.id;
-        const postTopics = post.contentTopics || [];
-        const matchesSelectedInterest = currentUser?.interests?.some(i => postTopics.includes(i));
         
-        const isFollowingContent = isFollowedPersonOrPage || matchesSelectedInterest;
-
-        if (!isFollowingContent) return false;
+        if (!isFollowedPersonOrPage) return false;
 
         if (followingSubTab !== 'All') {
+          const postTopics = post.contentTopics || [];
           return postTopics.includes(followingSubTab);
         }
         
@@ -189,7 +192,7 @@ export const HomeFeed: React.FC = () => {
   const tabs: { id: FeedTab; label: string }[] = [
     { id: 'for_you', label: 'For You' },
     { id: 'following', label: 'Following' },
-    { id: 'community', label: 'Community' },
+    ...(featureFlags?.communityEnabled ? [{ id: 'community' as FeedTab, label: 'Community' }] : []),
     { id: 'nearby', label: 'Nearby' },
     ...activeTopicTabs,
   ];
@@ -251,31 +254,7 @@ export const HomeFeed: React.FC = () => {
         })}
       </div>
 
-      {/* Sub-filters for Following Tab Interests */}
-      {feedTab === 'following' && currentUser?.interests && currentUser.interests.length > 0 && (
-        <div className="bg-[#f6f3ee] border-b border-neutral-200/60 overflow-x-auto hide-scrollbar">
-          <div className="flex items-center gap-2 px-3 py-2 min-w-max">
-            {['All', ...currentUser.interests].map((interest) => {
-              const isActive = followingSubTab === interest;
-              return (
-                <button
-                  key={interest}
-                  onClick={() => setFollowingSubTab(interest)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${
-                    isActive
-                      ? 'bg-[#5E43F3] text-white'
-                      : 'bg-white text-neutral-600 border border-neutral-200 hover:border-[#5E43F3]/30 hover:bg-[#5E43F3]/5'
-                  }`}
-                >
-                  {interest}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Pull-to-Refresh Visual Indicator Banner */}
+      {/* Sub-filters for Following Tab Interests - Removed per user request */}
       <div
         style={{
           height: `${effectiveOffset}px`,
@@ -517,9 +496,17 @@ export const HomeFeed: React.FC = () => {
         <>
           {/* Posts Stream */}
           {filteredPosts.length > 0 ? (
-            <div className="divide-y divide-neutral-100">
-              {filteredPosts.map((post) => (
-                <PostItem key={post.id} post={post} />
+            <div className="divide-y divide-neutral-100 pb-8">
+              {filteredPosts.map((post, index) => (
+                <React.Fragment key={post.id}>
+                  <PostItem post={post} />
+                  {/* Inject an event card every 4 posts if there are active events */
+                  index === 1 && activeEvents.length > 0 && feedTab === 'for_you' && (
+                    <div className="pt-6 pb-2 px-2 sm:px-0">
+                      <EventFeedCard event={activeEvents[Math.floor(Math.random() * activeEvents.length)]} />
+                    </div>
+                  )}
+                </React.Fragment>
               ))}
             </div>
           ) : (

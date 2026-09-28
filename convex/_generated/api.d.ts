@@ -9,16 +9,21 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as apiPartners from "../apiPartners.js";
 import type * as cloudinary from "../cloudinary.js";
 import type * as community from "../community.js";
 import type * as debug from "../debug.js";
+import type * as ecommerce from "../ecommerce.js";
 import type * as moderation from "../moderation.js";
 import type * as mux from "../mux.js";
 import type * as muxInternal from "../muxInternal.js";
+import type * as pageEvents from "../pageEvents.js";
 import type * as pages from "../pages.js";
 import type * as platformSettings from "../platformSettings.js";
 import type * as push from "../push.js";
 import type * as pushActions from "../pushActions.js";
+import type * as rallies from "../rallies.js";
+import type * as recommendations from "../recommendations.js";
 import type * as reports from "../reports.js";
 import type * as roomy from "../roomy.js";
 import type * as search from "../search.js";
@@ -37,16 +42,21 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  apiPartners: typeof apiPartners;
   cloudinary: typeof cloudinary;
   community: typeof community;
   debug: typeof debug;
+  ecommerce: typeof ecommerce;
   moderation: typeof moderation;
   mux: typeof mux;
   muxInternal: typeof muxInternal;
+  pageEvents: typeof pageEvents;
   pages: typeof pages;
   platformSettings: typeof platformSettings;
   push: typeof push;
   pushActions: typeof pushActions;
+  rallies: typeof rallies;
+  recommendations: typeof recommendations;
   reports: typeof reports;
   roomy: typeof roomy;
   search: typeof search;

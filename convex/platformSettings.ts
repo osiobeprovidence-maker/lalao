@@ -92,3 +92,109 @@ export const updateBrandingSettings = mutation({
     }
   },
 });
+
+// ─────────────────────────────────────────────────────────────
+// FEATURE FLAGS
+// ─────────────────────────────────────────────────────────────
+
+export const getFeatureFlags = query({
+  args: {},
+  handler: async (ctx) => {
+    const record = await ctx.db
+      .query("platformSettings")
+      .withIndex("by_key", (q) => q.eq("key", "featureFlags"))
+      .unique();
+
+    const defaultFlags = { communityEnabled: false };
+
+    if (!record) return defaultFlags;
+
+    try {
+      return { ...defaultFlags, ...JSON.parse(record.value) };
+    } catch (e) {
+      return defaultFlags;
+    }
+  },
+});
+
+export const updateFeatureFlags = mutation({
+  args: {
+    flags: v.object({
+      communityEnabled: v.optional(v.boolean()),
+      ralliesEnabled: v.optional(v.boolean()),
+      cyclesEnabled: v.optional(v.boolean()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const record = await ctx.db
+      .query("platformSettings")
+      .withIndex("by_key", (q) => q.eq("key", "featureFlags"))
+      .unique();
+
+    let currentFlags = { communityEnabled: false };
+    if (record) {
+      try {
+        currentFlags = { ...currentFlags, ...JSON.parse(record.value) };
+      } catch (e) {}
+    }
+
+    const newFlags = { ...currentFlags, ...args.flags };
+    const newValue = JSON.stringify(newFlags);
+
+    const identity = await ctx.auth.getUserIdentity();
+    let actorId = undefined;
+    if (identity) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+        .unique();
+      actorId = user?._id;
+    }
+
+    if (record) {
+      await ctx.db.patch(record._id, {
+        value: newValue,
+        updatedAt: Date.now(),
+        updatedBy: actorId,
+      });
+    } else {
+      await ctx.db.insert("platformSettings", {
+        key: "featureFlags",
+        value: newValue,
+        updatedAt: Date.now(),
+        updatedBy: actorId,
+      });
+    }
+
+    if (actorId) {
+      await ctx.db.insert("auditLog", {
+        actorId,
+        action: "updated_feature_flags",
+        target: "platformSettings:featureFlags",
+        before: record ? record.value : "{}",
+        after: newValue,
+        createdAt: Date.now(),
+      });
+    }
+  },
+});
+
+export const requireFeatureFlag = async (ctx: any, feature: string) => {
+  const record = await ctx.db
+    .query("platformSettings")
+    .withIndex("by_key", (q: any) => q.eq("key", "featureFlags"))
+    .unique();
+    
+  let flags: Record<string, boolean> = { communityEnabled: false };
+  if (record) {
+    try {
+      flags = { ...flags, ...JSON.parse(record.value) };
+    } catch (e) {}
+  }
+  
+  if (!flags[feature]) {
+    throw new Error(`Feature disabled: ${feature}`);
+  }
+};

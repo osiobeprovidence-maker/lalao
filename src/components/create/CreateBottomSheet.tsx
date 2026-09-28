@@ -7,7 +7,7 @@ import { RallyComposerModal } from './RallyComposerModal';
 import { CreatePageView } from '../pages/CreatePageView';
 
 export const CreateBottomSheet: React.FC = () => {
-  const { isCreateSheetOpen, setIsCreateSheetOpen, setCreateFlowType, createFlowType } = useLalao();
+  const { isCreateSheetOpen, setIsCreateSheetOpen, setCreateFlowType, createFlowType, setActiveTab } = useLalao();
 
   if (!isCreateSheetOpen) return null;
 
@@ -27,8 +27,17 @@ export const CreateBottomSheet: React.FC = () => {
       return;
     }
 
+    if (type === 'page') {
+      setIsCreateSheetOpen(false);
+      setCreateFlowType(null);
+      setActiveTab('create-page');
+      return;
+    }
+
     setCreateFlowType(type);
   };
+
+
 
   const handleClose = () => {
     if (createFlowType) {

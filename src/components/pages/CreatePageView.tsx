@@ -27,6 +27,7 @@ export const CreatePageView: React.FC = () => {
     triggerShareToast,
     generateCloudinarySignature,
     setActivePageId,
+    featureFlags,
   } = useLalao();
 
   const [stage, setStage] = useState<1 | 2 | 3>(1);
@@ -174,6 +175,12 @@ export const CreatePageView: React.FC = () => {
     },
   ];
 
+  const availablePageTypes = featureFlags?.communityEnabled 
+    ? typesConfig 
+    : typesConfig.filter(p => p.type !== 'community');
+  const pageTypes = availablePageTypes;
+  const availableTypesConfig = typesConfig;
+
   const quickCategories = [
     'Sports Club', 'Football Academy', 'Tech Community',
     'Streetwear & Fashion', 'Cafe & Lounge', 'Art & Photography',
@@ -248,7 +255,7 @@ export const CreatePageView: React.FC = () => {
                 Select Stand Type
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {typesConfig.map((item) => {
+                {availablePageTypes.map((item) => {
                   const isSelected = type === item.type;
                   return (
                     <button

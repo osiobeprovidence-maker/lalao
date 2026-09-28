@@ -30,10 +30,11 @@ interface PostComposerProps {
   embedded?: boolean;
   onClose?: () => void;
   initialAudience?: string;
+  initialPageRefId?: string;
   onSuccess?: () => void;
 }
 
-function PostComposerInner({ embedded = false, onClose, initialAudience = 'everyone', onSuccess }: PostComposerProps) {
+function PostComposerInner({ embedded = false, onClose, initialAudience = 'everyone', initialPageRefId, onSuccess }: PostComposerProps) {
   const {
     currentUser,
     pages,
@@ -62,10 +63,10 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // New features states
-  const [audience, setAudience] = useState('everyone');
+  const [audience, setAudience] = useState(initialPageRefId ? 'page' : initialAudience);
   const [showAudienceDropdown, setShowAudienceDropdown] = useState(false);
   const [audienceStep, setAudienceStep] = useState<'main' | 'communities' | 'pages' | 'topics'>('main');
-  const [selectedPageRefId, setSelectedPageRefId] = useState<string | null>(null);
+  const [selectedPageRefId, setSelectedPageRefId] = useState<string | null>(initialPageRefId || null);
   const [selectedTopicSlugs, setSelectedTopicSlugs] = useState<string[]>([]);
   const [replyPermission, setReplyPermission] = useState('everyone');
   const [showReplyDropdown, setShowReplyDropdown] = useState(false);
@@ -103,8 +104,8 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
     setMediaUrl('');
     setMediaType('image');
     setAttachedLocation(location.name || null);
-    setAudience('everyone');
-    setSelectedPageRefId(null);
+    setAudience(initialPageRefId ? 'page' : 'everyone');
+    setSelectedPageRefId(initialPageRefId || null);
     setSelectedTopicSlugs([]);
     setAudienceStep('main');
     setReplyPermission('everyone');

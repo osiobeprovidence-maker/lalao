@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Briefcase, Gift, Tag, Repeat, Users, BarChart, Settings, Check } from 'lucide-react';
+import { ArrowLeft, Briefcase, Gift, Tag, Repeat, Users, BarChart, Settings, Check, Sparkles, Gavel, CalendarDays, ConciergeBell } from 'lucide-react';
 import { Page } from '../../types';
 import { useLalao } from '../../context/LalaoContext';
 import { useMutation } from 'convex/react';
@@ -191,6 +191,68 @@ export const PageToolsModal: React.FC<PageToolsModalProps> = ({
               </div>
             </div>
           )}
+
+          {/* SUPER PAGE TOOLS SECTION */}
+          <div>
+            <h3 className="text-sm font-bold text-neutral-400 uppercase tracking-wider mb-3">Super Page Tools</h3>
+            <p className="text-xs text-neutral-500 mb-4">Turn your Page into a specialized business experience.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <ToolCard
+                title="Shop"
+                desc="E-commerce storefront and physical products."
+                icon={<Briefcase />}
+                color="blue"
+                isActive={activeTools.includes('shop')}
+                isEditing={isEditingSettings}
+                onToggle={() => toggleTool('shop')}
+              />
+              <ToolCard
+                title="Auction"
+                desc="Live bidding and timed auctions."
+                icon={<Gavel />}
+                color="rose"
+                isActive={activeTools.includes('auction')}
+                isEditing={isEditingSettings}
+                onToggle={() => toggleTool('auction')}
+              />
+              <ToolCard
+                title="Booking"
+                desc="Appointments, reservations, and scheduling."
+                icon={<CalendarDays />}
+                color="emerald"
+                isActive={activeTools.includes('booking')}
+                isEditing={isEditingSettings}
+                onToggle={() => toggleTool('booking')}
+              />
+              <ToolCard
+                title="Events"
+                desc="Ticketing and live events."
+                icon={<Gift />}
+                color="amber"
+                isActive={activeTools.includes('events')}
+                isEditing={isEditingSettings}
+                onToggle={() => toggleTool('events')}
+              />
+              <ToolCard
+                title="Services"
+                desc="Service menus and specialized offerings."
+                icon={<ConciergeBell />}
+                color="blue"
+                isActive={activeTools.includes('services')}
+                isEditing={isEditingSettings}
+                onToggle={() => toggleTool('services')}
+              />
+              <ToolCard
+                title="Subscriptions"
+                desc="Recurring memberships and premium content."
+                icon={<Repeat />}
+                color="rose"
+                isActive={activeTools.includes('subscriptions')}
+                isEditing={isEditingSettings}
+                onToggle={() => toggleTool('subscriptions')}
+              />
+            </div>
+          </div>
 
           {/* CUSTOMER ENGAGEMENT SECTION - Temporarily hidden as backend schema is not implemented
           <div>

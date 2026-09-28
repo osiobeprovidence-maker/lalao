@@ -13,8 +13,8 @@ const PRIORITY_COLORS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-neutral-100 text-neutral-600 border-neutral-200',
   under_review: 'bg-amber-50 text-amber-700 border-amber-200',
-  resolved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  dismissed: 'bg-slate-100 text-slate-500 border-slate-200',
+  resolved_violation: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  resolved_no_violation: 'bg-slate-100 text-slate-500 border-slate-200',
   escalated: 'bg-red-50 text-red-700 border-red-200',
 };
 
@@ -77,7 +77,7 @@ export const AdminReports: React.FC = () => {
     try {
       await updateReportStatus({ 
         reportId: selectedReportId,
-        status: "dismissed",
+        status: "resolved_no_violation",
         resolution: "Report dismissed by admin",
         resolutionNote: adminNotes
       });
@@ -123,8 +123,8 @@ export const AdminReports: React.FC = () => {
           <option value="all">All Statuses</option>
           <option value="pending">Pending</option>
           <option value="under_review">Under Review</option>
-          <option value="resolved">Resolved</option>
-          <option value="dismissed">Dismissed</option>
+          <option value="resolved_violation">Resolved (Violation)</option>
+          <option value="resolved_no_violation">Resolved (No Violation)</option>
         </select>
       </div>
 
@@ -316,7 +316,7 @@ export const AdminReports: React.FC = () => {
                     )}
                   </div>
 
-                  {selectedReportDetails.status !== 'resolved' && selectedReportDetails.status !== 'dismissed' && selectedReportDetails.targetType === 'post' && selectedReportDetails.targetData?.moderationStatus !== "removed" && (
+                  {selectedReportDetails.status !== 'resolved_violation' && selectedReportDetails.status !== 'resolved_no_violation' && selectedReportDetails.targetType === 'post' && selectedReportDetails.targetData?.moderationStatus !== "removed" && (
                     <div className="border-t border-neutral-200 pt-6 space-y-4">
                       <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider block">Moderation Action</label>
                       

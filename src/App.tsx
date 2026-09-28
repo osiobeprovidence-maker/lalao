@@ -10,6 +10,8 @@ import { MessagesView } from './components/messages/MessagesView';
 import { NotificationsView } from './components/notifications/NotificationsView';
 import { CreatePageView } from './components/pages/CreatePageView';
 import { ProfileView } from './components/profile/ProfileView';
+import { EventsView } from './components/events/EventsView';
+import { MyPagesView } from './pages/my-pages/MyPagesView';
 
 // Modals, Sheets, and Full-Page Subviews
 import { LocationRadiusModal } from './components/location/LocationRadiusModal';
@@ -19,6 +21,8 @@ import { CreateCycleModal } from './components/cycles/CreateCycleModal';
 import { CycleStoryViewerModal } from './components/cycles/CycleStoryViewerModal';
 import { CycleDetailModal } from './components/cycles/CycleDetailModal';
 import { PageDetailModal } from './components/pages/PageDetailModal';
+import { EventDistributionProvider } from './services/events/EventDistributionContext';
+import { KlyroWalletProvider } from './services/wallet/KlyroWalletContext';
 import { UserProfileModal } from './components/profile/UserProfileModal';
 import { SettingsPageView } from './components/profile/SettingsPageView';
 import { CommentsModal } from './components/common/CommentsModal';
@@ -83,11 +87,14 @@ import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 
 // Onboarding pages
 import { WelcomePage } from './pages/onboarding/WelcomePage';
+import { PhoneSetupPage } from './pages/onboarding/PhoneSetupPage';
+import { CountryRestrictedPage } from './pages/onboarding/CountryRestrictedPage';
 import { NameSetupPage } from './pages/onboarding/NameSetupPage';
 import { ProfileSetupPage } from './pages/onboarding/ProfileSetupPage';
 import { PronounsPage } from './pages/onboarding/PronounsPage';
 import { LocationSetupPage } from './pages/onboarding/LocationSetupPage';
 import { InterestsPage } from './pages/onboarding/InterestsPage';
+import { RecommendationsPage } from './pages/onboarding/RecommendationsPage';
 import { CompletePage } from './pages/onboarding/CompletePage';
 
 // Admin page
@@ -137,6 +144,16 @@ const LalaoAppContent: React.FC = () => {
       document.getElementsByTagName('head')[0].appendChild(link);
     }
   }, [platformSettings?.faviconUrl]);
+
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.phoneSetupCompleted === false) {
+        navigate('/onboarding/phone');
+      } else if (currentUser.accessStatus === 'country_restricted' || currentUser.accessStatus === 'waitlisted') {
+        navigate('/country-restricted');
+      }
+    }
+  }, [currentUser, navigate]);
 
   useEffect(() => {
     if (activePageId && !location.pathname.startsWith(`/app/page/${activePageId}`)) {
@@ -233,6 +250,11 @@ const LalaoAppContent: React.FC = () => {
                 <CreatePageView />
               </div>
             )}
+            {activeTab === 'my-pages' && (
+              <div key="tab-my-pages" className="animate-in fade-in duration-200 max-w-2xl mx-auto w-full bg-transparent pb-24">
+                <MyPagesView />
+              </div>
+            )}
             {activeTab === 'messages' && (
               <div key="tab-messages" className="animate-in fade-in duration-200 max-w-3xl mx-auto w-full bg-transparent">
                 <MessagesView />
@@ -241,6 +263,11 @@ const LalaoAppContent: React.FC = () => {
             {activeTab === 'notifications' && (
               <div key="tab-notifications" className="animate-in fade-in duration-200 max-w-3xl mx-auto w-full bg-transparent">
                 <NotificationsView />
+              </div>
+            )}
+            {activeTab === 'events' && (
+              <div key="tab-events" className="animate-in fade-in duration-200 max-w-3xl mx-auto w-full bg-transparent min-h-full">
+                <EventsView />
               </div>
             )}
             {activeTab === 'profile' && (
@@ -356,9 +383,13 @@ const LalaoAppContent: React.FC = () => {
 };
 
 const LalaoApp: React.FC = () => (
-  <LalaoProvider>
-    <LalaoAppContent />
-  </LalaoProvider>
+  <KlyroWalletProvider>
+    <EventDistributionProvider>
+      <LalaoProvider>
+        <LalaoAppContent />
+      </LalaoProvider>
+    </EventDistributionProvider>
+  </KlyroWalletProvider>
 );
 
 export default function App() {
@@ -373,11 +404,14 @@ export default function App() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       <Route path="/onboarding/welcome" element={<WelcomePage />} />
+      <Route path="/onboarding/phone" element={<PhoneSetupPage />} />
+      <Route path="/country-restricted" element={<CountryRestrictedPage />} />
       <Route path="/onboarding/name" element={<NameSetupPage />} />
       <Route path="/onboarding/profile" element={<ProfileSetupPage />} />
       <Route path="/onboarding/pronouns" element={<PronounsPage />} />
       <Route path="/onboarding/location" element={<LocationSetupPage />} />
       <Route path="/onboarding/interests" element={<InterestsPage />} />
+      <Route path="/onboarding/recommendations" element={<RecommendationsPage />} />
       <Route path="/onboarding/complete" element={<CompletePage />} />
 
       <Route path="/app" element={<LalaoApp />} />
@@ -385,9 +419,11 @@ export default function App() {
 
       <Route path="/admin/*" element={
         <AdminRoute>
-          <LalaoProvider>
-            <AdminApp />
-          </LalaoProvider>
+          <EventDistributionProvider>
+            <LalaoProvider>
+              <AdminApp />
+            </LalaoProvider>
+          </EventDistributionProvider>
         </AdminRoute>
       } />
 

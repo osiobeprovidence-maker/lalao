@@ -89,11 +89,39 @@ export const KNOWN_LOCATION_HUBS: Record<string, HubLocation> = {
     coords: { lat: 9.0765, lng: 7.4721 },
     popular: true,
   },
+  'abuja': {
+    id: 'abuja',
+    name: 'Abuja',
+    subArea: 'Abuja FCT',
+    coords: { lat: 9.0765, lng: 7.3986 },
+    popular: true,
+  },
   'trans-amadi': {
     id: 'trans-amadi',
     name: 'Trans-Amadi',
     subArea: 'Port Harcourt',
     coords: { lat: 4.8156, lng: 7.0498 },
+    popular: true,
+  },
+  'port-harcourt': {
+    id: 'port-harcourt',
+    name: 'Port Harcourt',
+    subArea: 'Rivers State',
+    coords: { lat: 4.8156, lng: 7.0498 },
+    popular: true,
+  },
+  'lagos': {
+    id: 'lagos',
+    name: 'Lagos',
+    subArea: 'Lagos State',
+    coords: { lat: 6.5244, lng: 3.3792 },
+    popular: true,
+  },
+  'delta': {
+    id: 'delta',
+    name: 'Delta',
+    subArea: 'Delta State',
+    coords: { lat: 5.5325, lng: 5.8987 },
     popular: true,
   },
 };
@@ -138,19 +166,20 @@ export function getCoordinatesForLocation(locationName: string): Coordinates {
     }
   }
 
-  // Generate deterministic offset if unknown name, so it's consistent
+  // Generate deterministic coordinates if unknown name, so it's consistent
+  // but DO NOT default to Udu (Delta State). Use the hash to spread them globally
+  // so unknown locations aren't falsely "nearby" Delta.
   let hash = 0;
   for (let i = 0; i < locationName.length; i++) {
     hash = (hash << 5) - hash + locationName.charCodeAt(i);
     hash |= 0;
   }
-  const latOffset = ((Math.abs(hash) % 50) - 25) / 1000;
-  const lngOffset = ((Math.abs(hash * 3) % 50) - 25) / 1000;
+  const latOffset = ((Math.abs(hash) % 180) - 90);
+  const lngOffset = ((Math.abs(hash * 3) % 360) - 180);
 
-  // Default to Udu epicenter with small hash-based displacement
   return {
-    lat: 5.5039 + latOffset,
-    lng: 5.8276 + lngOffset,
+    lat: latOffset,
+    lng: lngOffset,
   };
 }
 

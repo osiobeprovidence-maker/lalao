@@ -11,7 +11,8 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
-  ArrowRight
+  ArrowRight,
+  CheckCircle2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 

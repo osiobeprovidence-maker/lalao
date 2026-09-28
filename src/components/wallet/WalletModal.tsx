@@ -1,56 +1,41 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import {
-  ArrowDownLeft,
-  ArrowLeft,
-  ArrowUpRight,
-  Building2,
-  Check,
-  Copy,
-  CreditCard,
-  History,
-  Plus,
-  Wallet,
-  X,
-  Zap,
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ArrowDownLeft, ArrowLeft, ArrowUpRight, Copy, History, Plus, RefreshCw, Send, Check } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
+import { useKlyroWallet } from '../../services/wallet/KlyroWalletContext';
+import { WalletTransaction } from '../../services/wallet/types';
 
 export const WalletModal: React.FC = () => {
+  const { isWalletModalOpen, setIsWalletModalOpen, triggerShareToast } = useLalao();
   const {
-    wallet,
-    isWalletModalOpen,
-    setIsWalletModalOpen,
-    topUpWallet,
-    triggerShareToast,
-    currentUser,
-  } = useLalao();
+    isConnected,
+    address,
+    balance,
+    transactions,
+    connectWallet,
+    disconnectWallet,
+    sendFunds,
+    resetMockData,
+  } = useKlyroWallet();
 
-  const [activeTab, setActiveTab] = useState<'all' | 'deposits' | 'fees'>('all');
-  const [isTopUpOpen, setIsTopUpOpen] = useState(false);
-  const [topUpAmount, setTopUpAmount] = useState<number>(10000);
-  const [customAmount, setCustomAmount] = useState<string>('10000');
-  const [paymentMethod, setPaymentMethod] = useState<'paystack' | 'bank_transfer'>('paystack');
-  const [isFunding, setIsFunding] = useState(false);
-  const [copiedAccount, setCopiedAccount] = useState(false);
+  const [activeTab, setActiveTab] = useState<'activity' | 'send' | 'receive'>('activity');
+  const [copiedAddress, setCopiedAddress] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  // Send form states
+  const [sendAmount, setSendAmount] = useState('');
+  const [sendRecipient, setSendRecipient] = useState('');
+  const [sendDesc, setSendDesc] = useState('');
+  const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
     if (!isWalletModalOpen) return;
-
     window.history.pushState({ modal: 'wallet' }, '');
-
-    const handlePopState = () => {
-      setIsWalletModalOpen(false);
+    const handlePopState = () => setIsWalletModalOpen(false);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsWalletModalOpen(false);
     };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsWalletModalOpen(false);
-      }
-    };
-
     window.addEventListener('popstate', handlePopState);
     window.addEventListener('keydown', handleKeyDown);
-
     return () => {
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('keydown', handleKeyDown);
@@ -65,352 +50,250 @@ export const WalletModal: React.FC = () => {
     }
   };
 
-  const handleCopyAccount = () => {
-    if (wallet.accountNumber) {
-      navigator.clipboard?.writeText(wallet.accountNumber);
-      setCopiedAccount(true);
-      triggerShareToast('Virtual account number copied!');
-      setTimeout(() => setCopiedAccount(false), 2500);
+  const handleConnect = async () => {
+    setIsConnecting(true);
+    await connectWallet();
+    setIsConnecting(false);
+  };
+
+  const handleCopyAddress = () => {
+    if (address) {
+      navigator.clipboard?.writeText(address);
+      setCopiedAddress(true);
+      triggerShareToast('Wallet address copied');
+      setTimeout(() => setCopiedAddress(false), 2500);
     }
   };
 
-  const handleFundWallet = (e: React.FormEvent) => {
+  const handleSendSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const amount = Number(customAmount) || topUpAmount;
-    if (amount <= 0) return;
-
-    setIsFunding(true);
-    setTimeout(() => {
-      topUpWallet(amount, paymentMethod);
-      setIsFunding(false);
-      setIsTopUpOpen(false);
-    }, 1200);
+    if (!sendAmount || !sendRecipient) return;
+    setIsSending(true);
+    try {
+      await sendFunds(Number(sendAmount), sendRecipient, sendDesc);
+      triggerShareToast('Sent successfully');
+      setSendAmount('');
+      setSendRecipient('');
+      setSendDesc('');
+      setActiveTab('activity');
+    } catch (err: any) {
+      triggerShareToast(err.message || 'Failed to send');
+    } finally {
+      setIsSending(false);
+    }
   };
-
-  const filteredTransactions = useMemo(
-    () =>
-      wallet.transactions.filter((tx) => {
-        if (activeTab === 'deposits') return tx.type === 'deposit' || tx.type === 'prize_payout';
-        if (activeTab === 'fees') return tx.type === 'tournament_fee' || tx.type === 'ticket_purchase' || tx.type === 'transfer_out';
-        return true;
-      }),
-    [activeTab, wallet.transactions]
-  );
 
   if (!isWalletModalOpen) return null;
 
   return (
-    <div
-      id="wallet-overlay"
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex justify-end animate-in fade-in duration-200"
-      onClick={() => setIsWalletModalOpen(false)}
-    >
-      <div
-        id="wallet-container"
-        className="bg-white w-full sm:max-w-md md:max-w-lg h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 relative z-10 overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="px-4 sm:px-5 py-4 border-b border-neutral-100 bg-white sticky top-0 z-20 shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 sm:p-4 animate-in fade-in duration-200">
+      <div className="w-full sm:max-w-md bg-[#f6f3ee] sm:rounded-[32px] rounded-t-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] min-h-[70vh]">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 bg-white shrink-0 sticky top-0 z-10 border-b border-neutral-100">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleBack}
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-neutral-100 hover:bg-neutral-200 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-neutral-900" />
+            </button>
+            <h2 className="text-xl font-black text-neutral-900 tracking-tight">Wallet</h2>
+          </div>
+          {isConnected && (
+            <div className="flex items-center gap-2">
               <button
-                id="btn-back-wallet"
-                type="button"
-                onClick={handleBack}
-                className="p-1.5 -ml-1 rounded-full text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer"
-                title="Back"
-                aria-label="Back"
+                onClick={resetMockData}
+                className="flex items-center justify-center w-10 h-10 bg-neutral-100 rounded-full hover:bg-neutral-200"
+                title="Reset Mock Data"
               >
-                <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+                <RefreshCw className="w-4 h-4 text-neutral-600" />
               </button>
-              <div>
-                <h2 className="text-base font-bold text-neutral-900 leading-tight">Wallet</h2>
-                <p className="text-[11px] text-neutral-400">Your Lalao balance and account activity</p>
-              </div>
-            </div>
-
-            <button
-              id="btn-close-wallet"
-              type="button"
-              onClick={() => setIsWalletModalOpen(false)}
-              className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
-              aria-label="Close"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </header>
-
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
-          <div className="rounded-2xl border border-neutral-200 bg-[#f9f7f4] p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-neutral-400">
-                  Available Balance
-                </p>
-                <div className="mt-3 flex items-baseline gap-2">
-                  <span className="text-lg font-bold text-[#5E43F3]">₦</span>
-                  <span className="text-3xl font-black tracking-tight text-neutral-950">
-                    {wallet.balance.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-              <div className="rounded-full bg-violet-100 p-2 text-[#5E43F3]">
-                <Wallet className="w-4 h-4 stroke-[2.2]" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-neutral-200 bg-white p-4 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-neutral-900">
-                <Building2 className="w-4 h-4 text-neutral-600" />
-                <h3 className="text-sm font-bold">Virtual Bank Account</h3>
-              </div>
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
-                Active
-              </span>
-            </div>
-
-            <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
-              <p className="text-[10px] uppercase tracking-[0.14em] text-neutral-400">Account Number</p>
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <p className="font-mono text-sm font-bold tracking-wider text-neutral-900">
-                  {wallet.accountNumber || '9048291048'}
-                </p>
-                <button
-                  type="button"
-                  onClick={handleCopyAccount}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-neutral-700 transition-colors hover:bg-neutral-50 cursor-pointer"
-                >
-                  {copiedAccount ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
-                      <span className="text-emerald-600">Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>Copy</span>
-                    </>
-                  )}
-                </button>
-              </div>
-              <p className="mt-2 text-[11px] text-neutral-500">Account holder: {currentUser.name}</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              id="btn-wallet-topup"
-              onClick={() => setIsTopUpOpen(true)}
-              className="flex items-center justify-center gap-2 rounded-2xl bg-[#5E43F3] px-4 py-3 text-xs font-black text-white shadow-sm shadow-[#5E43F3]/20 transition-colors hover:bg-[#4f36e8] cursor-pointer"
-            >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
-              <span>Add Funds</span>
-            </button>
-
-            <button
-              type="button"
-              id="btn-wallet-withdraw"
-              onClick={() => triggerShareToast('Withdrawal is available for verified bank accounts')}
-              className="flex items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs font-black text-neutral-800 transition-colors hover:bg-neutral-100 cursor-pointer"
-            >
-              <ArrowUpRight className="w-4 h-4" />
-              <span>Withdraw</span>
-            </button>
-          </div>
-
-          {isTopUpOpen && (
-            <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="rounded-lg bg-emerald-100 p-2 text-emerald-600">
-                    <Zap className="w-4 h-4" />
-                  </div>
-                  <h3 className="text-sm font-black text-neutral-900">Add Funds</h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsTopUpOpen(false)}
-                  className="rounded-full p-1 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <form onSubmit={handleFundWallet} className="space-y-4">
-                <div>
-                  <label className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-neutral-500">
-                    Amount (NGN)
-                  </label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {[2000, 5000, 10000, 25000].map((amt) => (
-                      <button
-                        key={amt}
-                        type="button"
-                        onClick={() => {
-                          setTopUpAmount(amt);
-                          setCustomAmount(amt.toString());
-                        }}
-                        className={`rounded-xl px-2 py-2 text-xs font-black transition-all cursor-pointer ${
-                          Number(customAmount) === amt
-                            ? 'bg-[#5E43F3] text-white'
-                            : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-                        }`}
-                      >
-                        ₦{amt.toLocaleString()}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">
-                    Custom amount
-                  </label>
-                  <input
-                    type="number"
-                    min="500"
-                    step="500"
-                    value={customAmount}
-                    onChange={(e) => setCustomAmount(e.target.value)}
-                    className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm font-black text-neutral-950 focus:border-[#5E43F3] focus:outline-none"
-                    placeholder="e.g. 10000"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('paystack')}
-                    className={`flex items-center gap-2 rounded-xl border p-3 text-left transition-colors cursor-pointer ${
-                      paymentMethod === 'paystack'
-                        ? 'border-[#5E43F3] bg-violet-50'
-                        : 'border-neutral-200 hover:bg-neutral-50'
-                    }`}
-                  >
-                    <CreditCard className="w-4 h-4 text-[#5E43F3]" />
-                    <div>
-                      <p className="text-xs font-bold text-neutral-900">Paystack</p>
-                      <p className="text-[10px] text-neutral-500">Card / USSD</p>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('bank_transfer')}
-                    className={`flex items-center gap-2 rounded-xl border p-3 text-left transition-colors cursor-pointer ${
-                      paymentMethod === 'bank_transfer'
-                        ? 'border-[#5E43F3] bg-violet-50'
-                        : 'border-neutral-200 hover:bg-neutral-50'
-                    }`}
-                  >
-                    <Building2 className="w-4 h-4 text-neutral-700" />
-                    <div>
-                      <p className="text-xs font-bold text-neutral-900">Bank</p>
-                      <p className="text-[10px] text-neutral-500">Transfer</p>
-                    </div>
-                  </button>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isFunding || Number(customAmount) <= 0}
-                  className="w-full rounded-xl bg-[#5E43F3] px-4 py-3 text-xs font-black text-white transition-colors hover:bg-[#4f36e8] disabled:bg-neutral-200 disabled:text-neutral-500 cursor-pointer"
-                >
-                  {isFunding ? 'Processing...' : `Pay ₦${Number(customAmount || 0).toLocaleString()} Now`}
-                </button>
-              </form>
+              <button
+                onClick={disconnectWallet}
+                className="text-xs font-bold text-red-500 bg-red-50 px-3 py-1.5 rounded-full"
+              >
+                Disconnect
+              </button>
             </div>
           )}
+        </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <History className="w-4 h-4 text-neutral-600" />
-                <h2 className="text-sm font-black text-neutral-900">Wallet Activity</h2>
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto">
+          {!isConnected ? (
+            <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+              <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mb-6">
+                <ArrowUpRight className="w-10 h-10 text-[#5E43F3]" />
+              </div>
+              <h3 className="text-2xl font-black text-neutral-900 mb-2">Klyro Wallet</h3>
+              <p className="text-neutral-500 text-sm mb-8 max-w-[260px] mx-auto">
+                Connect your wallet to send, receive, and tip inside Lalao.
+              </p>
+              <button
+                onClick={handleConnect}
+                disabled={isConnecting}
+                className="w-full py-4 rounded-full bg-[#5E43F3] text-white font-bold text-lg hover:bg-indigo-600 transition-colors disabled:opacity-50"
+              >
+                {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+              </button>
+              <p className="text-[10px] text-neutral-400 mt-6 max-w-[260px] mx-auto">
+                NOTE: Klyro Wallet integration will replace MockWalletProvider when the Klyro API is available.
+              </p>
+            </div>
+          ) : (
+            <div>
+              {/* Balance Card */}
+              <div className="p-6 bg-white border-b border-neutral-100">
+                <div className="flex flex-col items-center justify-center py-6">
+                  <span className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-2">Total Balance</span>
+                  <div className="text-5xl font-black text-neutral-900 tracking-tighter">
+                    {balance.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className="text-xl text-[#5E43F3] ml-1">{balance.currency}</span>
+                  </div>
+                  
+                  <button 
+                    onClick={handleCopyAddress}
+                    className="mt-6 flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 rounded-full transition-colors text-sm font-semibold text-neutral-600"
+                  >
+                    <span>{address.substring(0,6)}...{address.substring(address.length - 4)}</span>
+                    {copiedAddress ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 mt-4">
+                  <button
+                    onClick={() => setActiveTab('send')}
+                    className={`flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-colors ${
+                      activeTab === 'send' ? 'bg-[#5E43F3] text-white' : 'bg-neutral-100 text-neutral-900 hover:bg-neutral-200'
+                    }`}
+                  >
+                    <Send className="w-5 h-5" />
+                    Send
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('receive')}
+                    className={`flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-colors ${
+                      activeTab === 'receive' ? 'bg-[#5E43F3] text-white' : 'bg-neutral-100 text-neutral-900 hover:bg-neutral-200'
+                    }`}
+                  >
+                    <ArrowDownLeft className="w-5 h-5" />
+                    Receive
+                  </button>
+                </div>
+              </div>
+
+              {/* Tabs Content */}
+              <div className="p-4">
+                {activeTab === 'activity' && (
+                  <div className="space-y-4">
+                    <h3 className="font-black text-neutral-900 px-2 flex items-center gap-2">
+                      <History className="w-4 h-4 text-neutral-400" />
+                      Recent Activity
+                    </h3>
+                    {transactions.length === 0 ? (
+                      <div className="text-center py-12 text-neutral-400 font-medium text-sm">
+                        No transactions yet.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {transactions.map((tx: WalletTransaction) => (
+                          <div key={tx.id} className="bg-white p-4 rounded-2xl flex items-center justify-between border border-neutral-100 shadow-sm">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                                tx.type === 'receive' ? 'bg-green-100 text-green-600' : 'bg-indigo-100 text-[#5E43F3]'
+                              }`}>
+                                {tx.type === 'receive' ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-neutral-900 capitalize">{tx.type}</h4>
+                                <p className="text-xs text-neutral-500">
+                                  {new Date(tx.timestamp).toLocaleDateString()} • {tx.status}
+                                </p>
+                              </div>
+                            </div>
+                            <div className={`font-black tracking-tight ${tx.type === 'receive' ? 'text-green-600' : 'text-neutral-900'}`}>
+                              {tx.type === 'receive' ? '+' : '-'}{tx.amount} {tx.currency}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === 'send' && (
+                  <div className="bg-white p-5 rounded-3xl shadow-sm border border-neutral-100 animate-in fade-in slide-in-from-bottom-2">
+                    <h3 className="font-black text-neutral-900 mb-4">Send Funds</h3>
+                    <form onSubmit={handleSendSubmit} className="space-y-4">
+                      <div>
+                        <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Recipient ID / Address</label>
+                        <input
+                          type="text"
+                          value={sendRecipient}
+                          onChange={(e) => setSendRecipient(e.target.value)}
+                          placeholder="User ID or Wallet Address"
+                          className="w-full bg-neutral-100 rounded-xl px-4 py-3 font-semibold focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/20"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Amount (KLY)</label>
+                        <input
+                          type="number"
+                          value={sendAmount}
+                          onChange={(e) => setSendAmount(e.target.value)}
+                          placeholder="0.00"
+                          min="0.1"
+                          step="any"
+                          className="w-full bg-neutral-100 rounded-xl px-4 py-3 font-semibold focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/20"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Note (Optional)</label>
+                        <input
+                          type="text"
+                          value={sendDesc}
+                          onChange={(e) => setSendDesc(e.target.value)}
+                          placeholder="What's this for?"
+                          className="w-full bg-neutral-100 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/20"
+                        />
+                      </div>
+                      
+                      <button
+                        type="submit"
+                        disabled={isSending || !sendAmount || !sendRecipient}
+                        className="w-full mt-2 bg-[#5E43F3] text-white font-bold py-4 rounded-xl hover:bg-indigo-600 transition-colors disabled:opacity-50"
+                      >
+                        {isSending ? 'Sending...' : 'Send Now'}
+                      </button>
+                    </form>
+                  </div>
+                )}
+
+                {activeTab === 'receive' && (
+                  <div className="bg-white p-8 rounded-3xl shadow-sm border border-neutral-100 text-center animate-in fade-in slide-in-from-bottom-2">
+                    <h3 className="font-black text-neutral-900 mb-2">Receive Funds</h3>
+                    <p className="text-sm text-neutral-500 mb-8">Share your wallet address to receive KLY tokens.</p>
+                    
+                    <div className="w-48 h-48 bg-neutral-100 mx-auto rounded-2xl flex items-center justify-center mb-8 border border-neutral-200 border-dashed">
+                      <span className="text-neutral-400 font-bold">QR Code Area</span>
+                    </div>
+
+                    <div className="bg-neutral-50 rounded-xl p-4 flex items-center justify-between border border-neutral-100">
+                      <span className="text-sm font-bold text-neutral-700 truncate mr-4">{address}</span>
+                      <button 
+                        onClick={handleCopyAddress}
+                        className="p-2 bg-white rounded-lg shadow-sm border border-neutral-200 text-neutral-900 hover:bg-neutral-50"
+                      >
+                        {copiedAddress ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar text-xs">
-              {[
-                { id: 'all', label: 'All' },
-                { id: 'deposits', label: 'Deposits & Prizes' },
-                { id: 'fees', label: 'Fees' },
-              ].map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setActiveTab(f.id as 'all' | 'deposits' | 'fees')}
-                  className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
-                    activeTab === f.id
-                      ? 'bg-neutral-950 text-white'
-                      : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="space-y-2">
-              {filteredTransactions.length === 0 ? (
-                <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-8 text-center text-xs text-neutral-500">
-                  <History className="mx-auto mb-2 w-8 h-8 text-neutral-300" />
-                  <p className="font-bold text-neutral-700">No activity found</p>
-                  <p className="mt-0.5 text-[11px] text-neutral-400">
-                    Your deposits, withdrawals, and platform activity will appear here.
-                  </p>
-                </div>
-              ) : (
-                filteredTransactions.map((tx) => {
-                  const isPositive = tx.type === 'deposit' || tx.type === 'prize_payout' || tx.type === 'refund';
-
-                  return (
-                    <div
-                      key={tx.id}
-                      className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200/80 bg-white p-3.5 shadow-2xs hover:border-neutral-300 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-                            isPositive ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-800'
-                          }`}
-                        >
-                          {isPositive ? (
-                            <ArrowDownLeft className="w-4 h-4" />
-                          ) : (
-                            <ArrowUpRight className="w-4 h-4" />
-                          )}
-                        </div>
-
-                        <div>
-                          <p className="line-clamp-1 text-xs font-bold text-neutral-900">{tx.description}</p>
-                          <div className="mt-0.5 flex items-center gap-2 text-[10px] text-neutral-400">
-                            <span>{new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                            <span>·</span>
-                            <span className="font-mono">{tx.reference || 'LLW-TX'}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="shrink-0 text-right">
-                        <p className={`text-xs sm:text-sm font-black ${isPositive ? 'text-emerald-600' : 'text-neutral-950'}`}>
-                          {isPositive ? '+' : '-'}₦{tx.amount.toLocaleString()}
-                        </p>
-                        <span className="rounded uppercase bg-emerald-50 px-1.5 py-0.2 text-[10px] font-bold text-emerald-700">
-                          {tx.status}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

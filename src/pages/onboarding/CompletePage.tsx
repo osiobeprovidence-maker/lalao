@@ -13,8 +13,8 @@ export const CompletePage: React.FC = () => {
 
   return (
     <OnboardingLayout 
-      step={6} 
-      totalSteps={6} 
+      step={7} 
+      totalSteps={7} 
       title="You're all set!" 
       subtitle="Welcome to Lalao. Your community is waiting."
     >

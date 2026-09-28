@@ -19,6 +19,8 @@ export interface User {
   relationship?: "none" | "following" | "follower" | "friends";
   isVerified?: boolean;
   mutualInfo?: string;
+  phoneSetupCompleted?: boolean;
+  accessStatus?: "available" | "country_restricted" | "waitlisted";
   [key: string]: any;
 }
 

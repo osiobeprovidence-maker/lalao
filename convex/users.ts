@@ -223,6 +223,8 @@ export const createUserRecord = mutation({
       followersCount: 0,
       followingCount: 0,
       role: isSuperAdmin ? "super_admin" : "user",
+      phoneSetupCompleted: false,
+      phoneVerified: false,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     } as any);
@@ -438,8 +440,100 @@ export const updateInterests = mutation({
     if (!userId) throw new Error("Not authenticated");
     await ctx.db.patch(userId, {
       interests,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * completeOnboardingStep
+ * Finalizes onboarding by setting onboardingStep to complete.
+ */
+export const completeOnboardingStep = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    await ctx.db.patch(userId, {
       onboardingStep: "complete",
       updatedAt: Date.now(),
     });
+  },
+});
+
+/**
+ * updatePhoneSetup
+ * Validates and sets phone number, determines country, and sets access status.
+ */
+export const updatePhoneSetup = mutation({
+  args: {
+    phoneNumber: v.string(),
+    countryCode: v.string(),
+    countryName: v.string(),
+    phoneCountryCode: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const accessStatus = args.countryCode === "NG" ? "available" : "country_restricted";
+
+    await ctx.db.patch(userId, {
+      phoneNumber: args.phoneNumber,
+      countryCode: args.countryCode,
+      countryName: args.countryName,
+      phoneCountryCode: args.phoneCountryCode,
+      phoneSetupCompleted: true,
+      phoneVerified: false,
+      accessStatus,
+      updatedAt: Date.now(),
+    });
+
+    return accessStatus;
+  },
+});
+
+/**
+ * joinWaitlist
+ * Joins the waitlist for a user who is country_restricted.
+ */
+export const joinWaitlist = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const user = await ctx.db.get(userId);
+    if (!user) throw new Error("User not found");
+
+    if (user.accessStatus !== "country_restricted") {
+      throw new Error("User is not country restricted");
+    }
+
+    const existingWaitlist = await ctx.db
+      .query("waitlist")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .unique();
+
+    if (existingWaitlist) {
+      return existingWaitlist._id;
+    }
+
+    const waitlistId = await ctx.db.insert("waitlist", {
+      userId,
+      email: user.email,
+      phoneNumber: user.phoneNumber!,
+      countryCode: user.countryCode!,
+      countryName: user.countryName!,
+      status: "active",
+      createdAt: Date.now(),
+    });
+
+    await ctx.db.patch(userId, {
+      accessStatus: "waitlisted",
+      updatedAt: Date.now(),
+    });
+
+    return waitlistId;
   },
 });

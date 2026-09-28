@@ -10,10 +10,16 @@ import { Id } from "./_generated/dataModel";
 export async function getAuthedUser(ctx: any) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) return null;
-  return await ctx.db
+  const user = await ctx.db
     .query("users")
     .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
     .unique();
+
+  if (user && (user.accessStatus === "country_restricted" || user.accessStatus === "waitlisted")) {
+    throw new Error("Access denied: Country restricted");
+  }
+
+  return user;
 }
 
 export async function getRelationshipSets(ctx: any, currentUser: any) {
@@ -193,15 +199,13 @@ export const listFeedPosts = query({
         .collect();
       const followedPageIds = new Set(followedPages.map((f: any) => f.pageId));
 
-      const interests = currentUser.interests || [];
-
-      // Strictly accounts or topics the user actively follows: if following nobody and no interests, return empty
-      if (followedUserIds.size === 0 && followedPageIds.size === 0 && interests.length === 0) {
+      // Strictly accounts the user actively follows: if following nobody, return empty
+      if (followedUserIds.size === 0 && followedPageIds.size === 0) {
         return [];
       }
 
       let candidatePosts: any[] = [];
-      if (followedUserIds.size + followedPageIds.size <= 30 && interests.length === 0) {
+      if (followedUserIds.size + followedPageIds.size <= 30) {
         // Query author/page posts directly by index for high accuracy
         const userPromises = Array.from(followedUserIds).map((authorId) =>
           ctx.db
@@ -238,7 +242,6 @@ export const listFeedPosts = query({
           if (p.moderationStatus === "removed") return false;
           if (p.pageRefId && followedPageIds.has(p.pageRefId)) return true;
           if (!p.pageRefId && followedUserIds.has(p.authorId)) return true;
-          if (interests.length > 0 && p.contentTopics?.some((t: string) => interests.includes(t))) return true;
           return false;
         });
       }
@@ -358,6 +361,13 @@ export const listFeedPosts = query({
         recentPosts = recentPosts.filter((p) => p.createdAt < args.cursor!);
       }
 
+      // Fetch active seed accounts to boost them
+      const activeSeeds = await ctx.db
+        .query("recommendations")
+        .withIndex("by_active_priority", (q) => q.eq("active", true))
+        .collect();
+      const seedIds = new Set(activeSeeds.map(s => s.targetId));
+
       let activeInterests = [...(currentUser?.interests || [])];
 
       if (currentUserId) {
@@ -419,7 +429,13 @@ export const listFeedPosts = query({
             }
           }
 
-          const score = ((engagement + 1) * interestBoost) / Math.pow(ageHours + 2, 1.2);
+          let seedBoost = 1;
+          const authorOrPageId = p.pageRefId || p.authorId;
+          if (seedIds.has(authorOrPageId)) {
+            seedBoost = 5; // Heavy boost for seed accounts to solve cold start
+          }
+
+          const score = ((engagement + 1) * interestBoost * seedBoost) / Math.pow(ageHours + 2, 1.2);
           return { post: p, score };
         });
 
@@ -548,11 +564,7 @@ export const listFeedPosts = query({
         location: post.location,
         latitude: post.latitude,
         longitude: post.longitude,
-        distanceMeters: (post as any)._computedDistance !== undefined
-          ? (post as any)._computedDistance
-          : (userLat !== undefined && userLng !== undefined && post.latitude !== undefined && post.longitude !== undefined)
-            ? haversineMeters(userLat, userLng, post.latitude, post.longitude)
-            : 0,
+        distanceMeters: (post as any)._computedDistance,
         createdAt: formatRelativeTime(post.createdAt),
         likesCount: post.likesCount ?? 0,
         commentsCount: post.commentsCount ?? topLevel.length,
@@ -2024,6 +2036,7 @@ const NOTIF_TEXT: Record<string, string> = {
   reply: "replied to your comment",
   follow: "started following you",
   rally_join: "joined your rally",
+  system_alert: "sent you a system alert",
 };
 
 export const listNotifications = query({
@@ -2047,7 +2060,7 @@ export const listNotifications = query({
           id: notif._id,
           type: notif.type as string,
           text: NOTIF_TEXT[notif.type] ?? "interacted with your content",
-          actor: actor
+          actor: (actor && notif.type !== 'system_alert')
             ? {
                 id: actor._id,
                 name: actor.name ?? "User",

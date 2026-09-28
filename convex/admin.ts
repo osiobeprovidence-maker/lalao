@@ -119,6 +119,100 @@ export const bootstrapSuperAdmin = mutation({
 });
 
 // ─────────────────────────────────────────────────────────────
+// ASSIGN RUMI SUPER PAGE OWNERSHIP
+// ─────────────────────────────────────────────────────────────
+export const assignRumiPage = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const targetEmail = "riderezzy@gmail.com";
+    console.log(`Starting assignment of Rumi page to ${targetEmail}`);
+
+    // 1. Verify target user
+    const users = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", targetEmail))
+      .collect();
+
+    if (users.length === 0) {
+      return "Ownership assignment blocked: the specified Lalao account could not be verified.";
+    }
+    const targetUser = users[0];
+    if (targetUser.status === "suspended") {
+      return "Ownership assignment blocked: target user is suspended.";
+    }
+
+    // 2. Verify target page
+    const rumiPages = await ctx.db
+      .query("pages")
+      .collect();
+
+    const exactRumiPages = rumiPages.filter((p) => p.name === "Rumi");
+
+    if (exactRumiPages.length === 0) {
+      return "Ownership assignment blocked: no page exactly named 'Rumi' found.";
+    }
+
+    if (exactRumiPages.length > 1) {
+      return "Ownership assignment blocked: multiple pages named Rumi were found.";
+    }
+
+    const rumiPage = exactRumiPages[0];
+    
+    if (rumiPage.ownerId === targetUser._id) {
+      return "Already assigned to this user";
+    }
+
+    const currentOwner = await ctx.db.get(rumiPage.ownerId);
+    if (currentOwner && currentOwner._id !== targetUser._id) {
+      if (currentOwner.email && currentOwner.email !== "system@lalao.app" && currentOwner.email !== "osiobeprovidence@gmail.com") {
+         return "Ownership assignment blocked: Rumi already has an owner.";
+      }
+    }
+
+    // 3. Ownership Assignment (Atomic)
+    const oldOwnerId = rumiPage.ownerId;
+    await ctx.db.patch(rumiPage._id, {
+      ownerId: targetUser._id,
+      updatedAt: Date.now(),
+    });
+
+    // 4. Audit Trail
+    await ctx.db.insert("auditLog", {
+      actorId: targetUser._id,
+      action: "assign_page_ownership",
+      target: `page:${rumiPage._id}`,
+      before: JSON.stringify({ ownerId: oldOwnerId }),
+      after: JSON.stringify({ ownerId: targetUser._id, email: targetEmail }),
+      createdAt: Date.now(),
+    });
+
+    return `Success: Rumi Super Page successfully assigned to ${targetEmail}.`;
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// UNSTICK USERS
+// ─────────────────────────────────────────────────────────────
+export const unstickUsers = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    let fixed = 0;
+    for (const u of users) {
+      if (u.phoneSetupCompleted === false || u.phoneSetupCompleted === undefined) {
+        await ctx.db.patch(u._id, {
+          phoneSetupCompleted: true,
+          accessStatus: "available",
+          onboardingStep: "complete"
+        });
+        fixed++;
+      }
+    }
+    return `Fixed ${fixed} users stuck on phone check.`;
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
 // ROLE QUERY — Used by sidebar & AdminRoute
 // ─────────────────────────────────────────────────────────────
 
@@ -392,6 +486,128 @@ export const restoreUser = mutation({
 // ─────────────────────────────────────────────────────────────
 // PAGES ADMIN
 // ─────────────────────────────────────────────────────────────
+// ASSIGN PAGE OWNER
+// ─────────────────────────────────────────────────────────────
+export const assignPageOwner = mutation({
+  args: {
+    pageId: v.id("pages"),
+    targetEmail: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const admin = await requireAdmin(ctx);
+
+    const users = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.targetEmail))
+      .collect();
+
+    if (users.length === 0) {
+      throw new Error("Ownership assignment blocked: the specified Lalao account could not be found.");
+    }
+    const targetUser = users[0];
+
+    const page = await ctx.db.get(args.pageId);
+    if (!page) {
+      throw new Error("Page not found");
+    }
+
+    const oldOwnerId = page.ownerId;
+    await ctx.db.patch(args.pageId, {
+      ownerId: targetUser._id,
+      updatedAt: Date.now(),
+    });
+
+    await writeAudit(ctx, admin._id, "assign_page_owner", {
+      target: `page:${args.pageId}`,
+      before: JSON.stringify({ ownerId: oldOwnerId }),
+      after: JSON.stringify({ ownerId: targetUser._id, email: args.targetEmail }),
+    });
+
+    return { success: true, message: `Successfully assigned to ${args.targetEmail}` };
+  },
+});
+
+export const bootstrapPlatformPages = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const admin = await requireAdmin(ctx);
+    const time = Date.now();
+    let createdCount = 0;
+    
+    const adminId = admin._id;
+
+    const SYSTEM_PAGES = [
+      {
+        name: "Lalao",
+        username: "lalao",
+        type: "organization",
+        badge: "ORG",
+      },
+      {
+        name: "Roomy",
+        username: "roomy",
+        type: "organization",
+        badge: "ORG",
+        activeTools: ['roomy'],
+      },
+      {
+        name: "This My Invite",
+        username: "thismyinvite",
+        type: "organization",
+        badge: "ORG",
+      },
+      {
+        name: "My Events",
+        username: "my_events",
+        type: "organization",
+        badge: "ORG",
+      }
+    ];
+
+    const results = [];
+
+
+    for (const sysPage of SYSTEM_PAGES) {
+      const existing = await ctx.db.query("pages").filter(q => q.eq(q.field("username"), sysPage.username)).first();
+      
+      if (!existing) {
+        await ctx.db.insert("pages", {
+          ownerId: adminId,
+          name: sysPage.name,
+          username: sysPage.username,
+          type: sysPage.type,
+          badge: sysPage.badge,
+          activeTools: sysPage.activeTools || [],
+          location: "Global",
+          followersCount: 0,
+          createdAt: time,
+          updatedAt: time,
+        });
+        createdCount++;
+        results.push({ name: sysPage.name, status: "created" });
+      } else {
+        results.push({ name: sysPage.name, status: "already exists" });
+        // Patch if needed (e.g. for Roomy tools)
+        if (sysPage.activeTools) {
+          const currentTools = existing.activeTools || [];
+          let needsUpdate = false;
+          for (const tool of sysPage.activeTools) {
+            if (!currentTools.includes(tool)) {
+              currentTools.push(tool);
+              needsUpdate = true;
+            }
+          }
+          if (needsUpdate) {
+            await ctx.db.patch(existing._id, { activeTools: currentTools });
+          }
+        }
+      }
+    }
+
+    return { success: true, createdCount, results };
+  }
+});
+
 
 export const listPages = query({
   args: {
@@ -413,7 +629,11 @@ export const listPages = query({
       );
     }
     if (args.type) {
-      pages = pages.filter((p: any) => p.type === args.type);
+      if (args.type === "commerce_partner") {
+        pages = pages.filter((p: any) => p.partnerType === "COMMERCE_PARTNER");
+      } else {
+        pages = pages.filter((p: any) => p.type === args.type);
+      }
     }
 
     const result = await Promise.all(
@@ -719,18 +939,34 @@ export const removePost = mutation({
     });
 
     if (args.reportId) {
-      await ctx.db.patch(args.reportId, {
-        status: "resolved",
-        resolvedAt: Date.now(),
-        resolvedBy: adminUser._id,
-        resolution: "Post removed",
-        resolutionNote: args.note,
-        moderationReasonId: args.moderationReasonId,
-        moderationReasonCode: officialReasonCode,
-        violationLevel: args.violationLevel,
-        userNotificationMessage: officialUserMessage,
-        updatedAt: Date.now(),
-      });
+      const report = await ctx.db.get(args.reportId);
+      if (report) {
+        const isResolvingNow = report.status !== "resolved_violation" && report.status !== "resolved_no_violation";
+        
+        await ctx.db.patch(args.reportId, {
+          status: "resolved_violation",
+          resolvedAt: Date.now(),
+          resolvedBy: adminUser._id,
+          resolution: "Post removed",
+          resolutionNote: args.note,
+          moderationReasonId: args.moderationReasonId,
+          moderationReasonCode: officialReasonCode,
+          violationLevel: args.violationLevel,
+          userNotificationMessage: officialUserMessage,
+          updatedAt: Date.now(),
+        });
+
+        if (isResolvingNow) {
+          await ctx.db.insert("notifications", {
+            recipientId: report.reporterId,
+            actorId: adminUser._id,
+            type: "system_alert",
+            targetExcerpt: "Report reviewed: We reviewed your report and found a violation. Appropriate action has been taken.",
+            isRead: false,
+            createdAt: Date.now(),
+          });
+        }
+      }
     }
 
     // Insert Notification

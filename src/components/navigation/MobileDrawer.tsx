@@ -4,6 +4,11 @@ import {
   ShoppingBag,
   Wallet,
   X,
+  Calendar,
+  Building2,
+  Users,
+  Bookmark,
+  Heart,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 
@@ -26,7 +31,17 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
   const accountItems = [
     { id: 'wallet', label: 'Wallet', icon: Wallet },
     { id: 'orders', label: 'Order History', icon: ShoppingBag },
-    { id: 'pages', label: 'Add Pages', icon: Plus },
+  ] as const;
+
+  const myPagesItems = [
+    { id: 'my-pages', label: 'My Pages', icon: Building2 },
+    { id: 'create-page', label: 'Create Page', icon: Plus },
+  ] as const;
+
+  const discoverItems = [
+    { id: 'following', label: 'Following', icon: Users },
+    { id: 'saved', label: 'Saved', icon: Bookmark },
+    { id: 'liked', label: 'Liked', icon: Heart },
   ] as const;
 
   const handleWalletAction = () => {
@@ -66,34 +81,83 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col px-4 py-4">
-          <div className="rounded-2xl border border-neutral-200/80 bg-white/80 p-2 shadow-sm">
-            {accountItems.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => {
-                  if (id === 'wallet') {
-                    handleWalletAction();
-                    return;
-                  }
-                  if (id === 'orders') {
-                    handleOrdersAction();
-                    return;
-                  }
-                  setCreateFlowType(null);
-                  setIsCreateSheetOpen(false);
-                  setActiveTab('create-post');
-                  onClose();
-                }}
-                className="flex w-full items-center rounded-xl px-3 py-3 text-left transition hover:bg-neutral-50"
-              >
-                <div className="flex items-center gap-3">
-                  <Icon className="h-4 w-4 text-neutral-600" />
-                  <span className="text-sm font-medium text-neutral-700">{label}</span>
-                </div>
-              </button>
-            ))}
+        <div className="flex flex-1 flex-col px-4 py-4 space-y-6">
+          <div>
+            <div className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
+              Account
+            </div>
+            <div className="rounded-2xl border border-neutral-200/80 bg-white/80 p-2 shadow-sm space-y-1">
+              {accountItems.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => {
+                    if (id === 'wallet') {
+                      handleWalletAction();
+                      return;
+                    }
+                    if (id === 'orders') {
+                      handleOrdersAction();
+                      return;
+                    }
+                  }}
+                  className="flex w-full items-center rounded-xl px-3 py-2 text-left transition hover:bg-neutral-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className="h-4 w-4 text-neutral-600" />
+                    <span className="text-sm font-medium text-neutral-700">{label}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
+              My Pages
+            </div>
+            <div className="rounded-2xl border border-neutral-200/80 bg-white/80 p-2 shadow-sm space-y-1">
+              {myPagesItems.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(id);
+                    onClose();
+                  }}
+                  className="flex w-full items-center rounded-xl px-3 py-2 text-left transition hover:bg-neutral-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className="h-4 w-4 text-neutral-600" />
+                    <span className="text-sm font-medium text-neutral-700">{label}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
+              Discover
+            </div>
+            <div className="rounded-2xl border border-neutral-200/80 bg-white/80 p-2 shadow-sm space-y-1">
+              {discoverItems.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(id);
+                    onClose();
+                  }}
+                  className="flex w-full items-center rounded-xl px-3 py-2 text-left transition hover:bg-neutral-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className="h-4 w-4 text-neutral-600" />
+                    <span className="text-sm font-medium text-neutral-700">{label}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { getAuthedUser } from "./social";
+import { requireFeatureFlag } from "./platformSettings";
 import { Id } from "./_generated/dataModel";
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -22,6 +23,7 @@ export const submitSuggestion = mutation({
     additionalInfo: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireFeatureFlag(ctx, "communityEnabled");
     const user = await getAuthedUser(ctx);
     if (!user) throw new ConvexError("You must be logged in to suggest a community.");
 
@@ -57,6 +59,7 @@ export const submitSuggestion = mutation({
 export const getMySuggestions = query({
   args: {},
   handler: async (ctx) => {
+    await requireFeatureFlag(ctx, "communityEnabled");
     const user = await getAuthedUser(ctx);
     if (!user) return [];
 

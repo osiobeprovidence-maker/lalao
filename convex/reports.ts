@@ -115,8 +115,8 @@ export const updateReportStatus = mutation({
     status: v.union(
       v.literal("pending"),
       v.literal("under_review"),
-      v.literal("resolved"),
-      v.literal("dismissed"),
+      v.literal("resolved_violation"),
+      v.literal("resolved_no_violation"),
       v.literal("escalated")
     ),
     resolution: v.optional(v.string()),
@@ -126,13 +126,18 @@ export const updateReportStatus = mutation({
   },
   handler: async (ctx, args) => {
     const adminUser = await requireAdmin(ctx);
+    const report = await ctx.db.get(args.reportId);
+    if (!report) throw new Error("Report not found");
 
     const updateFields: any = {
       status: args.status,
       updatedAt: Date.now()
     };
 
-    if (args.status === "resolved" || args.status === "dismissed") {
+    const isResolvingNow = (args.status === "resolved_violation" || args.status === "resolved_no_violation") && 
+                           (report.status !== "resolved_violation" && report.status !== "resolved_no_violation");
+
+    if (args.status === "resolved_violation" || args.status === "resolved_no_violation") {
       updateFields.resolvedAt = Date.now();
       updateFields.resolvedBy = adminUser._id;
       if (args.resolution) updateFields.resolution = args.resolution;
@@ -153,5 +158,20 @@ export const updateReportStatus = mutation({
     }
 
     await ctx.db.patch(args.reportId, updateFields);
+
+    if (isResolvingNow) {
+      const message = args.status === "resolved_violation" 
+        ? "We reviewed your report and found a violation. Appropriate action has been taken."
+        : "We reviewed the report you submitted, but we didn't find a violation of Lalao's guidelines.";
+        
+      await ctx.db.insert("notifications", {
+        recipientId: report.reporterId,
+        actorId: adminUser._id, // Use admin ID as actor (can be obfuscated in UI if needed)
+        type: "system_alert",
+        targetExcerpt: `Report reviewed: ${message}`,
+        isRead: false,
+        createdAt: Date.now(),
+      });
+    }
   }
 });

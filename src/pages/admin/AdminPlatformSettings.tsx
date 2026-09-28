@@ -8,6 +8,8 @@ import { uploadImageToCloudinary } from '../../lib/cloudinary';
 export const AdminPlatformSettings: React.FC = () => {
   const brandingSettings = useQuery((api as any).platformSettings.getBrandingSettings);
   const updateBrandingSettings = useMutation((api as any).platformSettings.updateBrandingSettings);
+  const featureFlagsData = useQuery((api as any).platformSettings.getFeatureFlags);
+  const updateFeatureFlags = useMutation((api as any).platformSettings.updateFeatureFlags);
   const { generateCloudinarySignature } = useLalao();
   
   const [formData, setFormData] = useState({
@@ -29,6 +31,15 @@ export const AdminPlatformSettings: React.FC = () => {
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  
+  const [flagsForm, setFlagsForm] = useState({
+    communityEnabled: false,
+    ralliesEnabled: false,
+    cyclesEnabled: false,
+  });
+
+  const [isSavingFlags, setIsSavingFlags] = useState(false);
+  const [saveFlagsSuccess, setSaveFlagsSuccess] = useState(false);
 
   // Initialize form when data loads
   useEffect(() => {
@@ -39,6 +50,16 @@ export const AdminPlatformSettings: React.FC = () => {
       }));
     }
   }, [brandingSettings]);
+
+  useEffect(() => {
+    if (featureFlagsData) {
+      setFlagsForm({
+        communityEnabled: featureFlagsData.communityEnabled ?? false,
+        ralliesEnabled: featureFlagsData.ralliesEnabled ?? false,
+        cyclesEnabled: featureFlagsData.cyclesEnabled ?? false,
+      });
+    }
+  }, [featureFlagsData]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -74,6 +95,22 @@ export const AdminPlatformSettings: React.FC = () => {
       alert(`Error saving branding settings: ${err.message}`);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSaveFlags = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingFlags(true);
+    setSaveFlagsSuccess(false);
+
+    try {
+      await updateFeatureFlags({ flags: flagsForm });
+      setSaveFlagsSuccess(true);
+      setTimeout(() => setSaveFlagsSuccess(false), 3000);
+    } catch (err: any) {
+      alert(`Error saving feature flags: ${err.message}`);
+    } finally {
+      setIsSavingFlags(false);
     }
   };
 
@@ -370,6 +407,75 @@ export const AdminPlatformSettings: React.FC = () => {
           </button>
         </div>
 
+      </form>
+
+      {/* Feature Flags Section */}
+      <form onSubmit={handleSaveFlags} className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mt-8 space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold text-neutral-900 uppercase tracking-wider">Feature Flags</h2>
+          <div className="flex items-center gap-3">
+            {saveFlagsSuccess && (
+              <span className="text-emerald-600 text-xs font-bold">Saved!</span>
+            )}
+            <button
+              type="submit"
+              disabled={isSavingFlags}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 disabled:opacity-50 text-white text-xs font-bold transition-all"
+            >
+              {isSavingFlags ? "Saving..." : "Save Flags"}
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-4 rounded-xl border border-neutral-100 bg-neutral-50/50">
+            <div>
+              <p className="text-sm font-bold text-neutral-900">Communities</p>
+              <p className="text-xs text-neutral-500 mt-0.5">Enable or disable the Communities feature globally</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={flagsForm.communityEnabled}
+                onChange={(e) => setFlagsForm(prev => ({ ...prev, communityEnabled: e.target.checked }))}
+              />
+              <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+            </label>
+          </div>
+
+          <div className="flex items-center justify-between p-4 rounded-xl border border-neutral-100 bg-neutral-50/50">
+            <div>
+              <p className="text-sm font-bold text-neutral-900">Rallies</p>
+              <p className="text-xs text-neutral-500 mt-0.5">Enable or disable the Rallies feature</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={flagsForm.ralliesEnabled}
+                onChange={(e) => setFlagsForm(prev => ({ ...prev, ralliesEnabled: e.target.checked }))}
+              />
+              <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+            </label>
+          </div>
+          
+          <div className="flex items-center justify-between p-4 rounded-xl border border-neutral-100 bg-neutral-50/50">
+            <div>
+              <p className="text-sm font-bold text-neutral-900">Cycles</p>
+              <p className="text-xs text-neutral-500 mt-0.5">Enable or disable the Cycles feature</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={flagsForm.cyclesEnabled}
+                onChange={(e) => setFlagsForm(prev => ({ ...prev, cyclesEnabled: e.target.checked }))}
+              />
+              <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+            </label>
+          </div>
+        </div>
       </form>
     </div>
   );

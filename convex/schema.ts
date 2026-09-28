@@ -63,6 +63,21 @@ export default defineSchema({
     ),
     // Whether account is suspended
     suspended: v.optional(v.boolean()),
+
+    // Phone & Country access control
+    countryCode: v.optional(v.string()),
+    countryName: v.optional(v.string()),
+    phoneNumber: v.optional(v.string()),
+    phoneCountryCode: v.optional(v.string()),
+    phoneSetupCompleted: v.optional(v.boolean()),
+    phoneVerified: v.optional(v.boolean()),
+    accessStatus: v.optional(
+      v.union(
+        v.literal("available"),
+        v.literal("country_restricted"),
+        v.literal("waitlisted")
+      )
+    ),
   })
     .index("by_token", ["tokenIdentifier"])
     .index("by_email", ["email"])
@@ -73,7 +88,18 @@ export default defineSchema({
     .searchIndex("search_email", { searchField: "email" })
     .searchIndex("search_phone", { searchField: "phone" }),
 
-
+  waitlist: defineTable({
+    userId: v.id("users"),
+    email: v.optional(v.string()),
+    phoneNumber: v.string(),
+    countryCode: v.string(),
+    countryName: v.string(),
+    status: v.union(v.literal("active"), v.literal("notified")),
+    notifiedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_country", ["countryCode"]),
 
   posts: defineTable({
     authorId: v.id("users"),
@@ -187,6 +213,13 @@ export default defineSchema({
     activeTools: v.optional(v.array(v.string())),
     description: v.optional(v.string()),
     
+    // Commerce Partner Extensions
+    partnerType: v.optional(v.union(v.literal("COMMERCE_PARTNER"), v.literal("API_PARTNER"))),
+    partnerStatus: v.optional(v.union(v.literal("ACTIVE"), v.literal("PENDING"), v.literal("SUSPENDED"))),
+    ownerStatus: v.optional(v.union(v.literal("ASSIGNED"), v.literal("UNASSIGNED"))),
+    integrationStatus: v.optional(v.string()),
+    externalPartnerId: v.optional(v.string()),
+
     // Global Business Extensions
     globalDiscoveryStatus: v.optional(v.union(v.literal("global"), v.literal("national"), v.literal("regional"), v.literal("local"))),
     serviceAreas: v.optional(v.array(v.string())),
@@ -337,9 +370,71 @@ export default defineSchema({
     stockQuantity: v.optional(v.number()),
     inStock: v.boolean(),
     image: v.optional(v.string()),
+    images: v.optional(v.array(v.string())),
+    status: v.optional(v.string()),
+    externalProductId: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_page", ["pageId"]),
+
+  cartItems: defineTable({
+    userId: v.id("users"),
+    productId: v.id("products"),
+    quantity: v.number(),
+    selectedOptions: v.optional(v.any()), // Record<string, string>
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  orders: defineTable({
+    buyerId: v.id("users"),
+    pageId: v.id("pages"),
+    totalAmount: v.number(),
+    currency: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("paid"),
+      v.literal("shipped"),
+      v.literal("delivered"),
+      v.literal("cancelled"),
+      v.literal("processing"),
+      v.literal("confirmed")
+    ),
+    shippingAddress: v.optional(v.any()),
+    externalOrderId: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_buyer", ["buyerId"]).index("by_page", ["pageId"]),
+
+  orderItems: defineTable({
+    orderId: v.id("orders"),
+    productId: v.id("products"),
+    quantity: v.number(),
+    priceAtPurchase: v.number(),
+    selectedOptions: v.optional(v.any()),
+  }).index("by_order", ["orderId"]),
+
+  auctions: defineTable({
+    pageId: v.id("pages"),
+    productId: v.id("products"),
+    startingBid: v.number(),
+    currentBid: v.number(),
+    currency: v.string(),
+    endsAt: v.number(),
+    status: v.union(
+      v.literal("active"),
+      v.literal("upcoming"),
+      v.literal("ended"),
+      v.literal("cancelled")
+    ),
+    externalAuctionId: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_page", ["pageId"]).index("by_product", ["productId"]),
+
+  auctionBids: defineTable({
+    auctionId: v.id("auctions"),
+    userId: v.id("users"),
+    bidAmount: v.number(),
+    createdAt: v.number(),
+  }).index("by_auction", ["auctionId"]).index("by_user", ["userId"]),
 
   // ---- WALLET SYSTEM ----
   userWallets: defineTable({
@@ -565,6 +660,8 @@ export default defineSchema({
       v.literal("under_review"),
       v.literal("resolved"),
       v.literal("dismissed"),
+      v.literal("resolved_violation"),
+      v.literal("resolved_no_violation"),
       v.literal("escalated")
     ),
     assignedTo: v.optional(v.id("users")), 
@@ -687,4 +784,174 @@ export default defineSchema({
     .index("by_requester", ["requesterId"])
     .index("by_owner", ["ownerId"])
     .index("by_listing", ["listingId"]),
+
+  // ---- RECOMMENDATION SYSTEM ----
+  recommendations: defineTable({
+    targetId: v.string(), // ID of the user, page, or community being recommended
+    targetType: v.union(v.literal("user"), v.literal("page"), v.literal("community")),
+    category: v.string(), // e.g., "featured", "seed", "new_creator"
+    priority: v.number(), // Higher number = higher priority
+    active: v.boolean(), // Whether this recommendation is currently active
+    addedBy: v.optional(v.id("users")), // Admin who added it
+    reason: v.optional(v.string()), // Internal note
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_active_priority", ["active", "priority"])
+    .index("by_target", ["targetId"]),
+
+  recommendationDismissals: defineTable({
+    userId: v.id("users"),
+    targetId: v.string(), // ID of the user, page, or community dismissed
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_target", ["userId", "targetId"]),
+
+  rallies: defineTable({
+    creatorId: v.id("users"),
+    title: v.string(),
+    description: v.string(),
+    location: v.string(),
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
+    distanceMeters: v.number(),
+    timeDate: v.string(),
+    category: v.union(
+      v.literal("Sports"),
+      v.literal("Help"),
+      v.literal("Meetup"),
+      v.literal("Initiative"),
+      v.literal("Civic"),
+      v.literal("General")
+    ),
+    status: v.union(v.literal("active"), v.literal("completed")),
+    maxNeeded: v.optional(v.number()),
+    urgency: v.optional(v.union(v.literal("normal"), v.literal("urgent"))),
+    tags: v.array(v.string()),
+    createdAt: v.number(),
+  }).index("by_creator", ["creatorId"]).index("by_status", ["status"]),
+
+  rallyParticipants: defineTable({
+    userId: v.id("users"),
+    rallyId: v.id("rallies"),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]).index("by_rally", ["rallyId"]),
+
+  pageEvents: defineTable({
+    pageId: v.id("pages"),
+    title: v.string(),
+    type: v.string(),
+    coverImage: v.optional(v.string()),
+    date: v.string(),
+    time: v.string(),
+    location: v.string(),
+    isOnline: v.boolean(),
+    registrationStatus: v.string(),
+    isTournament: v.optional(v.boolean()),
+    isTicketed: v.optional(v.boolean()),
+    ticketPrice: v.optional(v.number()),
+    prizePool: v.optional(v.number()),
+    prizeCurrency: v.optional(v.string()),
+    description: v.optional(v.string()),
+    availableTickets: v.optional(v.number()),
+    totalTickets: v.optional(v.number()),
+    rules: v.optional(v.string()),
+    schedule: v.optional(v.any()), // Array of objects or strings depending on client
+    createdAt: v.number(),
+  }).index("by_page", ["pageId"]),
+
+  // ---- API PARTNERS SYSTEM ----
+  apiPartners: defineTable({
+    name: v.string(),
+    slug: v.string(),
+    contactName: v.optional(v.string()),
+    contactEmail: v.optional(v.string()),
+    company: v.optional(v.string()),
+    type: v.string(), // e.g., 'event_platform', 'ticketing_platform'
+    status: v.union(v.literal("active"), v.literal("suspended"), v.literal("pending")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_slug", ["slug"]),
+
+  apiPlans: defineTable({
+    partnerId: v.id("apiPartners"),
+    name: v.string(),
+    monthlyPrice: v.number(),
+    currency: v.string(),
+    eventLimit: v.number(),
+    requestLimit: v.number(),
+    requestsPerMinute: v.number(),
+    billingCycle: v.union(v.literal("monthly"), v.literal("yearly")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_partner", ["partnerId"]),
+
+  apiCredentials: defineTable({
+    partnerId: v.id("apiPartners"),
+    environment: v.union(v.literal("test"), v.literal("live")),
+    keyHash: v.string(), // Secure hash of the API key
+    prefix: v.string(), // First few characters for display
+    createdAt: v.number(),
+    lastUsedAt: v.optional(v.number()),
+    revokedAt: v.optional(v.number()),
+  }).index("by_partner", ["partnerId"])
+    .index("by_keyHash", ["keyHash"]),
+
+  apiPermissions: defineTable({
+    partnerId: v.id("apiPartners"),
+    permission: v.string(),
+    createdAt: v.number(),
+  }).index("by_partner", ["partnerId"]),
+
+  apiUsage: defineTable({
+    partnerId: v.id("apiPartners"),
+    environment: v.union(v.literal("test"), v.literal("live")),
+    endpoint: v.string(),
+    method: v.string(),
+    statusCode: v.number(),
+    responseTimeMs: v.number(),
+    timestamp: v.number(),
+    monthKey: v.string(),
+  })
+    .index("by_partner", ["partnerId"])
+    .index("by_partner_month", ["partnerId", "monthKey"]),
+
+  apiBilling: defineTable({
+    partnerId: v.id("apiPartners"),
+    billingPeriod: v.string(),
+    amount: v.number(),
+    currency: v.string(),
+    status: v.union(v.literal("paid"), v.literal("pending"), v.literal("overdue"), v.literal("suspended")),
+    dueDate: v.number(),
+    paidAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_partner", ["partnerId"]),
+
+  partnerEvents: defineTable({
+    partnerId: v.id("apiPartners"),
+    externalId: v.string(),
+    lalaoEventId: v.optional(v.string()), 
+    title: v.string(),
+    description: v.optional(v.string()),
+    category: v.optional(v.string()),
+    date: v.string(),
+    time: v.string(),
+    locationName: v.optional(v.string()),
+    city: v.optional(v.string()),
+    country: v.optional(v.string()),
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
+    imageUrl: v.optional(v.string()),
+    price: v.optional(v.number()),
+    currency: v.optional(v.string()),
+    ticketUrl: v.optional(v.string()),
+    organizerName: v.optional(v.string()),
+    status: v.union(v.literal("active"), v.literal("cancelled"), v.literal("draft")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_partner", ["partnerId"])
+    .index("by_externalId", ["partnerId", "externalId"]),
 });

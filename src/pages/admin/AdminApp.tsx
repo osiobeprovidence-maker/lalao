@@ -17,7 +17,11 @@ import {
   BadgeDollarSign,
   Menu,
   LogOut as LogOutIcon,
-  X
+  X,
+  Star,
+  Plug,
+  BarChart3,
+  MapPin
 } from 'lucide-react';
 
 import { AdminDashboard } from './AdminDashboard';
@@ -32,6 +36,10 @@ import { AdminComingSoon } from './AdminComingSoon';
 import { AdminReports } from './AdminReports';
 import { AdminCommunitySuggestions } from './AdminCommunitySuggestions';
 import { AdminCommunities } from './AdminCommunities';
+import { AdminRecommendations } from './AdminRecommendations';
+import { AdminApiPartners } from './AdminApiPartners';
+import { AdminEventsDistribution } from './AdminEventsDistribution';
+import { AdminLocationRules } from './AdminLocationRules';
 import { useAuth } from '../../context/AuthContext';
 import { useLalao } from '../../context/LalaoContext';
 import { useQuery, useMutation } from 'convex/react';
@@ -81,6 +89,7 @@ export const AdminApp: React.FC = () => {
     {
       title: 'Operations',
       items: [
+        { path: '/admin/recommendations', label: 'Recommendations', icon: Star },
         { path: '/admin/reports', label: 'Reports', icon: FileText },
         { path: '/admin/communities', label: 'Communities', icon: Users },
         { path: '/admin/community-suggestions', label: 'Community Suggestions', icon: Users },
@@ -95,6 +104,14 @@ export const AdminApp: React.FC = () => {
         { path: '/admin/platforms', label: 'Subscription Platforms', icon: ListPlus },
         { path: '/admin/features', label: 'Feature Flags', icon: ToggleLeft },
         { path: '/admin/audit', label: 'Audit Log', icon: ActivitySquare },
+      ]
+    },
+    {
+      title: 'API & Developers',
+      items: [
+        { path: '/admin/api-partners', label: 'API Partners', icon: Plug },
+        { path: '/admin/events-distribution', label: 'Events Analytics', icon: BarChart3 },
+        { path: '/admin/location-rules', label: 'Location Rules', icon: MapPin },
       ]
     }
   ];
@@ -220,12 +237,16 @@ export const AdminApp: React.FC = () => {
                 <Route path="/reports" element={<AdminReports />} />
                 <Route path="/communities" element={<AdminCommunities />} />
                 <Route path="/community-suggestions" element={<AdminCommunitySuggestions />} />
+                <Route path="/recommendations" element={<AdminRecommendations />} />
                 <Route path="/moderation" element={<AdminComingSoon title="Moderation Queue" />} />
                 <Route path="/notifications" element={<AdminComingSoon title="System Notifications" />} />
                 <Route path="/settings" element={<AdminPlatformSettings />} />
                 <Route path="/platforms" element={<AdminSubPlatforms />} />
                 <Route path="/features" element={<AdminComingSoon title="Feature Flags" />} />
                 <Route path="/audit" element={<AdminAuditLog />} />
+                <Route path="/api-partners" element={<AdminApiPartners />} />
+                <Route path="/events-distribution" element={<AdminEventsDistribution />} />
+                <Route path="/location-rules" element={<AdminLocationRules />} />
                 <Route path="*" element={<Navigate to="/admin" replace />} />
               </Routes>
             </div>

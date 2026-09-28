@@ -52,7 +52,7 @@ export const SignUpPage: React.FC = () => {
       }
       if (attempts >= 15) throw new Error('Server authentication timeout.');
 
-      navigate('/onboarding/name');
+      navigate('/onboarding/phone');
     } catch (err: any) {
       setError(err.message || 'Failed to create account. Try again.');
     } finally {
@@ -200,7 +200,7 @@ export const SignUpPage: React.FC = () => {
                   }
                   if (attempts >= 15) throw new Error('Server authentication timeout.');
 
-                  navigate('/onboarding/name');
+                  navigate('/onboarding/phone');
                 } catch (err: any) {
                   setError(err.message || 'Google sign-up failed.');
                 }

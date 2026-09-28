@@ -67,9 +67,12 @@ export const UserProfileModal: React.FC = () => {
   const [isMuted, setIsMuted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Only query relationship if the ID looks like a real Convex ID (no hyphens, usually ~32 chars)
+  const isValidConvexId = activeUserProfile?.id && !activeUserProfile.id.includes('-');
+
   const liveRelationship = useQuery(
     api.social.getRelationship,
-    activeUserProfile ? { targetUserId: activeUserProfile.id as any } : "skip"
+    activeUserProfile && isValidConvexId ? { targetUserId: activeUserProfile.id as any } : "skip"
   );
 
   const displayedRelationship = liveRelationship?.relationship || activeUserProfile?.relationship || 'none';
@@ -96,7 +99,7 @@ export const UserProfileModal: React.FC = () => {
   // User's posts — fetched directly by author id & username, not from the feed window
   const userPostsQuery = useQuery(
     api.social.listUserPosts,
-    activeUserProfile
+    activeUserProfile && isValidConvexId
       ? { userId: activeUserProfile.id, username: activeUserProfile.username }
       : "skip"
   );
@@ -119,7 +122,7 @@ export const UserProfileModal: React.FC = () => {
   // User's total cumulative likes across all posts & comments (live real-time subscription)
   const userLikesQuery = useQuery(
     (api.users as any).getUserTotalLikes,
-    activeUserProfile ? { userId: activeUserProfile.id, username: activeUserProfile.username } : "skip"
+    activeUserProfile && isValidConvexId ? { userId: activeUserProfile.id, username: activeUserProfile.username } : "skip"
   );
   const totalLikes = userLikesQuery?.totalLikes ?? 0;
 
@@ -205,14 +208,15 @@ export const UserProfileModal: React.FC = () => {
 
   if (!activeUserProfile) return null;
 
-  // Numbers formatter
-  const formatFollowers = (count: number) => {
+  const formatFollowers = (count?: number) => {
+    if (count === undefined || count === null) return '0';
     if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
     if (count >= 10_000) return `${(count / 1000).toFixed(1).replace(/\.0$/, '')}K`;
     return count.toLocaleString();
   };
 
-  const formatLikes = (count: number) => {
+  const formatLikes = (count?: number) => {
+    if (count === undefined || count === null) return '0';
     if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
     if (count >= 1_000) return `${(count / 1000).toFixed(1).replace(/\.0$/, '')}K`;
     return count.toLocaleString();

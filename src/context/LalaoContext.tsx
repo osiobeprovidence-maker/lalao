@@ -51,7 +51,9 @@ export type NavTab =
   | 'following'
   | 'saved'
   | 'create-page'
-  | 'liked';
+  | 'my-pages'
+  | 'liked'
+  | 'events';
 export type FeedTab = 'for_you' | 'following' | 'community' | 'nearby' | (string & {});
 export type CreateOption = 'post' | 'rally' | 'page' | 'cycle' | null;
 
@@ -147,6 +149,7 @@ interface LalaoContextType {
   setIsCreateCycleOpen: (open: boolean) => void;
 
   sendDirectMessage: (conversationId: string, text: string, stickerId?: string) => void;
+  markConversationRead: (conversationId: string) => void;
   markNotificationsAsRead: () => void;
 
   // Modal / Navigation Overlay States
@@ -256,6 +259,7 @@ interface LalaoContextType {
   closeAuthPrompt: () => void;
   requireAuth: (action: () => void, message?: string) => void;
   [key: string]: any;
+  featureFlags: { communityEnabled: boolean; ralliesEnabled: boolean; cyclesEnabled: boolean };
 }
 
 const LalaoContext = createContext<LalaoContextType | undefined>(undefined);
@@ -313,13 +317,19 @@ const normalizeConvexUser = (user: Record<string, any> | null | undefined): User
     followingCount: typeof user.followingCount === 'number' ? user.followingCount : 0,
     isFollowing: typeof user.isFollowing === 'boolean' ? user.isFollowing : false,
     isVerified: typeof user.isVerified === 'boolean' ? user.isVerified : false,
+    phoneSetupCompleted: user.phoneSetupCompleted,
+    accessStatus: user.accessStatus,
   };
 };
 
 export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const currentUserQuery = useQuery(api.users.getCurrentUser);
+  const featureFlags = useQuery(api.platformSettings.getFeatureFlags) || { communityEnabled: false, ralliesEnabled: true, cyclesEnabled: true };
   const pushEnabledQuery = useQuery(api.push.hasActivePushToken);
   const upsertWebPushSubscription = useMutation(api.push.upsertWebPushSubscription);
+  const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
+  const toggleFollowUserMutation = useMutation(api.social.toggleFollowUser);
+  const toggleFollowPageMutation = useMutation(api.pages.toggleFollowPage);
   const toggleRepostPostMutation = useMutation(api.social.toggleRepost);
   const deletePostMutation = useMutation(api.social.deletePost);
   const createPostMutation = useMutation(api.social.createPost);
@@ -327,6 +337,11 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const toggleLikeCommentMutation = useMutation(api.social.toggleLikeComment);
   const saveDraftMutation = useMutation(api.social.saveDraft);
   const deleteDraftMutation = useMutation(api.social.deleteDraft);
+  
+  // ---- Rallies ----
+  const createRallyMutation = useMutation(api.rallies.createRally);
+  const toggleJoinRallyMutation = useMutation(api.rallies.toggleJoinRally);
+  const activeRalliesQuery = useQuery(api.rallies.listActiveRallies) || [];
 
   // ---- Topics / Home Feed Preferences ----
   const activeTopics = useQuery(api.topics.listActiveTopics) ?? [];
@@ -346,6 +361,19 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const generateCloudinarySignature = async (folder?: string) => {
     return await generateCloudinarySignatureAction({ folder });
   };
+  
+  // ---- Page Mutations ----
+  const createPageMutation = useMutation(api.pages.createPage);
+  const updatePageMutation = useMutation(api.pages.updatePage);
+  const createPageEventMutation = useMutation(api.pageEvents.createPageEvent);
+  
+  // ---- Ecommerce / Cart Mutations ----
+  const cartQuery = useQuery(api.ecommerce.getCart) || [];
+  const addToCartMutation = useMutation(api.ecommerce.addToCart);
+  const updateCartQuantityMutation = useMutation(api.ecommerce.updateCartQuantity);
+  const removeFromCartMutation = useMutation(api.ecommerce.removeFromCart);
+  const clearCartMutation = useMutation(api.ecommerce.clearCart);
+
   const messageContactsQuery = useQuery(api.social.getMessageContacts);
   const [pushEnabled, setPushEnabled] = useState<boolean>(false);
 
@@ -492,38 +520,11 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
-  const [posts, setPosts] = useState<Post[]>(() => {
-    try {
-      const saved = localStorage.getItem('lalao_posts');
-      return saved ? JSON.parse(saved) : EMPTY_POSTS;
-    } catch {
-      return EMPTY_POSTS;
-    }
-  });
+  const [posts, setPosts] = useState<Post[]>(EMPTY_POSTS);
 
-  const [rallies, setRallies] = useState<Rally[]>(() => {
-    try {
-      const saved = localStorage.getItem('lalao_rallies');
-      return saved ? JSON.parse(saved) : EMPTY_RALLIES;
-    } catch {
-      return EMPTY_RALLIES;
-    }
-  });
+  const rallies = (activeRalliesQuery as unknown as Rally[]) || EMPTY_RALLIES;
 
-  const [pages, setPages] = useState<Page[]>(() => {
-    try {
-      const saved = localStorage.getItem('lalao_pages');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      // ignore
-    }
-    return EMPTY_PAGES;
-  });
+  const [pages, setPages] = useState<Page[]>(EMPTY_PAGES);
 
   // Fetch live discoverable pages from Convex and sync with local state
   const backendPages = useQuery(api.pages.listDiscoverablePages);
@@ -558,29 +559,9 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [backendPages, location.latitude, location.longitude, location.name]);
 
-  const [cycles, setCycles] = useState<Cycle[]>(() => {
-    try {
-      const saved = localStorage.getItem('lalao_cycles');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.items) {
-          return parsed;
-        }
-      }
-      return EMPTY_CYCLES;
-    } catch {
-      return EMPTY_CYCLES;
-    }
-  });
+  const [cycles, setCycles] = useState<Cycle[]>(EMPTY_CYCLES);
 
-  const [conversations, setConversations] = useState<Conversation[]>(() => {
-    try {
-      const saved = localStorage.getItem('lalao_conversations');
-      return saved ? JSON.parse(saved) : EMPTY_CONVERSATIONS;
-    } catch {
-      return EMPTY_CONVERSATIONS;
-    }
-  });
+  const [conversations, setConversations] = useState<Conversation[]>(EMPTY_CONVERSATIONS);
 
   const [messageContacts, setMessageContacts] = useState<User[]>([]);
 
@@ -590,14 +571,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [messageContactsQuery]);
 
-  const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('lalao_notifications');
-      return saved ? JSON.parse(saved) : EMPTY_NOTIFICATIONS;
-    } catch {
-      return EMPTY_NOTIFICATIONS;
-    }
-  });
+  const [notifications, setNotifications] = useState<NotificationItem[]>(EMPTY_NOTIFICATIONS);
 
   useEffect(() => {
     if (feedPostsQuery) {
@@ -741,14 +715,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [shareToast, setShareToast] = useState<string | null>(null);
 
   // Shopping, Cart & Saved Products
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('lalao_cart');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const cart = (cartQuery as unknown as CartItem[]) || [];
 
   const [savedProductIds, setSavedProductIds] = useState<string[]>(() => {
     try {
@@ -763,11 +730,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [selectedShopProduct, setSelectedShopProduct] = useState<ShopProduct | null>(null);
   const [selectedProductStore, setSelectedProductStore] = useState<Page | null>(null);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('lalao_cart', JSON.stringify(cart));
-    } catch {}
-  }, [cart]);
+  // Cart is synced via backend now.
 
   useEffect(() => {
     try {
@@ -777,61 +740,48 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
 
-  const addToCart = (
+  const addToCart = async (
     product: ShopProduct,
     quantity: number,
     options?: Record<string, string>,
     store?: { id: string; name: string }
   ) => {
-    setCart((prev) => {
-      const optionsKey = options ? JSON.stringify(options) : '';
-      const existingIndex = prev.findIndex(
-        (item) =>
-          item.product.id === product.id &&
-          (item.selectedOptions ? JSON.stringify(item.selectedOptions) : '') === optionsKey
-      );
-
-      if (existingIndex > -1) {
-        const next = [...prev];
-        next[existingIndex] = {
-          ...next[existingIndex],
-          quantity: next[existingIndex].quantity + quantity,
-        };
-        return next;
-      }
-
-      const newItem: CartItem = {
-        id: `cart_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-        product,
+    try {
+      await addToCartMutation({
+        productId: product.id as any,
         quantity,
         selectedOptions: options,
-        storeId: store?.id,
-        storeName: store?.name,
-        addedAt: new Date().toISOString(),
-      };
-      return [newItem, ...prev];
-    });
-
-    triggerShareToast(`Added ${quantity}x ${product.name} to cart`);
-  };
-
-  const removeFromCart = (cartItemId: string) => {
-    setCart((prev) => prev.filter((item) => item.id !== cartItemId));
-    triggerShareToast('Item removed from cart');
-  };
-
-  const updateCartQuantity = (cartItemId: string, quantity: number) => {
-    if (quantity < 1) {
-      removeFromCart(cartItemId);
-      return;
+      });
+      triggerShareToast(`Added ${quantity}x ${product.name} to cart`);
+    } catch (err) {
+      console.error("Failed to add to cart", err);
+      triggerShareToast("Sign in to add items to cart");
     }
-    setCart((prev) =>
-      prev.map((item) => (item.id === cartItemId ? { ...item, quantity } : item))
-    );
   };
 
-  const clearCart = () => {
-    setCart([]);
+  const removeFromCart = async (cartItemId: string) => {
+    try {
+      await removeFromCartMutation({ cartItemId: cartItemId as any });
+      triggerShareToast('Item removed from cart');
+    } catch (err) {
+      console.error("Failed to remove from cart", err);
+    }
+  };
+
+  const updateCartQuantity = async (cartItemId: string, quantity: number) => {
+    try {
+      await updateCartQuantityMutation({ cartItemId: cartItemId as any, quantity });
+    } catch (err) {
+      console.error("Failed to update cart quantity", err);
+    }
+  };
+
+  const clearCart = async () => {
+    try {
+      await clearCartMutation();
+    } catch (err) {
+      console.error("Failed to clear cart", err);
+    }
   };
 
   const toggleSaveProduct = (productId: string) => {
@@ -1162,16 +1112,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       })
     );
 
-    setRallies((prev) =>
-      prev.map((rally) => {
-        const coords =
-          rally.latitude && rally.longitude
-            ? { lat: rally.latitude, lng: rally.longitude }
-            : getCoordinatesForLocation(rally.location);
-        const dist = calculateDistanceMeters(userCoords.lat, userCoords.lng, coords.lat, coords.lng);
-        return { ...rally, distanceMeters: dist };
-      })
-    );
+    // Rallies distance update is handled by the backend / frontend on render.
 
     setPages((prev) =>
       prev.map((page) => {
@@ -1201,16 +1142,10 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       localStorage.setItem('lalao_location', JSON.stringify(location));
       localStorage.setItem('lalao_location_privacy', JSON.stringify(locationPrivacy));
-      localStorage.setItem('lalao_posts', JSON.stringify(posts));
-      localStorage.setItem('lalao_rallies', JSON.stringify(rallies));
-      localStorage.setItem('lalao_pages', JSON.stringify(pages));
-      localStorage.setItem('lalao_cycles', JSON.stringify(cycles));
-      localStorage.setItem('lalao_conversations', JSON.stringify(conversations));
-      localStorage.setItem('lalao_notifications', JSON.stringify(notifications));
     } catch {
       // ignore storage quota errors
     }
-  }, [location, locationPrivacy, posts, rallies, pages, cycles, conversations, notifications]);
+  }, [location, locationPrivacy]);
 
   const triggerShareToast = (msg = 'Link copied to clipboard!') => {
     setShareToast(msg);
@@ -1231,6 +1166,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return post;
       })
     );
+    toggleLikePostMutation({ postId: postId as any }).catch(console.error);
   }, 'Sign in to like this post');
 
   const toggleRepostPost = (postId: string) => requireAuth(() => {
@@ -1376,30 +1312,18 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return await deleteDraftMutation({ draftId: draftId as any });
   };
 
-  const toggleJoinRally = (rallyId: string) => {
-    setRallies((prev) =>
-      prev.map((rally) => {
-        if (rally.id === rallyId) {
-          const isJoined = !rally.isJoined;
-          const interestedUsers = isJoined
-            ? [currentUser, ...rally.interestedUsers.filter((u) => u.id !== currentUser.id)]
-            : rally.interestedUsers.filter((u) => u.id !== currentUser.id);
-
-          return {
-            ...rally,
-            isJoined,
-            joinedUsersCount: isJoined
-              ? rally.joinedUsersCount + 1
-              : Math.max(0, rally.joinedUsersCount - 1),
-            interestedUsers,
-          };
-        }
-        return rally;
-      })
-    );
+  const toggleJoinRally = async (rallyId: string) => {
+    requireAuth(async () => {
+      try {
+        const isJoined = await toggleJoinRallyMutation({ rallyId: rallyId as any });
+        triggerShareToast(isJoined ? "You joined the Rally!" : "You left the Rally.");
+      } catch (err) {
+        console.error("Failed to toggle join rally", err);
+      }
+    }, 'Sign in to join this rally');
   };
 
-  const createRally = ({
+  const createRally = async ({
     title,
     description,
     location: rallyLoc,
@@ -1412,45 +1336,23 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     timeDate: string;
     category: Rally['category'];
   }) => {
-    const newRally: Rally = {
-      id: `rally_${Date.now()}`,
-      creator: currentUser,
-      title,
-      description,
-      location: rallyLoc || `${location.name} Center`,
-      distanceMeters: 50,
-      timeDate: timeDate || 'Today · Soon',
-      category,
-      status: 'active',
-      interestedUsers: [currentUser],
-      joinedUsersCount: 1,
-      isJoined: true,
-      tags: [category, 'LocalRally'],
-    };
+    try {
+      await createRallyMutation({
+        title,
+        description,
+        location: rallyLoc || `${location.name} Center`,
+        timeDate: timeDate || 'Today · Soon',
+        category,
+      });
 
-    // Also create a linked broadcast post in the feed
-    const broadcastPost: Post = {
-      id: `post_rally_${newRally.id}`,
-      author: currentUser,
-      text: `⚡ RALLY: ${title} — ${description}`,
-      location: newRally.location,
-      distanceMeters: 50,
-      createdAt: 'Just now',
-      likesCount: 1,
-      commentsCount: 0,
-      repostsCount: 0,
-      isLiked: true,
-      isReposted: false,
-      comments: [],
-      rallyRefId: newRally.id,
-    };
-
-    setRallies([newRally, ...rallies]);
-    setPosts([broadcastPost, ...posts]);
-    setCreateFlowType(null);
-    setIsCreateSheetOpen(false);
-    setActiveTab('home');
-    triggerShareToast('Rally created! Broadcasting to people nearby');
+      setCreateFlowType(null);
+      setIsCreateSheetOpen(false);
+      setActiveTab('home');
+      triggerShareToast('Rally created! Broadcasting to people nearby');
+    } catch (err) {
+      console.error("Failed to create rally", err);
+      triggerShareToast("Failed to create Rally.");
+    }
   };
 
   const toggleFollowPage = (pageId: string) => requireAuth(() => {
@@ -1469,6 +1371,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return page;
       })
     );
+    toggleFollowPageMutation({ pageId: pageId as any }).catch(console.error);
   }, 'Sign in to follow this page');
 
   const toggleFollowUser = (userId: string) => requireAuth(() => {
@@ -1534,9 +1437,10 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }));
 
     triggerShareToast(nowFollowing ? `Following @${targetUsername || 'user'}` : `Unfollowed @${targetUsername || 'user'}`);
+    toggleFollowUserMutation({ userId: userId as any }).catch(console.error);
   }, 'Sign in to follow this user');
 
-  const createPage = ({
+  const createPage = async ({
     name,
     username,
     category,
@@ -1555,58 +1459,50 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     avatar?: string;
     coverImage?: string;
   }) => {
-    const badgeMap: Record<Page['type'], Page['badge']> = {
-      business: 'BIZ',
-      organization: 'ORG',
-      club: 'CLUB',
-      community: 'COMMUNITY',
-    };
-
-    const newPage: Page = {
-      id: `page_${Date.now()}`,
-      name,
-      username: username.replace('@', ''),
-      type,
-      badge: badgeMap[type],
-      avatar: avatar || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&auto=format&fit=crop&q=80',
-      coverImage: coverImage || 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=1200&auto=format&fit=crop&q=80',
-      description,
-      location: pageLoc || `${location.name}, ${location.subArea}`,
-      followersCount: 1,
-      isFollowing: true,
-      isOwner: true,
-      ownerId: currentUser.id,
-      category,
-      aboutInfo: {
-        address: `${pageLoc || location.name}, Delta State`,
-        hours: 'Standard local operating hours',
-        founded: '2026',
-      },
-    };
-
-    setPages([newPage, ...pages]);
-    setCreateFlowType(null);
-    setIsCreateSheetOpen(false);
-    setActivePageId(newPage.id);
-    triggerShareToast(`Page "${name}" successfully created!`);
+    try {
+      const newPageId = await createPageMutation({
+        name,
+        username,
+        category,
+        description,
+        type,
+        location: pageLoc || `${location.name}, ${location.subArea}`,
+        avatar,
+        coverImage
+      });
+      setCreateFlowType(null);
+      setIsCreateSheetOpen(false);
+      setActivePageId(newPageId);
+      triggerShareToast(`Page "${name}" successfully created!`);
+      return newPageId;
+    } catch (err) {
+      console.error("Failed to create page", err);
+      triggerShareToast(`Failed to create page.`);
+      throw err;
+    }
   };
 
-  const updatePage = (pageId: string, updatedData: Partial<Page>) => {
-    setPages((prev) =>
-      prev.map((p) => {
-        if (p.id !== pageId) return p;
-        const updated = {
-          ...p,
-          ...updatedData,
-          aboutInfo: {
-            ...p.aboutInfo,
-            ...(updatedData.aboutInfo || {}),
-          },
-        };
-        return updated;
-      })
-    );
-    triggerShareToast('Page details updated successfully!');
+  const updatePage = async (pageId: string, updatedData: Partial<Page>) => {
+    try {
+      await updatePageMutation({
+        pageId: pageId as any,
+        name: updatedData.name,
+        username: updatedData.username,
+        category: updatedData.category,
+        description: updatedData.description,
+        location: updatedData.location,
+        avatar: updatedData.avatar,
+        coverImage: updatedData.coverImage,
+        aboutInfo: updatedData.aboutInfo,
+        globalDiscoveryStatus: updatedData.globalDiscoveryStatus,
+        serviceAreas: updatedData.serviceAreas,
+        isOnlineBusiness: updatedData.isOnlineBusiness,
+      });
+      triggerShareToast('Page details updated successfully!');
+    } catch (err) {
+      console.error("Failed to update page", err);
+      triggerShareToast('Failed to update page.');
+    }
   };
 
   const createPagePost = (
@@ -1654,48 +1550,34 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     triggerShareToast(`Post published to ${targetPage.name}!`);
   };
 
-  const createPageEvent = (pageId: string, eventData: Partial<OrgEvent>) => {
-    const targetPage = pages.find((p) => p.id === pageId);
-    if (!targetPage) return;
-
-    const newEvent: OrgEvent = {
-      id: `event_${Date.now()}`,
-      pageId,
-      organizationName: targetPage.name,
-      organizationAvatar: targetPage.avatar,
-      organizationBadge: targetPage.badge,
-      title: eventData.title || 'New Community Event',
-      type: eventData.type || 'community',
-      coverImage:
-        eventData.coverImage ||
-        targetPage.coverImage ||
-        'https://images.unsplash.com/photo-1511578314322-379afb476865?w=1200&auto=format&fit=crop&q=80',
-      date: eventData.date || 'Upcoming',
-      time: eventData.time || 'TBD',
-      location: eventData.location || targetPage.location,
-      isOnline: eventData.isOnline ?? false,
-      registrationStatus: eventData.registrationStatus || 'open',
-      isTournament: eventData.isTournament ?? false,
-      isTicketed: eventData.isTicketed ?? false,
-      ticketPrice: eventData.ticketPrice,
-      prizePool: eventData.prizePool,
-      prizeCurrency: eventData.prizeCurrency || 'NGN',
-      description: eventData.description || '',
-      availableTickets: eventData.availableTickets || 100,
-      totalTickets: eventData.totalTickets || 100,
-      rules: eventData.rules,
-      schedule: eventData.schedule,
-    };
-
-    setEvents((prev) => [newEvent, ...prev]);
-    setPages((prev) =>
-      prev.map((p) =>
-        p.id === pageId
-          ? { ...p, events: [newEvent, ...(p.events || [])] }
-          : p
-      )
-    );
-    triggerShareToast('Event created successfully!');
+  const createPageEvent = async (pageId: string, eventData: Partial<OrgEvent>) => {
+    try {
+      await createPageEventMutation({
+        pageId: pageId as any,
+        title: eventData.title,
+        type: eventData.type,
+        coverImage: eventData.coverImage,
+        date: eventData.date,
+        time: eventData.time,
+        location: eventData.location,
+        isOnline: eventData.isOnline,
+        registrationStatus: eventData.registrationStatus,
+        isTournament: eventData.isTournament,
+        isTicketed: eventData.isTicketed,
+        ticketPrice: eventData.ticketPrice,
+        prizePool: eventData.prizePool,
+        prizeCurrency: eventData.prizeCurrency,
+        description: eventData.description,
+        availableTickets: eventData.availableTickets,
+        totalTickets: eventData.totalTickets,
+        rules: eventData.rules,
+        schedule: eventData.schedule,
+      });
+      triggerShareToast('Event created successfully!');
+    } catch (err) {
+      console.error("Failed to create page event", err);
+      triggerShareToast('Failed to create event.');
+    }
   };
 
   const updatePageEvent = (eventId: string, eventData: Partial<OrgEvent>) => {
@@ -2142,6 +2024,16 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, 2400);
   };
 
+  const markConversationRead = (conversationId: string) => {
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === conversationId && c.hasUnread
+          ? { ...c, hasUnread: false }
+          : c
+      )
+    );
+  };
+
   const markNotificationsAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
@@ -2256,6 +2148,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isCreateCycleOpen,
         setIsCreateCycleOpen,
         sendDirectMessage,
+        markConversationRead,
         markNotificationsAsRead,
         isCreateSheetOpen,
         setIsCreateSheetOpen,
@@ -2342,6 +2235,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updateHomePreference,
         updateUserProfile,
         generateCloudinarySignature,
+        featureFlags,
       }}
     >
       {children}

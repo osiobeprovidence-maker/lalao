@@ -14,6 +14,7 @@ import {
   Clock,
   Users,
   Check,
+  Calendar,
 } from 'lucide-react';
 import { Post, Rally, User } from '../../types';
 import { Avatar } from '../common/Avatar';
@@ -29,13 +30,17 @@ import { CommentThread } from '../common/CommentsModal';
 import { CommentComposer } from '../common/CommentComposer';
 import { ReportModal } from './ReportModal';
 
+import { ExternalEvent } from '../../services/events/types';
+import { ExternalEventDetailModal } from '../events/ExternalEventDetailModal';
+
 export interface PostItemProps {
   post?: Post;
   rally?: Rally;
+  externalEvent?: ExternalEvent;
   onSelectAuthor?: () => void;
 }
 
-export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, onSelectAuthor }) => {
+export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, externalEvent, onSelectAuthor }) => {
   const {
     currentUser,
     toggleLikePost,
@@ -62,6 +67,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showInlineComments, setShowInlineComments] = useState(false);
+  const [showEventModal, setShowEventModal] = useState(false);
 
   // Local state for standalone rally likes
   const [standaloneLiked, setStandaloneLiked] = useState(false);
@@ -95,12 +101,12 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
 
   // Location & Proximity
   const locationText = post ? post.location : (linkedRally ? linkedRally.location : 'Delta State');
-  const distanceMeters = post ? post.distanceMeters : (linkedRally ? linkedRally.distanceMeters : 0);
-  const formattedDistance = formatDistance(distanceMeters, locationPrivacy?.approximateDistance);
-  const proximity = getProximityCategory(distanceMeters);
+  const distanceMeters = post ? post.distanceMeters : (linkedRally ? linkedRally.distanceMeters : undefined);
+  const formattedDistance = distanceMeters !== undefined ? formatDistance(distanceMeters, locationPrivacy?.approximateDistance) : '';
+  const proximity = distanceMeters !== undefined ? getProximityCategory(distanceMeters) : { label: '', color: '', dotColor: '' };
 
   // Timestamp
-  const timeText = post ? post.createdAt : (linkedRally ? linkedRally.timeDate : 'Just now');
+  const timeText = post ? post.createdAt : (linkedRally ? linkedRally.timeDate : (externalEvent ? '2h' : 'Just now'));
 
   // Author click handler
   const matchedPage = pages.find((p) => p.username === author.username);
@@ -125,10 +131,10 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
   const isLiked = associatedPost ? associatedPost.isLiked : standaloneLiked;
   const likesCount = associatedPost
     ? associatedPost.likesCount
-    : (linkedRally ? (linkedRally.joinedUsersCount * 2 + (standaloneLiked ? 1 : 0)) : 0);
+    : (linkedRally ? (linkedRally.joinedUsersCount * 2 + (standaloneLiked ? 1 : 0)) : (externalEvent ? 3 + (standaloneLiked ? 1 : 0) : 0));
 
-  const commentsCount = associatedPost ? associatedPost.commentsCount : (linkedRally ? 3 : 0);
-  const repostsCount = associatedPost ? associatedPost.repostsCount : 0;
+  const commentsCount = associatedPost ? associatedPost.commentsCount : (linkedRally ? 3 : (externalEvent ? 2 : 0));
+  const repostsCount = associatedPost ? associatedPost.repostsCount : (externalEvent ? 1 : 0);
   const isReposted = associatedPost ? associatedPost.isReposted : false;
 
   const handleLike = () => {
@@ -146,6 +152,8 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
       setShowInlineComments((prev) => !prev);
     } else if (linkedRally) {
       triggerShareToast('Opening Rally thread...');
+    } else if (externalEvent) {
+      triggerShareToast('Opening Event thread...');
     }
   };
 
@@ -161,7 +169,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
     triggerShareToast(isRallyPost ? 'Rally link copied to clipboard!' : 'Post link copied to clipboard!');
   };
 
-  const itemId = post?.id || linkedRally?.id || 'feed-item';
+  const itemId = post?.id || linkedRally?.id || externalEvent?.id || 'feed-item';
 
   return (
     <article
@@ -198,14 +206,25 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
                 <span className="text-neutral-400">@{author.username}</span>
                 <span>·</span>
                 <span>{timeText}</span>
-                <span>·</span>
-                <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-neutral-100 text-neutral-700 text-[11px] font-medium">
-                  <span className={`w-1.5 h-1.5 rounded-full ${proximity.dotColor}`} />
-                  <MapPin className="w-2.5 h-2.5 text-[#5E43F3]" />
-                  <span>{locationText}</span>
-                  <span className="text-neutral-400">·</span>
-                  <span className="font-bold text-neutral-900">{formattedDistance}</span>
-                </div>
+                {locationText && (
+                  <>
+                    <span>·</span>
+                    {distanceMeters !== undefined ? (
+                      <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-neutral-100 text-neutral-700 text-[11px] font-medium">
+                        <span className={`w-1.5 h-1.5 rounded-full ${proximity.dotColor}`} />
+                        <MapPin className="w-2.5 h-2.5 text-[#5E43F3]" />
+                        <span>{locationText}</span>
+                        <span className="text-neutral-400">·</span>
+                        <span className="font-bold text-neutral-900">{formattedDistance}</span>
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-neutral-100 text-neutral-700 text-[11px] font-medium">
+                        <MapPin className="w-2.5 h-2.5 text-[#5E43F3]" />
+                        <span>{locationText}</span>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
 
@@ -429,12 +448,43 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
                     src={post.mediaUrl}
                     alt="Post attachment"
                     referrerPolicy="no-referrer"
-                    className="mt-3 w-full max-h-[420px] rounded-[18px] object-cover"
+                    className="mt-3 w-full max-h-[420px] rounded-[18px] object-cover cursor-pointer"
+                    onClick={() => externalEvent && setShowEventModal(true)}
                     loading="lazy"
                   />
                 )
               )}
             </>
+          )}
+
+          {/* External Event Specific Body */}
+          {externalEvent && (
+            <div className="mt-3">
+              <div className="grid grid-cols-2 gap-3 mb-3 text-sm font-semibold text-neutral-600">
+                <div className="flex items-center gap-2 bg-neutral-50 p-2.5 rounded-xl">
+                  <Calendar className="w-4 h-4 text-[#5E43F3]" />
+                  <span className="truncate">{new Date(externalEvent.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                </div>
+                <div className="flex items-center gap-2 bg-neutral-50 p-2.5 rounded-xl">
+                  <Clock className="w-4 h-4 text-[#5E43F3]" />
+                  <span>{externalEvent.time}</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-1.5 text-sm font-semibold text-neutral-500 truncate">
+                  <MapPin className="w-4 h-4 shrink-0" />
+                  <span className="truncate">{externalEvent.area}, {externalEvent.city}</span>
+                </div>
+                
+                <button 
+                  onClick={() => setShowEventModal(true)}
+                  className="px-5 py-2 rounded-full bg-neutral-900 text-white font-bold text-sm hover:bg-neutral-800 transition-colors shrink-0"
+                >
+                  View Event →
+                </button>
+              </div>
+            </div>
           )}
 
           {/* GIF Attachment */}
@@ -478,8 +528,8 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
                 <span>{commentsCount}</span>
               </button>
 
-              {/* Repost (shown on posts, or can be used to re-rally) */}
-              {!linkedRally && (
+              {/* Repost */}
+              {(!linkedRally) && (
                 <button
                   id={`btn-repost-${itemId}`}
                   onClick={handleRepost}
@@ -587,12 +637,19 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, on
       <ReportModal 
         isOpen={showReportModal} 
         onClose={() => setShowReportModal(false)}
-        targetId={post ? post.id : (linkedRally?.id ?? "")}
+        targetId={post ? post.id : (linkedRally?.id ?? (externalEvent?.id ?? ""))}
         targetType={post ? "post" : "other"}
         onSuccess={() => {
           triggerShareToast('Thank you for keeping Lalao safe');
         }}
       />
+      
+      {showEventModal && externalEvent && (
+        <ExternalEventDetailModal 
+          eventId={externalEvent.id}
+          onClose={() => setShowEventModal(false)}
+        />
+      )}
     </article>
   );
 };

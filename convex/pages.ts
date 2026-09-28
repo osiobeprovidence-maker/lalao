@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { getFeatureFlags } from "./platformSettings";
 
 export const getMyPages = query({
   args: {},
@@ -19,27 +20,65 @@ export const getMyPages = query({
       .withIndex("by_owner", (q) => q.eq("ownerId", user._id))
       .collect();
 
-    return pages.map(page => ({
-      id: page._id,
-      ownerId: page.ownerId,
-      name: page.name,
-      username: page.username,
-      type: page.type,
-      badge: page.badge ?? "COMMUNITY",
-      avatar: page.avatar ?? "",
-      coverImage: page.coverImage ?? "",
-      description: page.description ?? "",
-      location: page.location ?? "",
-      followersCount: page.followersCount ?? 0,
-      isFollowing: true,
-      isOwner: true,
-      category: page.category ?? "",
-      aboutInfo: page.aboutInfo ?? {},
-      businessType: page.businessType,
-      activeTools: page.activeTools,
-      globalDiscoveryStatus: page.globalDiscoveryStatus ?? "global",
-      serviceAreas: page.serviceAreas ?? [],
-      isOnlineBusiness: page.isOnlineBusiness ?? false,
+    const flags = await getFeatureFlags(ctx, {} as any);
+
+    const filteredPages = flags.communityEnabled 
+      ? pages 
+      : pages.filter(p => p.type !== "community");
+
+    return Promise.all(filteredPages.map(async (page) => {
+      const events = await ctx.db
+        .query("pageEvents")
+        .withIndex("by_page", (q) => q.eq("pageId", page._id))
+        .collect();
+
+      return {
+        id: page._id,
+        ownerId: page.ownerId,
+        name: page.name,
+        username: page.username,
+        type: page.type,
+        badge: page.badge ?? "COMMUNITY",
+        avatar: page.avatar ?? "",
+        coverImage: page.coverImage ?? "",
+        description: page.description ?? "",
+        location: page.location ?? "",
+        followersCount: page.followersCount ?? 0,
+        isFollowing: true,
+        isOwner: true,
+        category: page.category ?? "",
+        aboutInfo: page.aboutInfo ?? {},
+        businessType: page.businessType,
+        activeTools: page.activeTools,
+        globalDiscoveryStatus: page.globalDiscoveryStatus ?? "global",
+        serviceAreas: page.serviceAreas ?? [],
+        isOnlineBusiness: page.isOnlineBusiness ?? false,
+        events: events.map(e => ({
+          id: e._id,
+          pageId: e.pageId,
+          organizationName: page.name,
+          organizationAvatar: page.avatar ?? "",
+          organizationBadge: page.badge ?? "ORG",
+          title: e.title,
+          type: e.type,
+          coverImage: e.coverImage ?? "",
+          date: e.date,
+          time: e.time,
+          location: e.location,
+          isOnline: e.isOnline,
+          registrationStatus: e.registrationStatus,
+          isTournament: e.isTournament,
+          isTicketed: e.isTicketed,
+          ticketPrice: e.ticketPrice,
+          prizePool: e.prizePool,
+          prizeCurrency: e.prizeCurrency,
+          description: e.description,
+          availableTickets: e.availableTickets,
+          totalTickets: e.totalTickets,
+          rules: e.rules,
+          schedule: e.schedule,
+        })),
+      };
     }));
   },
 });
@@ -47,27 +86,63 @@ export const getMyPages = query({
 export const listDiscoverablePages = query({
   args: {},
   handler: async (ctx) => {
-    // Fetch all pages (businesses, communities, clubs, orgs) for the discovery feed
+    const flags = await getFeatureFlags(ctx, {} as any);
     const pages = await ctx.db.query("pages").collect();
     
-    // In a real app, this might be filtered by moderation status, visibility, etc.
-    return pages.map(page => ({
-      id: page._id,
-      name: page.name,
-      username: page.username,
-      type: page.type,
-      badge: page.badge,
-      businessType: page.businessType,
-      globalDiscoveryStatus: page.globalDiscoveryStatus,
-      isOnlineBusiness: page.isOnlineBusiness,
-      location: page.location,
-      latitude: (page as any).latitude,
-      longitude: (page as any).longitude,
-      avatar: page.avatar,
-      coverImage: page.coverImage,
-      category: page.category,
-      aboutInfo: page.aboutInfo,
-      followersCount: page.followersCount ?? 0,
+    // Filter out community pages if disabled
+    const filteredPages = flags.communityEnabled 
+      ? pages 
+      : pages.filter(p => p.type !== "community");
+
+    return Promise.all(filteredPages.map(async (page) => {
+      const events = await ctx.db
+        .query("pageEvents")
+        .withIndex("by_page", (q) => q.eq("pageId", page._id))
+        .collect();
+
+      return {
+        id: page._id,
+        name: page.name,
+        username: page.username,
+        type: page.type,
+        badge: page.badge,
+        businessType: page.businessType,
+        globalDiscoveryStatus: page.globalDiscoveryStatus,
+        isOnlineBusiness: page.isOnlineBusiness,
+        location: page.location,
+        latitude: (page as any).latitude,
+        longitude: (page as any).longitude,
+        avatar: page.avatar,
+        coverImage: page.coverImage,
+        category: page.category,
+        aboutInfo: page.aboutInfo,
+        followersCount: page.followersCount ?? 0,
+        events: events.map(e => ({
+          id: e._id,
+          pageId: e.pageId,
+          organizationName: page.name,
+          organizationAvatar: page.avatar ?? "",
+          organizationBadge: page.badge ?? "ORG",
+          title: e.title,
+          type: e.type,
+          coverImage: e.coverImage ?? "",
+          date: e.date,
+          time: e.time,
+          location: e.location,
+          isOnline: e.isOnline,
+          registrationStatus: e.registrationStatus,
+          isTournament: e.isTournament,
+          isTicketed: e.isTicketed,
+          ticketPrice: e.ticketPrice,
+          prizePool: e.prizePool,
+          prizeCurrency: e.prizeCurrency,
+          description: e.description,
+          availableTickets: e.availableTickets,
+          totalTickets: e.totalTickets,
+          rules: e.rules,
+          schedule: e.schedule,
+        })),
+      };
     }));
   },
 });
@@ -97,6 +172,9 @@ export const getMyFollowedCommunities = query({
     const pages = await Promise.all(
       followedPageIds.map(async (pageId) => await ctx.db.get(pageId))
     );
+
+    const flags = await getFeatureFlags(ctx, {} as any);
+    if (!flags.communityEnabled) return [];
 
     return pages
       .filter((page: any) => page && page.type === "community")
@@ -151,6 +229,13 @@ export const createPage = mutation({
       club: "CLUB",
       community: "COMMUNITY",
     };
+
+    if (args.type === "community") {
+      const flags = await getFeatureFlags(ctx, {} as any);
+      if (!flags.communityEnabled) {
+        throw new Error("Community feature is currently disabled.");
+      }
+    }
 
     const now = Date.now();
     const newPageId = await ctx.db.insert("pages", {

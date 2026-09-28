@@ -51,7 +51,7 @@ export const InterestsPage: React.FC = () => {
     setIsLoading(true);
     try {
       await updateInterests({ interests: Array.from(selected) });
-      navigate('/onboarding/complete');
+      navigate('/onboarding/recommendations');
     } catch (err) {
       console.error(err);
     } finally {
@@ -62,7 +62,7 @@ export const InterestsPage: React.FC = () => {
   return (
     <OnboardingLayout 
       step={5} 
-      totalSteps={6} 
+      totalSteps={7} 
       title="What are you into?" 
       subtitle="Pick a few interests so we can personalize your Lalao experience." 
       backTo="/onboarding/location"

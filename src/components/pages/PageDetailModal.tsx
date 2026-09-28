@@ -42,6 +42,7 @@ import {
   Crown,
   Repeat,
   Heart,
+  Search,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
@@ -66,33 +67,15 @@ import { PageSettingsModal } from './PageSettingsModal';
 import { PageEventModal } from './PageEventModal';
 import { EventAttendeesModal } from './EventAttendeesModal';
 import { PageManageProductsModal } from './PageManageProductsModal';
-import { PagePostComposerModal } from './PagePostComposerModal';
+import { PostComposer } from '../create/PostComposer';
 import { RoomyTab } from './roomy/RoomyTab';
 
-type PageTab = 'posts' | 'shop' | 'subscriptions' | 'media' | 'events' | 'about' | 'roomy' | 'locations';
+type PageTab = 'posts' | 'shop' | 'auctions' | 'subscriptions' | 'media' | 'events' | 'about' | 'roomy' | 'locations';
 
-const ROOMY_PAGE: Page = {
-  _id: 'roomy' as any,
-  _creationTime: Date.now(),
-  id: 'roomy',
-  ownerId: 'system' as any,
-  name: 'Roomy',
-  username: 'roomy',
-  description: 'The community-driven marketplace built right into Lalao to help you find rooms, roommates, and accommodation options around you.',
-  category: 'Housing',
-  coverUrl: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=2070&auto=format&fit=crop',
-  avatarUrl: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=200&auto=format&fit=crop',
-  isVerified: true,
-  followersCount: 1,
-  activeTools: ['roomy'],
-  businessType: 'service',
-  locationMode: 'Global',
-};
 
 export const PageDetailModal: React.FC = () => {
   const {
     pages,
-    currentPage,
     activePageId,
     setActivePageId,
     pageProducts,
@@ -139,11 +122,14 @@ export const PageDetailModal: React.FC = () => {
   const [selectedEventForAttendees, setSelectedEventForAttendees] = useState<OrgEvent | null>(null);
   const [isPostComposerOpen, setIsPostComposerOpen] = useState(false);
 
-  const isVirtualPage = activePageId === 'page_honorofkings' || activePageId === 'roomy';
+  const isVirtualPage = activePageId === 'page_honorofkings';
+  
+  const currentPage = pages ? (pages.find(p => p.id === activePageId || p.username === activePageId) || null) : undefined;
+  const resolvedPageId = currentPage?.id;
 
-  const activePlans = useQuery(api.subscriptions.getPageSubscriptions, activePageId && !isVirtualPage ? { pageId: activePageId as any } : 'skip') || [];
+  const activePlans = useQuery(api.subscriptions.getPageSubscriptions, resolvedPageId && !isVirtualPage ? { pageId: resolvedPageId as any } : 'skip') || [];
   const myMemberships = useQuery(api.subscriptions.getMyMemberships) || [];
-  const pageLocations = useQuery(api.pages.getPageLocations, activePageId && !isVirtualPage ? { pageId: activePageId as any } : 'skip') || [];
+  const pageLocations = useQuery(api.pages.getPageLocations, resolvedPageId && !isVirtualPage ? { pageId: resolvedPageId as any } : 'skip') || [];
 
   const containerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -186,7 +172,6 @@ export const PageDetailModal: React.FC = () => {
   }
 
   const page =
-    activePageId === 'roomy' ? ROOMY_PAGE :
     activePageId === 'page_honorofkings' ? HOK_ORGANIZATION_PAGE : currentPage;
     
   if (!page) {
@@ -215,7 +200,65 @@ export const PageDetailModal: React.FC = () => {
   // Check if page is eligible for ticketing (Community, Club, Esports Org, etc.)
   const isTicketingEligible = isPageTicketingEligible(page);
 
-  const products: ShopProduct[] = pageProducts || [];
+  let products: ShopProduct[] = pageProducts || [];
+  
+  // Mock data for KoopUpBid MVP
+  if (page.partnerType === 'COMMERCE_PARTNER' && products.length === 0) {
+    products = [
+      {
+        id: 'mock-1',
+        name: 'Classic Vintage Denim Jacket',
+        description: 'Authentic 90s vintage denim with distressed details.',
+        price: 45000,
+        currency: 'NGN',
+        image: 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=500&q=80',
+        images: ['https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=500&q=80'],
+        category: 'Fashion',
+        inStock: true,
+        rating: 4.8,
+        reviewsCount: 12
+      },
+      {
+        id: 'mock-2',
+        name: 'Limited Edition Sneakers',
+        description: 'High-top sneakers with unique colorway. Mint condition.',
+        price: 120000,
+        currency: 'NGN',
+        image: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=500&q=80',
+        images: ['https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=500&q=80'],
+        category: 'Footwear',
+        inStock: true,
+        rating: 4.9,
+        reviewsCount: 34
+      },
+      {
+        id: 'mock-3',
+        name: 'Retro Sunglasses',
+        description: 'Stylish sunglasses for the summer.',
+        price: 15000,
+        currency: 'NGN',
+        image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=500&q=80',
+        images: ['https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=500&q=80'],
+        category: 'Accessories',
+        inStock: true,
+        rating: 4.5,
+        reviewsCount: 8
+      },
+      {
+        id: 'mock-4',
+        name: 'Leather Messenger Bag',
+        description: 'Handcrafted premium leather bag.',
+        price: 65000,
+        currency: 'NGN',
+        image: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=500&q=80',
+        images: ['https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=500&q=80'],
+        category: 'Accessories',
+        inStock: true,
+        rating: 4.7,
+        reviewsCount: 22
+      }
+    ];
+  }
 
   const categories = [
     'All',
@@ -241,33 +284,44 @@ export const PageDetailModal: React.FC = () => {
   let tabs: { id: PageTab; label: string }[] = [];
   tabs.push({ id: 'posts', label: 'Posts' });
 
-  const activeTools = page.activeTools || [];
+  const activeTools = page.activeTools || (page.partnerType === 'COMMERCE_PARTNER' ? ['shop', 'auction'] : []);
   
-  if (isBizPage) {
-    if (page.businessType === 'commerce' || page.businessType === 'hybrid') {
-      if (activeTools.includes('shop')) {
-        tabs.push({ id: 'shop', label: 'Shop' });
+  const isSuperPage = activeTools.some(t => ['shop', 'auction', 'booking', 'services', 'subscriptions'].includes(t)) || page.partnerType === 'COMMERCE_PARTNER';
+
+  if (isSuperPage) {
+    if (activeTools.includes('shop')) tabs.push({ id: 'shop', label: 'Shop' });
+    if (activeTools.includes('auction')) tabs.push({ id: 'auctions', label: 'Auctions' });
+    if (activeTools.includes('booking')) tabs.push({ id: 'booking', label: 'Booking' });
+    if (activeTools.includes('services')) tabs.push({ id: 'services', label: 'Services' });
+    if (activeTools.includes('events')) tabs.push({ id: 'events', label: 'Events' });
+    if (activeTools.includes('subscriptions')) tabs.push({ id: 'subscriptions', label: 'Subscriptions' });
+  } else {
+    if (isBizPage) {
+      if (page.businessType === 'commerce' || page.businessType === 'hybrid') {
+        if (activeTools.includes('shop')) {
+          tabs.push({ id: 'shop', label: 'Shop' });
+        }
+      }
+      if (page.businessType === 'subscription' || page.businessType === 'hybrid') {
+        if (activeTools.includes('subscriptions')) {
+          tabs.push({ id: 'subscriptions', label: 'Subscriptions' });
+        }
       }
     }
-    if (page.businessType === 'subscription' || page.businessType === 'hybrid') {
-      if (activeTools.includes('subscriptions')) {
-        tabs.push({ id: 'subscriptions', label: 'Subscriptions' });
-      }
+
+    tabs.push({ id: 'media', label: 'Media' });
+
+    if (hasEvents) {
+      tabs.push({ id: 'events', label: 'Events' });
     }
-  }
 
-  tabs.push({ id: 'media', label: 'Media' });
+    if (page.username === 'roomy' || activeTools.includes('roomy')) {
+      tabs.push({ id: 'roomy', label: 'Roomy' });
+    }
 
-  if (hasEvents) {
-    tabs.push({ id: 'events', label: 'Events' });
-  }
-
-  if (page.username === 'roomy' || activeTools.includes('roomy')) {
-    tabs.push({ id: 'roomy', label: 'Roomy' });
-  }
-
-  if (pageLocations.length > 0) {
-    tabs.push({ id: 'locations', label: 'Locations' });
+    if (pageLocations.length > 0) {
+      tabs.push({ id: 'locations', label: 'Locations' });
+    }
   }
 
   tabs.push({ id: 'about', label: 'About' });
@@ -599,7 +653,7 @@ export const PageDetailModal: React.FC = () => {
                           className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
                         >
                           <Edit3 className="w-4 h-4 text-[#5E43F3]" />
-                          <span>Edit Page Profile</span>
+                          <span>Edit Page</span>
                         </button>
 
                         <button
@@ -611,7 +665,7 @@ export const PageDetailModal: React.FC = () => {
                           className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
                         >
                           <PlusSquare className="w-4 h-4 text-[#5E43F3]" />
-                          <span>Create New Post</span>
+                          <span>Create Page Post</span>
                         </button>
 
                         <button
@@ -681,6 +735,17 @@ export const PageDetailModal: React.FC = () => {
                           <Briefcase className="w-4 h-4 text-[#5E43F3]" />
                           <span>Business Tools</span>
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            setIsToolsModalOpen(true);
+                          }}
+                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
+                        >
+                          <Sparkles className="w-4 h-4 text-purple-500" />
+                          <span>Super Page Tools</span>
+                        </button>
                       </div>
 
                       <div className="py-1">
@@ -694,6 +759,17 @@ export const PageDetailModal: React.FC = () => {
                         >
                           <Settings className="w-4 h-4 text-neutral-600" />
                           <span>Page Settings</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            alert("View as Visitor mode activated");
+                          }}
+                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
+                        >
+                          <Users className="w-4 h-4 text-neutral-600" />
+                          <span>View as Visitor</span>
                         </button>
                       </div>
                     </div>
@@ -860,6 +936,37 @@ export const PageDetailModal: React.FC = () => {
           {/* TAB: SHOP */}
           {activeTab === 'shop' && (
             <div id="page-shop-section" className="p-3 sm:p-4 space-y-4">
+              {page.partnerType === 'COMMERCE_PARTNER' && (
+                <div className="flex flex-col gap-3 mb-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative flex-1 min-w-[200px]">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                      <input 
+                        placeholder="Search products or categories..."
+                        className="w-full pl-9 pr-4 py-2 bg-white border border-neutral-200 rounded-xl text-xs focus:outline-none focus:border-[#5E43F3]"
+                      />
+                    </div>
+                    <select className="px-3 py-2 bg-white border border-neutral-200 rounded-xl text-xs focus:outline-none">
+                      <option>Sort: A–Z</option>
+                      <option>Sort: Z–A</option>
+                      <option>Price: Low to High</option>
+                      <option>Price: High to Low</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                    <button onClick={() => setIsCartOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-900 text-white rounded-lg text-xs font-bold hover:bg-black whitespace-nowrap shrink-0">
+                      <ShoppingBag className="w-3.5 h-3.5" /> Cart {cartCount > 0 && `(${cartCount})`}
+                    </button>
+                    <button onClick={() => setIsShoppingHistoryOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-neutral-200 text-neutral-800 rounded-lg text-xs font-bold hover:bg-neutral-50 whitespace-nowrap shrink-0">
+                      <History className="w-3.5 h-3.5" /> Order History
+                    </button>
+                    <button onClick={() => setActiveTab('auctions')} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-neutral-200 text-neutral-800 rounded-lg text-xs font-bold hover:bg-neutral-50 whitespace-nowrap shrink-0">
+                      <Trophy className="w-3.5 h-3.5" /> Auctions
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Storefront Overview Card */}
               <div className="bg-neutral-50 rounded-2xl p-3.5 border border-neutral-100 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
@@ -1013,6 +1120,39 @@ export const PageDetailModal: React.FC = () => {
                   No products in this category yet.
                 </div>
               )}
+            </div>
+          )}
+
+          {/* TAB: AUCTIONS */}
+          {activeTab === 'auctions' && (
+            <div id="page-auctions-section" className="p-3 sm:p-4 space-y-4">
+              <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-100 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
+                    <Trophy className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-neutral-900">Live Auctions</h3>
+                    <p className="text-[11px] text-neutral-500 max-w-sm">
+                      Bid on exclusive items from {page.name}.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2 mb-4 border-b border-neutral-100 pb-2">
+                <button className="px-3 py-1.5 bg-neutral-900 text-white rounded-lg text-xs font-bold">Active</button>
+                <button className="px-3 py-1.5 text-neutral-500 hover:bg-neutral-100 rounded-lg text-xs font-bold">Upcoming</button>
+                <button className="px-3 py-1.5 text-neutral-500 hover:bg-neutral-100 rounded-lg text-xs font-bold">Ended</button>
+              </div>
+
+              <div className="p-8 text-center flex flex-col items-center justify-center space-y-3 bg-white rounded-2xl border border-neutral-100">
+                <div className="w-12 h-12 rounded-full bg-neutral-50 flex items-center justify-center">
+                  <Trophy className="w-5 h-5 text-neutral-400" />
+                </div>
+                <h4 className="text-sm font-bold text-neutral-900">No active auctions</h4>
+                <p className="text-xs text-neutral-500 max-w-[200px]">Check back later for new items to bid on.</p>
+              </div>
             </div>
           )}
 
@@ -1625,11 +1765,23 @@ export const PageDetailModal: React.FC = () => {
       )}
 
       {isPostComposerOpen && (
-        <PagePostComposerModal
-          page={page}
-          isOpen={isPostComposerOpen}
-          onClose={() => setIsPostComposerOpen(false)}
-        />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-3xl shadow-2xl relative">
+            <button
+              onClick={() => setIsPostComposerOpen(false)}
+              className="absolute right-4 top-4 p-2 rounded-full hover:bg-neutral-100 z-10"
+            >
+              <X className="w-5 h-5 text-neutral-500" />
+            </button>
+            <div className="pt-8 pb-4">
+              <PostComposer
+                initialPageRefId={page.id}
+                onClose={() => setIsPostComposerOpen(false)}
+                onSuccess={() => setIsPostComposerOpen(false)}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {isToolsModalOpen && (

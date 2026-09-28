@@ -21,6 +21,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
+import { EventsView } from '../events/EventsView';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
 import { PostItem } from '../feed/PostItem';
@@ -59,7 +60,7 @@ export const DiscoverView: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'all' | 'people' | 'pages' | 'video' | 'trending'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'people' | 'pages' | 'video' | 'trending' | 'events'>('all');
   const [locationMode, setLocationMode] = useState<'current' | 'selected' | 'global'>('current');
   const [isLocationModeMenuOpen, setIsLocationModeMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -305,7 +306,7 @@ export const DiscoverView: React.FC = () => {
 
         {/* Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-          {['all', 'people', 'pages', 'video', 'trending'].map((filter) => (
+          {['all', 'people', 'pages', 'video', 'trending', 'events'].map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter as any)}
@@ -773,6 +774,7 @@ export const DiscoverView: React.FC = () => {
                 </div>
               </section>
             )}
+            {activeFilter === 'events' && <EventsView />}
 
             {/* Popular Posts Section */}
             {activeFilter === 'all' && (
