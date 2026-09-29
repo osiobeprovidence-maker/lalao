@@ -46,6 +46,7 @@ export const LocationRadiusModal: React.FC = () => {
     posts,
     rallies,
     cycles,
+    updateUserProfile,
   } = useLalao();
 
   const [activeTab, setActiveTab] = useState<ModalTab>('location');
@@ -99,6 +100,11 @@ export const LocationRadiusModal: React.FC = () => {
     setLocationPrivacy(privacySettings);
     setIsLocationModalOpen(false);
     triggerShareToast(`Discovery area set to ${finalLoc.name} · ${finalLoc.radiusKm} km`);
+
+    // Persist to Convex so the profile always shows the correct location
+    updateUserProfile({
+      locationName: finalName,
+    }).catch(console.error);
   };
 
   const handleGpsDetect = async () => {

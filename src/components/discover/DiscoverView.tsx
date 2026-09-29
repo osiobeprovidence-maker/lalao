@@ -126,36 +126,47 @@ export const DiscoverView: React.FC = () => {
       lng: location.longitude ?? getCoordinatesForLocation(location.name).lng,
     };
 
-    if (!activeCoords.lat || !activeCoords.lng) return [];
+    const viewerLocLower = location.name.toLowerCase().trim();
 
     return users
       .filter((user) => user.id !== currentUser?.id)
       .map((user) => {
         let uLat = user.latitude;
         let uLng = user.longitude;
-        
-        // Fallback to resolving the location name if no exact coordinates
-        if (!uLat || !uLng) {
-            if (user.location) {
-                const fallbackCoords = getCoordinatesForLocation(user.location);
-                uLat = fallbackCoords.lat;
-                uLng = fallbackCoords.lng;
-            }
+
+        // If the user has GPS coordinates, compute exact distance
+        if (uLat && uLng && activeCoords.lat && activeCoords.lng) {
+          const distance = calculateDistanceMeters(activeCoords.lat, activeCoords.lng, uLat, uLng);
+          return { ...user, distanceMeters: distance };
         }
 
-        if (!uLat || !uLng) return null;
+        // Fallback 1: resolve locationName to known hub coordinates
+        if (user.location) {
+          const fallbackCoords = getCoordinatesForLocation(user.location);
+          if (fallbackCoords.lat && fallbackCoords.lng && activeCoords.lat && activeCoords.lng) {
+            const distance = calculateDistanceMeters(activeCoords.lat, activeCoords.lng, fallbackCoords.lat, fallbackCoords.lng);
+            return { ...user, distanceMeters: distance };
+          }
 
-        const distance = calculateDistanceMeters(
-          activeCoords.lat,
-          activeCoords.lng,
-          uLat,
-          uLng
-        );
-        return { ...user, distanceMeters: distance };
+          // Fallback 2: string overlap match — same city/area = treat as nearby
+          const userLocLower = user.location.toLowerCase().trim();
+          if (
+            userLocLower &&
+            viewerLocLower &&
+            (userLocLower.includes(viewerLocLower) || viewerLocLower.includes(userLocLower))
+          ) {
+            // Same location name — treat as same area (200m nominal distance)
+            return { ...user, distanceMeters: 200 };
+          }
+        }
+
+        // No usable location data — exclude
+        return null;
       })
-      .filter((user): user is User & { distanceMeters: number } => user !== null && user.distanceMeters <= maxRadiusMeters)
+      .filter((user): user is any => user !== null && user.distanceMeters <= maxRadiusMeters)
       .sort((a, b) => a.distanceMeters - b.distanceMeters);
   }, [users, location, currentUser?.id, maxRadiusMeters]);
+
 
   const filteredPeople = useMemo(() => {
     return (nearbyPeople || [])
@@ -570,7 +581,7 @@ export const DiscoverView: React.FC = () => {
                             <div className="min-w-0">
                               <div className="flex items-center gap-1">
                                 <span className="font-bold text-sm text-neutral-900 truncate">{user.name}</span>
-                                {user.badge && <Badge type={user.badge} />}
+                                {(user as any).badge && <Badge type={(user as any).badge} />}
                               </div>
                               <div className="flex items-center gap-1.5 text-xs text-neutral-400 mt-0.5">
                                 <span className="truncate">@{user.username}</span>

@@ -131,7 +131,7 @@ async function resolveAuthor(ctx: any, authorDoc: any, currentUserId: string | n
     avatarUrl: avatar,
     userType: authorDoc.userType ?? "person",
     bio: authorDoc.bio ?? "",
-    location: authorDoc.locationName ?? "",
+    location: (authorDoc.locationName ?? "").replace(/\s*\(Detected\)\s*/i, "").replace(/^GPS Detected$/i, "").trim(),
     followersCount: authorDoc.followersCount ?? 0,
     followingCount: authorDoc.followingCount ?? 0,
     isFollowing,
@@ -564,7 +564,24 @@ export const listFeedPosts = query({
         location: post.location,
         latitude: post.latitude,
         longitude: post.longitude,
-        distanceMeters: (post as any)._computedDistance,
+        distanceMeters: (() => {
+          if (userLat && userLng && post.latitude && post.longitude) {
+            const R = 6371e3;
+            const f1 = (userLat * Math.PI) / 180;
+            const f2 = (post.latitude * Math.PI) / 180;
+            const df = ((post.latitude - userLat) * Math.PI) / 180;
+            const dl = ((post.longitude - userLng) * Math.PI) / 180;
+            const a = Math.sin(df / 2) ** 2 + Math.cos(f1) * Math.cos(f2) * Math.sin(dl / 2) ** 2;
+            return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+          }
+          if (post.location && cleanLocationName) {
+            const postLocLower = post.location.toLowerCase().trim();
+            if (postLocLower.includes(cleanLocationName) || cleanLocationName.includes(postLocLower)) {
+              return 250;
+            }
+          }
+          return 0;
+        })(),
         createdAt: formatRelativeTime(post.createdAt),
         likesCount: post.likesCount ?? 0,
         commentsCount: post.commentsCount ?? topLevel.length,
@@ -773,7 +790,29 @@ async function fetchPostsForProfileUser(
       location: post.location,
       latitude: post.latitude,
       longitude: post.longitude,
-      distanceMeters: 0,
+      distanceMeters: (() => {
+        // Compute distance from viewer to post location
+        const vLat = currentUser?.latitude;
+        const vLng = currentUser?.longitude;
+        if (vLat && vLng && post.latitude && post.longitude) {
+          const R = 6371e3;
+          const f1 = (vLat * Math.PI) / 180;
+          const f2 = (post.latitude * Math.PI) / 180;
+          const df = ((post.latitude - vLat) * Math.PI) / 180;
+          const dl = ((post.longitude - vLng) * Math.PI) / 180;
+          const a = Math.sin(df / 2) ** 2 + Math.cos(f1) * Math.cos(f2) * Math.sin(dl / 2) ** 2;
+          return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+        }
+        // Location name overlap → treat as same area
+        const viewerLoc = (currentUser?.locationName ?? "").toLowerCase().trim();
+        if (post.location && viewerLoc) {
+          const postLocLower = post.location.toLowerCase().trim();
+          if (postLocLower.includes(viewerLoc) || viewerLoc.includes(postLocLower)) {
+            return 250;
+          }
+        }
+        return 0;
+      })(),
       createdAt: formatRelativeTime(post.createdAt),
       likesCount: post.likesCount ?? 0,
       commentsCount: post.commentsCount ?? 0,
@@ -848,7 +887,7 @@ export const listUsersForExplore = query({
         avatar: user.avatarUrl ?? "",
         userType: user.userType ?? "person",
         bio: user.bio ?? "",
-        location: user.locationName ?? "",
+        location: (user.locationName ?? "").replace(/\s*\(Detected\)\s*/i, "").replace(/^GPS Detected$/i, "").trim(),
         latitude: user.latitude ?? undefined,
         longitude: user.longitude ?? undefined,
         followersCount: user.followersCount ?? 0,
@@ -898,7 +937,7 @@ export const listSuggestedUsers = query({
         avatar: user.avatarUrl ?? "",
         userType: user.userType ?? "person",
         bio: user.bio ?? "",
-        location: user.locationName ?? "",
+        location: (user.locationName ?? "").replace(/\s*\(Detected\)\s*/i, "").replace(/^GPS Detected$/i, "").trim(),
         followersCount: user.followersCount ?? 0,
         followingCount: user.followingCount ?? 0,
         isFollowing: relSets.followingIds.has(user._id),
@@ -1937,7 +1976,7 @@ export const getMyFollowers = query({
           username: user.username ?? "user",
           avatar: user.avatarUrl || "",
           bio: user.bio ?? "",
-          location: user.locationName ?? "",
+          location: (user.locationName ?? "").replace(/\s*\(Detected\)\s*/i, "").replace(/^GPS Detected$/i, "").trim(),
           isFollowing: myFollowingIds.has(user._id), // do I follow them back?
           followersCount: user.followersCount ?? 0,
           followingCount: user.followingCount ?? 0,

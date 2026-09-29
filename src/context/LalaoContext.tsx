@@ -310,7 +310,7 @@ const normalizeConvexUser = (user: Record<string, any> | null | undefined): User
     avatar: user.avatarUrl ?? EMPTY_CURRENT_USER.avatar,
     userType: (user.userType ?? 'person') as User['userType'],
     bio: user.bio ?? undefined,
-    location: user.locationName ?? user.location ?? EMPTY_CURRENT_USER.location,
+    location: (user.locationName ?? user.location ?? EMPTY_CURRENT_USER.location).replace(/\s*\(Detected\)\s*/i, '').replace(/^GPS Detected$/i, '').trim(),
     latitude: user.latitude ?? undefined,
     longitude: user.longitude ?? undefined,
     followersCount: typeof user.followersCount === 'number' ? user.followersCount : 0,
@@ -1043,28 +1043,56 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsDetectingGps(true);
     return new Promise((resolve) => {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setIsDetectingGps(false);
+        async (position) => {
           const { latitude, longitude } = position.coords;
 
-          // Find closest known hub
-          let closestHub = null;
-          let minDistance = Infinity;
-          for (const hub of Object.values(KNOWN_LOCATION_HUBS)) {
-            const d = calculateDistanceMeters(latitude, longitude, hub.coords.lat, hub.coords.lng);
-            if (d < minDistance) {
-              minDistance = d;
-              closestHub = hub;
-            }
-          }
-
           let locName = 'Current Location';
-          let subArea = 'GPS Detected';
-          if (closestHub && minDistance < 12000) {
-            locName = closestHub.name;
-            subArea = closestHub.subArea;
-          } else {
-            locName = `GPS Location (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`;
+          let subArea = '';
+
+          try {
+            // Real reverse geocode via OpenStreetMap Nominatim (free, no key)
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=12&addressdetails=1`,
+              { headers: { 'Accept-Language': 'en' } }
+            );
+            const data = await res.json();
+            const addr = data.address || {};
+            const area =
+              addr.neighbourhood ||
+              addr.suburb ||
+              addr.village ||
+              addr.town ||
+              addr.county ||
+              addr.city_district ||
+              '';
+            const city = addr.city || addr.town || addr.municipality || addr.county || '';
+            const state = addr.state || addr.region || '';
+            if (area) {
+              locName = area;
+              subArea = [city || state].filter(Boolean).join(', ') || state;
+            } else if (city) {
+              locName = city;
+              subArea = state;
+            } else {
+              locName = state || `GPS Location (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`;
+            }
+          } catch {
+            // Fallback: find closest known hub
+            let closestHub = null;
+            let minDistance = Infinity;
+            for (const hub of Object.values(KNOWN_LOCATION_HUBS)) {
+              const d = calculateDistanceMeters(latitude, longitude, hub.coords.lat, hub.coords.lng);
+              if (d < minDistance) {
+                minDistance = d;
+                closestHub = hub;
+              }
+            }
+            if (closestHub && minDistance < 12000) {
+              locName = closestHub.name;
+              subArea = closestHub.subArea;
+            } else {
+              locName = `GPS Location (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`;
+            }
           }
 
           const newLoc: LocationConfig = {
@@ -1076,6 +1104,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             isGpsDetected: true,
           };
           setLocation(newLoc);
+          setIsDetectingGps(false);
           triggerShareToast(`Location detected: ${locName}`);
           resolve({ success: true });
         },
@@ -1089,10 +1118,11 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }
           resolve({ success: false, error: errorMsg });
         },
-        { timeout: 8000, enableHighAccuracy: true }
+        { timeout: 10000, enableHighAccuracy: true }
       );
     });
   };
+
 
   // Recompute distance to all items dynamically whenever user location changes
   useEffect(() => {
@@ -1273,7 +1303,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         mediaUrl: args.mediaUrl,
         mediaType: args.mediaType as 'image' | 'video' | undefined,
         location: args.location || location.name,
-        distanceMeters: 0,
+        distanceMeters: 0, // User's own posts are 0m from themselves; feed recalculates for others
         createdAt: 'Just now',
         likesCount: 0,
         repostsCount: 0,
@@ -1437,7 +1467,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }));
 
     triggerShareToast(nowFollowing ? `Following @${targetUsername || 'user'}` : `Unfollowed @${targetUsername || 'user'}`);
-    toggleFollowUserMutation({ userId: userId as any }).catch(console.error);
+    toggleFollowUserMutation({ targetUserId: userId as any }).catch(console.error);
   }, 'Sign in to follow this user');
 
   const createPage = async ({

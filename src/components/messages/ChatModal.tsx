@@ -10,6 +10,8 @@ import {
   CheckCheck,
   Sparkles,
   MoreHorizontal,
+  Camera,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
@@ -490,6 +492,16 @@ export const ChatModal: React.FC = () => {
                     <Smile className="w-4 h-4" />
                   </button>
                 )}
+
+                <label className="rounded-full p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors cursor-pointer" title="Attach image">
+                  <ImageIcon className="w-4 h-4" />
+                  <input type="file" accept="image/*,video/*" className="hidden" onChange={() => triggerShareToast('Gallery selected')} />
+                </label>
+
+                <label className="rounded-full p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors cursor-pointer" title="Camera snap">
+                  <Camera className="w-4 h-4" />
+                  <input type="file" accept="image/*,video/*" capture="environment" className="hidden" onChange={() => triggerShareToast('Camera snapped')} />
+                </label>
 
                 <button
                   type="button"

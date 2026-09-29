@@ -10,6 +10,7 @@ export const LocationSetupPage: React.FC = () => {
   const updateLocation = useMutation(api.users.updateLocation);
   const [isDetecting, setIsDetecting] = useState(false);
   const [detectedLocation, setDetectedLocation] = useState<string | null>(null);
+  const [latLng, setLatLng] = useState<{ latitude: number; longitude: number } | null>(null);
   const [manualLocation, setManualLocation] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -18,16 +19,48 @@ export const LocationSetupPage: React.FC = () => {
     setIsDetecting(true);
     setError('');
     navigator.geolocation?.getCurrentPosition(
-      () => {
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        try {
+          // Real reverse geocode via OpenStreetMap Nominatim (free, no key needed)
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=12&addressdetails=1`,
+            { headers: { 'Accept-Language': 'en' } }
+          );
+          const data = await res.json();
+          const addr = data.address || {};
+          // Build a meaningful location string: neighbourhood / city + state
+          const parts: string[] = [];
+          const area =
+            addr.neighbourhood ||
+            addr.suburb ||
+            addr.village ||
+            addr.town ||
+            addr.county ||
+            addr.city_district ||
+            '';
+          const city = addr.city || addr.town || addr.municipality || addr.county || '';
+          const state = addr.state || addr.region || '';
+          if (area) parts.push(area);
+          else if (city) parts.push(city);
+          if (state && state !== area && state !== city) parts.push(state);
+          const locName = parts.length ? parts.join(', ') : `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
+          setDetectedLocation(locName);
+          setLatLng({ latitude, longitude });
+        } catch {
+          // Fallback: raw coordinates
+          const locName = `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
+          setDetectedLocation(locName);
+          setLatLng({ latitude, longitude });
+        }
         setIsDetecting(false);
-        setDetectedLocation('Udu, Delta State (Detected)');
-        setManualLocation(''); // Clear manual if GPS succeeds
+        setManualLocation('');
       },
       () => {
         setIsDetecting(false);
         setError('Location permission denied or unavailable. Please enter it manually.');
       },
-      { timeout: 8000 }
+      { timeout: 10000, enableHighAccuracy: true }
     );
   };
 
@@ -39,8 +72,11 @@ export const LocationSetupPage: React.FC = () => {
     setError('');
     setIsLoading(true);
     try {
-      const locName = detectedLocation || manualLocation.trim();
-      await updateLocation({ locationName: locName });
+      const locName = (detectedLocation || manualLocation.trim()).replace(/\s*\(Detected\)\s*/i, '').trim();
+      await updateLocation({
+        locationName: locName,
+        ...(latLng ?? {}),
+      });
       navigate('/onboarding/interests');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to update location.');
@@ -48,6 +84,7 @@ export const LocationSetupPage: React.FC = () => {
       setIsLoading(false);
     }
   };
+
 
   const handleSkip = () => {
     // According to instructions: "Allow the user to manually select their location or continue and set it later"

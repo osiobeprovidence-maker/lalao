@@ -49,6 +49,7 @@ export const CycleStoryViewerModal: React.FC = () => {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [floatingHearts, setFloatingHearts] = useState<{ id: number; x: number }[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
 
   const commentInputRef = useRef<HTMLInputElement>(null);
   const STORY_DURATION = 5500; // 5.5 seconds per slide
@@ -307,6 +308,21 @@ export const CycleStoryViewerModal: React.FC = () => {
               )}
             </button>
 
+            {/* Mute/Unmute Button for Videos */}
+            {currentItem.mediaType === 'video' && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsMuted((m) => !m);
+                }}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 backdrop-blur-xs flex items-center justify-center text-white cursor-pointer transition-colors mr-1"
+                title={isMuted ? 'Unmute' : 'Mute'}
+              >
+                {isMuted ? <VolumeX className="w-4 h-4 text-white" /> : <div className="w-4 h-4 flex items-center justify-center font-bold text-[10px]">VOL</div>}
+              </button>
+            )}
+
             {/* 3-Dots Menu Button */}
             <button
               id="btn-cycle-story-more-menu"
@@ -391,7 +407,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                   mediaUrl={currentItem.mediaUrl}
                   autoPlay={true}
                   loop
-                  muted
+                  muted={isMuted}
                   className="w-full h-full object-contain"
                 />
               <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/85 via-black/40 to-transparent pointer-events-none" />

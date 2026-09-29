@@ -492,12 +492,15 @@ export const UserProfileModal: React.FC = () => {
 
             {/* Location & Mutual Connections Footprint */}
             <div className="space-y-1.5 text-xs text-neutral-500 pt-0.5">
-              {activeUserProfile.location && (
-                <div className="flex items-center gap-1.5 text-neutral-600 font-medium">
-                  <MapPin className="w-3.5 h-3.5 text-[#5E43F3] shrink-0" />
-                  <span>{activeUserProfile.location}</span>
-                </div>
-              )}
+              {activeUserProfile.location && (() => {
+                const cleanLoc = activeUserProfile.location.replace(/\s*\(Detected\)\s*/i, '').replace(/^GPS Detected$/i, '').trim();
+                return cleanLoc ? (
+                  <div className="flex items-center gap-1.5 text-neutral-600 font-medium">
+                    <MapPin className="w-3.5 h-3.5 text-[#5E43F3] shrink-0" />
+                    <span>{cleanLoc}</span>
+                  </div>
+                ) : null;
+              })()}
 
               {activeUserProfile.mutualInfo ? (
                 <div className="flex items-center gap-1.5 text-neutral-500 text-[11px]">
