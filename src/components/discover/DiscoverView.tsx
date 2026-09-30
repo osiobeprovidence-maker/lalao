@@ -53,6 +53,7 @@ export const DiscoverView: React.FC = () => {
     unreadNotifsCount,
     toggleFollowUser,
     setActiveCommentsPostId,
+    featureFlags,
   } = useLalao();
 
   const rawUsers = useQuery(api.social.listUsersForExplore);
@@ -60,7 +61,7 @@ export const DiscoverView: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'all' | 'people' | 'pages' | 'video' | 'trending' | 'events'>('all');
+  const [activeFilter, setActiveFilter] = useState<'people' | 'pages' | 'shop' | 'events'>('people');
   const [locationMode, setLocationMode] = useState<'current' | 'selected' | 'global'>('current');
   const [isLocationModeMenuOpen, setIsLocationModeMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -178,7 +179,7 @@ export const DiscoverView: React.FC = () => {
   }, [nearbyPeople, locationMode, maxRadiusMeters]);
 
   // Filtered lists based on discovery radius
-  const filteredPages = useMemo(() => {
+  const baseFilteredPages = useMemo(() => {
     return (pages || [])
       .filter((p: any) => {
         // Global or national businesses are always visible
@@ -202,6 +203,9 @@ export const DiscoverView: React.FC = () => {
         return aDist - bDist;
       });
   }, [pages, locationMode, maxRadiusMeters]);
+
+  const filteredPages = useMemo(() => baseFilteredPages.filter((p: any) => p.type !== 'business'), [baseFilteredPages]);
+  const filteredShop = useMemo(() => baseFilteredPages.filter((p: any) => p.type === 'business'), [baseFilteredPages]);
 
   const nearbyPosts = useMemo(() => {
     return (posts || [])
@@ -317,7 +321,7 @@ export const DiscoverView: React.FC = () => {
 
         {/* Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-          {['all', 'people', 'pages', 'video', 'trending', 'events'].map((filter) => (
+          {['people', 'pages', 'shop', 'events'].map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter as any)}
@@ -327,7 +331,7 @@ export const DiscoverView: React.FC = () => {
                   : 'bg-white text-neutral-600 border border-neutral-200/80 hover:bg-neutral-50 hover:text-neutral-900'
               }`}
             >
-              {filter.charAt(0).toUpperCase() + filter.slice(1).replace('pages', 'Pages & Businesses')}
+              {filter.charAt(0).toUpperCase() + filter.slice(1)}
             </button>
           ))}
         </div>
@@ -343,8 +347,8 @@ export const DiscoverView: React.FC = () => {
         </div>
       )}
 
-      {/* Roomy Banner - Only show if not searching */}
-      {!isSearching && (
+      {/* Roomy Banner - Only show if not searching and roomyEnabled is true */}
+      {!isSearching && featureFlags.roomyEnabled && (
         <div className="px-4 mt-4">
           <div 
             onClick={() => {
@@ -400,7 +404,7 @@ export const DiscoverView: React.FC = () => {
             ) : (
               <>
                 {/* Search Results: People */}
-                {(activeFilter === 'all' || activeFilter === 'people') && searchResults.people.length > 0 && (
+                {activeFilter === 'people' && searchResults.people.length > 0 && (
                   <section className="px-4">
                     <div className="flex items-center gap-1.5 mb-3">
                       <Users className="w-4 h-4 text-[#5E43F3]" />
@@ -461,23 +465,8 @@ export const DiscoverView: React.FC = () => {
                   </section>
                 )}
 
-                {/* Search Results: Content / Video */}
-                {(activeFilter === 'all' || activeFilter === 'video') && searchResults.content.length > 0 && (
-                  <section className="px-4">
-                    <div className="flex items-center gap-1.5 mb-3">
-                      <Search className="w-4 h-4 text-[#5E43F3]" />
-                      <h2 className="text-sm font-bold text-neutral-900 tracking-tight">Content</h2>
-                    </div>
-                    <div className="divide-y divide-neutral-100">
-                      {searchResults.content.map((post: any) => (
-                        <PostItem key={post.id} post={post} />
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                {/* Search Results: Pages */}
-                {(activeFilter === 'all' || activeFilter === 'pages') && searchResults.pages.length > 0 && (
+                {/* Search Results: Pages & Shop */}
+                {(activeFilter === 'pages' || activeFilter === 'shop') && searchResults.pages.length > 0 && (
                   <section className="px-4">
                     <div className="flex items-center gap-1.5 mb-3">
                       <Building className="w-4 h-4 text-[#5E43F3]" />
@@ -527,35 +516,10 @@ export const DiscoverView: React.FC = () => {
              DISCOVERY STATE (Existing Nearby logic)
              ========================================= */
           <>
-            {/* Trending Section */}
-            {(activeFilter === 'all' || activeFilter === 'trending') && trendingTopics.length > 0 && (
-              <section className="px-4">
-                <div className="flex items-center justify-between mb-2.5">
-                  <div className="flex items-center gap-1.5">
-                    <TrendingUp className="w-4 h-4 text-[#5E43F3]" />
-                    <h2 className="text-sm font-bold text-neutral-900 tracking-tight">Trending Near You</h2>
-                  </div>
-                  <span className="text-xs text-neutral-400">{location.name}</span>
-                </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  {trendingTopics.map((topic, i) => (
-                    <div
-                      key={i}
-                      onClick={() => setSearchQuery(topic.tag.replace('#', ''))}
-                      className="p-3 rounded-xl bg-neutral-50 hover:bg-neutral-100 transition-colors border border-neutral-100/80 cursor-pointer"
-                    >
-                      <p className="text-xs font-semibold text-neutral-500">{topic.location}</p>
-                      <p className="font-bold text-sm text-neutral-900 truncate mt-0.5">{topic.tag}</p>
-                      <p className="text-[11px] text-neutral-400 mt-1">{topic.postsCount}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
 
             {/* People Near You */}
-            {(activeFilter === 'all' || activeFilter === 'people') && (
+            {activeFilter === 'people' && (
               <section className="px-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-1.5">
@@ -643,20 +607,24 @@ export const DiscoverView: React.FC = () => {
               </section>
             )}
 
-            {/* Local Pages & Businesses */}
-            {(activeFilter === 'all' || activeFilter === 'pages') && (
+            {/* Local Pages or Shop */}
+            {(activeFilter === 'pages' || activeFilter === 'shop') && (
               <section className="px-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-1.5">
                     <Building className="w-4 h-4 text-[#5E43F3]" />
-                    <h2 className="text-sm font-bold text-neutral-900 tracking-tight">Local Pages & Businesses</h2>
-                    <span className="text-xs text-neutral-400">({filteredPages.length})</span>
+                    <h2 className="text-sm font-bold text-neutral-900 tracking-tight">
+                      {activeFilter === 'pages' ? 'Local Pages' : 'Local Shops & Businesses'}
+                    </h2>
+                    <span className="text-xs text-neutral-400">
+                      ({activeFilter === 'pages' ? filteredPages.length : filteredShop.length})
+                    </span>
                   </div>
                 </div>
 
-                {filteredPages.length > 0 ? (
+                {(activeFilter === 'pages' ? filteredPages : filteredShop).length > 0 ? (
                   <div className="divide-y divide-neutral-200/80">
-                    {filteredPages.map((page) => {
+                    {(activeFilter === 'pages' ? filteredPages : filteredShop).map((page) => {
                       const distFormatted =
                         page.distanceMeters !== undefined
                           ? formatDistance(page.distanceMeters, locationPrivacy?.approximateDistance)
@@ -710,12 +678,12 @@ export const DiscoverView: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-[13px] font-bold text-neutral-900 mb-1">
-                        No local Stands found
+                        No local {activeFilter === 'pages' ? 'Pages' : 'Shops'} found
                       </p>
                       <p className="text-[11px] text-neutral-500 leading-relaxed max-w-[280px] mx-auto">
-                        No local Stands found within {location.radiusKm} km of {location.name}.
+                        No local {activeFilter === 'pages' ? 'Pages' : 'Shops'} found within {location.radiusKm} km of {location.name}.
                         <br/><br/>
-                        Be the first to create a Stand in your area and let people nearby discover you.
+                        Be the first to create one in your area and let people nearby discover you.
                       </p>
                     </div>
                     
@@ -727,7 +695,7 @@ export const DiscoverView: React.FC = () => {
                         }}
                         className="w-full max-w-[220px] mx-auto py-2.5 rounded-xl bg-[#5E43F3] text-white text-xs font-bold hover:bg-[#4E34E0] transition-colors"
                       >
-                        Create a Stand
+                        Create a {activeFilter === 'pages' ? 'Page' : 'Shop'}
                       </button>
                     </div>
                     
@@ -736,80 +704,13 @@ export const DiscoverView: React.FC = () => {
                       onClick={() => setLocationMode('global')}
                       className="block mx-auto text-[11px] font-bold text-[#5E43F3] hover:underline"
                     >
-                      Show pages everywhere
+                      Show everywhere
                     </button>
                   </div>
                 )}
               </section>
             )}
-
-            {/* Video Section */}
-            {(activeFilter === 'all' || activeFilter === 'video') && videoPosts.length > 0 && (
-              <section className="px-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-1.5">
-                    <Play className="w-4 h-4 text-[#5E43F3]" />
-                    <h2 className="text-sm font-bold text-neutral-900 tracking-tight">Video</h2>
-                    <span className="text-xs text-neutral-400">({videoPosts.length})</span>
-                  </div>
-                </div>
-
-                <div className="divide-y divide-neutral-200/80">
-                  {videoPosts.map((post) => (
-                    <div 
-                      key={post.id} 
-                      onClick={() => setActiveCommentsPostId(post.id)}
-                      className="py-3 flex items-center gap-3 cursor-pointer hover:bg-neutral-100/60 p-2 rounded-xl transition-colors"
-                    >
-                      <div className="relative h-16 w-24 rounded-xl overflow-hidden bg-neutral-200 shrink-0">
-                        <div className="absolute inset-0 bg-gradient-to-br from-neutral-300 via-neutral-200 to-neutral-100" />
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-8 h-8 rounded-full bg-white/80 flex items-center justify-center shadow-sm">
-                            <Play className="w-3.5 h-3.5 text-[#5E43F3] fill-current" />
-                          </div>
-                        </div>
-                        {post.mediaUrl && (
-                          <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 text-[9px] font-bold text-white">
-                            {post.mediaType === 'video' ? 'Video' : 'Post'}
-                          </span>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-bold text-neutral-900 line-clamp-2">{post.text}</p>
-                        <p className="text-[11px] text-neutral-500 mt-1">
-                          {post.likesCount} likes · {post.commentsCount} comments
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
             {activeFilter === 'events' && <EventsView />}
-
-            {/* Popular Posts Section */}
-            {activeFilter === 'all' && (
-              <section className="pt-2">
-                <div className="px-4 mb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <h2 className="text-sm font-bold text-neutral-900 tracking-tight">Popular Posts Nearby</h2>
-                  </div>
-                  <span className="text-xs text-neutral-400">Within {location.radiusKm} km</span>
-                </div>
-
-                {nearbyPosts.length > 0 ? (
-                  <div className="divide-y divide-neutral-100">
-                    {nearbyPosts.map((post) => (
-                      <PostItem key={post.id} post={post} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="mx-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-center text-xs text-neutral-600">
-                    No popular posts nearby yet. Try changing your location radius or check back later.
-                  </div>
-                )}
-              </section>
-            )}
           </>
         )}
       </div>

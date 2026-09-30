@@ -209,7 +209,7 @@ export const globalSearch = query({
     }
 
     // PAGES SEARCH
-    if (filter === 'all' || filter === 'pages') {
+    if (filter === 'all' || filter === 'pages' || filter === 'shop') {
       const byName = await ctx.db.query("pages").withSearchIndex("search_name", (q2: any) => q2.search("name", q)).take(10);
       const byCategory = await ctx.db.query("pages").withSearchIndex("search_category", (q2: any) => q2.search("category", q)).take(10);
 
@@ -221,6 +221,8 @@ export const globalSearch = query({
       });
 
       for (const p of uniquePages.values()) {
+        if (filter === 'pages' && p.type === 'business') continue;
+        if (filter === 'shop' && p.type !== 'business') continue;
         let isFollowing = false;
         if (currentUser) {
           const follow = await ctx.db

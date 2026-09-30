@@ -105,7 +105,7 @@ export const getFeatureFlags = query({
       .withIndex("by_key", (q) => q.eq("key", "featureFlags"))
       .unique();
 
-    const defaultFlags = { communityEnabled: false };
+    const defaultFlags = { communityEnabled: false, roomyEnabled: true };
 
     if (!record) return defaultFlags;
 
@@ -123,6 +123,7 @@ export const updateFeatureFlags = mutation({
       communityEnabled: v.optional(v.boolean()),
       ralliesEnabled: v.optional(v.boolean()),
       cyclesEnabled: v.optional(v.boolean()),
+      roomyEnabled: v.optional(v.boolean()),
     }),
   },
   handler: async (ctx, args) => {
@@ -133,7 +134,7 @@ export const updateFeatureFlags = mutation({
       .withIndex("by_key", (q) => q.eq("key", "featureFlags"))
       .unique();
 
-    let currentFlags = { communityEnabled: false };
+    let currentFlags = { communityEnabled: false, roomyEnabled: true };
     if (record) {
       try {
         currentFlags = { ...currentFlags, ...JSON.parse(record.value) };
@@ -187,7 +188,7 @@ export const requireFeatureFlag = async (ctx: any, feature: string) => {
     .withIndex("by_key", (q: any) => q.eq("key", "featureFlags"))
     .unique();
     
-  let flags: Record<string, boolean> = { communityEnabled: false };
+  let flags: Record<string, boolean> = { communityEnabled: false, roomyEnabled: true };
   if (record) {
     try {
       flags = { ...flags, ...JSON.parse(record.value) };

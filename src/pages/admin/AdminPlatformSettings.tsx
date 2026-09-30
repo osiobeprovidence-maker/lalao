@@ -36,6 +36,7 @@ export const AdminPlatformSettings: React.FC = () => {
     communityEnabled: false,
     ralliesEnabled: false,
     cyclesEnabled: false,
+    roomyEnabled: true,
   });
 
   const [isSavingFlags, setIsSavingFlags] = useState(false);
@@ -57,6 +58,7 @@ export const AdminPlatformSettings: React.FC = () => {
         communityEnabled: featureFlagsData.communityEnabled ?? false,
         ralliesEnabled: featureFlagsData.ralliesEnabled ?? false,
         cyclesEnabled: featureFlagsData.cyclesEnabled ?? false,
+        roomyEnabled: featureFlagsData.roomyEnabled ?? true,
       });
     }
   }, [featureFlagsData]);
@@ -439,6 +441,22 @@ export const AdminPlatformSettings: React.FC = () => {
                 className="sr-only peer"
                 checked={flagsForm.communityEnabled}
                 onChange={(e) => setFlagsForm(prev => ({ ...prev, communityEnabled: e.target.checked }))}
+              />
+              <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+            </label>
+          </div>
+
+          <div className="flex items-center justify-between p-4 rounded-xl border border-neutral-100 bg-neutral-50/50">
+            <div>
+              <p className="text-sm font-bold text-neutral-900">Show Roomy in Explore</p>
+              <p className="text-xs text-neutral-500 mt-0.5">Controls whether the Roomy discovery card is visible on the Explore page.</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={flagsForm.roomyEnabled}
+                onChange={(e) => setFlagsForm(prev => ({ ...prev, roomyEnabled: e.target.checked }))}
               />
               <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
             </label>

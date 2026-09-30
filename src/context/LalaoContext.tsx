@@ -264,7 +264,7 @@ interface LalaoContextType {
   closeAuthPrompt: () => void;
   requireAuth: (action: () => void, message?: string) => void;
   [key: string]: any;
-  featureFlags: { communityEnabled: boolean; ralliesEnabled: boolean; cyclesEnabled: boolean };
+  featureFlags: { communityEnabled: boolean; ralliesEnabled: boolean; cyclesEnabled: boolean; roomyEnabled?: boolean; };
 }
 
 const LalaoContext = createContext<LalaoContextType | undefined>(undefined);
@@ -329,7 +329,7 @@ const normalizeConvexUser = (user: Record<string, any> | null | undefined): User
 
 export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const currentUserQuery = useQuery(api.users.getCurrentUser);
-  const featureFlags = useQuery(api.platformSettings.getFeatureFlags) || { communityEnabled: false, ralliesEnabled: true, cyclesEnabled: true };
+  const featureFlags = useQuery(api.platformSettings.getFeatureFlags) || { communityEnabled: false, ralliesEnabled: true, cyclesEnabled: true, roomyEnabled: true };
   const pushEnabledQuery = useQuery(api.push.hasActivePushToken);
   const upsertWebPushSubscription = useMutation(api.push.upsertWebPushSubscription);
   const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
