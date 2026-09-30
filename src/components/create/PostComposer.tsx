@@ -186,7 +186,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
     setMediaUrl(URL.createObjectURL(file));
   };
 
-  const generateVideoPoster = (file: File): Promise<string> =>
+  const generateVideoPoster = (file: File): Promise<{ dataUrl: string, width: number, height: number }> =>
     new Promise((resolve) => {
       const video = document.createElement('video');
       video.preload = 'metadata';
@@ -203,15 +203,15 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
           URL.revokeObjectURL(video.src);
-          resolve(dataUrl);
+          resolve({ dataUrl, width: canvas.width, height: canvas.height });
         } else {
           URL.revokeObjectURL(video.src);
-          resolve('');
+          resolve({ dataUrl: '', width: canvas.width, height: canvas.height });
         }
       };
       video.onerror = () => {
         URL.revokeObjectURL(video.src);
-        resolve('');
+        resolve({ dataUrl: '', width: 640, height: 360 });
       };
     });
 
@@ -255,15 +255,19 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
       let finalMediaUrl = mediaUrl;
       let finalMediaStorageId: string | undefined;
       let finalMuxUploadId: string | undefined;
+      let finalMediaWidth: number | undefined;
+      let finalMediaHeight: number | undefined;
 
       if (selectedFile) {
         if (mediaType === 'video') {
           try {
-            const posterUrl = await generateVideoPoster(selectedFile);
+            const { dataUrl, width, height } = await generateVideoPoster(selectedFile);
+            finalMediaWidth = width;
+            finalMediaHeight = height;
             const { upload_url, upload_id } = await createMuxDirectUpload();
             await uploadFileWithProgress(upload_url, 'PUT', selectedFile, () => undefined);
             finalMuxUploadId = upload_id;
-            finalMediaUrl = posterUrl || mediaUrl;
+            finalMediaUrl = dataUrl || mediaUrl;
           } catch (muxErr) {
             console.error('[Lalao Media Upload] Mux upload failed, falling back to storage:', muxErr);
             try {
@@ -304,6 +308,8 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
         mediaUrl: finalMediaUrl || undefined,
         mediaStorageId: finalMediaStorageId,
         mediaType,
+        mediaWidth: finalMediaWidth,
+        mediaHeight: finalMediaHeight,
         location: attachedLocation || location.name || 'Local',
         audience,
         replyPermission,

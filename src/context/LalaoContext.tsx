@@ -93,7 +93,7 @@ interface LalaoContextType {
   deletePost: (postId: string) => Promise<void>;
   addComment: (postId: string, text: string, parentCommentId?: string, mediaStorageId?: string, mediaType?: 'image' | 'voice' | 'gif' | 'sticker') => Promise<void>;
   toggleLikeComment: (postId: string, commentId: string, replyId?: string) => void;
-  createPost: (post: { text: string; mediaUrl?: string; mediaStorageId?: string; mediaType?: 'image' | 'video'; location: string; audience?: string; replyPermission?: string; gifUrl?: string; pollQuestion?: string; pollOptions?: string[]; rallyRefId?: string; pageRefId?: string; contentTopics?: string[]; }) => Promise<any>;
+  createPost: (post: { text: string; mediaUrl?: string; mediaStorageId?: string; mediaType?: 'image' | 'video'; mediaWidth?: number; mediaHeight?: number; location: string; audience?: string; replyPermission?: string; gifUrl?: string; pollQuestion?: string; pollOptions?: string[]; rallyRefId?: string; pageRefId?: string; contentTopics?: string[]; }) => Promise<any>;
   saveDraft: (draft: any) => Promise<any>;
   getDrafts: () => Promise<any>;
   deleteDraft: (draftId: string) => Promise<any>;

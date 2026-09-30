@@ -37,6 +37,8 @@ export const VideoPlayer = React.memo(
     onExpandVideo,
     hideMuteButton,
     onMuteToggle,
+    mediaWidth,
+    mediaHeight,
   }: {
     muxPlaybackId?: string;
     mediaUrl?: string;
@@ -51,6 +53,8 @@ export const VideoPlayer = React.memo(
     onExpandVideo?: () => void;
     hideMuteButton?: boolean;
     onMuteToggle?: (muted: boolean) => void;
+    mediaWidth?: number;
+    mediaHeight?: number;
   }) {
     const containerRef = useRef<HTMLDivElement>(null);
     const playerRef = useRef<any>(null);
@@ -74,7 +78,9 @@ export const VideoPlayer = React.memo(
     const [controlsVisible, setControlsVisible] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [hasError, setHasError] = useState(false);
-    const [exactAspectRatio, setExactAspectRatio] = useState<number | null>(null);
+    const [exactAspectRatio, setExactAspectRatio] = useState<number | null>(
+      mediaWidth && mediaHeight ? mediaWidth / mediaHeight : null
+    );
     const [playbackSpeed, setPlaybackSpeed] = useState(1);
     const [showSpeedMenu, setShowSpeedMenu] = useState(false);
     const [supportsPiP, setSupportsPiP] = useState(false);
@@ -106,7 +112,7 @@ export const VideoPlayer = React.memo(
       if (!containerRef.current) return;
       const nearObserver = new IntersectionObserver(
         ([entry]) => setIsNearViewport(entry.isIntersecting),
-        { rootMargin: '100% 0px' },
+        { rootMargin: '300% 0px' },
       );
       const inObserver = new IntersectionObserver(
         ([entry]) => setIsInViewport(entry.isIntersecting),
@@ -348,7 +354,7 @@ export const VideoPlayer = React.memo(
             loop={loop}
             playsInline
             preload="metadata"
-            className={`block w-full h-auto max-h-[600px] object-contain mx-auto`}
+            className={`block w-full h-auto object-contain mx-auto`}
           />
         );
       }
@@ -363,7 +369,7 @@ export const VideoPlayer = React.memo(
           playsInline
           preload="metadata"
           controls={false}
-          className={`block w-full h-auto max-h-[600px] object-contain mx-auto`}
+          className={`block w-full h-auto object-contain mx-auto`}
         />
       );
     };
@@ -371,7 +377,7 @@ export const VideoPlayer = React.memo(
     return (
       <div
         ref={containerRef}
-        className={`relative w-full overflow-hidden ${className}`}
+        className={`relative w-full overflow-hidden rounded-[12px] ${className.replace('w-fit', '').replace('max-w-full', '').replace('mx-auto', '')}`}
         onMouseMove={showControls}
         onTouchStart={showControls}
         style={wrapperStyle}
@@ -380,18 +386,19 @@ export const VideoPlayer = React.memo(
           <img
             src={posterUrl}
             alt="Video poster"
-            className={`block w-full h-auto max-h-[600px] object-contain filter blur-sm transition-all duration-300 mx-auto`}
+            className={`block w-full h-auto object-contain filter blur-sm transition-all duration-300 mx-auto`}
             loading="lazy"
           />
         ) : (
           renderPlayer()
         )}
         
-        {/* Animated Loading Line along the top edge */}
+        {/* Loading State: Centered Spinner and Blurred Background */}
         {isLoading && !hasError && (
-          <div className="absolute top-0 left-0 right-0 h-[2px] overflow-hidden z-30">
-            <div className="w-full h-full bg-white/20"></div>
-            <div className="absolute top-0 left-0 h-full w-1/3 bg-[#5E43F3] animate-[slide_1.5s_ease-in-out_infinite]"></div>
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/10 backdrop-blur-[2px]">
+            <div className="p-3 rounded-full bg-black/40 backdrop-blur-md">
+              <Loader2 className="w-8 h-8 text-white animate-spin" />
+            </div>
           </div>
         )}
 

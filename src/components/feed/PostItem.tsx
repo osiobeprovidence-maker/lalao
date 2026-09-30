@@ -467,15 +467,17 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
 
           {/* Media Attachment (for normal post without rally or with independent media) */}
           {((post?.mediaUrl || (post as any)?.muxUploadId) && !linkedRally) && (
-            <div className="mt-3 w-full bg-black/5 rounded-[12px] overflow-hidden"> 
+            <div className="mt-3 w-full rounded-[12px] overflow-hidden border border-neutral-100 bg-black/5"> 
               {post.mediaType === 'video' ? (
                 <VideoPlayer
                   muxPlaybackId={(post as any).muxPlaybackId}
                   mediaUrl={post.mediaUrl}
                   mediaStatus={(post as any).mediaStatus}
+                  mediaWidth={(post as any).mediaWidth}
+                  mediaHeight={(post as any).mediaHeight}
                   aspect="auto"
                   autoPlay={true}
-                  className="w-full h-auto max-h-[600px] object-contain mx-auto"
+                  className="w-full h-auto object-contain"
                   onExpandVideo={() => setActiveVideoFeedPostId(post.id)}
                 />
               ) : (
@@ -484,7 +486,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                     src={post.mediaUrl}
                     alt="Post attachment"
                     referrerPolicy="no-referrer"
-                    className="w-full h-auto max-h-[600px] object-contain cursor-pointer"
+                    className="block w-full h-auto object-contain cursor-pointer"
                     onClick={() => externalEvent && setShowEventModal(true)}
                     loading="lazy"
                   />

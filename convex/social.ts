@@ -1185,6 +1185,8 @@ export const createPost = mutation({
     muxUploadId: v.optional(v.string()),
     muxAssetId: v.optional(v.string()),
     muxPlaybackId: v.optional(v.string()),
+    mediaWidth: v.optional(v.number()),
+    mediaHeight: v.optional(v.number()),
     mediaStatus: v.optional(
       v.union(
         v.literal("uploading"),
@@ -1313,6 +1315,8 @@ export const createPost = mutation({
       muxUploadId: args.muxUploadId,
       muxAssetId: args.muxAssetId,
       muxPlaybackId: args.muxPlaybackId,
+      mediaWidth: args.mediaWidth,
+      mediaHeight: args.mediaHeight,
       mediaStatus: initialMediaStatus,
     });
 
@@ -1332,6 +1336,8 @@ export const createPost = mutation({
       text: args.text,
       mediaUrl: args.mediaUrl,
       mediaType: args.mediaType,
+      mediaWidth: args.mediaWidth,
+      mediaHeight: args.mediaHeight,
       location: args.location,
       distanceMeters: 0,
       createdAt: "Just now",

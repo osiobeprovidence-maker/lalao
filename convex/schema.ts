@@ -141,6 +141,8 @@ export default defineSchema({
     pollOptions: v.optional(v.array(v.string())),
     pageRefId: v.optional(v.string()),
     rallyRefId: v.optional(v.string()),
+    mediaWidth: v.optional(v.number()),
+    mediaHeight: v.optional(v.number()),
     moderationStatus: v.optional(v.union(v.literal("removed"), v.literal("flagged"), v.literal("safe"))),
     removedAt: v.optional(v.number()),
     removedBy: v.optional(v.id("users")),

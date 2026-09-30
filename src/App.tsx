@@ -171,7 +171,7 @@ const LalaoAppContent: React.FC = () => {
   const likedPosts = posts.filter((post) => post.isLiked);
 
   const renderListPage = (title: string, subtitle: string, items: Array<{ id: string; title: string; meta: string; accent?: string }>, emptyText: string) => (
-    <div className="mx-auto w-full max-w-[680px] px-4 py-6">
+    <div className="mx-auto w-full max-w-[600px] px-4 py-6">
       <div className="mb-5 flex items-center justify-between gap-3 border-b border-neutral-200/80 pb-3">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#5E43F3]">Lalao</p>
@@ -237,7 +237,7 @@ const LalaoAppContent: React.FC = () => {
               </div>
             )}
             {activeTab === 'home' && (
-              <div key="tab-home" className="animate-in fade-in duration-200 mx-auto w-full max-w-[680px] bg-transparent min-h-full">
+              <div key="tab-home" className="animate-in fade-in duration-200 mx-auto w-full max-w-[600px] bg-transparent min-h-full">
                 <HomeFeed />
               </div>
             )}
@@ -277,7 +277,7 @@ const LalaoAppContent: React.FC = () => {
               </div>
             )}
             {activeTab === 'following' && (
-              <div key="tab-following" className="animate-in fade-in duration-200 mx-auto w-full max-w-[680px] bg-transparent min-h-full">
+              <div key="tab-following" className="animate-in fade-in duration-200 mx-auto w-full max-w-[600px] bg-transparent min-h-full">
                 {/* @ts-ignore */}
                 <HomeFeed 
                   hideTabs 
