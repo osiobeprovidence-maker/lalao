@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   X,
   Pause,
@@ -12,6 +12,7 @@ import {
   Share2,
   User as UserIcon,
   VolumeX,
+  Volume2,
   Flag,
   Sparkles,
   Plus,
@@ -22,7 +23,6 @@ import {
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
-import { VideoPlayer } from '../feed/VideoPlayer';
 
 export const CycleStoryViewerModal: React.FC = () => {
   const {
@@ -49,10 +49,12 @@ export const CycleStoryViewerModal: React.FC = () => {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [floatingHearts, setFloatingHearts] = useState<{ id: number; x: number }[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
+  const [showUnmuteHint, setShowUnmuteHint] = useState(false);
 
+  const videoRef = useRef<HTMLVideoElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
-  const STORY_DURATION = 5500; // 5.5 seconds per slide
+  const STORY_DURATION = 5500; // 5.5 seconds per slide (used for non-video)
   const progressIntervalRef = useRef<number | null>(null);
 
   const activeCycle = cycles.find((c) => c.id === activeCycleId);
@@ -62,11 +64,52 @@ export const CycleStoryViewerModal: React.FC = () => {
   const items = activeCycle?.items || [];
   const currentItem = items[activeStoryIndex] || items[0];
 
-  // Format time (e.g. "08:57 PM" or relative)
-  const formatTime = (timeStr?: string) => {
-    if (!timeStr) return '08:57 PM';
-    if (timeStr.includes('AM') || timeStr.includes('PM')) return timeStr;
-    return timeStr;
+  const formatTime = (timeStr?: string | number) => {
+    if (!timeStr) return '';
+    const date = new Date(timeStr);
+    if (isNaN(date.getTime())) return timeStr as string;
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    if (diffInSeconds < 60) return 'Just now';
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays === 1) return 'Yesterday';
+    return `${diffInDays}d ago`;
+  };
+
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+  const lastSwipeTime = useRef<number>(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    setIsPaused(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    setIsPaused(false);
+    if (!touchStartX.current || !touchEndX.current) return;
+    const diff = touchStartX.current - touchEndX.current;
+    const swipeThreshold = 50;
+
+    if (Math.abs(diff) > swipeThreshold) {
+      lastSwipeTime.current = Date.now();
+      if (diff > 0) {
+        handleNextSlideRef.current();
+      } else {
+        handlePrevSlide();
+      }
+    }
+    
+    touchStartX.current = null;
+    touchEndX.current = null;
   };
 
   const handleNextSlide = () => {
@@ -107,12 +150,15 @@ export const CycleStoryViewerModal: React.FC = () => {
     handleNextSlideRef.current = handleNextSlide;
   });
 
-  // Auto-progress timer
+  // Auto-progress timer — only used for non-video slides
   useEffect(() => {
     if (!activeCycleId || !currentItem || isPaused || isViewersSheetOpen || isMoreMenuOpen) {
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
       return;
     }
+
+    // For video slides, progress is driven by the video element's timeupdate
+    if (currentItem.mediaType === 'video') return;
 
     const stepMs = 50;
     const increment = (stepMs / STORY_DURATION) * 100;
@@ -129,18 +175,72 @@ export const CycleStoryViewerModal: React.FC = () => {
     };
   }, [activeCycleId, activeStoryIndex, isPaused, isViewersSheetOpen, isMoreMenuOpen, currentItem]);
 
-  // When slide progress reaches 100%, advance
+  // When non-video slide progress reaches 100%, advance
   useEffect(() => {
-    if (progress >= 100) {
+    if (currentItem?.mediaType !== 'video' && progress >= 100) {
       setProgress(0);
       handleNextSlideRef.current();
     }
-  }, [progress]);
+  }, [progress, currentItem]);
 
-  // Reset progress on slide change
+  // Video-driven progress: sync from the <video> element
+  const handleVideoTimeUpdate = useCallback(() => {
+    const v = videoRef.current;
+    if (!v || !v.duration) return;
+    setProgress((v.currentTime / v.duration) * 100);
+  }, []);
+
+  const handleVideoEnded = useCallback(() => {
+    setProgress(100);
+    handleNextSlideRef.current();
+  }, []);
+
+  // Play / pause the video when isPaused changes
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (isPaused) {
+      v.pause();
+    } else {
+      v.play().catch(() => {
+        // Autoplay blocked — try muted
+        v.muted = true;
+        setIsMuted(true);
+        setShowUnmuteHint(true);
+        v.play().catch(() => {});
+      });
+    }
+  }, [isPaused, currentItem]);
+
+  // When slide changes, reset video and attempt unmuted play
   useEffect(() => {
     setProgress(0);
+    setShowUnmuteHint(false);
+    const v = videoRef.current;
+    if (!v) return;
+    if (currentItem?.mediaType === 'video') {
+      v.currentTime = 0;
+      v.muted = isMuted;
+      v.play().catch(() => {
+        v.muted = true;
+        setIsMuted(true);
+        setShowUnmuteHint(true);
+        v.play().catch(() => {});
+      });
+    }
   }, [activeStoryIndex, activeCycleId]);
+
+  // Prevent background scrolling
+  useEffect(() => {
+    if (activeCycleId) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [activeCycleId]);
 
   if (!activeCycleId || !activeCycle || items.length === 0 || !currentItem) return null;
 
@@ -227,7 +327,7 @@ export const CycleStoryViewerModal: React.FC = () => {
       {/* Main Story Phone Viewport */}
       <div
         id="cycle-story-viewer-card"
-        className="w-full max-w-[420px] h-full sm:h-[92vh] sm:max-h-[840px] sm:rounded-3xl relative overflow-hidden bg-neutral-950 shadow-2xl flex flex-col justify-between border border-neutral-800/80"
+        className="w-full h-[100dvh] sm:h-[90dvh] sm:max-h-[840px] sm:max-w-[420px] sm:rounded-2xl relative overflow-hidden bg-black shadow-2xl flex flex-col justify-between"
       >
         {/* 1. TOP SEGMENTED PROGRESS BARS */}
         <div className="absolute top-0 left-0 right-0 z-30 px-3 pt-3 flex items-center gap-1.5 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
@@ -314,12 +414,18 @@ export const CycleStoryViewerModal: React.FC = () => {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setIsMuted((m) => !m);
+                  const next = !isMuted;
+                  setIsMuted(next);
+                  setShowUnmuteHint(false);
+                  if (videoRef.current) {
+                    videoRef.current.muted = next;
+                    if (!next) videoRef.current.volume = 1;
+                  }
                 }}
                 className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 backdrop-blur-xs flex items-center justify-center text-white cursor-pointer transition-colors mr-1"
                 title={isMuted ? 'Unmute' : 'Mute'}
               >
-                {isMuted ? <VolumeX className="w-4 h-4 text-white" /> : <div className="w-4 h-4 flex items-center justify-center font-bold text-[10px]">VOL</div>}
+                {isMuted ? <VolumeX className="w-4 h-4 text-white" /> : <Volume2 className="w-4 h-4 text-white" />}
               </button>
             )}
 
@@ -345,13 +451,15 @@ export const CycleStoryViewerModal: React.FC = () => {
           className="absolute inset-0 z-20 flex"
           onMouseDown={() => setIsPaused(true)}
           onMouseUp={() => setIsPaused(false)}
-          onTouchStart={() => setIsPaused(true)}
-          onTouchEnd={() => setIsPaused(false)}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
           {/* Left tap zone */}
           <div
             className="w-1/3 h-full cursor-pointer"
             onClick={(e) => {
+              if (Date.now() - lastSwipeTime.current < 300) return;
               e.stopPropagation();
               handlePrevSlide();
             }}
@@ -362,6 +470,7 @@ export const CycleStoryViewerModal: React.FC = () => {
           <div
             className="w-1/3 h-full cursor-pointer"
             onClick={(e) => {
+              if (Date.now() - lastSwipeTime.current < 300) return;
               e.stopPropagation();
               handleNextSlide();
             }}
@@ -383,70 +492,91 @@ export const CycleStoryViewerModal: React.FC = () => {
         ))}
 
         {/* 4. STORY CONTENT CANVAS */}
-        <div className="flex-1 w-full h-full flex items-center justify-center overflow-hidden relative bg-neutral-950">
+        <div className="flex-1 w-full h-full flex items-center justify-center overflow-hidden relative bg-black">
           {currentItem.mediaType === 'image' && currentItem.mediaUrl ? (
             <div className="w-full h-full relative flex items-center justify-center">
               <img
                 src={currentItem.mediaUrl}
                 alt="Cycle Story"
-                className="w-full h-full object-cover select-none"
+                className="w-full h-full object-contain select-none"
               />
               <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/85 via-black/40 to-transparent pointer-events-none" />
               {currentItem.caption && (
-                <div className="absolute bottom-24 left-4 right-4 z-20 pointer-events-none">
-                  <p className="text-sm font-medium text-white drop-shadow-md bg-black/40 backdrop-blur-xs p-3 rounded-2xl border border-white/10 leading-snug">
+                <div className="absolute bottom-16 left-4 right-4 z-20 pointer-events-none text-center">
+                  <p className="text-base font-semibold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)] leading-snug whitespace-pre-wrap">
                     {currentItem.caption}
                   </p>
                 </div>
               )}
             </div>
-          ) : currentItem.mediaType === 'video' && (currentItem.mediaUrl || (currentItem as any).muxPlaybackId) ? (
-            <div className="w-full h-full relative flex items-center justify-center">
-              <VideoPlayer
-                  muxPlaybackId={(currentItem as any).muxPlaybackId}
-                  mediaUrl={currentItem.mediaUrl}
-                  autoPlay={true}
-                  loop
-                  muted={isMuted}
-                  className="w-full h-full object-contain"
-                />
+          ) : currentItem.mediaType === 'video' && currentItem.mediaUrl ? (
+            <div className="w-full h-full relative flex items-center justify-center bg-black">
+              {/* Blurred background fill */}
+              <video
+                src={currentItem.mediaUrl}
+                className="absolute inset-0 w-full h-full object-cover opacity-30 blur-2xl scale-110 pointer-events-none"
+                muted
+                loop
+                playsInline
+                aria-hidden
+              />
+              {/* Main playable video */}
+              <video
+                ref={videoRef}
+                key={currentItem.id + '-' + currentItem.mediaUrl}
+                src={currentItem.mediaUrl}
+                className="relative z-10 w-full h-full object-contain"
+                playsInline
+                muted={isMuted}
+                onTimeUpdate={handleVideoTimeUpdate}
+                onEnded={handleVideoEnded}
+                onError={() => { /* silently handle */ }}
+              />
+              {/* Unmute hint */}
+              {showUnmuteHint && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (videoRef.current) {
+                      videoRef.current.muted = false;
+                      videoRef.current.volume = 1;
+                    }
+                    setIsMuted(false);
+                    setShowUnmuteHint(false);
+                  }}
+                  className="absolute top-20 right-4 z-30 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-xs font-semibold"
+                >
+                  <VolumeX className="w-3.5 h-3.5" />
+                  Tap to unmute
+                </button>
+              )}
               <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/85 via-black/40 to-transparent pointer-events-none" />
+              {currentItem.caption && (
+                <div className="absolute bottom-16 left-4 right-4 z-20 pointer-events-none text-center">
+                  <p className="text-base font-semibold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)] leading-snug whitespace-pre-wrap">
+                    {currentItem.caption}
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
-            /* Signature Lalao / Text Graphic Canvas (matching screenshot) */
+            /* Plain text / gradient status canvas */
             <div
-              className={`w-full h-full flex flex-col items-center justify-center p-6 text-center relative overflow-hidden ${
+              className={`w-full h-full flex flex-col items-center justify-center p-8 text-center relative overflow-hidden ${
                 currentItem.backgroundColor?.startsWith('from-')
                   ? `bg-gradient-to-br ${currentItem.backgroundColor}`
                   : 'bg-gradient-to-b from-[#002244] via-[#051E3D] to-[#0A192F]'
               }`}
             >
-              {/* Abstract decorative ambient rings */}
-              <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
-              <div className="absolute inset-0 border-[28px] border-white/5 rounded-full scale-150 pointer-events-none" />
+              {/* Ambient decorative rings */}
+              <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/5 blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-white/5 blur-3xl pointer-events-none" />
 
-              {/* Lalao Brand Graphic Elements */}
-              <div className="relative z-10 flex flex-col items-center justify-center max-w-xs space-y-4">
-                <div className="flex items-center gap-1.5 drop-shadow-md">
-                  <span className="font-serif italic font-black text-3xl tracking-tight text-white drop-shadow-sm">
-                    lalao
-                  </span>
-                  <Sparkles className="w-4 h-4 text-amber-300 fill-amber-300/80 animate-pulse" />
-                </div>
-
-                <p className="text-xs font-medium text-blue-200/90 tracking-wide">
-                  see what happening around you...
+              {currentItem.text && (
+                <p className="relative z-10 text-3xl sm:text-4xl font-bold text-white leading-relaxed drop-shadow-md whitespace-pre-wrap w-full">
+                  {currentItem.text}
                 </p>
-
-                {currentItem.text && (
-                  <div className="mt-4 p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 shadow-xl w-full">
-                    <p className="text-base sm:text-lg font-bold text-white leading-relaxed tracking-tight">
-                      {currentItem.text}
-                    </p>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           )}
         </div>
@@ -625,38 +755,6 @@ export const CycleStoryViewerModal: React.FC = () => {
             >
               {isMyCycle ? (
                 <>
-                  <div className="pb-3 border-b border-neutral-800">
-                    <h4 className="text-sm font-bold text-white">Manage Status</h4>
-                    <p className="text-xs text-neutral-400">Your 24-hour cycle update</p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMoreMenuOpen(false);
-                      setIsPaused(false);
-                      closeCycleStory();
-                      setIsCreateCycleOpen(true);
-                    }}
-                    className="w-full py-3 px-3 rounded-xl hover:bg-neutral-800 flex items-center gap-3 text-white text-sm font-semibold transition-colors cursor-pointer text-left"
-                  >
-                    <Plus className="w-5 h-5 text-[#5E43F3]" />
-                    <span>Add Another Status</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMoreMenuOpen(false);
-                      setIsPaused(false);
-                      handleShareStory();
-                    }}
-                    className="w-full py-3 px-3 rounded-xl hover:bg-neutral-800 flex items-center gap-3 text-white text-sm font-semibold transition-colors cursor-pointer text-left"
-                  >
-                    <Share2 className="w-5 h-5 text-neutral-300" />
-                    <span>Share Status Link</span>
-                  </button>
-
                   <button
                     type="button"
                     onClick={() => {

@@ -59,6 +59,8 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
     locationPrivacy,
     deletePost,
     addComment,
+    cycles,
+    openCycleStory,
   } = useLalao();
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -122,6 +124,17 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
     }
   };
 
+  const authorCycle = cycles?.find((c) => c.user?.id === author.id || (author.id === currentUser?.id && c.id === 'cycle_user_me'));
+  const hasActiveCycle = Boolean(authorCycle && authorCycle.items && authorCycle.items.length > 0);
+
+  const handleAvatarClick = () => {
+    if (hasActiveCycle && authorCycle) {
+      openCycleStory(authorCycle.id, 0);
+    } else {
+      handleAuthorClick();
+    }
+  };
+
   // Message Creator handler
   const handleMessageCreator = () => {
     openChatWithUser(author);
@@ -177,13 +190,29 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
       className="p-4 bg-transparent border-b border-neutral-200/70 hover:bg-neutral-100/30 transition-colors"
     >
       <div className="flex items-start gap-3">
-        {/* Avatar */}
-        <Avatar
-          src={author?.avatar}
-          alt={author?.name || 'User'}
-          size="md"
-          onClick={handleAuthorClick}
-        />
+        {/* Avatar with Cycle Beacon */}
+        <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
+          <div
+            className={`rounded-full transition-all duration-200 ${
+              hasActiveCycle
+                ? authorCycle?.hasUnseen
+                  ? 'p-[2.5px] bg-gradient-to-tr from-[#5E43F3] via-fuchsia-500 to-pink-500 shadow-xs'
+                  : 'p-[2px] bg-neutral-300/80'
+                : ''
+            }`}
+          >
+            <div className={`${hasActiveCycle ? 'bg-white p-[1.5px] rounded-full' : ''}`}>
+              <Avatar
+                src={author?.avatar}
+                alt={author?.name || 'User'}
+                size="md"
+              />
+            </div>
+          </div>
+          {hasActiveCycle && authorCycle?.hasUnseen && (
+             <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#5E43F3] rounded-full border-2 border-white ring-1 ring-[#5E43F3]/30" />
+          )}
+        </div>
 
         {/* Content column */}
         <div className="flex-1 min-w-0">

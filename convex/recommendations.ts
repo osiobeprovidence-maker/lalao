@@ -163,6 +163,29 @@ export const getOnboardingRecommendations = query({
       }
     }
 
+    if (results.length < limit) {
+      const recentUsers = await ctx.db.query("users").order("desc").take(limit * 3);
+      for (const targetUser of recentUsers) {
+        if (results.length >= limit) break;
+        if (targetUser._id === user._id) continue;
+        if (targetUser.suspended) continue;
+        if (followedUserIds.has(targetUser._id)) continue;
+        if (dismissedIds.has(targetUser._id)) continue;
+        if (results.some(r => r.id === targetUser._id)) continue;
+        
+        results.push({
+          id: targetUser._id,
+          type: "user",
+          name: targetUser.name || "Unknown",
+          username: targetUser.username || "unknown",
+          avatar: targetUser.avatarUrl || "",
+          description: targetUser.bio || "",
+          followersCount: targetUser.followersCount || 0,
+          category: "new",
+        });
+      }
+    }
+
     return results;
   },
 });

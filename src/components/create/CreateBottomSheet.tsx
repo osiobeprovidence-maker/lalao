@@ -1,13 +1,13 @@
 // @ts-nocheck
 import React from 'react';
-import { X, PenLine, Hand, Building2, ChevronRight, ArrowLeft } from 'lucide-react';
+import { X, PenLine, Hand, Building2, ChevronRight, ArrowLeft, Sparkles } from 'lucide-react';
 import { useLalao, CreateOption } from '../../context/LalaoContext';
 import { PostComposerModal } from './PostComposerModal';
 import { RallyComposerModal } from './RallyComposerModal';
 import { CreatePageView } from '../pages/CreatePageView';
 
 export const CreateBottomSheet: React.FC = () => {
-  const { isCreateSheetOpen, setIsCreateSheetOpen, setCreateFlowType, createFlowType, setActiveTab } = useLalao();
+  const { isCreateSheetOpen, setIsCreateSheetOpen, setCreateFlowType, createFlowType, setActiveTab, setIsCreateCycleOpen } = useLalao();
 
   if (!isCreateSheetOpen) return null;
 
@@ -24,6 +24,13 @@ export const CreateBottomSheet: React.FC = () => {
 
     if (type === 'rally') {
       setCreateFlowType('rally');
+      return;
+    }
+
+    if (type === 'cycle') {
+      setIsCreateSheetOpen(false);
+      setCreateFlowType(null);
+      setIsCreateCycleOpen(true);
       return;
     }
 
@@ -136,6 +143,33 @@ export const CreateBottomSheet: React.FC = () => {
             </button>
 
             <button
+              id="btn-create-option-cycle"
+              type="button"
+              onClick={() => handleSelect('cycle')}
+              className="w-full rounded-2xl border border-purple-100 bg-gradient-to-r from-purple-50/60 to-pink-50/50 p-4 text-left transition-all hover:border-[#5E43F3]/30 hover:from-purple-100/70 hover:to-pink-100/60 active:scale-[0.99] cursor-pointer"
+            >
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#5E43F3] to-pink-500 text-white shadow-md shadow-[#5E43F3]/20">
+                  <Sparkles className="h-6 w-6 stroke-[2.2]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-base font-bold text-neutral-900">Cycle Status</span>
+                      <span className="rounded bg-gradient-to-r from-[#5E43F3] to-pink-500 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white">
+                        24 Hours
+                      </span>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-neutral-400" />
+                  </div>
+                  <p className="mt-1 text-xs font-normal leading-relaxed text-neutral-700">
+                    Share a 24-hour photo, video, audio note, or text status to your local cycle.
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            <button
               id="btn-create-option-page"
               type="button"
               onClick={() => handleSelect('page')}
@@ -238,6 +272,31 @@ export const CreateBottomSheet: React.FC = () => {
                 </div>
                 <p className="text-xs text-neutral-700 mt-1 leading-relaxed font-normal">
                   Reach out to people near you — ask for something, offer help, or invite people to join you.
+                </p>
+              </div>
+            </button>
+
+            <button
+              id="btn-create-option-cycle"
+              type="button"
+              onClick={() => handleSelect('cycle')}
+              className="w-full p-4 rounded-2xl bg-gradient-to-r from-purple-50/70 to-pink-50/50 hover:from-purple-100/70 hover:to-pink-100/70 active:scale-[0.99] border border-purple-100/80 transition-all text-left flex items-start gap-4 group cursor-pointer"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#5E43F3] to-pink-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-[#5E43F3]/20">
+                <Sparkles className="w-6 h-6 stroke-[2.2]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-base text-neutral-900">Cycle Status</span>
+                    <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider bg-gradient-to-r from-[#5E43F3] to-pink-500 text-white rounded">
+                      24h Story
+                    </span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+                <p className="text-xs text-neutral-700 mt-1 leading-relaxed font-normal">
+                  Share a 24-hour photo, video, audio note, or text status to your local cycle.
                 </p>
               </div>
             </button>

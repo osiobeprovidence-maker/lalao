@@ -20,6 +20,7 @@ import { CommunityDirectory } from './CommunityDirectory';
 import { useEventDistribution } from '../../services/events/EventDistributionContext';
 import { EventFeedCard } from '../events/EventFeedCard';
 
+
 export const HomeFeed: React.FC = () => {
   const {
     posts,
@@ -296,6 +297,7 @@ export const HomeFeed: React.FC = () => {
           )}
         </div>
       </div>
+
 
       {/* Nearby Feed Discovery Scope Bar */}
       {feedTab === 'nearby' && (

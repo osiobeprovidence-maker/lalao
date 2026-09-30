@@ -12,6 +12,7 @@ import type * as admin from "../admin.js";
 import type * as apiPartners from "../apiPartners.js";
 import type * as cloudinary from "../cloudinary.js";
 import type * as community from "../community.js";
+import type * as cycles from "../cycles.js";
 import type * as debug from "../debug.js";
 import type * as ecommerce from "../ecommerce.js";
 import type * as moderation from "../moderation.js";
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   apiPartners: typeof apiPartners;
   cloudinary: typeof cloudinary;
   community: typeof community;
+  cycles: typeof cycles;
   debug: typeof debug;
   ecommerce: typeof ecommerce;
   moderation: typeof moderation;

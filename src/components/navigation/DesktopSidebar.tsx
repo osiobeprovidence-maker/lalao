@@ -6,17 +6,17 @@ import {
   Heart,
   Home,
   LogOut,
+  Menu,
   MessageCircle,
   Plus,
   User as UserIcon,
   Users,
   Building2,
-  Calendar,
   Wallet,
   ShoppingBag,
-  ChevronDown,
+  X,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../common/Avatar';
@@ -43,23 +43,37 @@ export const DesktopSidebar: React.FC = () => {
     0
   );
 
-  const [isDiscoverExpanded, setIsDiscoverExpanded] = useState(() => {
-    const saved = sessionStorage.getItem('lalao_discover_expanded');
-    return saved !== null ? saved === 'true' : true;
-  });
+  // Hamburger menu state
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const hamburgerRef = useRef<HTMLButtonElement>(null);
 
-  const [isAccountExpanded, setIsAccountExpanded] = useState(() => {
-    const saved = sessionStorage.getItem('lalao_account_expanded');
-    return saved !== null ? saved === 'true' : true;
-  });
-
+  // Close menu on outside click
   useEffect(() => {
-    sessionStorage.setItem('lalao_discover_expanded', String(isDiscoverExpanded));
-  }, [isDiscoverExpanded]);
+    if (!isMenuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node) &&
+        hamburgerRef.current &&
+        !hamburgerRef.current.contains(e.target as Node)
+      ) {
+        setIsMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [isMenuOpen]);
 
+  // Close menu on Escape
   useEffect(() => {
-    sessionStorage.setItem('lalao_account_expanded', String(isAccountExpanded));
-  }, [isAccountExpanded]);
+    if (!isMenuOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsMenuOpen(false);
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [isMenuOpen]);
 
   const navItems = [
     {
@@ -72,7 +86,7 @@ export const DesktopSidebar: React.FC = () => {
         if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'instant' });
       },
       isActive: activeTab === 'home',
-      badge: undefined,
+      badge: undefined as number | undefined,
     },
     {
       id: 'discover',
@@ -84,9 +98,8 @@ export const DesktopSidebar: React.FC = () => {
         if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'instant' });
       },
       isActive: activeTab === 'discover',
-      badge: undefined,
+      badge: undefined as number | undefined,
     },
-
     {
       id: 'messages',
       label: 'Messages',
@@ -120,8 +133,20 @@ export const DesktopSidebar: React.FC = () => {
         if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'instant' });
       },
       isActive: activeTab === 'profile',
-      badge: undefined,
+      badge: undefined as number | undefined,
     },
+  ];
+
+  const myPagesNav = [
+    { id: 'my-pages', label: 'My Pages', icon: Building2 },
+    { id: 'create-page', label: 'Create Page', icon: Plus },
+  ] as const;
+
+  // Items that live only in the hamburger menu
+  const discoverNav = [
+    { id: 'following', label: 'Following', icon: Users },
+    { id: 'saved', label: 'Saved', icon: Bookmark },
+    { id: 'liked', label: 'Liked', icon: Heart },
   ] as const;
 
   const accountNav = [
@@ -129,23 +154,19 @@ export const DesktopSidebar: React.FC = () => {
     { id: 'orders', label: 'Order History', icon: ShoppingBag },
   ] as const;
 
-  const myPagesNav = [
-    { id: 'my-pages', label: 'My Pages', icon: Building2 },
-    { id: 'create-page', label: 'Create Page', icon: Plus },
-  ] as const;
+  const isMenuItemActive = (id: string) =>
+    ['following', 'saved', 'liked'].includes(id) && activeTab === id;
 
-  const discoverNav = [
-    { id: 'following', label: 'Following', icon: Users },
-    { id: 'saved', label: 'Saved', icon: Bookmark },
-    { id: 'liked', label: 'Liked', icon: Heart },
-  ] as const;
   return (
     <aside
       id="desktop-navigation-sidebar"
       className="hidden lg:flex flex-col h-screen sticky top-0 shrink-0 w-[220px] xl:w-[240px] bg-[#f6f3ee] border-r border-neutral-200/80 px-4 py-5 select-none z-30"
     >
       <div className="flex flex-col gap-6 h-full">
-        <div className="flex items-center justify-between px-2 pt-1">
+
+        {/* ── TOP HEADER: logo · + · hamburger ── */}
+        <div className="flex items-center justify-between px-2 pt-1 relative">
+          {/* Logo — leftmost */}
           <button
             type="button"
             onClick={() => {
@@ -156,10 +177,12 @@ export const DesktopSidebar: React.FC = () => {
             className="text-left cursor-pointer"
             aria-label="Go to home feed"
           >
-            <span className="lalao-wordmark text-[28px] text-neutral-950">lalao</span>
+            <span className="lalao-wordmark text-[26px] text-neutral-950">lalao</span>
           </button>
 
-          <div className="relative flex items-center gap-2">
+          {/* Right side controls: + and Hamburger */}
+          <div className="flex items-center gap-2">
+            {/* Create post button */}
             <button
               type="button"
               onClick={() => {
@@ -167,15 +190,105 @@ export const DesktopSidebar: React.FC = () => {
                 setIsCreateSheetOpen(false);
                 setActiveTab('create-post');
               }}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 bg-[#f9f7f4] text-neutral-700 transition hover:border-neutral-300 hover:text-neutral-950 cursor-pointer"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-neutral-200 bg-[#f9f7f4] text-neutral-700 transition hover:border-neutral-300 hover:text-neutral-950 cursor-pointer"
               aria-label="Create post"
               title="Create"
             >
               <Plus className="h-4 w-4 stroke-[2.5]" />
             </button>
+
+            {/* Hamburger */}
+            <button
+              ref={hamburgerRef}
+              type="button"
+              onClick={() => setIsMenuOpen((prev) => !prev)}
+              className={`flex h-8 w-8 items-center justify-center rounded-full transition cursor-pointer ${
+                isMenuOpen
+                  ? 'bg-[#5E43F3]/10 text-[#5E43F3]'
+                  : 'text-neutral-500 hover:bg-neutral-200/70 hover:text-neutral-900'
+              }`}
+              aria-label="Open menu"
+              aria-expanded={isMenuOpen}
+              aria-haspopup="true"
+            >
+              {isMenuOpen ? (
+                <X className="h-4 w-4 stroke-[2]" />
+              ) : (
+                <Menu className="h-4 w-4 stroke-[2]" />
+              )}
+            </button>
           </div>
+
+          {/* ── HAMBURGER POPOVER MENU ── */}
+          {isMenuOpen && (
+            <div
+              ref={menuRef}
+              role="menu"
+              aria-label="Secondary navigation"
+              className="absolute top-full left-0 mt-2 w-52 bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-neutral-100 py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+            >
+              {/* DISCOVER section */}
+              <div className="px-3 pb-1">
+                <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
+                  Discover
+                </div>
+                <div className="space-y-0.5">
+                  {discoverNav.map(({ id, label, icon: Icon }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setActiveTab(id);
+                        const mainEl = document.querySelector('main');
+                        if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'instant' });
+                        setIsMenuOpen(false);
+                      }}
+                      className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition cursor-pointer ${
+                        isMenuItemActive(id)
+                          ? 'bg-[#5E43F3]/10 text-[#5E43F3]'
+                          : 'text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4 shrink-0 stroke-[1.8]" />
+                      <span className="text-[14px] font-medium">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="my-2 mx-3 border-t border-neutral-100" />
+
+              {/* ACCOUNT section */}
+              <div className="px-3 pt-1">
+                <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
+                  Account
+                </div>
+                <div className="space-y-0.5">
+                  {accountNav.map(({ id, label, icon: Icon }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        if (id === 'wallet') setIsWalletModalOpen(true);
+                        if (id === 'orders') setIsShoppingHistoryOpen(true);
+                        setIsMenuOpen(false);
+                      }}
+                      className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition cursor-pointer text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950"
+                    >
+                      <Icon className="h-4 w-4 shrink-0 stroke-[1.8]" />
+                      <span className="text-[14px] font-medium">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* ── LOCATION SELECTOR ── */}
         <button
           type="button"
           onClick={() => setIsLocationModalOpen(true)}
@@ -194,6 +307,7 @@ export const DesktopSidebar: React.FC = () => {
           </span>
         </button>
 
+        {/* ── PRIMARY NAVIGATION ── */}
         <nav className="flex flex-col gap-1.5">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -222,107 +336,33 @@ export const DesktopSidebar: React.FC = () => {
           })}
         </nav>
 
-        <div className="pt-2 space-y-4 overflow-y-auto max-h-[calc(100vh-400px)] scrollbar-hide">
-          {/* MY PAGES */}
-          <div>
-            <div className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
-              My Pages
-            </div>
-            <div className="space-y-1">
-              {myPagesNav.map(({ id, label, icon: Icon }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => {
-                    setActiveTab(id);
-                    const mainEl = document.querySelector('main');
-                    if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'instant' });
-                  }}
-                  className={`flex w-full items-center gap-3 rounded-full px-3 py-2 text-left transition cursor-pointer ${
-                    activeTab === id
-                      ? 'bg-[#5E43F3]/10 text-[#5E43F3]'
-                      : 'text-neutral-600 hover:bg-[#f8f6f3] hover:text-neutral-950'
-                  }`}
-                >
-                  <Icon className="h-4 w-4 stroke-[1.8]" />
-                  <span className="text-[14px] font-medium">{label}</span>
-                </button>
-              ))}
-            </div>
+        {/* ── MY PAGES ── */}
+        <div className="space-y-1">
+          <div className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
+            My Pages
           </div>
-
-          {/* DISCOVER */}
-          <div>
-            <button 
+          {myPagesNav.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
               type="button"
-              onClick={() => setIsDiscoverExpanded(!isDiscoverExpanded)}
-              className="w-full flex items-center justify-between px-2 pb-1.5 cursor-pointer group"
+              onClick={() => {
+                setActiveTab(id);
+                const mainEl = document.querySelector('main');
+                if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'instant' });
+              }}
+              className={`flex w-full items-center gap-3 rounded-full px-3 py-2 text-left transition cursor-pointer ${
+                activeTab === id
+                  ? 'bg-[#5E43F3]/10 text-[#5E43F3]'
+                  : 'text-neutral-600 hover:bg-[#f8f6f3] hover:text-neutral-950'
+              }`}
             >
-              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400 group-hover:text-neutral-600 transition-colors">
-                Discover
-              </div>
-              <ChevronDown className={`w-3 h-3 text-neutral-400 transition-transform duration-200 ${isDiscoverExpanded ? 'rotate-180' : ''}`} />
+              <Icon className="h-4 w-4 stroke-[1.8]" />
+              <span className="text-[14px] font-medium">{label}</span>
             </button>
-            <div className={`space-y-1 overflow-hidden transition-all duration-200 ${isDiscoverExpanded ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'}`}>
-              {discoverNav.map(({ id, label, icon: Icon }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => {
-                    setActiveTab(id);
-                    const mainEl = document.querySelector('main');
-                    if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'instant' });
-                  }}
-                  className={`flex w-full items-center gap-3 rounded-full px-3 py-2 text-left transition cursor-pointer ${
-                    activeTab === id
-                      ? 'bg-[#5E43F3]/10 text-[#5E43F3]'
-                      : 'text-neutral-600 hover:bg-[#f8f6f3] hover:text-neutral-950'
-                  }`}
-                >
-                  <Icon className="h-4 w-4 stroke-[1.8]" />
-                  <span className="text-[14px] font-medium">{label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* ACCOUNT */}
-          <div>
-            <button 
-              type="button"
-              onClick={() => setIsAccountExpanded(!isAccountExpanded)}
-              className="w-full flex items-center justify-between px-2 pb-1.5 cursor-pointer group"
-            >
-              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400 group-hover:text-neutral-600 transition-colors">
-                Account
-              </div>
-              <ChevronDown className={`w-3 h-3 text-neutral-400 transition-transform duration-200 ${isAccountExpanded ? 'rotate-180' : ''}`} />
-            </button>
-            <div className={`space-y-1 overflow-hidden transition-all duration-200 ${isAccountExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
-              {accountNav.map(({ id, label, icon: Icon }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => {
-                    if (id === 'wallet') {
-                      setIsWalletModalOpen(true);
-                      return;
-                    }
-                    if (id === 'orders') {
-                      setIsShoppingHistoryOpen(true);
-                      return;
-                    }
-                  }}
-                  className="flex w-full items-center gap-3 rounded-full px-3 py-2 text-left transition cursor-pointer text-neutral-600 hover:bg-[#f8f6f3] hover:text-neutral-950"
-                >
-                  <Icon className="h-4 w-4 stroke-[1.8]" />
-                  <span className="text-[14px] font-medium">{label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
 
+        {/* ── USER FOOTER ── */}
         <div className="mt-auto pt-4 border-t border-neutral-200/80">
           {isAuthenticated ? (
             <>
@@ -345,9 +385,7 @@ export const DesktopSidebar: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={async () => {
-                    await logout();
-                  }}
+                  onClick={async () => { await logout(); }}
                   className="flex shrink-0 h-8 w-8 items-center justify-center rounded-full text-rose-500 transition hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
                   aria-label="Log out"
                   title="Log out"
@@ -360,7 +398,7 @@ export const DesktopSidebar: React.FC = () => {
             <div className="flex flex-col gap-2">
               <button
                 type="button"
-                onClick={() => window.location.href = '/login'}
+                onClick={() => (window.location.href = '/login')}
                 className="w-full rounded-full bg-[#5E43F3] px-4 py-2.5 text-[14px] font-bold text-white transition hover:bg-[#5E43F3]/90"
               >
                 Sign In / Sign Up

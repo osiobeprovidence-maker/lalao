@@ -136,6 +136,7 @@ interface LalaoContextType {
   postCycleStory: (data: {
     mediaType: 'image' | 'video' | 'audio' | 'text';
     mediaUrl?: string;
+    mediaStorageId?: string;
     text?: string;
     backgroundColor?: string;
     caption?: string;
@@ -367,6 +368,13 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const updatePageMutation = useMutation(api.pages.updatePage);
   const createPageEventMutation = useMutation(api.pageEvents.createPageEvent);
   
+  // ---- Cycles / Stories Mutations ----
+  const postCycleStoryMutation = useMutation(api.cycles.postCycleStory);
+  const viewStoryMutation = useMutation(api.cycles.viewStory);
+  const toggleLikeStoryMutation = useMutation(api.cycles.toggleLikeStory);
+  const replyToStoryMutation = useMutation(api.cycles.replyToStory);
+  const deleteStoryItemMutation = useMutation(api.cycles.deleteStoryItem);
+
   // ---- Ecommerce / Cart Mutations ----
   const cartQuery = useQuery(api.ecommerce.getCart) || [];
   const addToCartMutation = useMutation(api.ecommerce.addToCart);
@@ -511,6 +519,12 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     locationName: location.name,
   });
 
+  const activeCyclesQuery = useQuery(api.cycles.listActiveCycles, {
+    locationName: location.name,
+    latitude: location.latitude,
+    longitude: location.longitude,
+  });
+
   const [locationPrivacy, setLocationPrivacy] = useState<LocationPrivacySettings>(() => {
     try {
       const saved = localStorage.getItem('lalao_location_privacy');
@@ -560,6 +574,12 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [backendPages, location.latitude, location.longitude, location.name]);
 
   const [cycles, setCycles] = useState<Cycle[]>(EMPTY_CYCLES);
+
+  useEffect(() => {
+    if (activeCyclesQuery) {
+      setCycles(activeCyclesQuery as Cycle[]);
+    }
+  }, [activeCyclesQuery]);
 
   const [conversations, setConversations] = useState<Conversation[]>(EMPTY_CONVERSATIONS);
 
@@ -1814,10 +1834,16 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const openCycleStory = (cycleId: string, itemIndex: number = 0) => {
     setActiveCycleId(cycleId);
     setActiveStoryIndex(itemIndex);
-    // Mark cycle as viewed
+    // Mark cycle as viewed in local state
     setCycles((prev) =>
       prev.map((c) => (c.id === cycleId ? { ...c, hasUnseen: false } : c))
     );
+
+    const targetCycle = cycles.find((c) => c.id === cycleId);
+    const storyItem = targetCycle?.items?.[itemIndex];
+    if (storyItem && !storyItem.id.startsWith('si_') && !storyItem.id.startsWith('item_')) {
+      viewStoryMutation({ storyId: storyItem.id as any }).catch(console.error);
+    }
   };
 
   const closeCycleStory = () => {
@@ -1825,9 +1851,10 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setActiveStoryIndex(0);
   };
 
-  const postCycleStory = ({
+  const postCycleStory = async ({
     mediaType,
     mediaUrl,
+    mediaStorageId,
     text,
     backgroundColor,
     caption,
@@ -1836,6 +1863,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }: {
     mediaType: 'image' | 'video' | 'audio' | 'text';
     mediaUrl?: string;
+    mediaStorageId?: string;
     text?: string;
     backgroundColor?: string;
     caption?: string;
@@ -1889,6 +1917,23 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     setIsCreateCycleOpen(false);
     triggerShareToast('Status posted to your 24h Cycle!');
+
+    try {
+      await postCycleStoryMutation({
+        mediaType,
+        mediaUrl: mediaStorageId ? undefined : mediaUrl,
+        mediaStorageId: mediaStorageId as any,
+        text,
+        backgroundColor,
+        caption,
+        audience,
+        location: storyLoc || location.name,
+        latitude: location.latitude,
+        longitude: location.longitude,
+      });
+    } catch (err) {
+      console.error('Failed to persist cycle story to Convex:', err);
+    }
   };
 
   const reactToCycleStory = (cycleId: string, itemId: string, emoji: string) => {
@@ -1910,6 +1955,10 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       })
     );
     triggerShareToast(`Reacted ${emoji} to status`);
+
+    if (!itemId.startsWith('si_') && !itemId.startsWith('item_')) {
+      toggleLikeStoryMutation({ storyId: itemId as any }).catch(console.error);
+    }
   };
 
   const replyToCycleStory = (cycleId: string, itemId: string, messageText: string) => {
@@ -1951,6 +2000,10 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       })
     );
 
+    if (!itemId.startsWith('si_') && !itemId.startsWith('item_')) {
+      replyToStoryMutation({ storyId: itemId as any, replyText: messageText.trim() }).catch(console.error);
+    }
+
     let conv = conversations.find((c) => c.participant.id === targetUser.id);
     if (conv) {
       sendDirectMessage(conv.id, dmText);
@@ -1987,6 +2040,10 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         .filter((c) => (c.items?.length || 0) > 0 || c.user?.id !== currentUser?.id)
     );
     triggerShareToast('Status removed from Cycle');
+
+    if (!itemId.startsWith('si_') && !itemId.startsWith('item_')) {
+      deleteStoryItemMutation({ storyId: itemId as any }).catch(console.error);
+    }
   };
 
   const sendDirectMessage = (conversationId: string, text: string, stickerId?: string) => {

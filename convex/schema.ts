@@ -954,4 +954,36 @@ export default defineSchema({
   })
     .index("by_partner", ["partnerId"])
     .index("by_externalId", ["partnerId", "externalId"]),
+
+  cycleStories: defineTable({
+    authorId: v.id("users"),
+    mediaType: v.union(v.literal("image"), v.literal("video"), v.literal("audio"), v.literal("text")),
+    mediaUrl: v.optional(v.string()),
+    mediaStorageId: v.optional(v.id("_storage")),
+    text: v.optional(v.string()),
+    caption: v.optional(v.string()),
+    backgroundColor: v.optional(v.string()),
+    textColor: v.optional(v.string()),
+    location: v.string(),
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
+    audience: v.optional(v.union(v.literal("community"), v.literal("nearby"), v.literal("friends"))),
+    excludedUserIds: v.optional(v.array(v.id("users"))),
+    viewsCount: v.number(),
+    likesCount: v.number(),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_author", ["authorId"])
+    .index("by_expires", ["expiresAt"]),
+
+  cycleStoryInteractions: defineTable({
+    storyId: v.id("cycleStories"),
+    userId: v.id("users"),
+    type: v.union(v.literal("view"), v.literal("like"), v.literal("reply")),
+    replyText: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_story", ["storyId"])
+    .index("by_story_user_type", ["storyId", "userId", "type"]),
 });
