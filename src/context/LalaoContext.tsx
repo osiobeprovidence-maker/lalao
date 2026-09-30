@@ -93,7 +93,34 @@ interface LalaoContextType {
   deletePost: (postId: string) => Promise<void>;
   addComment: (postId: string, text: string, parentCommentId?: string, mediaStorageId?: string, mediaType?: 'image' | 'voice' | 'gif' | 'sticker') => Promise<void>;
   toggleLikeComment: (postId: string, commentId: string, replyId?: string) => void;
-  createPost: (post: { text: string; mediaUrl?: string; mediaStorageId?: string; mediaType?: 'image' | 'video'; mediaWidth?: number; mediaHeight?: number; location: string; audience?: string; replyPermission?: string; gifUrl?: string; pollQuestion?: string; pollOptions?: string[]; rallyRefId?: string; pageRefId?: string; contentTopics?: string[]; }) => Promise<any>;
+  createPost: (post: { 
+    text: string; 
+    mediaUrl?: string; 
+    mediaStorageId?: string; 
+    mediaType?: 'image' | 'video'; 
+    mediaWidth?: number; 
+    mediaHeight?: number; 
+    location: string; 
+    audience?: string; 
+    replyPermission?: string; 
+    gifUrl?: string; 
+    pollQuestion?: string; 
+    pollOptions?: string[]; 
+    rallyRefId?: string; 
+    pageRefId?: string; 
+    contentTopics?: string[];
+    rallyData?: {
+      type: 'ASK' | 'HELP' | 'JOIN';
+      title: string;
+      description: string;
+      location: string;
+      eventDate: string;
+      eventTime: string;
+      peopleNeeded?: number;
+      compensationType?: 'free' | 'paying' | 'charging' | 'other';
+      compensationAmount?: string;
+    };
+  }) => Promise<any>;
   saveDraft: (draft: any) => Promise<any>;
   getDrafts: () => Promise<any>;
   deleteDraft: (draftId: string) => Promise<any>;
@@ -1299,13 +1326,24 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     pageRefId?: string;
     visibility?: string;
     contentTopics?: string[];
+    rallyData?: {
+      type: 'ASK' | 'HELP' | 'JOIN';
+      title: string;
+      description: string;
+      location: string;
+      eventDate: string;
+      eventTime: string;
+      peopleNeeded?: number;
+      compensationType?: 'free' | 'paying' | 'charging' | 'other';
+      compensationAmount?: string;
+    };
   }) => {
     if (!isAuthenticated) {
       showAuthPrompt('Sign in to create a post');
       return;
     }
     try {
-      const postId = await createPostMutation({
+      const response = await createPostMutation({
         text: args.text,
         mediaUrl: args.mediaUrl,
         mediaStorageId: args.mediaStorageId as any,
@@ -1319,11 +1357,14 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         rallyRefId: args.rallyRefId,
         pageRefId: args.pageRefId,
         contentTopics: args.contentTopics,
+        rallyData: args.rallyData,
       });
+
+      const postIdStr = typeof response === 'object' && response !== null ? response.id : response;
 
       // Create a local post object to push to feed instantly
       const newPost: Post = {
-        id: postId as string,
+        id: postIdStr as string,
         author: currentUser,
         text: args.text,
         mediaUrl: args.mediaUrl,
@@ -1347,8 +1388,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setIsCreateSheetOpen(false);
       setActiveTab('home');
       triggerShareToast('Post published!');
-      
-      return { id: postId };
+      return { id: postIdStr };
     } catch (error) {
       console.error('Failed to create post:', error);
       throw error;

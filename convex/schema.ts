@@ -812,27 +812,43 @@ export default defineSchema({
 
   rallies: defineTable({
     creatorId: v.id("users"),
+    postId: v.optional(v.id("posts")),
+    type: v.optional(v.union(v.literal("ASK"), v.literal("HELP"), v.literal("JOIN"))), // optional for backward compatibility
     title: v.string(),
     description: v.string(),
     location: v.string(),
     latitude: v.optional(v.number()),
     longitude: v.optional(v.number()),
-    distanceMeters: v.number(),
-    timeDate: v.string(),
-    category: v.union(
-      v.literal("Sports"),
-      v.literal("Help"),
-      v.literal("Meetup"),
-      v.literal("Initiative"),
-      v.literal("Civic"),
-      v.literal("General")
+    distanceMeters: v.optional(v.number()), // made optional
+    eventDate: v.optional(v.string()),
+    eventTime: v.optional(v.string()),
+    timeDate: v.optional(v.string()), // keeping for old
+    category: v.optional(
+      v.union(
+        v.literal("Sports"),
+        v.literal("Help"),
+        v.literal("Meetup"),
+        v.literal("Initiative"),
+        v.literal("Civic"),
+        v.literal("General")
+      )
     ),
     status: v.union(v.literal("active"), v.literal("completed")),
-    maxNeeded: v.optional(v.number()),
+    peopleNeeded: v.optional(v.number()),
+    maxNeeded: v.optional(v.number()), // old
+    compensationType: v.optional(
+      v.union(v.literal("free"), v.literal("paying"), v.literal("charging"), v.literal("other"))
+    ),
+    compensationAmount: v.optional(v.string()),
+    participantCount: v.optional(v.number()),
     urgency: v.optional(v.union(v.literal("normal"), v.literal("urgent"))),
-    tags: v.array(v.string()),
+    tags: v.optional(v.array(v.string())),
     createdAt: v.number(),
-  }).index("by_creator", ["creatorId"]).index("by_status", ["status"]),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_creator", ["creatorId"])
+    .index("by_post", ["postId"])
+    .index("by_status", ["status"]),
 
   rallyParticipants: defineTable({
     userId: v.id("users"),

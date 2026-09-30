@@ -80,6 +80,18 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [eventDate, setEventDate] = useState('');
   
+  // Rally UI states
+  const [showRallyTypeSelector, setShowRallyTypeSelector] = useState(false);
+  const [rallyType, setRallyType] = useState<'ASK' | 'HELP' | 'JOIN' | null>(null);
+  const [rallyTitle, setRallyTitle] = useState('');
+  const [rallyDescription, setRallyDescription] = useState('');
+  const [rallyLocation, setRallyLocation] = useState('');
+  const [rallyEventDate, setRallyEventDate] = useState('');
+  const [rallyEventTime, setRallyEventTime] = useState('');
+  const [rallyPeopleNeeded, setRallyPeopleNeeded] = useState<number | ''>('');
+  const [rallyCompensationType, setRallyCompensationType] = useState<'free' | 'paying' | 'charging' | 'other' | ''>('');
+  const [rallyCompensationAmount, setRallyCompensationAmount] = useState('');
+
   useEffect(() => {
     if (location.name && !attachedLocation) {
       setAttachedLocation(location.name);
@@ -146,6 +158,16 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
     setGifUrl('');
     setShowEmojiPicker(false);
     setEventDate('');
+    setShowRallyTypeSelector(false);
+    setRallyType(null);
+    setRallyTitle('');
+    setRallyDescription('');
+    setRallyLocation('');
+    setRallyEventDate('');
+    setRallyEventTime('');
+    setRallyPeopleNeeded('');
+    setRallyCompensationType('');
+    setRallyCompensationAmount('');
     setCreateFlowType(null);
     setIsCreateSheetOpen(false);
     if (embedded) setActiveTab('home');
@@ -303,6 +325,21 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
         }
       }
 
+      let rallyData = undefined;
+      if (rallyType) {
+        rallyData = {
+          type: rallyType,
+          title: rallyTitle.trim(),
+          description: rallyDescription.trim() || text.trim(),
+          location: rallyLocation.trim() || attachedLocation || location.name || 'Local',
+          eventDate: rallyEventDate.trim(),
+          eventTime: rallyEventTime.trim(),
+          peopleNeeded: typeof rallyPeopleNeeded === 'number' ? rallyPeopleNeeded : undefined,
+          compensationType: rallyCompensationType || undefined,
+          compensationAmount: rallyCompensationAmount.trim() || undefined,
+        };
+      }
+
       const created = await createPost({
         text: text.trim(),
         mediaUrl: finalMediaUrl || undefined,
@@ -317,6 +354,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
         pollOptions: showPoll ? pollOptions.filter(o => o.trim() !== '') : undefined,
         pageRefId: selectedPageRefId || undefined,
         contentTopics: selectedTopicSlugs.length > 0 ? selectedTopicSlugs : undefined,
+        rallyData: rallyData as any,
       });
 
       if (finalMuxUploadId && created?.id) {
@@ -605,6 +643,111 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
             </div>
           )}
 
+          {/* RALLY UI */}
+          {showRallyTypeSelector && !rallyType && (
+            <div className="mt-3 p-3 rounded-xl border border-neutral-200 bg-neutral-50 relative">
+              <button 
+                onClick={() => setShowRallyTypeSelector(false)}
+                className="absolute top-2 right-2 p-1 text-neutral-400 hover:text-neutral-600 rounded-full hover:bg-neutral-100 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <h3 className="text-sm font-bold text-neutral-900 mb-3 flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-[#5E43F3]" /> Select Rally Type</h3>
+              <div className="grid grid-cols-3 gap-2">
+                <button 
+                  onClick={() => setRallyType('ASK')}
+                  className="flex flex-col items-center justify-center p-3 rounded-lg border border-neutral-200 bg-white hover:border-[#5E43F3] hover:bg-[#5E43F3]/5 transition"
+                >
+                  <span className="font-black text-[13px] text-neutral-900 mb-0.5">ASK</span>
+                  <span className="text-[10px] text-neutral-500 font-medium">I need something</span>
+                </button>
+                <button 
+                  onClick={() => setRallyType('HELP')}
+                  className="flex flex-col items-center justify-center p-3 rounded-lg border border-neutral-200 bg-white hover:border-[#5E43F3] hover:bg-[#5E43F3]/5 transition"
+                >
+                  <span className="font-black text-[13px] text-neutral-900 mb-0.5">HELP</span>
+                  <span className="text-[10px] text-neutral-500 font-medium">I can help</span>
+                </button>
+                <button 
+                  onClick={() => setRallyType('JOIN')}
+                  className="flex flex-col items-center justify-center p-3 rounded-lg border border-neutral-200 bg-white hover:border-[#5E43F3] hover:bg-[#5E43F3]/5 transition"
+                >
+                  <span className="font-black text-[13px] text-neutral-900 mb-0.5">JOIN</span>
+                  <span className="text-[10px] text-neutral-500 font-medium">Join me</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {rallyType && (
+            <div className="mt-3 p-3 rounded-xl border border-[#5E43F3]/30 bg-[#5E43F3]/5 relative space-y-3">
+              <button 
+                onClick={() => { setRallyType(null); setShowRallyTypeSelector(false); }}
+                className="absolute top-2 right-2 p-1 text-[#5E43F3]/60 hover:text-[#5E43F3] rounded-full hover:bg-[#5E43F3]/10 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              
+              <div className="flex items-center gap-2">
+                <span className="bg-[#5E43F3] text-white text-[10px] font-black px-2 py-0.5 rounded uppercase">{rallyType} RALLY</span>
+                <button onClick={() => setRallyType(null)} className="text-[11px] text-[#5E43F3] font-semibold hover:underline">Change</button>
+              </div>
+
+              <input 
+                value={rallyTitle}
+                onChange={e => setRallyTitle(e.target.value)}
+                placeholder="Rally Title (e.g., Need a plumber, Free tutoring)"
+                className="w-full text-sm font-semibold p-2 rounded-md border border-white/50 bg-white focus:outline-none focus:border-[#5E43F3]"
+              />
+
+              <div className="grid grid-cols-2 gap-2">
+                <input 
+                  type="date"
+                  value={rallyEventDate}
+                  onChange={e => setRallyEventDate(e.target.value)}
+                  className="w-full text-sm p-2 rounded-md border border-white/50 bg-white focus:outline-none focus:border-[#5E43F3]"
+                />
+                <input 
+                  type="time"
+                  value={rallyEventTime}
+                  onChange={e => setRallyEventTime(e.target.value)}
+                  className="w-full text-sm p-2 rounded-md border border-white/50 bg-white focus:outline-none focus:border-[#5E43F3]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <input 
+                  type="number"
+                  placeholder="People needed (opt)"
+                  value={rallyPeopleNeeded}
+                  onChange={e => setRallyPeopleNeeded(e.target.value ? parseInt(e.target.value) : '')}
+                  min={1}
+                  className="w-full text-sm p-2 rounded-md border border-white/50 bg-white focus:outline-none focus:border-[#5E43F3]"
+                />
+                <select 
+                  value={rallyCompensationType}
+                  onChange={e => setRallyCompensationType(e.target.value as any)}
+                  className="w-full text-sm p-2 rounded-md border border-white/50 bg-white focus:outline-none focus:border-[#5E43F3]"
+                >
+                  <option value="">Compensation...</option>
+                  <option value="free">Free</option>
+                  <option value="paying">Paying</option>
+                  <option value="charging">Charging</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              {rallyCompensationType && rallyCompensationType !== 'free' && (
+                <input 
+                  value={rallyCompensationAmount}
+                  onChange={e => setRallyCompensationAmount(e.target.value)}
+                  placeholder="Amount / Details (e.g., ₦5000)"
+                  className="w-full text-sm p-2 rounded-md border border-white/50 bg-white focus:outline-none focus:border-[#5E43F3]"
+                />
+              )}
+            </div>
+          )}
+
           {gifUrl && !mediaUrl && (
             <div className="relative mt-3 overflow-hidden rounded-[16px] border border-neutral-200 bg-neutral-100">
               <img src={gifUrl} alt="Post GIF attachment" className="max-h-[360px] w-full object-cover" />
@@ -753,8 +896,8 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
             </button>
             <button
               type="button"
-              onClick={() => triggerShareToast('Rally feature triggered')}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[#5E43F3] hover:bg-[#5E43F3]/10 transition"
+              onClick={() => setShowRallyTypeSelector(!showRallyTypeSelector)}
+              className={`flex h-9 w-9 items-center justify-center rounded-full transition ${showRallyTypeSelector || rallyType ? 'text-white bg-[#5E43F3]' : 'text-[#5E43F3] hover:bg-[#5E43F3]/10'}`}
               title="Rally"
             >
               <Sparkles className="h-5 w-5" />

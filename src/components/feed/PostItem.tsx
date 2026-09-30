@@ -431,14 +431,14 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
               <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs text-neutral-600">
                 <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-neutral-100 text-neutral-700 font-medium">
                   <Clock className="w-3.5 h-3.5 text-neutral-500" />
-                  <span>{linkedRally.timeDate}</span>
+                  <span>{linkedRally.eventDate ? `${linkedRally.eventDate} ${linkedRally.eventTime || ''}`.trim() : linkedRally.timeDate}</span>
                 </div>
 
                 <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-neutral-100 text-neutral-700 font-medium">
                   <Users className="w-3.5 h-3.5 text-neutral-500" />
                   <span>
                     {linkedRally.joinedUsersCount} {linkedRally.joinedUsersCount === 1 ? 'person' : 'people'} joined
-                    {linkedRally.maxNeeded ? ` (need ${linkedRally.maxNeeded - linkedRally.joinedUsersCount} more)` : ''}
+                    {(linkedRally.peopleNeeded || linkedRally.maxNeeded) ? ` (need ${(linkedRally.peopleNeeded || linkedRally.maxNeeded || 0) - linkedRally.joinedUsersCount} more)` : ''}
                   </span>
                 </div>
 
@@ -614,7 +614,11 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                         <span>Joined</span>
                       </>
                     ) : (
-                      <span>Join Rally</span>
+                      <span>
+                        {linkedRally.type === 'ASK' ? 'I Can Help' : 
+                         linkedRally.type === 'HELP' ? "I'm Interested" : 
+                         'Join Rally'}
+                      </span>
                     )}
                   </button>
                 </>

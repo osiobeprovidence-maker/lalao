@@ -111,21 +111,28 @@ export interface Post {
 export interface Rally {
   id: string;
   creator: User;
+  postId?: string;
+  type?: 'ASK' | 'HELP' | 'JOIN';
   title: string;
   description: string;
   location: string;
   latitude?: number;
   longitude?: number;
-  distanceMeters: number;
-  timeDate: string; // e.g. "Today · 6:00 PM" or "Tomorrow · 8:00 AM"
-  category: 'Sports' | 'Help' | 'Meetup' | 'Initiative' | 'Civic' | 'General';
+  distanceMeters?: number;
+  eventDate?: string;
+  eventTime?: string;
+  timeDate?: string; // Legacy
+  category?: 'Sports' | 'Help' | 'Meetup' | 'Initiative' | 'Civic' | 'General'; // Legacy
   status: 'active' | 'completed';
   interestedUsers: User[];
   joinedUsersCount: number;
-  maxNeeded?: number;
+  peopleNeeded?: number;
+  maxNeeded?: number; // Legacy
+  compensationType?: 'free' | 'paying' | 'charging' | 'other';
+  compensationAmount?: string;
   isJoined: boolean;
   urgency?: 'normal' | 'urgent';
-  tags: string[];
+  tags?: string[];
 }
 
 export interface ProductVariantOption {

@@ -1195,6 +1195,19 @@ export const createPost = mutation({
         v.literal("failed")
       )
     ),
+    rallyData: v.optional(
+      v.object({
+        type: v.union(v.literal("ASK"), v.literal("HELP"), v.literal("JOIN")),
+        title: v.string(),
+        description: v.string(),
+        location: v.string(),
+        eventDate: v.string(),
+        eventTime: v.string(),
+        peopleNeeded: v.optional(v.number()),
+        compensationType: v.optional(v.union(v.literal("free"), v.literal("paying"), v.literal("charging"), v.literal("other"))),
+        compensationAmount: v.optional(v.string()),
+      })
+    ),
   },
   handler: async (ctx, args) => {
     let currentUser = await getAuthedUser(ctx);
@@ -1291,6 +1304,35 @@ export const createPost = mutation({
     }
 
     const now = Date.now();
+    let finalRallyRefId = args.rallyRefId;
+
+    if (args.rallyData) {
+      finalRallyRefId = await ctx.db.insert("rallies", {
+        creatorId: currentUser._id,
+        type: args.rallyData.type,
+        title: args.rallyData.title,
+        description: args.rallyData.description,
+        location: args.rallyData.location,
+        latitude: args.latitude,
+        longitude: args.longitude,
+        eventDate: args.rallyData.eventDate,
+        eventTime: args.rallyData.eventTime,
+        peopleNeeded: args.rallyData.peopleNeeded,
+        compensationType: args.rallyData.compensationType,
+        compensationAmount: args.rallyData.compensationAmount,
+        status: "active",
+        participantCount: 1, // creator is a participant
+        createdAt: now,
+      });
+
+      // Automatically join the creator
+      await ctx.db.insert("rallyParticipants", {
+        userId: currentUser._id,
+        rallyId: finalRallyRefId,
+        createdAt: now,
+      });
+    }
+
     const postId = await ctx.db.insert("posts", {
       authorId: currentUser._id,
       text: args.text,
@@ -1309,7 +1351,7 @@ export const createPost = mutation({
       gifUrl: args.gifUrl,
       pollQuestion: args.pollQuestion,
       pollOptions: args.pollOptions,
-      rallyRefId: args.rallyRefId,
+      rallyRefId: finalRallyRefId,
       pageRefId: args.pageRefId,
       contentTopics: extractedTopics.length > 0 ? extractedTopics : undefined,
       muxUploadId: args.muxUploadId,
@@ -1319,6 +1361,10 @@ export const createPost = mutation({
       mediaHeight: args.mediaHeight,
       mediaStatus: initialMediaStatus,
     });
+
+    if (args.rallyData && finalRallyRefId) {
+      await ctx.db.patch(finalRallyRefId, { postId });
+    }
 
     return {
       id: postId,
