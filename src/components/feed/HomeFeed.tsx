@@ -38,7 +38,37 @@ export const HomeFeed: React.FC = () => {
     setNearbySort,
     triggerShareToast,
     featureFlags,
+    isFeedLoading,
   } = useLalao();
+
+const FeedSkeleton: React.FC = () => {
+  return (
+    <div className="divide-y divide-neutral-100 pb-8 animate-pulse">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="p-4 sm:p-5 bg-white">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-full bg-neutral-200 shrink-0" />
+            <div className="flex-1 min-w-0 space-y-2">
+              <div className="h-3.5 bg-neutral-200 rounded w-1/3" />
+              <div className="h-2.5 bg-neutral-100 rounded w-1/4" />
+            </div>
+            <div className="w-6 h-6 rounded-full bg-neutral-100 shrink-0" />
+          </div>
+          <div className="space-y-2 mb-3">
+            <div className="h-3.5 bg-neutral-200 rounded w-full" />
+            <div className="h-3.5 bg-neutral-200 rounded w-5/6" />
+          </div>
+          <div className="w-full h-64 bg-neutral-100 rounded-[12px] mb-3" />
+          <div className="flex items-center gap-6 mt-3">
+            <div className="w-12 h-6 bg-neutral-100 rounded-full" />
+            <div className="w-12 h-6 bg-neutral-100 rounded-full" />
+            <div className="w-12 h-6 bg-neutral-100 rounded-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
 
   const { externalEvents } = useEventDistribution();
   const activeEvents = externalEvents.filter(e => e.status === 'active');
@@ -494,6 +524,8 @@ export const HomeFeed: React.FC = () => {
       {/* Content Area */}
       {feedTab === 'community' ? (
         <CommunityDirectory />
+      ) : isFeedLoading ? (
+        <FeedSkeleton />
       ) : (
         <>
           {/* Posts Stream */}

@@ -476,70 +476,7 @@ export const listFeedPosts = query({
         author = await resolveAuthor(ctx, authorDoc, currentUserId || null);
       }
 
-      // Top-level comments only (parentCommentId is undefined/null)
-      const allComments = await ctx.db
-        .query("comments")
-        .withIndex("by_post", (q: any) => q.eq("postId", post._id))
-        .order("desc")
-        .take(30);
-
-      const topLevel = allComments.filter((c: any) => !c.parentCommentId);
-      const topLevelSlice = topLevel.slice(0, 10);
-
-      const commentPayload = await Promise.all(
-        topLevelSlice.map(async (comment: any) => {
-          const commentAuthorDoc = comment.authorId ? await ctx.db.get(comment.authorId) : null;
-          const commentAuthor = await resolveAuthor(ctx, commentAuthorDoc, currentUserId || null);
-
-          let commentLike = null;
-          if (currentUserId) {
-            commentLike = await ctx.db
-              .query("likes")
-              .withIndex("by_user_target", (q: any) =>
-                q.eq("userId", currentUserId).eq("targetType", "comment").eq("targetId", comment._id)
-              )
-              .unique();
-          }
-
-          // Direct replies to this comment
-          const replies = allComments
-            .filter((c: any) => c.parentCommentId === comment._id)
-            .slice(0, 5);
-
-          return {
-            id: comment._id,
-            author: commentAuthor,
-            text: comment.text,
-            createdAt: formatRelativeTime(comment.createdAt),
-            likesCount: comment.likesCount ?? 0,
-            isLiked: !!commentLike,
-            replies: await Promise.all(
-              replies.map(async (reply: any) => {
-                const replyAuthorDoc = reply.authorId ? await ctx.db.get(reply.authorId) : null;
-                const replyAuthor = await resolveAuthor(ctx, replyAuthorDoc, currentUserId || null);
-                let replyLike = null;
-                if (currentUserId) {
-                  replyLike = await ctx.db
-                    .query("likes")
-                    .withIndex("by_user_target", (q: any) =>
-                      q.eq("userId", currentUserId).eq("targetType", "comment").eq("targetId", reply._id)
-                    )
-                    .unique();
-                }
-                return {
-                  id: reply._id,
-                  author: replyAuthor,
-                  text: reply.text,
-                  createdAt: formatRelativeTime(reply.createdAt),
-                  likesCount: reply.likesCount ?? 0,
-                  isLiked: !!replyLike,
-                  replyToUsername: (commentAuthorDoc as any)?.username ?? "user",
-                };
-              })
-            ),
-          };
-        })
-      );
+      const commentPayload: any[] = [];
 
       let isLiked = false;
       if (currentUserId) {

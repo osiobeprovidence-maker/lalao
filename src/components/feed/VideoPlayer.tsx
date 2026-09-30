@@ -74,12 +74,10 @@ export const VideoPlayer = React.memo(
     const [controlsVisible, setControlsVisible] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [hasError, setHasError] = useState(false);
-    const [aspectRatio, setAspectRatio] = useState<'portrait' | 'landscape' | 'square'>('landscape');
+    const [exactAspectRatio, setExactAspectRatio] = useState<number | null>(null);
     const [playbackSpeed, setPlaybackSpeed] = useState(1);
     const [showSpeedMenu, setShowSpeedMenu] = useState(false);
     const [supportsPiP, setSupportsPiP] = useState(false);
-
-    const aspectClass = aspect === 'auto' ? '' : aspect === 'square' ? 'aspect-square' : aspect === 'portrait' ? 'aspect-[9/16]' : 'aspect-video';
 
     // Determine effective playback id (Mux or fallback)
     let effectivePlaybackId = muxPlaybackId;
@@ -149,10 +147,7 @@ export const VideoPlayer = React.memo(
         const w = videoEl.videoWidth;
         const h = videoEl.videoHeight;
         if (w && h) {
-          const ratio = w / h;
-          if (ratio > 1.2) setAspectRatio('landscape');
-          else if (ratio < 0.8) setAspectRatio('portrait');
-          else setAspectRatio('square');
+          setExactAspectRatio(w / h);
         }
       };
       const onTimeUpdate = () => setCurrentTime(videoEl.currentTime);
@@ -268,10 +263,13 @@ export const VideoPlayer = React.memo(
       playerRef.current.currentTime = newTime;
     };
 
+    // Dynamic aspect ratio styling for the wrapper before metadata loads
+    const wrapperStyle = exactAspectRatio ? { aspectRatio: exactAspectRatio } : {};
+
     // Loading / error UI
     if (mediaStatus === 'uploading') {
       return (
-        <div className={`relative w-full ${aspectClass} rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col items-center justify-center p-6 gap-3 text-center ${className}`}>
+        <div className={`relative w-full rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col items-center justify-center p-6 gap-3 text-center ${className}`} style={wrapperStyle}>
           <div className="w-14 h-14 rounded-full bg-[#5E43F3]/15 flex items-center justify-center border border-[#5E43F3]/30 shadow-inner">
             <Loader2 className="w-7 h-7 text-[#5E43F3] animate-spin" />
           </div>
@@ -285,7 +283,7 @@ export const VideoPlayer = React.memo(
     if (isProcessing && !isFailed) {
       const previewPoster = poster || (mediaUrl && (mediaUrl.startsWith('data:image') || mediaUrl.includes('image.mux.com')) ? mediaUrl : undefined);
       return (
-        <div className={`relative w-full ${aspectClass} rounded-2xl bg-neutral-900 border border-neutral-800/80 overflow-hidden flex flex-col items-center justify-center p-6 text-center ${className}`}>
+        <div className={`relative w-full rounded-2xl bg-neutral-900 border border-neutral-800/80 overflow-hidden flex flex-col items-center justify-center p-6 text-center ${className}`} style={wrapperStyle}>
           {previewPoster && (
             <img
               src={previewPoster}
@@ -313,7 +311,7 @@ export const VideoPlayer = React.memo(
     }
     if (isFailed) {
       return (
-        <div className={`relative w-full ${aspectClass} rounded-2xl bg-neutral-900 border border-rose-900/40 flex flex-col items-center justify-center gap-3 p-6 text-center ${className}`}>
+        <div className={`relative w-full rounded-2xl bg-neutral-900 border border-rose-900/40 flex flex-col items-center justify-center gap-3 p-6 text-center ${className}`} style={wrapperStyle}>
           <div className="w-12 h-12 rounded-full bg-rose-500/15 flex items-center justify-center text-rose-500 border border-rose-500/30">
             <AlertCircle className="w-6 h-6" />
           </div>
@@ -350,7 +348,7 @@ export const VideoPlayer = React.memo(
             loop={loop}
             playsInline
             preload="metadata"
-            className={`block w-full h-full object-contain ${aspectClass}`}
+            className={`block w-full h-auto max-h-[600px] object-contain mx-auto`}
           />
         );
       }
@@ -365,7 +363,7 @@ export const VideoPlayer = React.memo(
           playsInline
           preload="metadata"
           controls={false}
-          className={`block w-full h-full object-contain ${aspectClass}`}
+          className={`block w-full h-auto max-h-[600px] object-contain mx-auto`}
         />
       );
     };
@@ -373,23 +371,54 @@ export const VideoPlayer = React.memo(
     return (
       <div
         ref={containerRef}
-        className={`relative w-full overflow-hidden bg-black ${className}`}
+        className={`relative w-full overflow-hidden ${className}`}
         onMouseMove={showControls}
         onTouchStart={showControls}
-        style={{ maxHeight: aspectRatio === 'portrait' ? '70vh' : undefined }}
+        style={wrapperStyle}
       >
         {!isNearViewport ? (
           <img
             src={posterUrl}
             alt="Video poster"
-            className={`block w-full h-full object-cover ${aspectClass}`}
+            className={`block w-full h-auto max-h-[600px] object-contain filter blur-sm transition-all duration-300 mx-auto`}
             loading="lazy"
           />
         ) : (
           renderPlayer()
         )}
+        
+        {/* Animated Loading Line along the top edge */}
+        {isLoading && !hasError && (
+          <div className="absolute top-0 left-0 right-0 h-[2px] overflow-hidden z-30">
+            <div className="w-full h-full bg-white/20"></div>
+            <div className="absolute top-0 left-0 h-full w-1/3 bg-[#5E43F3] animate-[slide_1.5s_ease-in-out_infinite]"></div>
+          </div>
+        )}
+
+        {/* Video Error State */}
+        {hasError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-900/90 backdrop-blur-sm z-30 gap-2">
+            <div className="w-10 h-10 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-500">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <p className="text-sm font-bold text-white">Video couldn't load</p>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setHasError(false);
+                setIsLoading(true);
+                if (playerRef.current?.load) playerRef.current.load();
+              }}
+              className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-colors"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Retry
+            </button>
+          </div>
+        )}
+
         {/* Play/Pause Indicator (Fades out when playing) */}
-        {!isPlaying && isNearViewport && !isLoading && (
+        {!isPlaying && isNearViewport && !isLoading && !hasError && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20">
             <div className="w-16 h-16 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center border border-white/20">
               <Play className="w-8 h-8 text-white ml-1" />
@@ -398,36 +427,40 @@ export const VideoPlayer = React.memo(
         )}
 
         {/* Progress Bar (like mobile VideoProgressIndicator) */}
-        <div 
-          className="absolute inset-x-0 bottom-0 h-2 cursor-pointer bg-transparent z-10"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleBarClick(e);
-          }}
-        >
-          <div className="absolute bottom-0 inset-x-0 h-1 bg-white/30">
-            <div
-              className="absolute h-full bg-white transition-all duration-100 ease-linear"
-              style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
-            />
+        {!hasError && (
+          <div 
+            className="absolute inset-x-0 bottom-0 h-2 cursor-pointer bg-transparent z-10"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleBarClick(e);
+            }}
+          >
+            <div className="absolute bottom-0 inset-x-0 h-1 bg-white/30">
+              <div
+                className="absolute h-full bg-white transition-all duration-100 ease-linear"
+                style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Bottom Controls */}
-        <div className="absolute bottom-4 right-4 flex items-center space-x-2 z-20">
-          {!hideMuteButton && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleMute();
-              }}
-              aria-label={isMuted ? 'Unmute' : 'Mute'}
-              className="p-2 bg-black/40 hover:bg-black/60 rounded-full backdrop-blur-sm text-white transition"
-            >
-              {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-            </button>
-          )}
-        </div>
+        {!hasError && (
+          <div className="absolute bottom-4 right-4 flex items-center space-x-2 z-20">
+            {!hideMuteButton && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleMute();
+                }}
+                aria-label={isMuted ? 'Unmute' : 'Mute'}
+                className="p-2 bg-black/40 hover:bg-black/60 rounded-full backdrop-blur-sm text-white transition"
+              >
+                {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     );
   },

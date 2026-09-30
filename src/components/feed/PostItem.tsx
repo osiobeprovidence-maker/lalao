@@ -4,6 +4,7 @@ import {
   MessageCircle,
   Repeat,
   Share2,
+  Bookmark,
   MoreHorizontal,
   Play,
   Pause,
@@ -183,6 +184,10 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
     triggerShareToast(isRallyPost ? 'Rally link copied to clipboard!' : 'Post link copied to clipboard!');
   };
 
+  const handleBookmark = () => {
+    triggerShareToast(isRallyPost ? 'Rally saved to bookmarks' : 'Post saved to bookmarks');
+  };
+
   const itemId = post?.id || linkedRally?.id || externalEvent?.id || 'feed-item';
 
   return (
@@ -190,76 +195,78 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
       id={`feed-item-${itemId}`}
       className="p-4 bg-transparent border-b border-neutral-200/70 hover:bg-neutral-100/30 transition-colors"
     >
-      <div className="flex items-start gap-3">
-        {/* Avatar with Cycle Beacon */}
-        <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
-          <div
-            className={`rounded-full transition-all duration-200 ${
-              hasActiveCycle
-                ? authorCycle?.hasUnseen
-                  ? 'p-[2.5px] bg-gradient-to-tr from-[#5E43F3] via-fuchsia-500 to-pink-500 shadow-xs'
-                  : 'p-[2px] bg-neutral-300/80'
-                : ''
-            }`}
-          >
-            <div className={`${hasActiveCycle ? 'bg-white p-[1.5px] rounded-full' : ''}`}>
-              <Avatar
-                src={author?.avatar}
-                alt={author?.name || 'User'}
-                size="md"
-              />
+      {/* 1. Header Row */}
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={handleAvatarClick}>
+          {/* Avatar with Cycle Beacon */}
+          <div className="relative group">
+            <div
+              className={`rounded-full transition-all duration-200 ${
+                hasActiveCycle
+                  ? authorCycle?.hasUnseen
+                    ? 'p-[2.5px] bg-gradient-to-tr from-[#5E43F3] via-fuchsia-500 to-pink-500 shadow-xs'
+                    : 'p-[2px] bg-neutral-300/80'
+                  : ''
+              }`}
+            >
+              <div className={`${hasActiveCycle ? 'bg-white p-[1.5px] rounded-full' : ''}`}>
+                <Avatar
+                  src={author?.avatar}
+                  alt={author?.name || 'User'}
+                  size="md"
+                />
+              </div>
+            </div>
+            {hasActiveCycle && authorCycle?.hasUnseen && (
+               <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#5E43F3] rounded-full border-2 border-white ring-1 ring-[#5E43F3]/30" />
+            )}
+          </div>
+
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAuthorClick();
+                }}
+                className="font-bold text-[15px] text-neutral-900 hover:underline cursor-pointer tracking-tight"
+              >
+                {author.name}
+              </span>
+
+              {author.badge && <Badge type={author.badge} />}
+            </div>
+
+            {/* Sub-header: @username · time · location · distance */}
+            <div className="flex items-center gap-1.5 text-xs text-neutral-500 mt-0.5 flex-wrap">
+              <span className="text-neutral-400">@{author.username}</span>
+              <span>·</span>
+              <span>{timeText}</span>
+              {locationText && (
+                <>
+                  <span>·</span>
+                  {distanceMeters !== undefined ? (
+                    <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-neutral-100 text-neutral-700 text-[11px] font-medium">
+                      <span className={`w-1.5 h-1.5 rounded-full ${proximity.dotColor}`} />
+                      <MapPin className="w-2.5 h-2.5 text-[#5E43F3]" />
+                      <span>{locationText}</span>
+                      <span className="text-neutral-400">·</span>
+                      <span className="font-bold text-neutral-900">{formattedDistance}</span>
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-neutral-100 text-neutral-700 text-[11px] font-medium">
+                      <MapPin className="w-2.5 h-2.5 text-[#5E43F3]" />
+                      <span>{locationText}</span>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
-          {hasActiveCycle && authorCycle?.hasUnseen && (
-             <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#5E43F3] rounded-full border-2 border-white ring-1 ring-[#5E43F3]/30" />
-          )}
         </div>
 
-        {/* Content column */}
-        <div className="flex-1 min-w-0">
-          {/* Header Row */}
-          <div className="flex items-start justify-between gap-1">
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span
-                  onClick={handleAuthorClick}
-                  className="font-bold text-[15px] text-neutral-900 hover:underline cursor-pointer tracking-tight"
-                >
-                  {author.name}
-                </span>
-
-                {author.badge && <Badge type={author.badge} />}
-              </div>
-
-              {/* Sub-header: @username · time · location · distance */}
-              <div className="flex items-center gap-1.5 text-xs text-neutral-500 mt-0.5 flex-wrap">
-                <span className="text-neutral-400">@{author.username}</span>
-                <span>·</span>
-                <span>{timeText}</span>
-                {locationText && (
-                  <>
-                    <span>·</span>
-                    {distanceMeters !== undefined ? (
-                      <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-neutral-100 text-neutral-700 text-[11px] font-medium">
-                        <span className={`w-1.5 h-1.5 rounded-full ${proximity.dotColor}`} />
-                        <MapPin className="w-2.5 h-2.5 text-[#5E43F3]" />
-                        <span>{locationText}</span>
-                        <span className="text-neutral-400">·</span>
-                        <span className="font-bold text-neutral-900">{formattedDistance}</span>
-                      </div>
-                    ) : (
-                      <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-neutral-100 text-neutral-700 text-[11px] font-medium">
-                        <MapPin className="w-2.5 h-2.5 text-[#5E43F3]" />
-                        <span>{locationText}</span>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Top-Right Badges & Kebab Options */}
-            <div className="flex items-center gap-1.5">
+        {/* Top-Right Badges & Kebab Options */}
+        <div className="flex items-center gap-1.5">
               {/* Rally Badges if applicable */}
               {linkedRally && (
                 <>
@@ -460,32 +467,30 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
 
           {/* Media Attachment (for normal post without rally or with independent media) */}
           {((post?.mediaUrl || (post as any)?.muxUploadId) && !linkedRally) && (
-            <> 
+            <div className="mt-3 w-full bg-black/5 rounded-[12px] overflow-hidden"> 
               {post.mediaType === 'video' ? (
-                <div className="mt-3 relative group">
-                  <VideoPlayer
-                    muxPlaybackId={(post as any).muxPlaybackId}
-                    mediaUrl={post.mediaUrl}
-                    mediaStatus={(post as any).mediaStatus}
-                    aspect="video"
-                    autoPlay={true}
-                    className="mx-auto w-full"
-                    onExpandVideo={() => setActiveVideoFeedPostId(post.id)}
-                  />
-                </div>
+                <VideoPlayer
+                  muxPlaybackId={(post as any).muxPlaybackId}
+                  mediaUrl={post.mediaUrl}
+                  mediaStatus={(post as any).mediaStatus}
+                  aspect="auto"
+                  autoPlay={true}
+                  className="w-full h-auto max-h-[600px] object-contain mx-auto"
+                  onExpandVideo={() => setActiveVideoFeedPostId(post.id)}
+                />
               ) : (
                 post.mediaUrl && (
                   <img
                     src={post.mediaUrl}
                     alt="Post attachment"
                     referrerPolicy="no-referrer"
-                    className="mt-3 w-full max-h-[420px] rounded-[18px] object-cover cursor-pointer"
+                    className="w-full h-auto max-h-[600px] object-contain cursor-pointer"
                     onClick={() => externalEvent && setShowEventModal(true)}
                     loading="lazy"
                   />
                 )
               )}
-            </>
+            </div>
           )}
 
           {/* External Event Specific Body */}
@@ -531,7 +536,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
 
           {/* Unified Action Row */}
           <div className="mt-3.5 flex items-center justify-between text-neutral-500 text-xs">
-            {/* Social Interactions */}
+            {/* Left Social Interactions */}
             <div className="flex items-center gap-1 sm:gap-2">
               {/* Like */}
               <button
@@ -576,50 +581,53 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                   <span>{repostsCount}</span>
                 </button>
               )}
-
-              {/* Share */}
-              <button
-                id={`btn-share-${itemId}`}
-                onClick={handleShare}
-                className="flex items-center gap-1 py-1 px-2 rounded-lg hover:text-neutral-900 transition-colors cursor-pointer"
-              >
-                <Share2 className="w-4 h-4 stroke-[1.8]" />
-                <span className="hidden xs:inline">Share</span>
-              </button>
             </div>
 
-            {/* Rally-Specific Actions (Message Creator & Join/Joined CTA) */}
-            {linkedRally && (
-              <div className="flex items-center gap-1.5">
-                <button
-                  id={`btn-msg-rally-${linkedRally.id}`}
-                  onClick={handleMessageCreator}
-                  className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
-                  title="Message creator"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                </button>
+            {/* Right Side Actions (Bookmark & Rally Actions) */}
+            <div className="flex items-center gap-1.5">
+              {/* Rally-Specific Actions */}
+              {linkedRally && (
+                <>
+                  <button
+                    id={`btn-msg-rally-${linkedRally.id}`}
+                    onClick={handleMessageCreator}
+                    className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+                    title="Message creator"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                  </button>
 
-                <button
-                  id={`btn-join-rally-${linkedRally.id}`}
-                  onClick={() => toggleJoinRally(linkedRally.id)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    linkedRally.isJoined
-                      ? 'bg-neutral-900 text-white hover:bg-neutral-800'
-                      : 'bg-[#5E43F3] text-white hover:bg-[#4E34E0] shadow-sm shadow-[#5E43F3]/25 active:scale-95'
-                  }`}
-                >
-                  {linkedRally.isJoined ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                      <span>Joined</span>
-                    </>
-                  ) : (
-                    <span>Join Rally</span>
-                  )}
-                </button>
-              </div>
-            )}
+                  <button
+                    id={`btn-join-rally-${linkedRally.id}`}
+                    onClick={() => toggleJoinRally(linkedRally.id)}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      linkedRally.isJoined
+                        ? 'bg-neutral-900 text-white hover:bg-neutral-800'
+                        : 'bg-[#5E43F3] text-white hover:bg-[#4E34E0] shadow-sm shadow-[#5E43F3]/25 active:scale-95'
+                    }`}
+                  >
+                    {linkedRally.isJoined ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                        <span>Joined</span>
+                      </>
+                    ) : (
+                      <span>Join Rally</span>
+                    )}
+                  </button>
+                </>
+              )}
+
+              {/* Bookmark */}
+              <button
+                id={`btn-bookmark-${itemId}`}
+                onClick={handleBookmark}
+                className="flex items-center py-1 px-2 rounded-lg hover:text-neutral-900 transition-colors cursor-pointer"
+                title="Bookmark"
+              >
+                <Bookmark className="w-4 h-4 stroke-[1.8]" />
+              </button>
+            </div>
           </div>
 
           {/* Inline Comments Section */}
@@ -632,8 +640,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
             </div>
           )}
 
-        </div>
-      </div>
+
 
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
@@ -735,3 +742,4 @@ const InlineComments = ({ postId, postAuthorId }: { postId: string, postAuthorId
     </div>
   );
 };
+
