@@ -297,9 +297,8 @@ export const MuxVideoPlayer = React.memo<MuxVideoPlayerProps>(({
     return (
       <div
         ref={containerRef}
-        className={`relative w-full overflow-hidden rounded-[18px] bg-black ${className}`}
-        onMouseMove={showControls}
-        onTouchStart={showControls}
+        className={`relative w-full overflow-hidden rounded-[18px] bg-black ${className} cursor-pointer group`}
+        onClick={togglePlayPause}
       >
         {!isNearViewport ? (
           <img
@@ -321,57 +320,30 @@ export const MuxVideoPlayer = React.memo<MuxVideoPlayerProps>(({
             className={`block w-full h-full object-contain ${aspectClass}`}
           />
         )}
-        {/* Controls Overlay */}
-        <div
-          className={`absolute inset-x-0 bottom-0 flex items-center justify-between p-2 bg-black/60 backdrop-blur-sm transition-opacity ${controlsVisible ? 'opacity-100' : 'opacity-0'}`}
-        >
-          {/* Play / Pause */}
-          <button
-            onClick={togglePlayPause}
-            aria-label={isPlaying ? 'Pause' : 'Play'}
-            className="text-white"
-          >
-            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-          </button>
-          {/* Rewind / Forward */}
-          <div className="flex items-center space-x-1">
-            <button onClick={() => skip(-10)} aria-label="Rewind 10 seconds" className="text-white">
-              <Rewind className="w-5 h-5" />
-            </button>
-            <button onClick={() => skip(10)} aria-label="Forward 10 seconds" className="text-white">
-              <FastForward className="w-5 h-5" />
-            </button>
-          </div>
-          {/* Progress Bar */}
-          <div className="flex-1 mx-2" onClick={handleBarClick}>
-            <div className="relative h-1 bg-neutral-600/40 rounded">
-              <div
-                className="absolute h-1 bg-[#5E43F3] rounded"
-                style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
-              />
+        
+        {/* Play/Pause Indicator (Fades out) */}
+        {!isPlaying && isNearViewport && !isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20">
+            <div className="w-16 h-16 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center border border-white/20">
+              <Play className="w-8 h-8 text-white ml-1" />
             </div>
           </div>
-          {/* Time */}
-          <div className="text-xs text-white whitespace-nowrap mr-2">
-            {`${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')} / ${Math.floor(duration / 60)}:${String(Math.floor(duration % 60)).padStart(2, '0')}`}
+        )}
+
+        {/* Progress Bar (like mobile VideoProgressIndicator) */}
+        <div 
+          className="absolute inset-x-0 bottom-0 h-1.5 cursor-pointer bg-transparent z-10"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleBarClick(e);
+          }}
+        >
+          <div className="absolute bottom-0 inset-x-0 h-1 bg-white/30">
+            <div
+              className="absolute h-full bg-white transition-all duration-100 ease-linear"
+              style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
+            />
           </div>
-          {/* Volume */}
-          <button onClick={toggleMute} aria-label={isMuted ? 'Unmute' : 'Mute'} className="text-white">
-            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-          </button>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={volume}
-            onChange={handleVolumeChange}
-            className="w-20 h-1 bg-neutral-600/40 rounded"
-          />
-          {/* Fullscreen */}
-          <button onClick={toggleFullscreen} aria-label="Toggle Fullscreen" className="text-white">
-            {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
-          </button>
         </div>
       </div>
     );
@@ -382,9 +354,8 @@ export const MuxVideoPlayer = React.memo<MuxVideoPlayerProps>(({
     return (
       <div
         ref={containerRef}
-        className={`relative w-full overflow-hidden rounded-[18px] bg-neutral-900 ${className}`}
-        onMouseMove={showControls}
-        onTouchStart={showControls}
+        className={`relative w-full overflow-hidden rounded-[18px] bg-neutral-900 ${className} cursor-pointer group`}
+        onClick={togglePlayPause}
       >
         {!isNearViewport ? (
           <img
@@ -406,47 +377,30 @@ export const MuxVideoPlayer = React.memo<MuxVideoPlayerProps>(({
             className={`block w-full h-full object-contain ${aspectClass} max-h-[500px]`}
           />
         )}
-        {/* Controls Overlay */}
-        <div
-          className={`absolute inset-x-0 bottom-0 flex items-center justify-between p-2 bg-black/60 backdrop-blur-sm transition-opacity ${controlsVisible ? 'opacity-100' : 'opacity-0'}`}
-        >
-          <button onClick={togglePlayPause} aria-label={isPlaying ? 'Pause' : 'Play'} className="text-white">
-            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-          </button>
-          <div className="flex items-center space-x-1">
-            <button onClick={() => skip(-10)} aria-label="Rewind 10 seconds" className="text-white">
-              <Rewind className="w-5 h-5" />
-            </button>
-            <button onClick={() => skip(10)} aria-label="Forward 10 seconds" className="text-white">
-              <FastForward className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="flex-1 mx-2" onClick={handleBarClick}>
-            <div className="relative h-1 bg-neutral-600/40 rounded">
-              <div
-                className="absolute h-1 bg-[#5E43F3] rounded"
-                style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
-              />
+        
+        {/* Play/Pause Indicator */}
+        {!isPlaying && isNearViewport && !isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20">
+            <div className="w-16 h-16 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center border border-white/20">
+              <Play className="w-8 h-8 text-white ml-1" />
             </div>
           </div>
-          <div className="text-xs text-white whitespace-nowrap mr-2">
-            {`${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')} / ${Math.floor(duration / 60)}:${String(Math.floor(duration % 60)).padStart(2, '0')}`}
+        )}
+
+        {/* Progress Bar */}
+        <div 
+          className="absolute inset-x-0 bottom-0 h-1.5 cursor-pointer bg-transparent z-10"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleBarClick(e);
+          }}
+        >
+          <div className="absolute bottom-0 inset-x-0 h-1 bg-white/30">
+            <div
+              className="absolute h-full bg-white transition-all duration-100 ease-linear"
+              style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
+            />
           </div>
-          <button onClick={toggleMute} aria-label={isMuted ? 'Unmute' : 'Mute'} className="text-white">
-            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-          </button>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={volume}
-            onChange={handleVolumeChange}
-            className="w-20 h-1 bg-neutral-600/40 rounded"
-          />
-          <button onClick={toggleFullscreen} aria-label="Toggle Fullscreen" className="text-white">
-            {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
-          </button>
         </div>
       </div>
     );

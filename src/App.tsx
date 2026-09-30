@@ -1,6 +1,7 @@
 // @ts-nocheck
 import React, { useRef, useEffect } from 'react';
 import { LalaoProvider, useLalao } from './context/LalaoContext';
+import { VideoFeedModal } from './components/feed/VideoFeedModal';
 import { Header } from './components/navigation/Header';
 import { BottomNav } from './components/navigation/BottomNav';
 import { DesktopSidebar } from './components/navigation/DesktopSidebar';
@@ -340,6 +341,7 @@ const LalaoAppContent: React.FC = () => {
       <UserProfileModal />
       <CommentsModal />
       <NotificationsModal />
+      <VideoFeedModal />
 
       {!['create-post'].includes(activeTab) && <CycleStoryViewerModal />}
       {!['create-post'].includes(activeTab) && <PermissionPromptModal />}

@@ -58,6 +58,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
     pages,
     locationPrivacy,
     deletePost,
+    setActiveVideoFeedPostId,
     addComment,
     cycles,
     openCycleStory,
@@ -461,7 +462,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
           {((post?.mediaUrl || (post as any)?.muxUploadId) && !linkedRally) && (
             <> 
               {post.mediaType === 'video' ? (
-                <div className="mt-3">
+                <div className="mt-3 relative group">
                   <VideoPlayer
                     muxPlaybackId={(post as any).muxPlaybackId}
                     mediaUrl={post.mediaUrl}
@@ -469,6 +470,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                     aspect="video"
                     autoPlay={true}
                     className="mx-auto w-full"
+                    onExpandVideo={() => setActiveVideoFeedPostId(post.id)}
                   />
                 </div>
               ) : (

@@ -149,6 +149,9 @@ interface LalaoContextType {
   isCreateCycleOpen: boolean;
   setIsCreateCycleOpen: (open: boolean) => void;
 
+  activeVideoFeedPostId: string | null;
+  setActiveVideoFeedPostId: (id: string | null) => void;
+
   sendDirectMessage: (conversationId: string, text: string, stickerId?: string) => void;
   markConversationRead: (conversationId: string) => void;
   markNotificationsAsRead: () => void;
@@ -727,6 +730,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [activeCycleId, setActiveCycleId] = useState<string | null>(null);
   const [activeStoryIndex, setActiveStoryIndex] = useState<number>(0);
   const [isCreateCycleOpen, setIsCreateCycleOpen] = useState(false);
+  const [activeVideoFeedPostId, setActiveVideoFeedPostId] = useState<string | null>(null);
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [activeUserProfile, setActiveUserProfile] = useState<User | null>(null);
   const [composerInitialText, setComposerInitialText] = useState<string>('');
@@ -2234,6 +2238,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         deleteCycleStoryItem,
         isCreateCycleOpen,
         setIsCreateCycleOpen,
+        activeVideoFeedPostId,
+        setActiveVideoFeedPostId,
         sendDirectMessage,
         markConversationRead,
         markNotificationsAsRead,

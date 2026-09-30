@@ -34,6 +34,9 @@ export const VideoPlayer = React.memo(
     className = '',
     aspect = 'video', // fallback if we cannot determine
     onRetryProcessing,
+    onExpandVideo,
+    hideMuteButton,
+    onMuteToggle,
   }: {
     muxPlaybackId?: string;
     mediaUrl?: string;
@@ -43,8 +46,11 @@ export const VideoPlayer = React.memo(
     loop?: boolean;
     muted?: boolean;
     className?: string;
-    aspect?: 'video' | 'square';
+    aspect?: 'video' | 'square' | 'portrait' | 'auto';
     onRetryProcessing?: () => void;
+    onExpandVideo?: () => void;
+    hideMuteButton?: boolean;
+    onMuteToggle?: (muted: boolean) => void;
   }) {
     const containerRef = useRef<HTMLDivElement>(null);
     const playerRef = useRef<any>(null);
@@ -52,6 +58,14 @@ export const VideoPlayer = React.memo(
     const [isNearViewport, setIsNearViewport] = useState(false);
     const [isInViewport, setIsInViewport] = useState(false);
     const [isMuted, setIsMuted] = useState(muted);
+
+    useEffect(() => {
+      setIsMuted(muted);
+      if (playerRef.current) {
+        playerRef.current.muted = muted;
+      }
+    }, [muted]);
+
     const [isPlaying, setIsPlaying] = useState(false);
     const [volume, setVolume] = useState(1);
     const [currentTime, setCurrentTime] = useState(0);
@@ -65,7 +79,7 @@ export const VideoPlayer = React.memo(
     const [showSpeedMenu, setShowSpeedMenu] = useState(false);
     const [supportsPiP, setSupportsPiP] = useState(false);
 
-    const aspectClass = aspect === 'square' ? 'aspect-square' : 'aspect-video';
+    const aspectClass = aspect === 'auto' ? '' : aspect === 'square' ? 'aspect-square' : aspect === 'portrait' ? 'aspect-[9/16]' : 'aspect-video';
 
     // Determine effective playback id (Mux or fallback)
     let effectivePlaybackId = muxPlaybackId;
@@ -193,7 +207,6 @@ export const VideoPlayer = React.memo(
       }
     }, [isPlaying]);
 
-    // Control actions
     const togglePlayPause = () => {
       if (!playerRef.current) return;
       if (isPlaying) playerRef.current.pause();
@@ -201,8 +214,10 @@ export const VideoPlayer = React.memo(
     };
     const toggleMute = () => {
       if (!playerRef.current) return;
-      playerRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
+      const newMuted = !isMuted;
+      playerRef.current.muted = newMuted;
+      setIsMuted(newMuted);
+      onMuteToggle?.(newMuted);
     };
     const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const vol = parseFloat(e.target.value);
@@ -358,8 +373,7 @@ export const VideoPlayer = React.memo(
     return (
       <div
         ref={containerRef}
-        data-aspect={aspectRatio}
-        className={`relative w-full overflow-hidden rounded-[18px] bg-black ${className}`}
+        className={`relative w-full overflow-hidden bg-black ${className}`}
         onMouseMove={showControls}
         onTouchStart={showControls}
         style={{ maxHeight: aspectRatio === 'portrait' ? '70vh' : undefined }}
@@ -374,88 +388,45 @@ export const VideoPlayer = React.memo(
         ) : (
           renderPlayer()
         )}
-        {/* Controls Overlay */}
-        <div
-          className={`absolute inset-x-0 bottom-0 flex items-center justify-between p-2 bg-black/60 backdrop-blur-sm transition-opacity ${controlsVisible ? 'opacity-100' : 'opacity-0'}`}
-        >
-          {/* Play / Pause */}
-          <button onClick={togglePlayPause} aria-label={isPlaying ? 'Pause' : 'Play'} className="text-white">
-            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-          </button>
-          {/* Skip */}
-          <div className="flex items-center space-x-1">
-            <button onClick={() => skip(-10)} aria-label="Rewind 10 seconds" className="text-white">
-              <Rewind className="w-5 h-5" />
-            </button>
-            <button onClick={() => skip(10)} aria-label="Forward 10 seconds" className="text-white">
-              <FastForward className="w-5 h-5" />
-            </button>
-          </div>
-          {/* Progress bar */}
-          <div className="flex-1 mx-2" onClick={handleBarClick}>
-            <div className="relative h-1 bg-neutral-600/40 rounded">
-              <div
-                className="absolute h-1 bg-[#5E43F3] rounded"
-                style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
-              />
+        {/* Play/Pause Indicator (Fades out when playing) */}
+        {!isPlaying && isNearViewport && !isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20">
+            <div className="w-16 h-16 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center border border-white/20">
+              <Play className="w-8 h-8 text-white ml-1" />
             </div>
           </div>
-          {/* Time */}
-          <div className="text-xs text-white whitespace-nowrap mr-2">
-            {`${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')} / ${Math.floor(duration / 60)}:${String(Math.floor(duration % 60)).padStart(2, '0')}`}
+        )}
+
+        {/* Progress Bar (like mobile VideoProgressIndicator) */}
+        <div 
+          className="absolute inset-x-0 bottom-0 h-2 cursor-pointer bg-transparent z-10"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleBarClick(e);
+          }}
+        >
+          <div className="absolute bottom-0 inset-x-0 h-1 bg-white/30">
+            <div
+              className="absolute h-full bg-white transition-all duration-100 ease-linear"
+              style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
+            />
           </div>
-          {/* Volume */}
-          <button onClick={toggleMute} aria-label={isMuted ? 'Unmute' : 'Mute'} className="text-white">
-            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-          </button>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={volume}
-            onChange={handleVolumeChange}
-            className="w-20 h-1 bg-neutral-600/40 rounded"
-          />
-          {/* Settings (speed) */}
-          <div className="relative">
-            <button onClick={toggleSpeedMenu} aria-label="Playback speed" className="text-white mr-1">
-              <Settings className="w-5 h-5" />
-            </button>
-            {showSpeedMenu && (
-              <div className="absolute bottom-full mb-2 right-0 bg-neutral-800 text-white rounded shadow-lg p-2 space-y-1">
-                {[0.5, 0.75, 1, 1.25, 1.5, 2].map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => changeSpeed(s)}
-                    className={`block w-full text-left px-2 py-1 ${playbackSpeed === s ? 'bg-[#5E43F3]/30' : ''}`}
-                  >
-                    {s}x
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          {/* Picture-in-Picture */}
-          {supportsPiP && (
-            <button onClick={enterPiP} aria-label="Picture in picture" className="text-white mr-1">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h10v8H7V7z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 5h14v14H5V5z" />
-              </svg>
+        </div>
+
+        {/* Bottom Controls */}
+        <div className="absolute bottom-4 right-4 flex items-center space-x-2 z-20">
+          {!hideMuteButton && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleMute();
+              }}
+              aria-label={isMuted ? 'Unmute' : 'Mute'}
+              className="p-2 bg-black/40 hover:bg-black/60 rounded-full backdrop-blur-sm text-white transition"
+            >
+              {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
             </button>
           )}
-          {/* Fullscreen */}
-          <button onClick={toggleFullscreen} aria-label="Toggle Fullscreen" className="text-white">
-            {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
-          </button>
         </div>
       </div>
     );
