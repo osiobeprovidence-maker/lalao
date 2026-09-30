@@ -23,6 +23,8 @@ import { Avatar } from '../common/Avatar';
 import { Popover } from '../common/Popover';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { uploadImageToCloudinary } from '../../lib/cloudinary';
+import { GifPickerPopover } from './GifPickerPopover';
+import { EmojiPickerPopover } from './EmojiPickerPopover';
 
 const MAX_CHARS = 280;
 
@@ -73,7 +75,17 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState<string[]>([]);
   const [showPoll, setShowPoll] = useState(false);
+  const [showGifPicker, setShowGifPicker] = useState(false);
+  const [gifUrl, setGifUrl] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [eventDate, setEventDate] = useState('');
   
+  useEffect(() => {
+    if (location.name && !attachedLocation) {
+      setAttachedLocation(location.name);
+    }
+  }, [location.name]);
+
   // Data for audience
   const topicsData = useQuery(api.topics.listActiveTopics, currentUser ? {} : ('skip' as any));
   const followedCommunities = useQuery(api.pages.getMyFollowedCommunities, currentUser ? {} : ('skip' as any));
@@ -86,6 +98,24 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
   // File pickers
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleEmojiSelect = (emoji: string) => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newText = text.substring(0, start) + emoji + text.substring(end);
+      setText(newText);
+      setTimeout(() => {
+        textarea.focus();
+        textarea.selectionStart = textarea.selectionEnd = start + emoji.length;
+      }, 0);
+    } else {
+      setText(prev => prev + emoji);
+    }
+    setShowEmojiPicker(false);
+  };
 
   useEffect(() => {
     return () => {
@@ -112,13 +142,17 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
     setShowPoll(false);
     setPollQuestion('');
     setPollOptions([]);
+    setShowGifPicker(false);
+    setGifUrl('');
+    setShowEmojiPicker(false);
+    setEventDate('');
     setCreateFlowType(null);
     setIsCreateSheetOpen(false);
     if (embedded) setActiveTab('home');
     if (onClose) onClose();
   };
 
-  const hasDraftContent = Boolean(text.trim() || selectedFile || pollQuestion.trim());
+  const hasDraftContent = Boolean(text.trim() || selectedFile || pollQuestion.trim() || gifUrl || eventDate);
 
   const handleClose = async () => {
     if (hasDraftContent) {
@@ -131,6 +165,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
             pollQuestion: showPoll ? pollQuestion : undefined,
             pollOptions: showPoll ? pollOptions : undefined,
             pageRefId: selectedPageRefId || undefined,
+            gifUrl: gifUrl || undefined,
           });
           triggerShareToast('Draft saved!');
         } catch (err) {
@@ -486,6 +521,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
         {/* COMPOSER AREA */}
         <div className="px-4 py-3 min-h-[120px]">
           <textarea
+            ref={textareaRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={4}
@@ -495,7 +531,13 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
           />
 
           {showPoll && (
-            <div className="mt-2 rounded-xl border border-neutral-200 p-3 space-y-2">
+            <div className="mt-2 rounded-xl border border-neutral-200 p-3 space-y-2 relative">
+              <button 
+                onClick={() => { setShowPoll(false); setPollQuestion(''); setPollOptions([]); }}
+                className="absolute top-2 right-2 p-1 text-neutral-400 hover:text-neutral-600 rounded-full hover:bg-neutral-100 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
               <input 
                 value={pollQuestion}
                 onChange={e => setPollQuestion(e.target.value)}
@@ -538,6 +580,35 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
                 aria-label="Remove location"
               >
                 <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+
+          {eventDate && (
+            <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[#5E43F3]/20 bg-[#5E43F3]/5 px-2.5 py-1 text-[11px] font-semibold text-[#5E43F3]">
+              <Calendar className="h-3 w-3 text-[#5E43F3]" />
+              <span>Event Date: {new Date(eventDate).toLocaleDateString()}</span>
+              <button
+                type="button"
+                onClick={() => setEventDate('')}
+                className="text-[#5E43F3] hover:text-[#4E34E0]"
+                aria-label="Remove date"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+
+          {gifUrl && !mediaUrl && (
+            <div className="relative mt-3 overflow-hidden rounded-[16px] border border-neutral-200 bg-neutral-100">
+              <img src={gifUrl} alt="Post GIF attachment" className="max-h-[360px] w-full object-cover" />
+              <button
+                type="button"
+                onClick={() => setGifUrl('')}
+                className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white"
+                aria-label="Remove GIF"
+              >
+                <X className="h-4 w-4" />
               </button>
             </div>
           )}
@@ -610,38 +681,62 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
             >
               <Video className="h-5 w-5" />
             </button>
+            <Popover
+              isOpen={showGifPicker}
+              onClose={() => setShowGifPicker(false)}
+              width={320}
+              trigger={
+                <button
+                  type="button"
+                  onClick={() => { setShowGifPicker(!showGifPicker); setShowEmojiPicker(false); }}
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-[#5E43F3] hover:bg-[#5E43F3]/10 transition"
+                  title="GIF"
+                >
+                  <div className="text-[10px] font-black border-2 border-current rounded px-0.5">GIF</div>
+                </button>
+              }
+              content={<GifPickerPopover onSelectGif={(url) => { setGifUrl(url); setShowGifPicker(false); }} onClose={() => setShowGifPicker(false)} />}
+            />
             <button
               type="button"
-              onClick={() => triggerShareToast('GIF picker coming soon')}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[#5E43F3] hover:bg-[#5E43F3]/10 transition"
-              title="GIF"
-            >
-              <div className="text-[10px] font-black border-2 border-current rounded px-0.5">GIF</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => { setShowPoll(!showPoll); if(!showPoll) setPollOptions(['', '']); }}
+              onClick={() => { setShowPoll(!showPoll); if(!showPoll) setPollOptions(['', '']); setShowGifPicker(false); setShowEmojiPicker(false); }}
               className="flex h-9 w-9 items-center justify-center rounded-full text-[#5E43F3] hover:bg-[#5E43F3]/10 transition"
               title="Poll"
             >
               <BarChart2 className="h-5 w-5" />
             </button>
-            <button
-              type="button"
-              onClick={() => triggerShareToast('Emoji picker coming soon')}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[#5E43F3] hover:bg-[#5E43F3]/10 transition"
-              title="Emoji"
-            >
-              <Smile className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => triggerShareToast('Calendar events coming soon')}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[#5E43F3] hover:bg-[#5E43F3]/10 transition"
-              title="Calendar"
-            >
-              <Calendar className="h-5 w-5" />
-            </button>
+            <Popover
+              isOpen={showEmojiPicker}
+              onClose={() => setShowEmojiPicker(false)}
+              width={320}
+              trigger={
+                <button
+                  type="button"
+                  onClick={() => { setShowEmojiPicker(!showEmojiPicker); setShowGifPicker(false); }}
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-[#5E43F3] hover:bg-[#5E43F3]/10 transition"
+                  title="Emoji"
+                >
+                  <Smile className="h-5 w-5" />
+                </button>
+              }
+              content={<EmojiPickerPopover onSelectEmoji={handleEmojiSelect} onClose={() => setShowEmojiPicker(false)} />}
+            />
+            <div className="relative flex items-center justify-center">
+              <input
+                type="date"
+                onChange={(e) => setEventDate(e.target.value)}
+                value={eventDate}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                title="Select Date"
+              />
+              <button
+                type="button"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-[#5E43F3] hover:bg-[#5E43F3]/10 transition pointer-events-none"
+                title="Calendar"
+              >
+                <Calendar className="h-5 w-5" />
+              </button>
+            </div>
             <button
               type="button"
               onClick={() => setIsLocationModalOpen(true)}
