@@ -105,6 +105,7 @@ interface LalaoContextType {
   toggleFollowPage: (pageId: string) => void;
   createPage: (pageData: { name: string; username: string; category: string; description: string; type: Page['type']; location: string; avatar?: string; coverImage?: string }) => void;
   updatePage: (pageId: string, updatedData: Partial<Page>) => void;
+  deletePage: (pageId: string) => Promise<void>;
   createPagePost: (pageId: string, postData: { text: string; mediaUrl?: string; mediaType?: 'image' | 'video'; location?: string }) => void;
   createPageEvent: (pageId: string, eventData: Partial<OrgEvent>) => void;
   updatePageEvent: (eventId: string, eventData: Partial<OrgEvent>) => void;
@@ -369,6 +370,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // ---- Page Mutations ----
   const createPageMutation = useMutation(api.pages.createPage);
   const updatePageMutation = useMutation(api.pages.updatePage);
+  const deletePageMutation = useMutation(api.pages.deletePage);
   const createPageEventMutation = useMutation(api.pageEvents.createPageEvent);
   
   // ---- Cycles / Stories Mutations ----
@@ -1559,6 +1561,18 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const deletePage = async (pageId: string) => {
+    try {
+      await deletePageMutation({ pageId: pageId as any });
+      triggerShareToast('Page deleted successfully.');
+      setActivePageId(null);
+    } catch (err) {
+      console.error("Failed to delete page", err);
+      triggerShareToast('Failed to delete page.');
+      throw err;
+    }
+  };
+
   const createPagePost = (
     pageId: string,
     postData: {
@@ -2209,6 +2223,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toggleFollowPage,
         createPage,
         updatePage,
+        deletePage,
         createPagePost,
         createPageEvent,
         updatePageEvent,

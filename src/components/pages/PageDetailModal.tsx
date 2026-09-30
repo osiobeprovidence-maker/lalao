@@ -92,6 +92,7 @@ export const PageDetailModal: React.FC = () => {
     setIsMyTicketsOpen,
     activeTicketsCount,
     updatePage,
+    deletePage,
     deletePageEvent,
     isManageSubscriptionsOpen,
     setIsManageSubscriptionsOpen,
@@ -121,6 +122,8 @@ export const PageDetailModal: React.FC = () => {
   const [eventToEdit, setEventToEdit] = useState<OrgEvent | null>(null);
   const [selectedEventForAttendees, setSelectedEventForAttendees] = useState<OrgEvent | null>(null);
   const [isPostComposerOpen, setIsPostComposerOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const isVirtualPage = activePageId === 'page_honorofkings';
   
@@ -660,70 +663,26 @@ export const PageDetailModal: React.FC = () => {
                           type="button"
                           onClick={() => {
                             setIsMenuOpen(false);
-                            setIsPostComposerOpen(true);
+                            setIsEditModalOpen(true);
                           }}
                           className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
                         >
-                          <PlusSquare className="w-4 h-4 text-[#5E43F3]" />
-                          <span>Create Page Post</span>
+                          <Sparkles className="w-4 h-4 text-[#5E43F3]" />
+                          <span>Customize Page</span>
                         </button>
 
                         <button
                           type="button"
                           onClick={() => {
                             setIsMenuOpen(false);
-                            setEventToEdit(null);
-                            setIsEventModalOpen(true);
+                            setIsSettingsOpen(true);
                           }}
                           className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
                         >
-                          <Calendar className="w-4 h-4 text-[#5E43F3]" />
-                          <span>Create / Manage Events</span>
+                          <Settings className="w-4 h-4 text-[#5E43F3]" />
+                          <span>Page Settings</span>
                         </button>
 
-                        {(isBizPage || page.monetization?.sellProducts) && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsMenuOpen(false);
-                              setIsManageProductsOpen(true);
-                            }}
-                            className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
-                          >
-                            <ShoppingBag className="w-4 h-4 text-[#5E43F3]" />
-                            <span>Manage Products / Shop</span>
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="py-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsMenuOpen(false);
-                            setIsMonetizationOpen(true);
-                          }}
-                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
-                        >
-                          <Coins className="w-4 h-4 text-emerald-600" />
-                          <span>Monetize Page & Payouts</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsMenuOpen(false);
-                            setIsAnalyticsOpen(true);
-                          }}
-                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
-                        >
-                          <BarChart3 className="w-4 h-4 text-blue-600" />
-                          <span>Page Analytics</span>
-                        </button>
-                      </div>
-
-                      <div className="py-1">
-                        <div className="px-3.5 py-1 text-[10px] font-black uppercase tracking-wider text-neutral-400">Tools</div>
                         <button
                           type="button"
                           onClick={() => {
@@ -733,18 +692,7 @@ export const PageDetailModal: React.FC = () => {
                           className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
                         >
                           <Briefcase className="w-4 h-4 text-[#5E43F3]" />
-                          <span>Business Tools</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsMenuOpen(false);
-                            setIsToolsModalOpen(true);
-                          }}
-                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
-                        >
-                          <Sparkles className="w-4 h-4 text-purple-500" />
-                          <span>Super Page Tools</span>
+                          <span>Manage Page</span>
                         </button>
                       </div>
 
@@ -753,23 +701,12 @@ export const PageDetailModal: React.FC = () => {
                           type="button"
                           onClick={() => {
                             setIsMenuOpen(false);
-                            setIsSettingsOpen(true);
+                            setIsDeleteConfirmOpen(true);
                           }}
-                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
+                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2.5 cursor-pointer"
                         >
-                          <Settings className="w-4 h-4 text-neutral-600" />
-                          <span>Page Settings</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsMenuOpen(false);
-                            alert("View as Visitor mode activated");
-                          }}
-                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
-                        >
-                          <Users className="w-4 h-4 text-neutral-600" />
-                          <span>View as Visitor</span>
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                          <span>Delete Page</span>
                         </button>
                       </div>
                     </div>
@@ -1699,6 +1636,51 @@ export const PageDetailModal: React.FC = () => {
       </div>
 
       {/* MODALS */}
+      {isDeleteConfirmOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl scale-in-95 duration-200">
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4 text-red-600">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-black text-neutral-900 mb-2">Delete this Page?</h3>
+            <p className="text-sm text-neutral-600 mb-6">
+              This action is permanent and cannot be undone. Are you sure you want to permanently delete <strong>{page.name}</strong> and all associated data, posts, and settings?
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setIsDeleteConfirmOpen(false)}
+                className="px-5 py-2.5 rounded-xl font-bold text-neutral-700 hover:bg-neutral-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={async () => {
+                  try {
+                    setIsDeleting(true);
+                    await deletePage(page.id);
+                    setIsDeleteConfirmOpen(false);
+                  } catch (e) {
+                    setIsDeleting(false);
+                  }
+                }}
+                className="px-5 py-2.5 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 transition-colors flex items-center gap-2"
+              >
+                {isDeleting ? (
+                  <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                <span>Delete Permanently</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isEditModalOpen && (
         <EditPageModal
           page={page}

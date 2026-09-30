@@ -326,6 +326,29 @@ export const updatePage = mutation({
   },
 });
 
+export const deletePage = mutation({
+  args: {
+    pageId: v.id("pages"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+    if (!user) throw new Error("User not found");
+
+    const page = await ctx.db.get(args.pageId);
+    if (!page) throw new Error("Page not found");
+    if (page.ownerId !== user._id) throw new Error("Unauthorized: Only the owner can delete the page");
+
+    // We can just delete the page, related data deletion would be handled by cascades or cleanups
+    await ctx.db.delete(args.pageId);
+  },
+});
+
 export const updatePageBusinessSettings = mutation({
   args: {
     pageId: v.id("pages"),
