@@ -22,21 +22,21 @@
   --font-lalao: 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif;
   
   /* Light Mode Tokens (Original Lalao Colors) */
-  --color-theme-base: #f6f3ee;
-  --color-theme-surface: #FFFFFF;
-  --color-theme-surface-hover: #F5F5F5;
-  --color-theme-surface-active: #E5E5E5;
-  --color-theme-inverse: #171717;
+  --color-theme-base: #F5EFE6; /* Warmer, slightly deeper cream for main background */
+  --color-theme-surface: #FFFFFF; /* Pure white for cards and surfaces */
+  --color-theme-surface-hover: #FAFAF8; 
+  --color-theme-surface-active: #F0EDE5;
+  --color-theme-inverse: #1C1917;
   
-  --color-theme-primary: #171717; /* neutral-900 / 800 */
-  --color-theme-secondary: #525252; /* neutral-600 / 700 */
-  --color-theme-tertiary: #737373; /* neutral-500 */
+  --color-theme-primary: #1C1917; /* Very dark brown/gray for warm readable text */
+  --color-theme-secondary: #57534E; /* Stone-600 */
+  --color-theme-tertiary: #78716C; /* Stone-500 */
   --color-theme-text-inverse: #FFFFFF;
   
-  --color-theme-divider-light: #F5F5F5; /* neutral-100 */
-  --color-theme-divider: #E5E5E5; /* neutral-200 */
-  --color-theme-divider-strong: #D4D4D4; /* neutral-300 */
-  --color-theme-divider-inverse: #262626; /* neutral-800 */
+  --color-theme-divider-light: #EBE6DF; /* Subtle warm border */
+  --color-theme-divider: #E0D9D0;
+  --color-theme-divider-strong: #D1C7BB;
+  --color-theme-divider-inverse: #292524;
 }
 
 /* Dark Mode Tokens (Warm/Beige Dark) */

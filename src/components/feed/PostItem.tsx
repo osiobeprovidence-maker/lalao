@@ -467,7 +467,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
 
           {/* Media Attachment (for normal post without rally or with independent media) */}
           {((post?.mediaUrl || (post as any)?.muxUploadId) && !linkedRally) && (
-            <div className="mt-3 w-full rounded-[12px] overflow-hidden border border-theme-divider-light bg-black/5"> 
+            <div className="mt-3 w-full max-h-[450px] sm:max-h-[500px] rounded-[16px] overflow-hidden border border-theme-divider-light bg-black/5 dark:bg-white/5 flex items-center justify-center"> 
               {post.mediaType === 'video' ? (
                 <VideoPlayer
                   muxPlaybackId={(post as any).muxPlaybackId}
@@ -477,7 +477,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                   mediaHeight={(post as any).mediaHeight}
                   aspect="auto"
                   autoPlay={true}
-                  className="w-full h-auto object-contain"
+                  className="w-auto h-auto max-w-full max-h-[450px] sm:max-h-[500px] object-contain"
                   onExpandVideo={() => setActiveVideoFeedPostId(post.id)}
                 />
               ) : (
@@ -486,7 +486,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                     src={post.mediaUrl}
                     alt="Post attachment"
                     referrerPolicy="no-referrer"
-                    className="block w-full h-auto object-contain cursor-pointer"
+                    className="w-auto h-auto max-w-full max-h-[450px] sm:max-h-[500px] object-contain cursor-pointer"
                     onClick={() => externalEvent && setShowEventModal(true)}
                     loading="lazy"
                   />
@@ -527,13 +527,15 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
 
           {/* GIF Attachment */}
           {post?.gifUrl && !linkedRally && (
-            <img
-              src={post.gifUrl}
-              alt="GIF attachment"
-              referrerPolicy="no-referrer"
-              className="mt-3 w-full max-h-[420px] rounded-[18px] object-cover"
-              loading="lazy"
-            />
+            <div className="mt-3 w-full max-h-[400px] rounded-[16px] overflow-hidden border border-theme-divider-light bg-black/5 dark:bg-white/5 flex items-center justify-center">
+              <img
+                src={post.gifUrl}
+                alt="GIF attachment"
+                referrerPolicy="no-referrer"
+                className="w-auto h-auto max-w-full max-h-[400px] object-contain cursor-pointer"
+                loading="lazy"
+              />
+            </div>
           )}
 
           {/* Unified Action Row */}
