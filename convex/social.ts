@@ -521,7 +521,7 @@ export const listFeedPosts = query({
         })(),
         createdAt: formatRelativeTime(post.createdAt),
         likesCount: post.likesCount ?? 0,
-        commentsCount: post.commentsCount ?? topLevel.length,
+        commentsCount: post.commentsCount ?? 0,
         repostsCount: post.repostsCount ?? 0,
         isLiked,
         isReposted: false,
@@ -1307,7 +1307,7 @@ export const createPost = mutation({
     let finalRallyRefId = args.rallyRefId;
 
     if (args.rallyData) {
-      finalRallyRefId = await ctx.db.insert("rallies", {
+      const insertedRallyId = await ctx.db.insert("rallies", {
         creatorId: currentUser._id,
         type: args.rallyData.type,
         title: args.rallyData.title,
@@ -1324,11 +1324,12 @@ export const createPost = mutation({
         participantCount: 1, // creator is a participant
         createdAt: now,
       });
+      finalRallyRefId = insertedRallyId as any;
 
       // Automatically join the creator
       await ctx.db.insert("rallyParticipants", {
         userId: currentUser._id,
-        rallyId: finalRallyRefId,
+        rallyId: insertedRallyId,
         createdAt: now,
       });
     }
@@ -1363,7 +1364,7 @@ export const createPost = mutation({
     });
 
     if (args.rallyData && finalRallyRefId) {
-      await ctx.db.patch(finalRallyRefId, { postId });
+      await ctx.db.patch(finalRallyRefId as any, { postId });
     }
 
     return {

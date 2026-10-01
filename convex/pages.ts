@@ -1,6 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { getFeatureFlags } from "./platformSettings";
+import { getFeatureFlagsInternal } from "./platformSettings";
 
 export const getMyPages = query({
   args: {},
@@ -20,7 +20,7 @@ export const getMyPages = query({
       .withIndex("by_owner", (q) => q.eq("ownerId", user._id))
       .collect();
 
-    const flags = await getFeatureFlags(ctx, {} as any);
+    const flags = await getFeatureFlagsInternal(ctx);
 
     const filteredPages = flags.communityEnabled 
       ? pages 
@@ -86,7 +86,7 @@ export const getMyPages = query({
 export const listDiscoverablePages = query({
   args: {},
   handler: async (ctx) => {
-    const flags = await getFeatureFlags(ctx, {} as any);
+    const flags = await getFeatureFlagsInternal(ctx);
     const pages = await ctx.db.query("pages").collect();
     
     // Filter out community pages if disabled
@@ -173,7 +173,7 @@ export const getMyFollowedCommunities = query({
       followedPageIds.map(async (pageId) => await ctx.db.get(pageId))
     );
 
-    const flags = await getFeatureFlags(ctx, {} as any);
+    const flags = await getFeatureFlagsInternal(ctx);
     if (!flags.communityEnabled) return [];
 
     return pages
@@ -231,7 +231,7 @@ export const createPage = mutation({
     };
 
     if (args.type === "community") {
-      const flags = await getFeatureFlags(ctx, {} as any);
+      const flags = await getFeatureFlagsInternal(ctx);
       if (!flags.communityEnabled) {
         throw new Error("Community feature is currently disabled.");
       }

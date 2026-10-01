@@ -275,14 +275,36 @@ export const replyToStory = mutation({
     if (story && story.authorId !== currentUser._id) {
       // Send DM to the author
       const recipientId = story.authorId;
-      
       // Look for conversation or create message
+      let conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_user_a", (q: any) => q.eq("userA", currentUser._id))
+        .filter((q: any) => q.eq(q.field("userB"), recipientId))
+        .first();
+
+      if (!conversation) {
+        conversation = await ctx.db
+          .query("conversations")
+          .withIndex("by_user_b", (q: any) => q.eq("userB", currentUser._id))
+          .filter((q: any) => q.eq(q.field("userA"), recipientId))
+          .first();
+      }
+
+      let conversationId = conversation?._id;
+      if (!conversationId) {
+        conversationId = await ctx.db.insert("conversations", {
+          userA: currentUser._id,
+          userB: recipientId,
+          updatedAt: Date.now(),
+        });
+      }
+
       await ctx.db.insert("messages", {
         senderId: currentUser._id,
-        recipientId,
+        conversationId,
         text: `Replied to your status: "${args.replyText}"`,
         createdAt: Date.now(),
-        read: false,
+        isRead: false,
       });
     }
   },

@@ -97,23 +97,27 @@ export const updateBrandingSettings = mutation({
 // FEATURE FLAGS
 // ─────────────────────────────────────────────────────────────
 
+export const getFeatureFlagsInternal = async (ctx: any) => {
+  const record = await ctx.db
+    .query("platformSettings")
+    .withIndex("by_key", (q: any) => q.eq("key", "featureFlags"))
+    .unique();
+
+  const defaultFlags = { communityEnabled: false, roomyEnabled: true };
+
+  if (!record) return defaultFlags;
+
+  try {
+    return { ...defaultFlags, ...JSON.parse(record.value) };
+  } catch (e) {
+    return defaultFlags;
+  }
+};
+
 export const getFeatureFlags = query({
   args: {},
   handler: async (ctx) => {
-    const record = await ctx.db
-      .query("platformSettings")
-      .withIndex("by_key", (q) => q.eq("key", "featureFlags"))
-      .unique();
-
-    const defaultFlags = { communityEnabled: false, roomyEnabled: true };
-
-    if (!record) return defaultFlags;
-
-    try {
-      return { ...defaultFlags, ...JSON.parse(record.value) };
-    } catch (e) {
-      return defaultFlags;
-    }
+    return await getFeatureFlagsInternal(ctx);
   },
 });
 

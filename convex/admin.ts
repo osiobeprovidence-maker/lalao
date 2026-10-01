@@ -137,7 +137,7 @@ export const assignRumiPage = internalMutation({
       return "Ownership assignment blocked: the specified Lalao account could not be verified.";
     }
     const targetUser = users[0];
-    if (targetUser.status === "suspended") {
+    if (targetUser.suspended) {
       return "Ownership assignment blocked: target user is suspended.";
     }
 
@@ -575,8 +575,8 @@ export const bootstrapPlatformPages = mutation({
           ownerId: adminId,
           name: sysPage.name,
           username: sysPage.username,
-          type: sysPage.type,
-          badge: sysPage.badge,
+          type: sysPage.type as any,
+          badge: sysPage.badge as any,
           activeTools: sysPage.activeTools || [],
           location: "Global",
           followersCount: 0,

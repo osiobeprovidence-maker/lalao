@@ -3,7 +3,7 @@ import {
   Image as ImageIcon,
   Loader2,
   MapPin,
-  Sparkles,
+  Hand,
   Video,
   X,
   ChevronDown,
@@ -652,7 +652,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
               >
                 <X className="w-4 h-4" />
               </button>
-              <h3 className="text-sm font-bold text-neutral-900 mb-3 flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-[#5E43F3]" /> Select Rally Type</h3>
+              <h3 className="text-sm font-bold text-neutral-900 mb-3 flex items-center gap-1.5"><Hand className="w-4 h-4 text-[#5E43F3]" /> Select Rally Type</h3>
               <div className="grid grid-cols-3 gap-2">
                 <button 
                   onClick={() => setRallyType('ASK')}
@@ -900,7 +900,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
               className={`flex h-9 w-9 items-center justify-center rounded-full transition ${showRallyTypeSelector || rallyType ? 'text-white bg-[#5E43F3]' : 'text-[#5E43F3] hover:bg-[#5E43F3]/10'}`}
               title="Rally"
             >
-              <Sparkles className="h-5 w-5" />
+              <Hand className="h-5 w-5" />
             </button>
           </div>
 
