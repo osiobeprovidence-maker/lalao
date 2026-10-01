@@ -16,7 +16,7 @@ export const BottomNav: React.FC = () => {
   return (
     <nav
       id="lalao-bottom-nav"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-neutral-100 bg-white/95 px-6 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.06)] backdrop-blur-lg flex items-center justify-between"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-theme-divider-light bg-theme-surface/95 px-6 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.06)] backdrop-blur-lg flex items-center justify-between"
     >
       {navItems.map((item) => {
         const isCenter = item.id === 'create';
@@ -55,7 +55,7 @@ export const BottomNav: React.FC = () => {
               window.scrollTo({ top: 0, behavior: 'instant' });
             }}
             className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition-all cursor-pointer relative ${
-              isActive ? 'text-[#5E43F3]' : 'text-neutral-500 hover:text-neutral-900'
+              isActive ? 'text-[#5E43F3]' : 'text-theme-tertiary hover:text-theme-primary'
             }`}
             aria-label={item.label}
           >

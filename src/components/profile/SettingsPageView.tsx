@@ -23,6 +23,7 @@ import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useNavigate } from 'react-router-dom';
 import { uploadImageToCloudinary } from '../../lib/cloudinary';
+import { useTheme } from '../../context/ThemeContext';
 
 export const SettingsPageView: React.FC = () => {
   const {
@@ -65,6 +66,7 @@ export const SettingsPageView: React.FC = () => {
   const generateConvexUploadUrl = useMutation(api.social.generateUploadUrl);
   const createAdminSession = useMutation(api.admin.createAdminSession);
   const [isCreatingAdminSession, setIsCreatingAdminSession] = useState(false);
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     setName(currentUser.name);
@@ -225,24 +227,24 @@ export const SettingsPageView: React.FC = () => {
       <div
         ref={containerRef}
         id="settings-page-screen"
-        className="bg-white w-full sm:max-w-md md:max-w-lg h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 relative z-10 overflow-hidden"
+        className="bg-theme-surface w-full sm:max-w-md md:max-w-lg h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 relative z-10 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Sticky Header */}
-        <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-neutral-100 px-4 py-3 flex items-center justify-between">
+        <div className="sticky top-0 z-20 bg-theme-surface/95 backdrop-blur-md border-b border-theme-divider-light px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             id="btn-back-settings"
             type="button"
             onClick={handleClose}
-            className="p-1.5 -ml-1 rounded-full text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100 transition-colors cursor-pointer"
+            className="p-1.5 -ml-1 rounded-full text-theme-secondary hover:text-theme-primary hover:bg-theme-surface-hover transition-colors cursor-pointer"
             title="Go back"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="font-bold text-base text-neutral-950">Settings & Profile</h1>
-            <p className="text-[11px] text-neutral-500">Manage your account & preferences</p>
+            <h1 className="font-bold text-base text-theme-primary">Settings & Profile</h1>
+            <p className="text-[11px] text-theme-tertiary">Manage your account & preferences</p>
           </div>
         </div>
 
@@ -261,11 +263,11 @@ export const SettingsPageView: React.FC = () => {
         <div className="flex-1 max-w-xl mx-auto w-full p-4 sm:p-6 space-y-7 pb-28 overflow-y-auto">
         {/* 1. Profile Identity Section */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between border-b border-neutral-100 pb-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+          <div className="flex items-center justify-between border-b border-theme-divider-light pb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">
               Profile Details
             </h3>
-            <span className="text-[11px] text-neutral-400 font-medium">Public Information</span>
+            <span className="text-[11px] text-theme-tertiary font-medium">Public Information</span>
           </div>
 
           {/* Avatar uploader */}
@@ -295,14 +297,14 @@ export const SettingsPageView: React.FC = () => {
             />
 
             <div className="text-center">
-              <span className="text-xs font-bold text-neutral-800">Profile photo</span>
-              <p className="text-[11px] text-neutral-500 mt-0.5">Upload your own image from your device</p>
+              <span className="text-xs font-bold text-theme-primary">Profile photo</span>
+              <p className="text-[11px] text-theme-tertiary mt-0.5">Upload your own image from your device</p>
             </div>
 
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-2 text-[11px] font-bold text-neutral-700 hover:bg-neutral-100 cursor-pointer"
+              className="inline-flex items-center gap-2 rounded-full border border-theme-divider bg-theme-base px-3 py-2 text-[11px] font-bold text-theme-secondary hover:bg-theme-surface-hover cursor-pointer"
             >
               <Upload className="w-3.5 h-3.5" />
               {avatar ? 'Change photo' : 'Add profile photo'}
@@ -312,7 +314,7 @@ export const SettingsPageView: React.FC = () => {
           {/* Display Name & Handle */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="text-xs font-bold text-neutral-700 mb-1.5 block">
+              <label className="text-xs font-bold text-theme-secondary mb-1.5 block">
                 Display Name
               </label>
               <input
@@ -320,16 +322,16 @@ export const SettingsPageView: React.FC = () => {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-xs font-semibold text-neutral-950 focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] outline-none transition-all"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-theme-divider text-xs font-semibold text-theme-primary focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] outline-none transition-all"
               />
             </div>
 
             <div>
-              <label className="text-xs font-bold text-neutral-700 mb-1.5 block">
+              <label className="text-xs font-bold text-theme-secondary mb-1.5 block">
                 Username (@handle)
               </label>
-              <div className="flex items-center px-3.5 py-2.5 rounded-xl border border-neutral-200 text-xs font-semibold text-neutral-950 focus-within:border-[#5E43F3] focus-within:ring-1 focus-within:ring-[#5E43F3] transition-all bg-white">
-                <span className="text-neutral-400 mr-0.5">@</span>
+              <div className="flex items-center px-3.5 py-2.5 rounded-xl border border-theme-divider text-xs font-semibold text-theme-primary focus-within:border-[#5E43F3] focus-within:ring-1 focus-within:ring-[#5E43F3] transition-all bg-theme-surface">
+                <span className="text-theme-tertiary mr-0.5">@</span>
                 <input
                   id="input-settings-username"
                   type="text"
@@ -344,8 +346,8 @@ export const SettingsPageView: React.FC = () => {
           {/* Bio */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-bold text-neutral-700 block">Bio</label>
-              <span className="text-[10px] text-neutral-400 font-mono">{bio.length}/180</span>
+              <label className="text-xs font-bold text-theme-secondary block">Bio</label>
+              <span className="text-[10px] text-theme-tertiary font-mono">{bio.length}/180</span>
             </div>
             <textarea
               id="input-settings-bio"
@@ -354,16 +356,16 @@ export const SettingsPageView: React.FC = () => {
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               placeholder="Share a short bio about what you do in Warri..."
-              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-xs text-neutral-950 focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] outline-none resize-none leading-relaxed transition-all"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-theme-divider text-xs text-theme-primary focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] outline-none resize-none leading-relaxed transition-all"
             />
           </div>
 
           {/* Home Location */}
           <div>
-            <label className="text-xs font-bold text-neutral-700 mb-1.5 block">
+            <label className="text-xs font-bold text-theme-secondary mb-1.5 block">
               Home Neighborhood / Area
             </label>
-            <div className="flex items-center px-3.5 py-2.5 rounded-xl border border-neutral-200 text-xs text-neutral-950 focus-within:border-[#5E43F3] focus-within:ring-1 focus-within:ring-[#5E43F3] transition-all bg-white">
+            <div className="flex items-center px-3.5 py-2.5 rounded-xl border border-theme-divider text-xs text-theme-primary focus-within:border-[#5E43F3] focus-within:ring-1 focus-within:ring-[#5E43F3] transition-all bg-theme-surface">
               <MapPin className="w-3.5 h-3.5 text-[#5E43F3] mr-1.5 shrink-0" />
               <input
                 id="input-settings-location"
@@ -383,8 +385,8 @@ export const SettingsPageView: React.FC = () => {
                   onClick={() => setUserLocation(loc)}
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ${
                     userLocation === loc
-                      ? 'bg-neutral-900 text-white'
-                      : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                      ? 'bg-theme-inverse text-theme-text-inverse'
+                      : 'bg-theme-surface-hover text-theme-secondary hover:bg-theme-surface-active'
                   }`}
                 >
                   {loc}
@@ -396,18 +398,18 @@ export const SettingsPageView: React.FC = () => {
 
         {/* 2. Community & Discovery Range Section */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between border-b border-neutral-100 pb-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+          <div className="flex items-center justify-between border-b border-theme-divider-light pb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">
               Community Radius & Discovery
             </h3>
             <span className="text-[11px] text-[#5E43F3] font-bold">{radiusKm} km active</span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-100 space-y-3">
+          <div className="p-4 rounded-2xl bg-theme-base border border-theme-divider-light space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold text-neutral-900">Discovery Radius</span>
-                <p className="text-[11px] text-neutral-500">Filter posts and rallies by distance from you</p>
+                <span className="text-xs font-bold text-theme-primary">Discovery Radius</span>
+                <p className="text-[11px] text-theme-tertiary">Filter posts and rallies by distance from you</p>
               </div>
               <span className="px-2.5 py-1 rounded-full bg-[#5E43F3]/10 text-[#5E43F3] text-xs font-extrabold">
                 {radiusKm} km
@@ -423,7 +425,7 @@ export const SettingsPageView: React.FC = () => {
                   className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     radiusKm === km
                       ? 'bg-[#5E43F3] text-white shadow-xs'
-                      : 'bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-100'
+                      : 'bg-theme-surface text-theme-secondary border border-theme-divider hover:bg-theme-surface-hover'
                   }`}
                 >
                   {km}km
@@ -435,27 +437,27 @@ export const SettingsPageView: React.FC = () => {
 
         {/* 3. Notifications & Activity Alerts */}
         <div className="space-y-3">
-          <div className="border-b border-neutral-100 pb-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+          <div className="border-b border-theme-divider-light pb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">
               Notifications & Alerts
             </h3>
           </div>
 
-          <div className="divide-y divide-neutral-100 border border-neutral-100 rounded-2xl overflow-hidden bg-white">
+          <div className="divide-y divide-neutral-100 border border-theme-divider-light rounded-2xl overflow-hidden bg-theme-surface">
             <div className="p-3.5 flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold text-neutral-900">Local Rallies & Meetups</span>
-                <p className="text-[11px] text-neutral-500">Get alerted when a rally happens nearby</p>
+                <span className="text-xs font-bold text-theme-primary">Local Rallies & Meetups</span>
+                <p className="text-[11px] text-theme-tertiary">Get alerted when a rally happens nearby</p>
               </div>
               <button
                 type="button"
                 onClick={() => setNotifyRallies(!notifyRallies)}
                 className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  notifyRallies ? 'bg-[#5E43F3]' : 'bg-neutral-300'
+                  notifyRallies ? 'bg-[#5E43F3]' : 'bg-theme-divider-strong'
                 }`}
               >
                 <div
-                  className={`w-5 h-5 rounded-full bg-white transition-transform absolute top-0.5 ${
+                  className={`w-5 h-5 rounded-full bg-theme-surface transition-transform absolute top-0.5 ${
                     notifyRallies ? 'right-0.5' : 'left-0.5'
                   }`}
                 />
@@ -464,18 +466,18 @@ export const SettingsPageView: React.FC = () => {
 
             <div className="p-3.5 flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold text-neutral-900">24-Hour Cycle Updates</span>
-                <p className="text-[11px] text-neutral-500">Notifications when following post stories</p>
+                <span className="text-xs font-bold text-theme-primary">24-Hour Cycle Updates</span>
+                <p className="text-[11px] text-theme-tertiary">Notifications when following post stories</p>
               </div>
               <button
                 type="button"
                 onClick={() => setNotifyCycles(!notifyCycles)}
                 className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  notifyCycles ? 'bg-[#5E43F3]' : 'bg-neutral-300'
+                  notifyCycles ? 'bg-[#5E43F3]' : 'bg-theme-divider-strong'
                 }`}
               >
                 <div
-                  className={`w-5 h-5 rounded-full bg-white transition-transform absolute top-0.5 ${
+                  className={`w-5 h-5 rounded-full bg-theme-surface transition-transform absolute top-0.5 ${
                     notifyCycles ? 'right-0.5' : 'left-0.5'
                   }`}
                 />
@@ -484,18 +486,18 @@ export const SettingsPageView: React.FC = () => {
 
             <div className="p-3.5 flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold text-neutral-900">Messages & Replies</span>
-                <p className="text-[11px] text-neutral-500">Direct chats and comment notifications</p>
+                <span className="text-xs font-bold text-theme-primary">Messages & Replies</span>
+                <p className="text-[11px] text-theme-tertiary">Direct chats and comment notifications</p>
               </div>
               <button
                 type="button"
                 onClick={() => setNotifyMessages(!notifyMessages)}
                 className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  notifyMessages ? 'bg-[#5E43F3]' : 'bg-neutral-300'
+                  notifyMessages ? 'bg-[#5E43F3]' : 'bg-theme-divider-strong'
                 }`}
               >
                 <div
-                  className={`w-5 h-5 rounded-full bg-white transition-transform absolute top-0.5 ${
+                  className={`w-5 h-5 rounded-full bg-theme-surface transition-transform absolute top-0.5 ${
                     notifyMessages ? 'right-0.5' : 'left-0.5'
                   }`}
                 />
@@ -504,18 +506,57 @@ export const SettingsPageView: React.FC = () => {
           </div>
         </div>
 
-        {/* 3.5. Home Feed Preferences */}
+        {/* 3.5 Theme Settings */}
         <div className="space-y-3">
-          <div className="border-b border-neutral-100 pb-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+          <div className="border-b border-theme-divider-light pb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">
+              Appearance
+            </h3>
+            <p className="text-[11px] text-theme-tertiary mt-1">
+              Customize how Lalao looks on your device.
+            </p>
+          </div>
+
+          <div className="flex bg-theme-surface border border-theme-divider-light rounded-2xl p-1 shadow-sm overflow-hidden">
+            <button
+              onClick={() => setTheme('light')}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-colors ${
+                theme === 'light' ? 'bg-[#5E43F3] text-white shadow-md' : 'text-theme-secondary hover:bg-theme-surface-hover'
+              }`}
+            >
+              Light
+            </button>
+            <button
+              onClick={() => setTheme('dark')}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-colors ${
+                theme === 'dark' ? 'bg-[#5E43F3] text-white shadow-md' : 'text-theme-secondary hover:bg-theme-surface-hover'
+              }`}
+            >
+              Dark
+            </button>
+            <button
+              onClick={() => setTheme('system')}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-colors ${
+                theme === 'system' ? 'bg-[#5E43F3] text-white shadow-md' : 'text-theme-secondary hover:bg-theme-surface-hover'
+              }`}
+            >
+              Automatic
+            </button>
+          </div>
+        </div>
+
+        {/* 3.6. Home Feed Preferences */}
+        <div className="space-y-3">
+          <div className="border-b border-theme-divider-light pb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">
               Interests & Home Feed
             </h3>
-            <p className="text-[11px] text-neutral-500 mt-1">
+            <p className="text-[11px] text-theme-tertiary mt-1">
               Choose the topics you want Lalao to personalize for you.
             </p>
           </div>
 
-          <div className="divide-y divide-neutral-100 border border-neutral-100 rounded-2xl overflow-hidden bg-white">
+          <div className="divide-y divide-neutral-100 border border-theme-divider-light rounded-2xl overflow-hidden bg-theme-surface">
             {activeTopics?.length > 0 ? (
               activeTopics.map((topic: any) => {
                   let isEnabled = false;
@@ -528,8 +569,8 @@ export const SettingsPageView: React.FC = () => {
                   return (
                     <div key={topic.slug} className="p-3.5 flex items-center justify-between">
                       <div>
-                        <span className="text-xs font-bold text-neutral-900">{topic.displayName}</span>
-                        <p className="text-[11px] text-neutral-500 max-w-[200px]">
+                        <span className="text-xs font-bold text-theme-primary">{topic.displayName}</span>
+                        <p className="text-[11px] text-theme-tertiary max-w-[200px]">
                           {topic.description}
                         </p>
                       </div>
@@ -559,11 +600,11 @@ export const SettingsPageView: React.FC = () => {
                           });
                         }}
                         className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                          isEnabled ? 'bg-[#5E43F3]' : 'bg-neutral-300'
+                          isEnabled ? 'bg-[#5E43F3]' : 'bg-theme-divider-strong'
                         }`}
                       >
                         <div
-                          className={`w-5 h-5 rounded-full bg-white transition-transform absolute top-0.5 ${
+                          className={`w-5 h-5 rounded-full bg-theme-surface transition-transform absolute top-0.5 ${
                             isEnabled ? 'right-0.5' : 'left-0.5'
                           }`}
                         />
@@ -573,7 +614,7 @@ export const SettingsPageView: React.FC = () => {
                 })
             ) : (
               <div className="p-4 text-center">
-                <p className="text-[11px] text-neutral-500">
+                <p className="text-[11px] text-theme-tertiary">
                   No active topics available.
                 </p>
               </div>
@@ -583,27 +624,27 @@ export const SettingsPageView: React.FC = () => {
 
         {/* 4. Privacy & Safety */}
         <div className="space-y-3">
-          <div className="border-b border-neutral-100 pb-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+          <div className="border-b border-theme-divider-light pb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">
               Privacy & Community Safety
             </h3>
           </div>
 
-          <div className="divide-y divide-neutral-100 border border-neutral-100 rounded-2xl overflow-hidden bg-white">
+          <div className="divide-y divide-neutral-100 border border-theme-divider-light rounded-2xl overflow-hidden bg-theme-surface">
             <div className="p-3.5 flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold text-neutral-900">Public Community Profile</span>
-                <p className="text-[11px] text-neutral-500">Allow local members to view your posts</p>
+                <span className="text-xs font-bold text-theme-primary">Public Community Profile</span>
+                <p className="text-[11px] text-theme-tertiary">Allow local members to view your posts</p>
               </div>
               <button
                 type="button"
                 onClick={() => setPublicVisibility(!publicVisibility)}
                 className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  publicVisibility ? 'bg-[#5E43F3]' : 'bg-neutral-300'
+                  publicVisibility ? 'bg-[#5E43F3]' : 'bg-theme-divider-strong'
                 }`}
               >
                 <div
-                  className={`w-5 h-5 rounded-full bg-white transition-transform absolute top-0.5 ${
+                  className={`w-5 h-5 rounded-full bg-theme-surface transition-transform absolute top-0.5 ${
                     publicVisibility ? 'right-0.5' : 'left-0.5'
                   }`}
                 />
@@ -612,18 +653,18 @@ export const SettingsPageView: React.FC = () => {
 
             <div className="p-3.5 flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold text-neutral-900">Active Story Indicator</span>
-                <p className="text-[11px] text-neutral-500">Show colorful ring when 24h cycle is active</p>
+                <span className="text-xs font-bold text-theme-primary">Active Story Indicator</span>
+                <p className="text-[11px] text-theme-tertiary">Show colorful ring when 24h cycle is active</p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowActiveStatus(!showActiveStatus)}
                 className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  showActiveStatus ? 'bg-[#5E43F3]' : 'bg-neutral-300'
+                  showActiveStatus ? 'bg-[#5E43F3]' : 'bg-theme-divider-strong'
                 }`}
               >
                 <div
-                  className={`w-5 h-5 rounded-full bg-white transition-transform absolute top-0.5 ${
+                  className={`w-5 h-5 rounded-full bg-theme-surface transition-transform absolute top-0.5 ${
                     showActiveStatus ? 'right-0.5' : 'left-0.5'
                   }`}
                 />
@@ -634,19 +675,19 @@ export const SettingsPageView: React.FC = () => {
 
         {/* 5. KYC / Verification */}
         <div className="space-y-3">
-          <div className="border-b border-neutral-100 pb-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+          <div className="border-b border-theme-divider-light pb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">
               KYC / Verification
             </h3>
           </div>
 
-          <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 space-y-3">
+          <div className="rounded-2xl border border-theme-divider bg-theme-base p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Shield className="w-4 h-4 text-[#5E43F3]" />
-                <span className="text-xs font-bold text-neutral-900">Current status</span>
+                <span className="text-xs font-bold text-theme-primary">Current status</span>
               </div>
-              <span className="rounded-full bg-neutral-900 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+              <span className="rounded-full bg-theme-inverse px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-theme-text-inverse">
                 {kycStatus === 'verified' ? 'Verified' : kycStatus === 'in_progress' ? 'In progress' : kycStatus === 'requires_attention' ? 'Requires attention' : 'Not verified'}
               </span>
             </div>
@@ -659,7 +700,7 @@ export const SettingsPageView: React.FC = () => {
               {kycStatus === 'not_verified' ? 'Start KYC' : 'Continue KYC'}
             </button>
 
-            <p className="text-[11px] text-neutral-500">
+            <p className="text-[11px] text-theme-tertiary">
               Your identity has not been verified yet. This status will update once your verification review is complete.
             </p>
           </div>
@@ -667,19 +708,19 @@ export const SettingsPageView: React.FC = () => {
 
         {/* 6. Withdrawal Account */}
         <div className="space-y-3">
-          <div className="border-b border-neutral-100 pb-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+          <div className="border-b border-theme-divider-light pb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">
               Wallet / Withdrawals
             </h3>
           </div>
 
-          <div className="rounded-2xl border border-neutral-200 bg-white p-4 space-y-3">
+          <div className="rounded-2xl border border-theme-divider bg-theme-surface p-4 space-y-3">
             {withdrawalAccount.bankName && withdrawalAccount.accountNumber ? (
               <>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-[#5E43F3]" />
-                    <span className="text-xs font-bold text-neutral-900">Withdrawal account</span>
+                    <span className="text-xs font-bold text-theme-primary">Withdrawal account</span>
                   </div>
                   <button
                     type="button"
@@ -690,21 +731,21 @@ export const SettingsPageView: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="rounded-xl bg-neutral-50 border border-neutral-200 p-3">
-                  <p className="text-[11px] text-neutral-500">Bank</p>
-                  <p className="mt-1 text-sm font-bold text-neutral-900">{withdrawalAccount.bankName}</p>
-                  <p className="mt-2 text-[11px] text-neutral-500">Account</p>
-                  <p className="mt-1 font-mono text-sm font-bold text-neutral-900">
+                <div className="rounded-xl bg-theme-base border border-theme-divider p-3">
+                  <p className="text-[11px] text-theme-tertiary">Bank</p>
+                  <p className="mt-1 text-sm font-bold text-theme-primary">{withdrawalAccount.bankName}</p>
+                  <p className="mt-2 text-[11px] text-theme-tertiary">Account</p>
+                  <p className="mt-1 font-mono text-sm font-bold text-theme-primary">
                     {withdrawalAccount.accountNumber.replace(/\d(?=\d{4})/g, '•')}
                   </p>
-                  <p className="mt-2 text-[11px] text-neutral-500">Account name</p>
-                  <p className="mt-1 text-sm text-neutral-800">{withdrawalAccount.accountName || 'Not provided'}</p>
+                  <p className="mt-2 text-[11px] text-theme-tertiary">Account name</p>
+                  <p className="mt-1 text-sm text-theme-primary">{withdrawalAccount.accountName || 'Not provided'}</p>
                 </div>
               </>
             ) : (
-              <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 p-4 text-center">
-                <p className="text-xs font-bold text-neutral-700">No withdrawal account added</p>
-                <p className="mt-1 text-[11px] text-neutral-500">Add your bank details to receive payouts.</p>
+              <div className="rounded-xl border border-dashed border-theme-divider bg-theme-base p-4 text-center">
+                <p className="text-xs font-bold text-theme-secondary">No withdrawal account added</p>
+                <p className="mt-1 text-[11px] text-theme-tertiary">Add your bank details to receive payouts.</p>
               </div>
             )}
 
@@ -719,38 +760,38 @@ export const SettingsPageView: React.FC = () => {
             )}
 
             {isBankFormOpen && (
-              <div className="space-y-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+              <div className="space-y-3 rounded-xl border border-theme-divider bg-theme-base p-3">
                 <div>
-                  <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-neutral-500">Bank</label>
+                  <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-theme-tertiary">Bank</label>
                   <input
                     type="text"
                     value={withdrawalAccount.bankName}
                     onChange={(e) => setWithdrawalAccount((prev) => ({ ...prev, bankName: e.target.value }))}
                     placeholder="Access Bank"
-                    className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-xs text-neutral-900 outline-none focus:border-[#5E43F3]"
+                    className="w-full rounded-xl border border-theme-divider bg-theme-surface px-3 py-2.5 text-xs text-theme-primary outline-none focus:border-[#5E43F3]"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-neutral-500">Account number</label>
+                  <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-theme-tertiary">Account number</label>
                   <input
                     type="text"
                     inputMode="numeric"
                     value={withdrawalAccount.accountNumber}
                     onChange={(e) => setWithdrawalAccount((prev) => ({ ...prev, accountNumber: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
                     placeholder="0123456789"
-                    className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-xs text-neutral-900 outline-none focus:border-[#5E43F3]"
+                    className="w-full rounded-xl border border-theme-divider bg-theme-surface px-3 py-2.5 text-xs text-theme-primary outline-none focus:border-[#5E43F3]"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-neutral-500">Account name</label>
+                  <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-theme-tertiary">Account name</label>
                   <input
                     type="text"
                     value={withdrawalAccount.accountName}
                     onChange={(e) => setWithdrawalAccount((prev) => ({ ...prev, accountName: e.target.value }))}
                     placeholder="Full name on account"
-                    className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-xs text-neutral-900 outline-none focus:border-[#5E43F3]"
+                    className="w-full rounded-xl border border-theme-divider bg-theme-surface px-3 py-2.5 text-xs text-theme-primary outline-none focus:border-[#5E43F3]"
                   />
                 </div>
 
@@ -772,7 +813,7 @@ export const SettingsPageView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsBankFormOpen(false)}
-                    className="flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-[11px] font-bold text-neutral-700 hover:bg-neutral-100 cursor-pointer"
+                    className="flex-1 rounded-xl border border-theme-divider bg-theme-surface px-3 py-2.5 text-[11px] font-bold text-theme-secondary hover:bg-theme-surface-hover cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -785,8 +826,8 @@ export const SettingsPageView: React.FC = () => {
         {/* 7. Account Mode (Admin Roles Only) */}
         {(role === 'super_admin' || role === 'admin' || role === 'editor') && (
           <div className="space-y-3">
-            <div className="border-b border-neutral-100 pb-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+            <div className="border-b border-theme-divider-light pb-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">
                 Account Mode
               </h3>
             </div>
@@ -795,10 +836,10 @@ export const SettingsPageView: React.FC = () => {
               type="button"
               onClick={handleSwitchToAdmin}
               disabled={isCreatingAdminSession}
-              className="w-full rounded-2xl border border-neutral-200 bg-white p-4 flex items-center justify-between hover:bg-neutral-50 cursor-pointer disabled:opacity-50 transition-colors"
+              className="w-full rounded-2xl border border-theme-divider bg-theme-surface p-4 flex items-center justify-between hover:bg-theme-base cursor-pointer disabled:opacity-50 transition-colors"
             >
               <div className="flex items-center gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-white">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-theme-inverse text-theme-text-inverse">
                   {isCreatingAdminSession ? (
                     <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                   ) : (
@@ -806,19 +847,19 @@ export const SettingsPageView: React.FC = () => {
                   )}
                 </div>
                 <div className="text-left flex flex-col">
-                  <span className="text-sm font-bold text-neutral-900">Go to Admin Panel</span>
-                  <span className="text-[11px] text-neutral-500 line-clamp-1">Manage the Lalao platform</span>
+                  <span className="text-sm font-bold text-theme-primary">Go to Admin Panel</span>
+                  <span className="text-[11px] text-theme-tertiary line-clamp-1">Manage the Lalao platform</span>
                 </div>
               </div>
-              <ChevronRight className="w-5 h-5 text-neutral-400" />
+              <ChevronRight className="w-5 h-5 text-theme-tertiary" />
             </button>
           </div>
         )}
 
         {/* 8. Account Actions */}
         <div className="space-y-3">
-          <div className="border-b border-neutral-100 pb-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+          <div className="border-b border-theme-divider-light pb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">
               Account Session
             </h3>
           </div>
@@ -836,10 +877,10 @@ export const SettingsPageView: React.FC = () => {
         </div>
 
         {/* 7. App Info */}
-        <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-100 text-center space-y-1">
-          <p className="text-xs font-bold text-neutral-900">Lalao Community Platform</p>
-          <p className="text-[11px] text-neutral-500">Version 2.4.0 (Warri & Delta State Edition)</p>
-          <p className="text-[10px] text-neutral-400 pt-1">
+        <div className="p-4 rounded-2xl bg-theme-base border border-theme-divider-light text-center space-y-1">
+          <p className="text-xs font-bold text-theme-primary">Lalao Community Platform</p>
+          <p className="text-[11px] text-theme-tertiary">Version 2.4.0 (Warri & Delta State Edition)</p>
+          <p className="text-[10px] text-theme-tertiary pt-1">
             Hyperlocal social connectivity · Real-time local stories & rallies
           </p>
         </div>

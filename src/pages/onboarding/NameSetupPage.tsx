@@ -53,40 +53,40 @@ export const NameSetupPage: React.FC = () => {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5 col-span-1">
-            <label className="text-xs font-bold text-neutral-500 tracking-wider uppercase">First Name</label>
+            <label className="text-xs font-bold text-theme-tertiary tracking-wider uppercase">First Name</label>
             <input
               type="text"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               placeholder="e.g. Jane"
-              className="w-full px-4 py-3.5 rounded-xl border-2 border-neutral-200 bg-white text-base text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#3823A4] focus:ring-4 focus:ring-[#3823A4]/10 transition-all"
+              className="w-full px-4 py-3.5 rounded-xl border-2 border-theme-divider bg-theme-surface text-base text-theme-primary placeholder-neutral-400 focus:outline-none focus:border-[#3823A4] focus:ring-4 focus:ring-[#3823A4]/10 transition-all"
               autoFocus
             />
           </div>
           
           <div className="space-y-1.5 col-span-1">
-            <label className="text-xs font-bold text-neutral-500 tracking-wider uppercase">Last Name</label>
+            <label className="text-xs font-bold text-theme-tertiary tracking-wider uppercase">Last Name</label>
             <input
               type="text"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               placeholder="e.g. Doe"
-              className="w-full px-4 py-3.5 rounded-xl border-2 border-neutral-200 bg-white text-base text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#3823A4] focus:ring-4 focus:ring-[#3823A4]/10 transition-all"
+              className="w-full px-4 py-3.5 rounded-xl border-2 border-theme-divider bg-theme-surface text-base text-theme-primary placeholder-neutral-400 focus:outline-none focus:border-[#3823A4] focus:ring-4 focus:ring-[#3823A4]/10 transition-all"
             />
           </div>
         </div>
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-neutral-500 tracking-wider uppercase">Display Name</label>
-            <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Optional</span>
+            <label className="text-xs font-bold text-theme-tertiary tracking-wider uppercase">Display Name</label>
+            <span className="text-[11px] font-bold text-theme-tertiary uppercase tracking-wider">Optional</span>
           </div>
           <input
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder="How should we display your name?"
-            className="w-full px-4 py-3.5 rounded-xl border-2 border-neutral-200 bg-white text-base text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#3823A4] focus:ring-4 focus:ring-[#3823A4]/10 transition-all"
+            className="w-full px-4 py-3.5 rounded-xl border-2 border-theme-divider bg-theme-surface text-base text-theme-primary placeholder-neutral-400 focus:outline-none focus:border-[#3823A4] focus:ring-4 focus:ring-[#3823A4]/10 transition-all"
           />
         </div>
 

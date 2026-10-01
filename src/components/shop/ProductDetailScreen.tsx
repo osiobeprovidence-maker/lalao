@@ -209,29 +209,29 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   return (
     <div
       id="product-detail-page-screen"
-      className="fixed inset-0 z-40 bg-white overflow-y-auto flex flex-col min-h-full animate-in fade-in duration-200"
+      className="fixed inset-0 z-40 bg-theme-surface overflow-y-auto flex flex-col min-h-full animate-in fade-in duration-200"
     >
       {/* 1. TOP APP BAR */}
       <header
         id="product-page-header"
-        className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-neutral-100 px-4 py-3 flex items-center justify-between transition-all"
+        className="sticky top-0 z-30 bg-theme-surface/95 backdrop-blur-md border-b border-theme-divider-light px-4 py-3 flex items-center justify-between transition-all"
       >
         <div className="flex items-center gap-2 min-w-0">
           <button
             id="btn-back-to-shop"
             type="button"
             onClick={handleBack}
-            className="p-2 rounded-full text-neutral-800 hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer -ml-1.5 shrink-0"
+            className="p-2 rounded-full text-theme-primary hover:bg-theme-surface-hover active:scale-95 transition-all cursor-pointer -ml-1.5 shrink-0"
             title="Back to Shop"
             aria-label="Back to Shop"
           >
             <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
           </button>
           <div className="min-w-0">
-            <h2 className="text-sm font-bold text-neutral-900 truncate">
+            <h2 className="text-sm font-bold text-theme-primary truncate">
               {product.name}
             </h2>
-            <p className="text-[11px] text-neutral-400 truncate">
+            <p className="text-[11px] text-theme-tertiary truncate">
               {store?.name || 'Lazla Shop'} · Delta State
             </p>
           </div>
@@ -243,7 +243,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             id="btn-product-view-history"
             type="button"
             onClick={() => setIsShoppingHistoryOpen(true)}
-            className="p-2 rounded-full text-neutral-700 hover:bg-neutral-100 active:scale-95 transition-colors cursor-pointer"
+            className="p-2 rounded-full text-theme-secondary hover:bg-theme-surface-hover active:scale-95 transition-colors cursor-pointer"
             title="Shopping History"
             aria-label="Shopping history"
           >
@@ -255,7 +255,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             id="btn-product-view-cart"
             type="button"
             onClick={() => setIsCartOpen(true)}
-            className="relative p-2 rounded-full text-neutral-700 hover:bg-neutral-100 active:scale-95 transition-colors cursor-pointer"
+            className="relative p-2 rounded-full text-theme-secondary hover:bg-theme-surface-hover active:scale-95 transition-colors cursor-pointer"
             title="View Cart"
             aria-label="View Cart"
           >
@@ -275,7 +275,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             className={`p-2 rounded-full active:scale-95 transition-colors cursor-pointer ${
               isSaved
                 ? 'text-rose-500 hover:bg-rose-50'
-                : 'text-neutral-700 hover:bg-neutral-100'
+                : 'text-theme-secondary hover:bg-theme-surface-hover'
             }`}
             title={isSaved ? 'Saved to Wishlist' : 'Save to Wishlist'}
             aria-label="Save product"
@@ -292,7 +292,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             id="btn-share-product"
             type="button"
             onClick={handleShare}
-            className="p-2 rounded-full text-neutral-700 hover:bg-neutral-100 active:scale-95 transition-colors cursor-pointer"
+            className="p-2 rounded-full text-theme-secondary hover:bg-theme-surface-hover active:scale-95 transition-colors cursor-pointer"
             title="Share product"
             aria-label="Share product"
           >
@@ -306,18 +306,18 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
         {/* 1. PRODUCT IMAGE AREA */}
         <section
           id="product-image-carousel"
-          className="relative w-full bg-neutral-100 overflow-hidden select-none"
+          className="relative w-full bg-theme-surface-hover overflow-hidden select-none"
         >
           {/* Main Display Image */}
           <div
-            className="relative aspect-square sm:aspect-4/3 w-full bg-neutral-50 flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
+            className="relative aspect-square sm:aspect-4/3 w-full bg-theme-base flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
             {imageErrorMap[activeImageIndex] ? (
-              <div className="flex flex-col items-center justify-center text-neutral-400 p-8 text-center">
+              <div className="flex flex-col items-center justify-center text-theme-tertiary p-8 text-center">
                 <Package className="w-16 h-16 stroke-[1.5] mb-2" />
-                <p className="text-xs font-semibold text-neutral-500">Image unavailable</p>
+                <p className="text-xs font-semibold text-theme-tertiary">Image unavailable</p>
               </div>
             ) : (
               <img
@@ -337,7 +337,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 className={`px-3 py-1 rounded-full text-xs font-bold tracking-wide shadow-md ${
                   product.inStock !== false
                     ? 'bg-emerald-600 text-white'
-                    : 'bg-neutral-800 text-neutral-200'
+                    : 'bg-theme-inverse text-theme-tertiary'
                 }`}
               >
                 {product.inStock !== false ? 'In Stock' : 'Out of Stock'}
@@ -363,7 +363,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 <button
                   type="button"
                   onClick={handlePrevImage}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-neutral-800 flex items-center justify-center shadow-md cursor-pointer transition-all active:scale-95"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-theme-surface/90 hover:bg-theme-surface text-theme-primary flex items-center justify-center shadow-md cursor-pointer transition-all active:scale-95"
                   aria-label="Previous image"
                 >
                   <ChevronLeft className="w-5 h-5 stroke-[2.5]" />
@@ -371,7 +371,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 <button
                   type="button"
                   onClick={handleNextImage}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-neutral-800 flex items-center justify-center shadow-md cursor-pointer transition-all active:scale-95"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-theme-surface/90 hover:bg-theme-surface text-theme-primary flex items-center justify-center shadow-md cursor-pointer transition-all active:scale-95"
                   aria-label="Next image"
                 >
                   <ChevronRight className="w-5 h-5 stroke-[2.5]" />
@@ -382,7 +382,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
 
           {/* Multiple Image Thumbnails / Dot Indicators */}
           {images.length > 1 && (
-            <div className="px-4 py-3 bg-white border-b border-neutral-100 flex items-center justify-center gap-2 overflow-x-auto">
+            <div className="px-4 py-3 bg-theme-surface border-b border-theme-divider-light flex items-center justify-center gap-2 overflow-x-auto">
               {images.map((img, idx) => (
                 <button
                   key={idx}
@@ -391,7 +391,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                   className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden border-2 transition-all cursor-pointer shrink-0 ${
                     activeImageIndex === idx
                       ? 'border-[#5E43F3] ring-2 ring-[#5E43F3]/20 scale-105 shadow-sm'
-                      : 'border-neutral-200 opacity-60 hover:opacity-100'
+                      : 'border-theme-divider opacity-60 hover:opacity-100'
                   }`}
                   aria-label={`View image ${idx + 1}`}
                 >
@@ -410,11 +410,11 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
         {/* 2. PRODUCT INFORMATION */}
         <section className="p-4 sm:p-6 space-y-6">
           {/* Header Block: Title, Rating, Price */}
-          <div className="space-y-3 border-b border-neutral-100 pb-5">
+          <div className="space-y-3 border-b border-theme-divider-light pb-5">
             {/* Product Title */}
             <h1
               id="product-title"
-              className="text-2xl sm:text-3xl font-extrabold text-neutral-950 tracking-tight leading-tight"
+              className="text-2xl sm:text-3xl font-extrabold text-theme-primary tracking-tight leading-tight"
             >
               {product.name}
             </h1>
@@ -428,35 +428,35 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                     className={`w-4 h-4 ${
                       i < Math.floor(ratingScore)
                         ? 'fill-amber-400 text-amber-400'
-                        : 'fill-neutral-200 text-neutral-200'
+                        : 'fill-neutral-200 text-theme-tertiary'
                     }`}
                   />
                 ))}
               </div>
-              <span className="text-sm font-medium text-neutral-600">
+              <span className="text-sm font-medium text-theme-secondary">
                 {reviewsCount} {reviewsCount === 1 ? 'rating' : 'ratings'}
               </span>
             </div>
 
             {/* Product Price */}
             <div id="product-price-row" className="flex items-baseline gap-2 pt-1">
-              <span className="text-2xl sm:text-3xl font-black text-neutral-950 tracking-tight">
+              <span className="text-2xl sm:text-3xl font-black text-theme-primary tracking-tight">
                 {currencyLabel}
                 {product.price.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
               </span>
-              <span className="text-xs text-neutral-400 font-medium">
+              <span className="text-xs text-theme-tertiary font-medium">
                 VAT & taxes included
               </span>
             </div>
           </div>
 
           {/* Product Description */}
-          <div id="product-description-section" className="space-y-2 border-b border-neutral-100 pb-5">
-            <h3 className="text-base font-bold text-neutral-950">Description</h3>
-            <div className="prose prose-sm text-neutral-700 leading-relaxed bg-neutral-50/70 p-4 rounded-2xl border border-neutral-100">
+          <div id="product-description-section" className="space-y-2 border-b border-theme-divider-light pb-5">
+            <h3 className="text-base font-bold text-theme-primary">Description</h3>
+            <div className="prose prose-sm text-theme-secondary leading-relaxed bg-theme-base/70 p-4 rounded-2xl border border-theme-divider-light">
               <p className="whitespace-pre-line text-sm sm:text-base leading-relaxed">
                 {product.description ||
                   `The ${product.name} is a verified offering crafted for premium utility and style. Sourced and provided by ${store?.name || 'Lazla Verified Merchants'}. Order directly with doorstep courier delivery or instant local pickup in Delta State.`}
@@ -466,11 +466,11 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
 
           {/* 3. PRODUCT OPTIONS (Variants) */}
           {product.variants && product.variants.length > 0 && (
-            <div id="product-variants-section" className="space-y-4 border-b border-neutral-100 pb-5">
+            <div id="product-variants-section" className="space-y-4 border-b border-theme-divider-light pb-5">
               {product.variants.map((variant) => (
                 <div key={variant.name} className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-neutral-800">
+                    <span className="font-bold text-theme-primary">
                       Select {variant.name}:
                     </span>
                     <span className="font-semibold text-[#5E43F3]">
@@ -489,7 +489,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                           className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                             isSelected
                               ? 'bg-[#5E43F3] text-white shadow-sm ring-2 ring-[#5E43F3]/25 scale-102'
-                              : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 border border-neutral-200/60'
+                              : 'bg-theme-surface-hover text-theme-secondary hover:bg-theme-surface-active border border-theme-divider/60'
                           }`}
                         >
                           {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
@@ -504,16 +504,16 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           )}
 
           {/* 4. QUANTITY SELECTOR */}
-          <div id="product-quantity-section" className="space-y-2 border-b border-neutral-100 pb-5">
-            <span className="text-xs font-bold text-neutral-800 block">Quantity</span>
+          <div id="product-quantity-section" className="space-y-2 border-b border-theme-divider-light pb-5">
+            <span className="text-xs font-bold text-theme-primary block">Quantity</span>
             <div className="flex items-center gap-4">
-              <div className="inline-flex items-center rounded-2xl border border-neutral-200 bg-neutral-50/80 p-1">
+              <div className="inline-flex items-center rounded-2xl border border-theme-divider bg-theme-base/80 p-1">
                 <button
                   id="btn-decrease-qty"
                   type="button"
                   disabled={quantity <= 1}
                   onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
-                  className="w-10 h-10 rounded-xl bg-white hover:bg-neutral-100 active:scale-95 disabled:opacity-40 disabled:hover:bg-white text-neutral-800 flex items-center justify-center cursor-pointer shadow-xs transition-all"
+                  className="w-10 h-10 rounded-xl bg-theme-surface hover:bg-theme-surface-hover active:scale-95 disabled:opacity-40 disabled:hover:bg-theme-surface text-theme-primary flex items-center justify-center cursor-pointer shadow-xs transition-all"
                   title="Decrease quantity"
                   aria-label="Decrease quantity"
                 >
@@ -521,7 +521,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 </button>
                 <span
                   id="quantity-display"
-                  className="w-12 text-center text-sm font-black text-neutral-900 select-none"
+                  className="w-12 text-center text-sm font-black text-theme-primary select-none"
                 >
                   {quantity}
                 </span>
@@ -529,7 +529,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                   id="btn-increase-qty"
                   type="button"
                   onClick={() => setQuantity((prev) => prev + 1)}
-                  className="w-10 h-10 rounded-xl bg-white hover:bg-neutral-100 active:scale-95 text-neutral-800 flex items-center justify-center cursor-pointer shadow-xs transition-all"
+                  className="w-10 h-10 rounded-xl bg-theme-surface hover:bg-theme-surface-hover active:scale-95 text-theme-primary flex items-center justify-center cursor-pointer shadow-xs transition-all"
                   title="Increase quantity"
                   aria-label="Increase quantity"
                 >
@@ -537,9 +537,9 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 </button>
               </div>
 
-              <div className="text-xs text-neutral-500">
+              <div className="text-xs text-theme-tertiary">
                 Subtotal:{' '}
-                <span className="font-bold text-neutral-900">
+                <span className="font-bold text-theme-primary">
                   {currencyLabel}
                   {(product.price * quantity).toLocaleString()}
                 </span>
@@ -567,7 +567,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               type="button"
               disabled={product.inStock === false}
               onClick={handleBuyNow}
-              className="w-full py-3.5 px-6 rounded-2xl bg-neutral-900 hover:bg-black active:scale-98 disabled:opacity-50 text-white text-sm font-bold flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all"
+              className="w-full py-3.5 px-6 rounded-2xl bg-theme-inverse hover:bg-theme-inverse active:scale-98 disabled:opacity-50 text-theme-text-inverse text-sm font-bold flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all"
             >
               <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
               <span>Buy now</span>
@@ -577,14 +577,14 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           {/* 7. HIGHLIGHTS & PRODUCT DETAILS */}
           {product.details && product.details.length > 0 && (
             <div id="product-highlights-section" className="space-y-2.5">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">
                 Specifications & Details
               </h3>
               <ul className="space-y-2">
                 {product.details.map((detail, idx) => (
                   <li
                     key={idx}
-                    className="flex items-start gap-2.5 text-xs text-neutral-700"
+                    className="flex items-start gap-2.5 text-xs text-theme-secondary"
                   >
                     <div className="w-1.5 h-1.5 rounded-full bg-[#5E43F3] shrink-0 mt-1.5" />
                     <span>{detail}</span>
@@ -598,7 +598,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           {store && (
             <div
               id="product-store-profile-card"
-              className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/80 space-y-3"
+              className="p-4 rounded-2xl bg-theme-base border border-theme-divider/80 space-y-3"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
@@ -610,12 +610,12 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                   />
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-bold text-neutral-900 truncate">
+                      <span className="text-sm font-bold text-theme-primary truncate">
                         {store.name}
                       </span>
                       <Badge type={store.badge} size="sm" />
                     </div>
-                    <p className="text-xs text-neutral-500 truncate mt-0.5">
+                    <p className="text-xs text-theme-tertiary truncate mt-0.5">
                       {store.location} · {store.followersCount.toLocaleString()} followers
                     </p>
                   </div>
@@ -653,7 +653,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                     `Chat opened with ${store.name} regarding "${product.name}"`
                   );
                 }}
-                className="w-full py-2.5 px-3 rounded-xl bg-white hover:bg-neutral-100 border border-neutral-200 text-neutral-800 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                className="w-full py-2.5 px-3 rounded-xl bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider text-theme-primary text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors"
               >
                 <MessageSquare className="w-3.5 h-3.5 text-[#5E43F3]" />
                 <span>Message Seller about this Product</span>
@@ -663,31 +663,31 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
 
           {/* 9. FULFILLMENT & ASSURANCE BADGES */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-            <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-100 flex items-start gap-2.5">
+            <div className="p-3 rounded-xl bg-theme-base border border-theme-divider-light flex items-start gap-2.5">
               <Truck className="w-4 h-4 text-[#5E43F3] shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-xs font-bold text-neutral-900">Doorstep Delivery</h4>
-                <p className="text-[11px] text-neutral-500 mt-0.5">
+                <h4 className="text-xs font-bold text-theme-primary">Doorstep Delivery</h4>
+                <p className="text-[11px] text-theme-tertiary mt-0.5">
                   Courier delivery across Delta State
                 </p>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-100 flex items-start gap-2.5">
+            <div className="p-3 rounded-xl bg-theme-base border border-theme-divider-light flex items-start gap-2.5">
               <MapPin className="w-4 h-4 text-[#5E43F3] shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-xs font-bold text-neutral-900">Local Pickup</h4>
-                <p className="text-[11px] text-neutral-500 mt-0.5">
+                <h4 className="text-xs font-bold text-theme-primary">Local Pickup</h4>
+                <p className="text-[11px] text-theme-tertiary mt-0.5">
                   Available in {store?.location || 'Delta State'}
                 </p>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-100 flex items-start gap-2.5">
+            <div className="p-3 rounded-xl bg-theme-base border border-theme-divider-light flex items-start gap-2.5">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-xs font-bold text-neutral-900">Buyer Protection</h4>
-                <p className="text-[11px] text-neutral-500 mt-0.5">
+                <h4 className="text-xs font-bold text-theme-primary">Buyer Protection</h4>
+                <p className="text-[11px] text-theme-tertiary mt-0.5">
                   100% authentic guarantee & returns
                 </p>
               </div>
@@ -697,7 +697,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           {/* 10. REVIEWS BREAKDOWN */}
           <div id="product-reviews-card" className="space-y-3 pt-2">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">
                 Customer Ratings & Feedback
               </h3>
               <span className="text-xs font-bold text-amber-500 flex items-center gap-1">
@@ -706,40 +706,40 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               </span>
             </div>
 
-            <div className="space-y-2.5 bg-neutral-50/70 p-4 rounded-2xl border border-neutral-100">
+            <div className="space-y-2.5 bg-theme-base/70 p-4 rounded-2xl border border-theme-divider-light">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-full bg-emerald-600 text-white text-[11px] font-bold flex items-center justify-center shrink-0">
                   KO
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold text-neutral-900">Kome O.</p>
+                    <p className="text-xs font-bold text-theme-primary">Kome O.</p>
                     <div className="flex text-amber-400">
                       {[...Array(5)].map((_, i) => (
                         <Star key={i} className="w-3 h-3 fill-amber-400" />
                       ))}
                     </div>
                   </div>
-                  <p className="text-[11px] text-neutral-600 mt-0.5">
+                  <p className="text-[11px] text-theme-secondary mt-0.5">
                     "Super soft and huge! Perfect for beach days at Abraka turf and picnics. The material is very durable."
                   </p>
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-neutral-200/60 flex items-center gap-2">
+              <div className="pt-2 border-t border-theme-divider/60 flex items-center gap-2">
                 <div className="w-7 h-7 rounded-full bg-[#5E43F3] text-white text-[11px] font-bold flex items-center justify-center shrink-0">
                   TM
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold text-neutral-900">Tega M.</p>
+                    <p className="text-xs font-bold text-theme-primary">Tega M.</p>
                     <div className="flex text-amber-400">
                       {[...Array(5)].map((_, i) => (
                         <Star key={i} className="w-3 h-3 fill-amber-400" />
                       ))}
                     </div>
                   </div>
-                  <p className="text-[11px] text-neutral-600 mt-0.5">
+                  <p className="text-[11px] text-theme-secondary mt-0.5">
                     "Quality is top notch, thick cotton with great stitching. Arrived fast via local dispatch."
                   </p>
                 </div>
@@ -749,9 +749,9 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
 
           {/* 11. MORE FROM THIS STORE */}
           {moreProducts.length > 0 && onSelectProduct && (
-            <div id="more-from-store-section" className="space-y-3 pt-4 border-t border-neutral-100">
+            <div id="more-from-store-section" className="space-y-3 pt-4 border-t border-theme-divider-light">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">
                   More From {store?.name || 'This Store'}
                 </h3>
                 <button
@@ -774,9 +774,9 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                         onSelectProduct(item);
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}
-                      className="group bg-white rounded-2xl border border-neutral-100 overflow-hidden cursor-pointer hover:shadow-md hover:border-neutral-200 transition-all flex flex-col"
+                      className="group bg-theme-surface rounded-2xl border border-theme-divider-light overflow-hidden cursor-pointer hover:shadow-md hover:border-theme-divider transition-all flex flex-col"
                     >
-                      <div className="aspect-square w-full bg-neutral-100 overflow-hidden">
+                      <div className="aspect-square w-full bg-theme-surface-hover overflow-hidden">
                         <img
                           src={item.image}
                           alt={item.name}
@@ -785,10 +785,10 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                         />
                       </div>
                       <div className="p-3 flex-1 flex flex-col justify-between">
-                        <h5 className="text-xs font-bold text-neutral-900 line-clamp-1 group-hover:text-[#5E43F3] transition-colors">
+                        <h5 className="text-xs font-bold text-theme-primary line-clamp-1 group-hover:text-[#5E43F3] transition-colors">
                           {item.name}
                         </h5>
-                        <p className="text-xs font-black text-neutral-950 mt-1">
+                        <p className="text-xs font-black text-theme-primary mt-1">
                           {item.currency === 'NGN' ? 'NGN ' : item.currency || '₦'}
                           {item.price.toLocaleString()}
                         </p>
@@ -804,13 +804,13 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
       {/* 12. STICKY BOTTOM QUICK ACTION BAR */}
       <footer
         id="product-sticky-bottom-bar"
-        className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-neutral-200 p-3 px-4 flex items-center gap-2 shadow-xl max-w-4xl mx-auto"
+        className="fixed bottom-0 left-0 right-0 z-30 bg-theme-surface/95 backdrop-blur-md border-t border-theme-divider p-3 px-4 flex items-center gap-2 shadow-xl max-w-4xl mx-auto"
       >
         <div className="min-w-0 shrink-0 pr-1">
-          <span className="text-[10px] uppercase font-bold text-neutral-400 block">
+          <span className="text-[10px] uppercase font-bold text-theme-tertiary block">
             Total
           </span>
-          <span className="text-sm sm:text-base font-black text-neutral-950 truncate block">
+          <span className="text-sm sm:text-base font-black text-theme-primary truncate block">
             {currencyLabel}
             {(product.price * quantity).toLocaleString()}
           </span>
@@ -821,7 +821,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           type="button"
           disabled={product.inStock === false}
           onClick={handleAddToCart}
-          className="flex-1 py-3 px-3 rounded-xl bg-neutral-100 hover:bg-neutral-200 active:scale-95 text-neutral-900 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+          className="flex-1 py-3 px-3 rounded-xl bg-theme-surface-hover hover:bg-theme-surface-active active:scale-95 text-theme-primary text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
         >
           <ShoppingBag className="w-4 h-4" />
           <span>Add to cart</span>

@@ -36,15 +36,15 @@ export const DigitalTicketModal: React.FC = () => {
   return (
     <div
       id="screen-digital-ticket-pass"
-      className="absolute inset-0 z-40 bg-neutral-900 flex flex-col min-h-full overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-200"
+      className="absolute inset-0 z-40 bg-theme-inverse flex flex-col min-h-full overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-200"
     >
       {/* Top Controls */}
-      <header className="sticky top-0 z-20 bg-neutral-900/95 backdrop-blur-md px-4 lg:px-8 py-3.5 border-b border-neutral-800 flex items-center justify-between text-white shrink-0">
+      <header className="sticky top-0 z-20 bg-theme-inverse/95 backdrop-blur-md px-4 lg:px-8 py-3.5 border-b border-theme-divider-inverse flex items-center justify-between text-theme-text-inverse shrink-0">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => setSelectedTicketForPass(null)}
-            className="p-1.5 -ml-1 rounded-full text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
+            className="p-1.5 -ml-1 rounded-full text-theme-tertiary hover:text-theme-text-inverse hover:bg-theme-inverse transition-colors cursor-pointer"
             title="Go back"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -59,7 +59,7 @@ export const DigitalTicketModal: React.FC = () => {
           <button
             type="button"
             onClick={handleShare}
-            className="p-1.5 rounded-full text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-full text-theme-tertiary hover:text-theme-text-inverse hover:bg-theme-inverse transition-colors cursor-pointer"
             title="Share Ticket"
           >
             <Share2 className="w-4 h-4" />
@@ -67,7 +67,7 @@ export const DigitalTicketModal: React.FC = () => {
           <button
             type="button"
             onClick={() => setSelectedTicketForPass(null)}
-            className="p-1.5 rounded-full text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-full text-theme-tertiary hover:text-theme-text-inverse hover:bg-theme-inverse transition-colors cursor-pointer"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
@@ -76,7 +76,7 @@ export const DigitalTicketModal: React.FC = () => {
       </header>
 
       <div className="flex-1 max-w-md mx-auto w-full p-4 lg:p-6 flex flex-col justify-center pb-24">
-        <div className="w-full bg-white rounded-3xl shadow-2xl overflow-hidden border border-neutral-800 flex flex-col">
+        <div className="w-full bg-theme-surface rounded-3xl shadow-2xl overflow-hidden border border-theme-divider-inverse flex flex-col">
           {/* Real Digital Ticket Body */}
           <div className="relative bg-gradient-to-b from-neutral-900 to-neutral-950 text-white p-5 text-center">
           {/* Header Org */}
@@ -96,7 +96,7 @@ export const DigitalTicketModal: React.FC = () => {
           </div>
 
           {/* Holographic / Security Strip */}
-          <div className="mt-4 py-1.5 px-3 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 flex items-center justify-between text-[10px] text-neutral-300">
+          <div className="mt-4 py-1.5 px-3 rounded-xl bg-theme-surface/10 backdrop-blur-md border border-white/15 flex items-center justify-between text-[10px] text-theme-tertiary">
             <span className="flex items-center gap-1 text-emerald-400 font-bold">
               <CheckCircle2 className="w-3 h-3" />
               {ticket.status === 'active' ? 'VALID ENTRY PASS' : ticket.status.toUpperCase()}
@@ -106,21 +106,21 @@ export const DigitalTicketModal: React.FC = () => {
         </div>
 
         {/* Ticket Perforation with Scalloped Cutouts */}
-        <div className="relative h-6 bg-neutral-950 flex items-center justify-center">
+        <div className="relative h-6 bg-theme-inverse flex items-center justify-center">
           {/* Left Notch */}
           <div className="absolute -left-3 w-6 h-6 rounded-full bg-black/75" />
           {/* Dashed Tear Line */}
-          <div className="w-full border-t-2 border-dashed border-neutral-700/80 mx-5" />
+          <div className="w-full border-t-2 border-dashed border-theme-divider-strong/80 mx-5" />
           {/* Right Notch */}
           <div className="absolute -right-3 w-6 h-6 rounded-full bg-black/75" />
         </div>
 
         {/* QR Code Section */}
-        <div className="bg-white p-6 flex flex-col items-center justify-center text-center space-y-4">
+        <div className="bg-theme-surface p-6 flex flex-col items-center justify-center text-center space-y-4">
           {/* Interactive QR Card */}
           <div
             onClick={() => setIsQrZoomed(!isQrZoomed)}
-            className={`relative p-3.5 bg-white border-2 border-neutral-900 rounded-2xl shadow-lg transition-transform cursor-pointer ${
+            className={`relative p-3.5 bg-theme-surface border-2 border-theme-divider-inverse rounded-2xl shadow-lg transition-transform cursor-pointer ${
               isQrZoomed ? 'scale-110' : 'hover:scale-102'
             }`}
             title="Tap to enlarge QR Code"
@@ -208,50 +208,50 @@ export const DigitalTicketModal: React.FC = () => {
               <rect x="88" y="92" width="4" height="4" fill="#0A0A0A" />
             </svg>
 
-            <div className="absolute inset-x-0 bottom-1 text-[9px] font-mono font-bold text-neutral-400">
+            <div className="absolute inset-x-0 bottom-1 text-[9px] font-mono font-bold text-theme-tertiary">
               SCAN TO ADMIT
             </div>
           </div>
 
-          <p className="text-[11px] text-neutral-500">
+          <p className="text-[11px] text-theme-tertiary">
             Show this digital pass at the entrance scan terminal.
           </p>
 
           {/* Ticket Information Table */}
-          <div className="w-full bg-neutral-50 rounded-2xl p-4 border border-neutral-200 text-left space-y-2 text-xs">
-            <div className="flex justify-between items-center pb-2 border-b border-neutral-200">
-              <span className="text-neutral-500">Ticket Holder</span>
-              <span className="font-bold text-neutral-900">{ticket.holderName}</span>
+          <div className="w-full bg-theme-base rounded-2xl p-4 border border-theme-divider text-left space-y-2 text-xs">
+            <div className="flex justify-between items-center pb-2 border-b border-theme-divider">
+              <span className="text-theme-tertiary">Ticket Holder</span>
+              <span className="font-bold text-theme-primary">{ticket.holderName}</span>
             </div>
 
-            <div className="flex justify-between items-center pb-2 border-b border-neutral-200">
-              <span className="text-neutral-500">Date & Time</span>
-              <span className="font-bold text-neutral-900">
+            <div className="flex justify-between items-center pb-2 border-b border-theme-divider">
+              <span className="text-theme-tertiary">Date & Time</span>
+              <span className="font-bold text-theme-primary">
                 {ticket.date} · {ticket.time}
               </span>
             </div>
 
-            <div className="flex justify-between items-center pb-2 border-b border-neutral-200">
-              <span className="text-neutral-500">Venue</span>
-              <span className="font-bold text-neutral-900">{ticket.venue}</span>
+            <div className="flex justify-between items-center pb-2 border-b border-theme-divider">
+              <span className="text-theme-tertiary">Venue</span>
+              <span className="font-bold text-theme-primary">{ticket.venue}</span>
             </div>
 
             {ticket.seat && (
-              <div className="flex justify-between items-center pb-2 border-b border-neutral-200">
-                <span className="text-neutral-500">Seat / Tier</span>
+              <div className="flex justify-between items-center pb-2 border-b border-theme-divider">
+                <span className="text-theme-tertiary">Seat / Tier</span>
                 <span className="font-bold text-[#5E43F3]">{ticket.seat}</span>
               </div>
             )}
 
             <div className="flex justify-between items-center">
-              <span className="text-neutral-500">Ticket ID</span>
-              <span className="font-mono text-neutral-600">{ticket.id}</span>
+              <span className="text-theme-tertiary">Ticket ID</span>
+              <span className="font-mono text-theme-secondary">{ticket.id}</span>
             </div>
           </div>
 
           {/* Extra Details Accordion */}
           {showDetailsSection && (
-            <div className="w-full p-3 bg-violet-50/60 rounded-xl border border-violet-100 text-left text-[11px] text-neutral-700 space-y-1.5 animate-fadeIn">
+            <div className="w-full p-3 bg-violet-50/60 rounded-xl border border-violet-100 text-left text-[11px] text-theme-secondary space-y-1.5 animate-fadeIn">
               <div className="flex items-center gap-1.5 font-bold text-violet-950">
                 <ShieldCheck className="w-3.5 h-3.5 text-[#5E43F3]" />
                 Security & Admission Rules
@@ -268,7 +268,7 @@ export const DigitalTicketModal: React.FC = () => {
               type="button"
               id="btn-pass-show-qr"
               onClick={() => setIsQrZoomed(!isQrZoomed)}
-              className="w-full py-3 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-white text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md"
+              className="w-full py-3 rounded-xl bg-theme-inverse hover:bg-theme-inverse text-theme-text-inverse text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md"
             >
               <Maximize2 className="w-3.5 h-3.5" />
               <span>{isQrZoomed ? 'Standard QR View' : 'Show Fullscreen QR'}</span>
@@ -278,7 +278,7 @@ export const DigitalTicketModal: React.FC = () => {
               type="button"
               id="btn-pass-ticket-details"
               onClick={() => setShowDetailsSection(!showDetailsSection)}
-              className="w-full py-2.5 rounded-xl border border-neutral-300 hover:bg-neutral-100 text-neutral-700 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 rounded-xl border border-theme-divider-strong hover:bg-theme-surface-hover text-theme-secondary text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
             >
               <Info className="w-3.5 h-3.5" />
               <span>{showDetailsSection ? 'Hide Details' : 'Ticket Details'}</span>

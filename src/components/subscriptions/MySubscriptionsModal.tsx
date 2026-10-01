@@ -28,38 +28,38 @@ export const MySubscriptionsModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] shadow-2xl">
+      <div className="bg-theme-surface rounded-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] shadow-2xl">
         {/* Header */}
-        <div className="flex items-center gap-3 p-4 border-b border-neutral-100 shrink-0">
+        <div className="flex items-center gap-3 p-4 border-b border-theme-divider-light shrink-0">
           <button
             type="button"
             onClick={() => setIsMySubscriptionsOpen(false)}
-            className="p-2 -ml-2 rounded-full hover:bg-neutral-100 transition-colors"
+            className="p-2 -ml-2 rounded-full hover:bg-theme-surface-hover transition-colors"
           >
-            <X className="w-5 h-5 text-neutral-600" />
+            <X className="w-5 h-5 text-theme-secondary" />
           </button>
           <div>
-            <h2 className="text-base font-black text-neutral-900">
+            <h2 className="text-base font-black text-theme-primary">
               My Subscriptions
             </h2>
-            <p className="text-xs text-neutral-500 font-medium">Manage your premium plans</p>
+            <p className="text-xs text-theme-tertiary font-medium">Manage your premium plans</p>
           </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-neutral-50">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-theme-base">
           {mySubscriptions.length === 0 ? (
-            <div className="text-center py-12 px-4 bg-white rounded-2xl border border-neutral-200">
-              <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Crown className="w-8 h-8 text-neutral-400" />
+            <div className="text-center py-12 px-4 bg-theme-surface rounded-2xl border border-theme-divider">
+              <div className="w-16 h-16 bg-theme-surface-hover rounded-full flex items-center justify-center mx-auto mb-4">
+                <Crown className="w-8 h-8 text-theme-tertiary" />
               </div>
-              <h3 className="text-base font-black text-neutral-900 mb-1">No active subscriptions</h3>
-              <p className="text-sm text-neutral-500">Subscribe to your favorite Pages to unlock premium benefits.</p>
+              <h3 className="text-base font-black text-theme-primary mb-1">No active subscriptions</h3>
+              <p className="text-sm text-theme-tertiary">Subscribe to your favorite Pages to unlock premium benefits.</p>
             </div>
           ) : (
             <div className="space-y-4">
               {mySubscriptions.map((sub: any) => (
-                <div key={sub._id} className="bg-white rounded-2xl border border-neutral-200 p-4 transition-all relative overflow-hidden">
+                <div key={sub._id} className="bg-theme-surface rounded-2xl border border-theme-divider p-4 transition-all relative overflow-hidden">
                   
                   {sub.cancelAtPeriodEnd && (
                     <div className="absolute top-0 right-0 bg-red-100 text-red-600 text-[10px] font-black px-2 py-1 rounded-bl-lg flex items-center gap-1">
@@ -69,7 +69,7 @@ export const MySubscriptionsModal: React.FC = () => {
                   )}
 
                   <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-neutral-100 overflow-hidden shrink-0">
+                    <div className="w-12 h-12 rounded-xl bg-theme-surface-hover overflow-hidden shrink-0">
                       {sub.page?.avatar ? (
                         <img src={sub.page.avatar} alt={sub.page.name} className="w-full h-full object-cover" />
                       ) : (
@@ -79,14 +79,14 @@ export const MySubscriptionsModal: React.FC = () => {
                       )}
                     </div>
                     <div>
-                      <h3 className="text-base font-black text-neutral-900">{sub.plan?.name}</h3>
-                      <p className="text-xs text-neutral-500 font-bold">@ {sub.page?.name}</p>
+                      <h3 className="text-base font-black text-theme-primary">{sub.plan?.name}</h3>
+                      <p className="text-xs text-theme-tertiary font-bold">@ {sub.page?.name}</p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-3 mb-4 p-3 bg-neutral-50 rounded-xl border border-neutral-100">
+                  <div className="flex items-center gap-3 mb-4 p-3 bg-theme-base rounded-xl border border-theme-divider-light">
                     <div className="flex-1">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-0.5">Status</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-theme-tertiary mb-0.5">Status</p>
                       <div className="flex items-center gap-1">
                         {sub.status === 'pending' ? (
                           <>
@@ -106,10 +106,10 @@ export const MySubscriptionsModal: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    <div className="w-px h-8 bg-neutral-200"></div>
+                    <div className="w-px h-8 bg-theme-surface-active"></div>
                     <div className="flex-1">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-0.5">Slot Price</p>
-                      <span className="text-xs font-bold text-neutral-900">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-theme-tertiary mb-0.5">Slot Price</p>
+                      <span className="text-xs font-bold text-theme-primary">
                         {sub.plan?.currency === 'NGN' ? '₦' : sub.plan?.currency}{(sub.plan?.defaultSlotPrice ?? 0).toLocaleString()} / {sub.plan?.billingCycle}
                       </span>
                     </div>
@@ -117,8 +117,8 @@ export const MySubscriptionsModal: React.FC = () => {
                   
                   {sub.currentPeriodEnd && (
                     <div className="mb-4">
-                      <p className="text-xs text-neutral-500">
-                        {sub.cancelAtPeriodEnd ? 'Ends on' : 'Renews on'} <span className="font-bold text-neutral-900">{new Date(sub.currentPeriodEnd).toLocaleDateString()}</span>
+                      <p className="text-xs text-theme-tertiary">
+                        {sub.cancelAtPeriodEnd ? 'Ends on' : 'Renews on'} <span className="font-bold text-theme-primary">{new Date(sub.currentPeriodEnd).toLocaleDateString()}</span>
                       </p>
                     </div>
                   )}

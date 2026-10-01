@@ -33,8 +33,8 @@ export const CountryRestrictedPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F8F7FF] px-4">
-      <div className="w-full max-w-md bg-white rounded-3xl p-8 shadow-xl shadow-indigo-100 border border-indigo-50 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-theme-base px-4">
+      <div className="w-full max-w-md bg-theme-surface rounded-3xl p-8 shadow-xl shadow-indigo-100 border border-indigo-50 relative overflow-hidden">
         {/* Decorative background element */}
         <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-[#3823A4]/10 to-transparent pointer-events-none" />
 
@@ -43,11 +43,11 @@ export const CountryRestrictedPage: React.FC = () => {
             <Globe className="w-8 h-8" />
           </div>
 
-          <h1 className="text-2xl font-black text-neutral-950 tracking-tight mb-3">
+          <h1 className="text-2xl font-black text-theme-primary tracking-tight mb-3">
             Lalao isn't available in your country yet.
           </h1>
           
-          <p className="text-neutral-600 mb-8 leading-relaxed">
+          <p className="text-theme-secondary mb-8 leading-relaxed">
             Lalao is currently available only in Nigeria. Join the waitlist and we'll notify you when Lalao becomes available in your country.
           </p>
 
@@ -73,7 +73,7 @@ export const CountryRestrictedPage: React.FC = () => {
 
           <button
             onClick={handleSignOut}
-            className="flex items-center justify-center gap-2 text-sm font-semibold text-neutral-500 hover:text-neutral-800 transition-colors py-2"
+            className="flex items-center justify-center gap-2 text-sm font-semibold text-theme-tertiary hover:text-theme-primary transition-colors py-2"
           >
             <LogOut className="w-4 h-4" />
             Sign Out

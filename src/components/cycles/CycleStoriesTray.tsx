@@ -33,7 +33,7 @@ export const CycleStoriesTray: React.FC<CycleStoriesTrayProps> = ({
   return (
     <div
       id="cycle-stories-tray"
-      className={`border-b border-neutral-100 bg-white py-2.5 ${className}`}
+      className={`border-b border-theme-divider-light bg-theme-surface py-2.5 ${className}`}
     >
       <div className="flex items-center gap-3.5 overflow-x-auto no-scrollbar px-4">
         {/* 1. Current User's Cycle */}
@@ -54,10 +54,10 @@ export const CycleStoriesTray: React.FC<CycleStoriesTrayProps> = ({
                 className={`p-[2px] rounded-full transition-transform active:scale-95 ${
                   myHasItems
                     ? 'bg-gradient-to-tr from-[#5E43F3] via-fuchsia-500 to-amber-400 p-[2.5px]'
-                    : 'bg-neutral-200'
+                    : 'bg-theme-surface-active'
                 }`}
               >
-                <div className="bg-white p-[1.5px] rounded-full">
+                <div className="bg-theme-surface p-[1.5px] rounded-full">
                   <Avatar
                     src={currentUser.avatar}
                     alt={currentUser.name}
@@ -82,10 +82,10 @@ export const CycleStoriesTray: React.FC<CycleStoriesTrayProps> = ({
             </button>
           </div>
 
-          <span className="text-[11px] font-semibold text-neutral-800 mt-1.5 truncate max-w-[62px] text-center">
+          <span className="text-[11px] font-semibold text-theme-primary mt-1.5 truncate max-w-[62px] text-center">
             {myHasItems ? 'Your Cycle' : 'Add Status'}
           </span>
-          <span className="text-[9px] text-neutral-400 -mt-0.5 leading-tight">
+          <span className="text-[9px] text-theme-tertiary -mt-0.5 leading-tight">
             {myHasItems ? `${myCycle?.items?.length || 0} active` : '24h cycle'}
           </span>
         </div>
@@ -106,10 +106,10 @@ export const CycleStoriesTray: React.FC<CycleStoriesTrayProps> = ({
                   className={`rounded-full transition-all duration-200 group-hover:scale-105 active:scale-95 ${
                     cycle.hasUnseen
                       ? 'p-[2.5px] bg-gradient-to-tr from-[#5E43F3] via-fuchsia-500 to-pink-500 shadow-xs'
-                      : 'p-[2px] bg-neutral-300/80'
+                      : 'p-[2px] bg-theme-divider-strong/80'
                   }`}
                 >
-                  <div className="bg-white p-[1.5px] rounded-full">
+                  <div className="bg-theme-surface p-[1.5px] rounded-full">
                     <Avatar
                       src={user?.avatar || cycle.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400'}
                       alt={user?.name || cycle.name || 'User'}
@@ -125,7 +125,7 @@ export const CycleStoriesTray: React.FC<CycleStoriesTrayProps> = ({
                 )}
               </div>
 
-              <span className="text-[11px] font-semibold text-neutral-800 mt-1.5 truncate max-w-[68px] text-center">
+              <span className="text-[11px] font-semibold text-theme-primary mt-1.5 truncate max-w-[68px] text-center">
                 {firstName}
               </span>
             </div>

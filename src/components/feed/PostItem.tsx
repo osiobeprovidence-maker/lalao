@@ -193,7 +193,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
   return (
     <article
       id={`feed-item-${itemId}`}
-      className="p-4 bg-transparent border-b border-neutral-200/70 hover:bg-neutral-100/30 transition-colors"
+      className="p-4 bg-transparent border-b border-theme-divider/70 hover:bg-theme-surface-hover/30 transition-colors"
     >
       {/* 1. Header Row */}
       <div className="flex items-start justify-between mb-2">
@@ -205,11 +205,11 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                 hasActiveCycle
                   ? authorCycle?.hasUnseen
                     ? 'p-[2.5px] bg-gradient-to-tr from-[#5E43F3] via-fuchsia-500 to-pink-500 shadow-xs'
-                    : 'p-[2px] bg-neutral-300/80'
+                    : 'p-[2px] bg-theme-divider-strong/80'
                   : ''
               }`}
             >
-              <div className={`${hasActiveCycle ? 'bg-white p-[1.5px] rounded-full' : ''}`}>
+              <div className={`${hasActiveCycle ? 'bg-theme-surface p-[1.5px] rounded-full' : ''}`}>
                 <Avatar
                   src={author?.avatar}
                   alt={author?.name || 'User'}
@@ -229,7 +229,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                   e.stopPropagation();
                   handleAuthorClick();
                 }}
-                className="font-bold text-[15px] text-neutral-900 hover:underline cursor-pointer tracking-tight"
+                className="font-bold text-[15px] text-theme-primary hover:underline cursor-pointer tracking-tight"
               >
                 {author.name}
               </span>
@@ -238,23 +238,23 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
             </div>
 
             {/* Sub-header: @username · time · location · distance */}
-            <div className="flex items-center gap-1.5 text-xs text-neutral-500 mt-0.5 flex-wrap">
-              <span className="text-neutral-400">@{author.username}</span>
+            <div className="flex items-center gap-1.5 text-xs text-theme-tertiary mt-0.5 flex-wrap">
+              <span className="text-theme-tertiary">@{author.username}</span>
               <span>·</span>
               <span>{timeText}</span>
               {locationText && (
                 <>
                   <span>·</span>
                   {distanceMeters !== undefined ? (
-                    <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-neutral-100 text-neutral-700 text-[11px] font-medium">
+                    <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-theme-surface-hover text-theme-secondary text-[11px] font-medium">
                       <span className={`w-1.5 h-1.5 rounded-full ${proximity.dotColor}`} />
                       <MapPin className="w-2.5 h-2.5 text-[#5E43F3]" />
                       <span>{locationText}</span>
-                      <span className="text-neutral-400">·</span>
-                      <span className="font-bold text-neutral-900">{formattedDistance}</span>
+                      <span className="text-theme-tertiary">·</span>
+                      <span className="font-bold text-theme-primary">{formattedDistance}</span>
                     </div>
                   ) : (
-                    <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-neutral-100 text-neutral-700 text-[11px] font-medium">
+                    <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-theme-surface-hover text-theme-secondary text-[11px] font-medium">
                       <MapPin className="w-2.5 h-2.5 text-[#5E43F3]" />
                       <span>{locationText}</span>
                     </div>
@@ -287,20 +287,20 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                 <button
                   id={`btn-item-options-${itemId}`}
                   onClick={() => setShowOptions(!showOptions)}
-                  className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
+                  className="p-1.5 rounded-full text-theme-tertiary hover:text-theme-secondary hover:bg-theme-surface-hover transition-colors"
                   aria-label="Options"
                 >
                   <MoreHorizontal className="w-4 h-4" />
                 </button>
 
                 {showOptions && (
-                  <div className="absolute right-0 top-7 z-20 w-44 bg-white rounded-xl shadow-lg border border-neutral-100 py-1.5 text-xs text-neutral-700 animate-in fade-in zoom-in-95">
+                  <div className="absolute right-0 top-7 z-20 w-44 bg-theme-surface rounded-xl shadow-lg border border-theme-divider-light py-1.5 text-xs text-theme-secondary animate-in fade-in zoom-in-95">
                     <button
                       onClick={() => {
                         triggerShareToast(isRallyPost ? 'Rally link copied' : 'Post link copied');
                         setShowOptions(false);
                       }}
-                      className="w-full text-left px-3.5 py-2 hover:bg-neutral-50 flex items-center justify-between cursor-pointer"
+                      className="w-full text-left px-3.5 py-2 hover:bg-theme-base flex items-center justify-between cursor-pointer"
                     >
                       <span>Copy link</span>
                     </button>
@@ -309,19 +309,19 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                         triggerShareToast(isRallyPost ? 'Rally saved to bookmarks' : 'Post saved to bookmarks');
                         setShowOptions(false);
                       }}
-                      className="w-full text-left px-3.5 py-2 hover:bg-neutral-50 cursor-pointer"
+                      className="w-full text-left px-3.5 py-2 hover:bg-theme-base cursor-pointer"
                     >
                       {isRallyPost ? 'Save Rally' : 'Save post'}
                     </button>
                     {isAuthor && post && (
                       <>
-                        <div className="h-px bg-neutral-100 my-1" />
+                        <div className="h-px bg-theme-surface-hover my-1" />
                         <button
                           onClick={() => {
                             setShowOptions(false);
                             setShowDeleteModal(true);
                           }}
-                          className="w-full text-left px-3.5 py-2 hover:bg-neutral-50 text-red-600 font-medium cursor-pointer"
+                          className="w-full text-left px-3.5 py-2 hover:bg-theme-base text-red-600 font-medium cursor-pointer"
                         >
                           Delete post
                         </button>
@@ -333,7 +333,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                           setShowReportModal(true);
                           setShowOptions(false);
                         }}
-                        className="w-full text-left px-3.5 py-2 hover:bg-neutral-50 text-rose-600 font-medium cursor-pointer"
+                        className="w-full text-left px-3.5 py-2 hover:bg-theme-base text-rose-600 font-medium cursor-pointer"
                       >
                         {isRallyPost ? 'Report Rally' : 'Report post'}
                       </button>
@@ -346,7 +346,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
 
           {/* Normal Post Text if post exists */}
           {post && post.text && (
-            <p className="mt-2 text-[15px] text-neutral-900 leading-relaxed break-words whitespace-pre-line">
+            <p className="mt-2 text-[15px] text-theme-primary leading-relaxed break-words whitespace-pre-line">
               {post.text}
             </p>
           )}
@@ -370,8 +370,8 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
 
           {/* Poll Card */}
           {post?.poll && (
-            <div className="mt-3 rounded-2xl border border-neutral-200 bg-neutral-50/80 p-3.5 space-y-2">
-              <p className="text-sm font-semibold text-neutral-900">{post.poll.question}</p>
+            <div className="mt-3 rounded-2xl border border-theme-divider bg-theme-base/80 p-3.5 space-y-2">
+              <p className="text-sm font-semibold text-theme-primary">{post.poll.question}</p>
               <div className="space-y-1.5">
                 {post.poll.options.map((option, idx) => {
                   const votes = (post.poll?.votes?.[idx] ?? 0) + (userPollVote === idx ? 1 : 0);
@@ -388,7 +388,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                       className={`relative w-full overflow-hidden rounded-xl border p-2.5 text-left text-xs font-medium transition cursor-pointer ${
                         isSelected
                           ? 'border-[#5E43F3] bg-[#5E43F3]/5 text-[#5E43F3]'
-                          : 'border-neutral-200 bg-white text-neutral-800 hover:border-neutral-300'
+                          : 'border-theme-divider bg-theme-surface text-theme-primary hover:border-theme-divider-strong'
                       }`}
                     >
                       {hasVoted && (
@@ -400,14 +400,14 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                       <div className="relative flex items-center justify-between z-10 pointer-events-none">
                         <span className="font-semibold">{option}</span>
                         {hasVoted && (
-                          <span className="text-[11px] font-bold text-neutral-500">{percent}%</span>
+                          <span className="text-[11px] font-bold text-theme-tertiary">{percent}%</span>
                         )}
                       </div>
                     </button>
                   );
                 })}
               </div>
-              <p className="text-[10px] text-neutral-400 pt-0.5">
+              <p className="text-[10px] text-theme-tertiary pt-0.5">
                 {((post.poll.votes ?? []).reduce((a, b) => a + b, 0)) + (userPollVote !== null ? 1 : 0)} votes
               </p>
             </div>
@@ -415,27 +415,27 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
 
           {/* Rally Specific Body (Rendered seamlessly within the same card layout) */}
           {linkedRally && (
-            <div className={`space-y-2 ${post ? 'mt-2.5 pt-2.5 border-t border-neutral-100' : 'mt-2'}`}>
-              <h3 className="text-[15px] font-bold text-neutral-950 tracking-tight leading-snug">
+            <div className={`space-y-2 ${post ? 'mt-2.5 pt-2.5 border-t border-theme-divider-light' : 'mt-2'}`}>
+              <h3 className="text-[15px] font-bold text-theme-primary tracking-tight leading-snug">
                 {linkedRally.title}
               </h3>
 
               {/* Show description if standalone rally, or if post text didn't already convey it */}
               {(!post || linkedRally.description !== post.text) && (
-                <p className="text-sm text-neutral-700 leading-relaxed break-words whitespace-pre-line">
+                <p className="text-sm text-theme-secondary leading-relaxed break-words whitespace-pre-line">
                   {linkedRally.description}
                 </p>
               )}
 
               {/* Metadata Info Chips: Time & Participants & Interested Avatars */}
-              <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs text-neutral-600">
-                <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-neutral-100 text-neutral-700 font-medium">
-                  <Clock className="w-3.5 h-3.5 text-neutral-500" />
+              <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs text-theme-secondary">
+                <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-theme-surface-hover text-theme-secondary font-medium">
+                  <Clock className="w-3.5 h-3.5 text-theme-tertiary" />
                   <span>{linkedRally.eventDate ? `${linkedRally.eventDate} ${linkedRally.eventTime || ''}`.trim() : linkedRally.timeDate}</span>
                 </div>
 
-                <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-neutral-100 text-neutral-700 font-medium">
-                  <Users className="w-3.5 h-3.5 text-neutral-500" />
+                <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-theme-surface-hover text-theme-secondary font-medium">
+                  <Users className="w-3.5 h-3.5 text-theme-tertiary" />
                   <span>
                     {linkedRally.joinedUsersCount} {linkedRally.joinedUsersCount === 1 ? 'person' : 'people'} joined
                     {(linkedRally.peopleNeeded || linkedRally.maxNeeded) ? ` (need ${(linkedRally.peopleNeeded || linkedRally.maxNeeded || 0) - linkedRally.joinedUsersCount} more)` : ''}
@@ -455,7 +455,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                       />
                     ))}
                     {linkedRally.joinedUsersCount > 3 && (
-                      <span className="w-5 h-5 rounded-full bg-neutral-100 border border-white text-[9px] font-bold text-neutral-600 flex items-center justify-center">
+                      <span className="w-5 h-5 rounded-full bg-theme-surface-hover border border-white text-[9px] font-bold text-theme-secondary flex items-center justify-center">
                         +{linkedRally.joinedUsersCount - 3}
                       </span>
                     )}
@@ -467,7 +467,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
 
           {/* Media Attachment (for normal post without rally or with independent media) */}
           {((post?.mediaUrl || (post as any)?.muxUploadId) && !linkedRally) && (
-            <div className="mt-3 w-full rounded-[12px] overflow-hidden border border-neutral-100 bg-black/5"> 
+            <div className="mt-3 w-full rounded-[12px] overflow-hidden border border-theme-divider-light bg-black/5"> 
               {post.mediaType === 'video' ? (
                 <VideoPlayer
                   muxPlaybackId={(post as any).muxPlaybackId}
@@ -498,26 +498,26 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
           {/* External Event Specific Body */}
           {externalEvent && (
             <div className="mt-3">
-              <div className="grid grid-cols-2 gap-3 mb-3 text-sm font-semibold text-neutral-600">
-                <div className="flex items-center gap-2 bg-neutral-50 p-2.5 rounded-xl">
+              <div className="grid grid-cols-2 gap-3 mb-3 text-sm font-semibold text-theme-secondary">
+                <div className="flex items-center gap-2 bg-theme-base p-2.5 rounded-xl">
                   <Calendar className="w-4 h-4 text-[#5E43F3]" />
                   <span className="truncate">{new Date(externalEvent.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                 </div>
-                <div className="flex items-center gap-2 bg-neutral-50 p-2.5 rounded-xl">
+                <div className="flex items-center gap-2 bg-theme-base p-2.5 rounded-xl">
                   <Clock className="w-4 h-4 text-[#5E43F3]" />
                   <span>{externalEvent.time}</span>
                 </div>
               </div>
               
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-1.5 text-sm font-semibold text-neutral-500 truncate">
+                <div className="flex items-center gap-1.5 text-sm font-semibold text-theme-tertiary truncate">
                   <MapPin className="w-4 h-4 shrink-0" />
                   <span className="truncate">{externalEvent.area}, {externalEvent.city}</span>
                 </div>
                 
                 <button 
                   onClick={() => setShowEventModal(true)}
-                  className="px-5 py-2 rounded-full bg-neutral-900 text-white font-bold text-sm hover:bg-neutral-800 transition-colors shrink-0"
+                  className="px-5 py-2 rounded-full bg-theme-inverse text-theme-text-inverse font-bold text-sm hover:bg-theme-inverse transition-colors shrink-0"
                 >
                   View Event →
                 </button>
@@ -537,7 +537,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
           )}
 
           {/* Unified Action Row */}
-          <div className="mt-3.5 flex items-center justify-between text-neutral-500 text-xs">
+          <div className="mt-3.5 flex items-center justify-between text-theme-tertiary text-xs">
             {/* Left Social Interactions */}
             <div className="flex items-center gap-1 sm:gap-2">
               {/* Like */}
@@ -593,7 +593,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                   <button
                     id={`btn-msg-rally-${linkedRally.id}`}
                     onClick={handleMessageCreator}
-                    className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg text-theme-tertiary hover:text-theme-primary hover:bg-theme-surface-hover transition-colors cursor-pointer"
                     title="Message creator"
                   >
                     <MessageCircle className="w-4 h-4" />
@@ -604,7 +604,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                     onClick={() => toggleJoinRally(linkedRally.id)}
                     className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                       linkedRally.isJoined
-                        ? 'bg-neutral-900 text-white hover:bg-neutral-800'
+                        ? 'bg-theme-inverse text-theme-text-inverse hover:bg-theme-inverse'
                         : 'bg-[#5E43F3] text-white hover:bg-[#4E34E0] shadow-sm shadow-[#5E43F3]/25 active:scale-95'
                     }`}
                   >
@@ -628,7 +628,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
               <button
                 id={`btn-bookmark-${itemId}`}
                 onClick={handleBookmark}
-                className="flex items-center py-1 px-2 rounded-lg hover:text-neutral-900 transition-colors cursor-pointer"
+                className="flex items-center py-1 px-2 rounded-lg hover:text-theme-primary transition-colors cursor-pointer"
                 title="Bookmark"
               >
                 <Bookmark className="w-4 h-4 stroke-[1.8]" />
@@ -638,7 +638,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
 
           {/* Inline Comments Section */}
           {showInlineComments && associatedPost && (
-            <div className="mt-4 pt-3 border-t border-neutral-100 animate-in fade-in slide-in-from-top-2">
+            <div className="mt-4 pt-3 border-t border-theme-divider-light animate-in fade-in slide-in-from-top-2">
               <InlineComments 
                 postId={associatedPost.id} 
                 postAuthorId={associatedPost.author.id} 
@@ -650,15 +650,15 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
 
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl w-full max-w-[320px] p-6 shadow-xl animate-in zoom-in-95 duration-200">
-            <h3 className="text-lg font-bold text-neutral-900 mb-2">Delete this post?</h3>
-            <p className="text-[15px] text-neutral-600 mb-6">
+          <div className="bg-theme-surface rounded-2xl w-full max-w-[320px] p-6 shadow-xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-theme-primary mb-2">Delete this post?</h3>
+            <p className="text-[15px] text-theme-secondary mb-6">
               This can't be undone. The post and all its replies will be permanently removed.
             </p>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="flex-1 px-4 py-2.5 rounded-full font-bold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors"
+                className="flex-1 px-4 py-2.5 rounded-full font-bold text-theme-secondary bg-theme-surface-hover hover:bg-theme-surface-active transition-colors"
               >
                 Cancel
               </button>
@@ -704,7 +704,7 @@ const InlineComments = ({ postId, postAuthorId }: { postId: string, postAuthorId
   const [replyingTo, setReplyingTo] = useState<{ commentId: string; username: string } | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  if (!comments) return <div className="py-4 text-center text-xs text-neutral-400">Loading replies...</div>;
+  if (!comments) return <div className="py-4 text-center text-xs text-theme-tertiary">Loading replies...</div>;
 
   const displayComments = isExpanded ? comments : comments.slice(0, 3);
 

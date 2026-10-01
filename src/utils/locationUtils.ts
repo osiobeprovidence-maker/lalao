@@ -236,7 +236,7 @@ export function getProximityCategory(meters: number): {
   }
   return {
     label: 'Greater Metro',
-    badgeClass: 'bg-neutral-100 text-neutral-600 border-neutral-200',
+    badgeClass: 'bg-theme-surface-hover text-theme-secondary border-theme-divider',
     dotColor: 'bg-neutral-400',
   };
 }

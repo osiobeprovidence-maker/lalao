@@ -206,16 +206,16 @@ export const CreatePageView: React.FC = () => {
   return (
     <div ref={containerRef} className="w-full flex flex-col min-h-full">
       {/* Top Header - Using standard app layout style */}
-      <div className="sticky top-0 z-20 bg-[#f6f3ee]/95 backdrop-blur-md border-b border-neutral-200/80 px-4 py-2.5 space-y-2">
+      <div className="sticky top-0 z-20 bg-theme-base/95 backdrop-blur-md border-b border-theme-divider/80 px-4 py-2.5 space-y-2">
         <div className="flex items-center gap-3">
           <button
             onClick={handleClose}
-            className="p-1.5 -ml-1 rounded-full text-neutral-700 hover:text-neutral-950 hover:bg-neutral-200/50 transition-colors cursor-pointer"
+            className="p-1.5 -ml-1 rounded-full text-theme-secondary hover:text-theme-primary hover:bg-theme-surface-active/50 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-xl font-black tracking-tight text-neutral-950 font-sans">
+            <h1 className="text-xl font-black tracking-tight text-theme-primary font-sans">
               Create a Stand
             </h1>
           </div>
@@ -230,18 +230,18 @@ export const CreatePageView: React.FC = () => {
               <React.Fragment key={step}>
                 <div 
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                    stage >= step ? 'bg-[#5E43F3] text-white' : 'bg-neutral-200 text-neutral-500'
+                    stage >= step ? 'bg-[#5E43F3] text-white' : 'bg-theme-surface-active text-theme-tertiary'
                   }`}
                 >
                   {step}
                 </div>
                 {step < 3 && (
-                  <div className={`w-8 h-0.5 rounded-full ${stage > step ? 'bg-[#5E43F3]' : 'bg-neutral-200'}`} />
+                  <div className={`w-8 h-0.5 rounded-full ${stage > step ? 'bg-[#5E43F3]' : 'bg-theme-surface-active'}`} />
                 )}
               </React.Fragment>
             ))}
           </div>
-          <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">
+          <span className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">
             {stage === 1 ? 'Identity' : stage === 2 ? 'Local Presence' : 'Review'}
           </span>
         </div>
@@ -251,7 +251,7 @@ export const CreatePageView: React.FC = () => {
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
             {/* Page Type */}
             <div className="space-y-3">
-              <label className="text-sm font-bold text-neutral-900 block">
+              <label className="text-sm font-bold text-theme-primary block">
                 Select Stand Type
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -265,12 +265,12 @@ export const CreatePageView: React.FC = () => {
                       className={`p-4 rounded-2xl border text-left transition-all relative flex flex-col justify-between cursor-pointer ${
                         isSelected
                           ? 'border-[#5E43F3] bg-indigo-50/40 ring-1.5 ring-[#5E43F3] shadow-xs'
-                          : 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50/70 bg-white'
+                          : 'border-theme-divider hover:border-theme-divider-strong hover:bg-theme-base/70 bg-theme-surface'
                       }`}
                     >
                       <div className="flex items-start justify-between w-full">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-sm text-neutral-950">{item.label}</span>
+                          <span className="font-bold text-sm text-theme-primary">{item.label}</span>
                           <Badge type={item.badge} size="sm" />
                         </div>
                         {isSelected && (
@@ -279,7 +279,7 @@ export const CreatePageView: React.FC = () => {
                           </div>
                         )}
                       </div>
-                      <p className="text-xs text-neutral-500 mt-2 leading-relaxed">{item.desc}</p>
+                      <p className="text-xs text-theme-tertiary mt-2 leading-relaxed">{item.desc}</p>
                     </button>
                   );
                 })}
@@ -288,20 +288,20 @@ export const CreatePageView: React.FC = () => {
 
             {/* Photo Upload */}
             <div className="space-y-3">
-              <label className="text-sm font-bold text-neutral-900 block">
+              <label className="text-sm font-bold text-theme-primary block">
                 Stand Photo
               </label>
-              <div className="flex items-start gap-4 p-4 rounded-2xl bg-white border border-neutral-200">
+              <div className="flex items-start gap-4 p-4 rounded-2xl bg-theme-surface border border-theme-divider">
                 <div className="relative shrink-0">
                   {avatarUrl ? (
                     <img
                       src={avatarUrl}
                       alt="Uploaded"
-                      className="w-20 h-20 rounded-2xl object-cover ring-1 ring-neutral-200"
+                      className="w-20 h-20 rounded-2xl object-cover ring-1 ring-theme-divider"
                     />
                   ) : (
-                    <div className="w-20 h-20 rounded-2xl bg-neutral-100 flex items-center justify-center ring-1 ring-neutral-200">
-                      <Image className="w-6 h-6 text-neutral-400" />
+                    <div className="w-20 h-20 rounded-2xl bg-theme-surface-hover flex items-center justify-center ring-1 ring-theme-divider">
+                      <Image className="w-6 h-6 text-theme-tertiary" />
                     </div>
                   )}
                 </div>
@@ -317,7 +317,7 @@ export const CreatePageView: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => avatarInputRef.current?.click()}
-                      className="px-3 py-1.5 rounded-xl bg-neutral-100 text-neutral-700 text-xs font-bold hover:bg-neutral-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+                      className="px-3 py-1.5 rounded-xl bg-theme-surface-hover text-theme-secondary text-xs font-bold hover:bg-theme-surface-active transition-colors flex items-center gap-1.5 cursor-pointer"
                     >
                       <Camera className="w-3.5 h-3.5" />
                       {avatarUrl ? 'Change photo' : 'Upload photo'}
@@ -333,7 +333,7 @@ export const CreatePageView: React.FC = () => {
                       </button>
                     )}
                   </div>
-                  <p className="text-[11px] text-neutral-500 mt-2">
+                  <p className="text-[11px] text-theme-tertiary mt-2">
                     JPG, PNG, or WebP. Max 5MB.
                   </p>
                 </div>
@@ -343,7 +343,7 @@ export const CreatePageView: React.FC = () => {
             {/* Name & Handle */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-bold text-neutral-900 mb-2 block">
+                <label className="text-sm font-bold text-theme-primary mb-2 block">
                   Stand Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -351,16 +351,16 @@ export const CreatePageView: React.FC = () => {
                   value={name}
                   onChange={(e) => handleNameChange(e.target.value)}
                   placeholder="e.g. Udu Lions FC"
-                  className="w-full px-4 py-3 rounded-xl border border-neutral-200 text-sm font-semibold text-neutral-950 focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] outline-none transition-all bg-white"
+                  className="w-full px-4 py-3 rounded-xl border border-theme-divider text-sm font-semibold text-theme-primary focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] outline-none transition-all bg-theme-surface"
                 />
               </div>
 
               <div>
-                <label className="text-sm font-bold text-neutral-900 mb-2 block">
+                <label className="text-sm font-bold text-theme-primary mb-2 block">
                   Handle <span className="text-red-500">*</span>
                 </label>
-                <div className="flex items-center px-4 py-3 rounded-xl border border-neutral-200 text-sm font-semibold text-neutral-950 focus-within:border-[#5E43F3] focus-within:ring-1 focus-within:ring-[#5E43F3] transition-all bg-white">
-                  <span className="text-neutral-400 mr-0.5">@</span>
+                <div className="flex items-center px-4 py-3 rounded-xl border border-theme-divider text-sm font-semibold text-theme-primary focus-within:border-[#5E43F3] focus-within:ring-1 focus-within:ring-[#5E43F3] transition-all bg-theme-surface">
+                  <span className="text-theme-tertiary mr-0.5">@</span>
                   <input
                     type="text"
                     value={username}
@@ -372,7 +372,7 @@ export const CreatePageView: React.FC = () => {
               </div>
             </div>
 
-            <div className="pt-6 border-t border-neutral-200/80">
+            <div className="pt-6 border-t border-theme-divider/80">
               <button
                 type="button"
                 onClick={() => setStage(2)}
@@ -380,7 +380,7 @@ export const CreatePageView: React.FC = () => {
                 className={`w-full sm:w-auto px-8 py-3 rounded-xl text-sm font-bold transition-all float-right cursor-pointer ${
                   isStage1Valid
                     ? 'bg-[#5E43F3] text-white hover:bg-[#4E34E0] shadow-md shadow-[#5E43F3]/25'
-                    : 'bg-neutral-100 text-neutral-400 cursor-not-allowed'
+                    : 'bg-theme-surface-hover text-theme-tertiary cursor-not-allowed'
                 }`}
               >
                 Continue
@@ -394,10 +394,10 @@ export const CreatePageView: React.FC = () => {
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
             {/* Location */}
             <div>
-              <label className="text-sm font-bold text-neutral-900 mb-2 block">
+              <label className="text-sm font-bold text-theme-primary mb-2 block">
                 Location <span className="text-red-500">*</span>
               </label>
-              <div className="flex items-center px-4 py-3 rounded-xl border border-neutral-200 text-sm font-medium text-neutral-950 focus-within:border-[#5E43F3] focus-within:ring-1 focus-within:ring-[#5E43F3] transition-all bg-white">
+              <div className="flex items-center px-4 py-3 rounded-xl border border-theme-divider text-sm font-medium text-theme-primary focus-within:border-[#5E43F3] focus-within:ring-1 focus-within:ring-[#5E43F3] transition-all bg-theme-surface">
                 <MapPin className="w-4 h-4 text-[#5E43F3] mr-2 shrink-0" />
                 <input
                   type="text"
@@ -415,8 +415,8 @@ export const CreatePageView: React.FC = () => {
                     onClick={() => setPageLocation(loc)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                       pageLocation === loc
-                        ? 'bg-neutral-900 text-white'
-                        : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                        ? 'bg-theme-inverse text-theme-text-inverse'
+                        : 'bg-theme-surface-hover text-theme-secondary hover:bg-theme-surface-active'
                     }`}
                   >
                     {loc}
@@ -427,7 +427,7 @@ export const CreatePageView: React.FC = () => {
 
             {/* Category */}
             <div>
-              <label className="text-sm font-bold text-neutral-900 mb-2 block">
+              <label className="text-sm font-bold text-theme-primary mb-2 block">
                 Category <span className="text-red-500">*</span>
               </label>
               <input
@@ -435,7 +435,7 @@ export const CreatePageView: React.FC = () => {
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 placeholder="e.g. Football Academy, Cafe, Tech Hub"
-                className="w-full px-4 py-3 rounded-xl border border-neutral-200 text-sm text-neutral-900 focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] outline-none transition-all bg-white"
+                className="w-full px-4 py-3 rounded-xl border border-theme-divider text-sm text-theme-primary focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] outline-none transition-all bg-theme-surface"
               />
               <div className="flex flex-wrap gap-2 mt-3">
                 {quickCategories.map((c) => (
@@ -446,7 +446,7 @@ export const CreatePageView: React.FC = () => {
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                       category === c
                         ? 'bg-[#5E43F3] text-white'
-                        : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                        : 'bg-theme-surface-hover text-theme-secondary hover:bg-theme-surface-active'
                     }`}
                   >
                     {c}
@@ -458,10 +458,10 @@ export const CreatePageView: React.FC = () => {
             {/* About */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-bold text-neutral-900 block">
+                <label className="text-sm font-bold text-theme-primary block">
                   About your Stand <span className="text-red-500">*</span>
                 </label>
-                <span className="text-[11px] text-neutral-400 font-mono">
+                <span className="text-[11px] text-theme-tertiary font-mono">
                   {description.length}/300
                 </span>
               </div>
@@ -471,18 +471,18 @@ export const CreatePageView: React.FC = () => {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Tell your local community what your Stand is about, what you offer, meeting times, or special events..."
-                className="w-full px-4 py-3 rounded-xl border border-neutral-200 text-sm text-neutral-900 focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] outline-none resize-none leading-relaxed transition-all bg-white"
+                className="w-full px-4 py-3 rounded-xl border border-theme-divider text-sm text-theme-primary focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] outline-none resize-none leading-relaxed transition-all bg-theme-surface"
               />
             </div>
 
             {/* Contact */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-bold text-neutral-900 mb-2 block">
+                <label className="text-sm font-bold text-theme-primary mb-2 block">
                   Website / Social (Optional)
                 </label>
-                <div className="flex items-center px-4 py-3 rounded-xl border border-neutral-200 text-sm text-neutral-900 bg-white">
-                  <Globe className="w-4 h-4 text-neutral-400 mr-2 shrink-0" />
+                <div className="flex items-center px-4 py-3 rounded-xl border border-theme-divider text-sm text-theme-primary bg-theme-surface">
+                  <Globe className="w-4 h-4 text-theme-tertiary mr-2 shrink-0" />
                   <input
                     type="text"
                     value={website}
@@ -494,11 +494,11 @@ export const CreatePageView: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-sm font-bold text-neutral-900 mb-2 block">
+                <label className="text-sm font-bold text-theme-primary mb-2 block">
                   Phone / WhatsApp (Optional)
                 </label>
-                <div className="flex items-center px-4 py-3 rounded-xl border border-neutral-200 text-sm text-neutral-900 bg-white">
-                  <Phone className="w-4 h-4 text-neutral-400 mr-2 shrink-0" />
+                <div className="flex items-center px-4 py-3 rounded-xl border border-theme-divider text-sm text-theme-primary bg-theme-surface">
+                  <Phone className="w-4 h-4 text-theme-tertiary mr-2 shrink-0" />
                   <input
                     type="text"
                     value={phone}
@@ -510,11 +510,11 @@ export const CreatePageView: React.FC = () => {
               </div>
             </div>
 
-            <div className="pt-6 border-t border-neutral-200/80 flex items-center justify-between">
+            <div className="pt-6 border-t border-theme-divider/80 flex items-center justify-between">
               <button
                 type="button"
                 onClick={() => setStage(1)}
-                className="px-6 py-3 rounded-xl text-sm font-bold text-neutral-600 hover:bg-neutral-100 transition-colors cursor-pointer"
+                className="px-6 py-3 rounded-xl text-sm font-bold text-theme-secondary hover:bg-theme-surface-hover transition-colors cursor-pointer"
               >
                 Back
               </button>
@@ -525,7 +525,7 @@ export const CreatePageView: React.FC = () => {
                 className={`px-8 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer ${
                   isStage2Valid
                     ? 'bg-[#5E43F3] text-white hover:bg-[#4E34E0] shadow-md shadow-[#5E43F3]/25'
-                    : 'bg-neutral-100 text-neutral-400 cursor-not-allowed'
+                    : 'bg-theme-surface-hover text-theme-tertiary cursor-not-allowed'
                 }`}
               >
                 Continue
@@ -538,35 +538,35 @@ export const CreatePageView: React.FC = () => {
         {stage === 3 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div>
-              <h2 className="text-lg font-black text-neutral-900 mb-1">Review your Stand</h2>
-              <p className="text-sm text-neutral-500">This is how your Stand will appear in the local feed and discovery pages.</p>
+              <h2 className="text-lg font-black text-theme-primary mb-1">Review your Stand</h2>
+              <p className="text-sm text-theme-tertiary">This is how your Stand will appear in the local feed and discovery pages.</p>
             </div>
 
-            <div className="p-5 rounded-2xl bg-white border border-neutral-200 shadow-sm flex flex-col gap-4">
+            <div className="p-5 rounded-2xl bg-theme-surface border border-theme-divider shadow-sm flex flex-col gap-4">
               <div className="flex items-start gap-4">
                 <img
                   src={avatarUrl || typesConfig.find((t) => t.type === type)?.sampleAvatar}
                   alt="Preview"
-                  className="w-14 h-14 rounded-xl object-cover border border-neutral-100 shrink-0"
+                  className="w-14 h-14 rounded-xl object-cover border border-theme-divider-light shrink-0"
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <h3 className="font-bold text-base text-neutral-900 truncate">{name}</h3>
+                    <h3 className="font-bold text-base text-theme-primary truncate">{name}</h3>
                     <Badge type={typesConfig.find((t) => t.type === type)?.badge || 'CLUB'} size="sm" />
                   </div>
-                  <p className="text-xs text-neutral-500 truncate mb-1">
+                  <p className="text-xs text-theme-tertiary truncate mb-1">
                     @{username} · {category} · {pageLocation}
                   </p>
-                  <p className="text-sm text-neutral-700 line-clamp-3 leading-relaxed mt-2 bg-neutral-50 p-3 rounded-xl">
+                  <p className="text-sm text-theme-secondary line-clamp-3 leading-relaxed mt-2 bg-theme-base p-3 rounded-xl">
                     {description}
                   </p>
                 </div>
               </div>
-              <div className="pt-2 border-t border-neutral-100">
+              <div className="pt-2 border-t border-theme-divider-light">
                 <button
                   type="button"
                   disabled
-                  className="w-full sm:w-auto px-6 py-2 rounded-xl bg-neutral-900 text-white text-xs font-bold opacity-80"
+                  className="w-full sm:w-auto px-6 py-2 rounded-xl bg-theme-inverse text-theme-text-inverse text-xs font-bold opacity-80"
                 >
                   Follow Stand
                 </button>
@@ -574,10 +574,10 @@ export const CreatePageView: React.FC = () => {
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-4 rounded-xl bg-neutral-50 border border-neutral-200">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-theme-base border border-theme-divider">
                 <div className="min-w-0">
-                  <h4 className="text-sm font-bold text-neutral-900">Identity & Branding</h4>
-                  <p className="text-xs text-neutral-500 mt-0.5 truncate">{name}, @{username}, {typesConfig.find(t => t.type === type)?.label}</p>
+                  <h4 className="text-sm font-bold text-theme-primary">Identity & Branding</h4>
+                  <p className="text-xs text-theme-tertiary mt-0.5 truncate">{name}, @{username}, {typesConfig.find(t => t.type === type)?.label}</p>
                 </div>
                 <button
                   type="button"
@@ -588,10 +588,10 @@ export const CreatePageView: React.FC = () => {
                 </button>
               </div>
 
-              <div className="flex items-center justify-between p-4 rounded-xl bg-neutral-50 border border-neutral-200">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-theme-base border border-theme-divider">
                 <div className="min-w-0">
-                  <h4 className="text-sm font-bold text-neutral-900">Local Presence</h4>
-                  <p className="text-xs text-neutral-500 mt-0.5 truncate">{pageLocation}, {category}</p>
+                  <h4 className="text-sm font-bold text-theme-primary">Local Presence</h4>
+                  <p className="text-xs text-theme-tertiary mt-0.5 truncate">{pageLocation}, {category}</p>
                 </div>
                 <button
                   type="button"
@@ -603,11 +603,11 @@ export const CreatePageView: React.FC = () => {
               </div>
             </div>
 
-            <div className="pt-6 border-t border-neutral-200/80 flex items-center justify-between">
+            <div className="pt-6 border-t border-theme-divider/80 flex items-center justify-between">
               <button
                 type="button"
                 onClick={() => setStage(2)}
-                className="px-6 py-3 rounded-xl text-sm font-bold text-neutral-600 hover:bg-neutral-100 transition-colors cursor-pointer"
+                className="px-6 py-3 rounded-xl text-sm font-bold text-theme-secondary hover:bg-theme-surface-hover transition-colors cursor-pointer"
               >
                 Back
               </button>

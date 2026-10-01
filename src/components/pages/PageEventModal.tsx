@@ -103,23 +103,23 @@ export const PageEventModal: React.FC<PageEventModalProps> = ({
   };
 
   return (
-    <div className="absolute inset-0 z-50 bg-white overflow-y-auto flex flex-col animate-in fade-in slide-in-from-right-4 duration-250">
+    <div className="absolute inset-0 z-50 bg-theme-surface overflow-y-auto flex flex-col animate-in fade-in slide-in-from-right-4 duration-250">
       {/* Top Sticky Header */}
-      <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-neutral-100 px-4 py-3 sm:px-6 flex items-center justify-between z-20 shrink-0">
+      <div className="sticky top-0 bg-theme-surface/95 backdrop-blur-md border-b border-theme-divider-light px-4 py-3 sm:px-6 flex items-center justify-between z-20 shrink-0">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="p-2 -ml-2 rounded-full hover:bg-neutral-100 text-neutral-800 transition-colors cursor-pointer"
+            className="p-2 -ml-2 rounded-full hover:bg-theme-surface-hover text-theme-primary transition-colors cursor-pointer"
             aria-label="Back"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h3 className="text-base font-black text-neutral-950">
+            <h3 className="text-base font-black text-theme-primary">
               {eventToEdit ? 'Edit Event' : 'Create New Event'}
             </h3>
-            <p className="text-xs text-neutral-500 font-medium truncate max-w-[180px] sm:max-w-md">
+            <p className="text-xs text-theme-tertiary font-medium truncate max-w-[180px] sm:max-w-md">
               @{page.username} · Ticketing, venue & schedule
             </p>
           </div>
@@ -140,10 +140,10 @@ export const PageEventModal: React.FC<PageEventModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Cover Photo Selection */}
           <div>
-            <label className="text-xs font-black uppercase tracking-wider text-neutral-500 block mb-2">
+            <label className="text-xs font-black uppercase tracking-wider text-theme-tertiary block mb-2">
               Event Cover Banner
             </label>
-            <div className="relative h-44 rounded-3xl overflow-hidden bg-neutral-900 border border-neutral-200 group">
+            <div className="relative h-44 rounded-3xl overflow-hidden bg-theme-inverse border border-theme-divider group">
               <img
                 src={coverImage}
                 alt="Cover Preview"
@@ -153,7 +153,7 @@ export const PageEventModal: React.FC<PageEventModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowCoverSelector(!showCoverSelector)}
-                  className="px-4 py-2 rounded-full bg-white text-neutral-900 text-xs font-bold shadow-md hover:bg-neutral-100 transition-colors flex items-center gap-2 cursor-pointer"
+                  className="px-4 py-2 rounded-full bg-theme-surface text-theme-primary text-xs font-bold shadow-md hover:bg-theme-surface-hover transition-colors flex items-center gap-2 cursor-pointer"
                 >
                   <ImageIcon className="w-4 h-4 text-[#5E43F3]" />
                   <span>Change Banner</span>
@@ -162,7 +162,7 @@ export const PageEventModal: React.FC<PageEventModalProps> = ({
             </div>
 
             {showCoverSelector && (
-              <div className="mt-3 p-3 bg-neutral-50 rounded-2xl border border-neutral-200 grid grid-cols-3 sm:grid-cols-5 gap-2 animate-in fade-in">
+              <div className="mt-3 p-3 bg-theme-base rounded-2xl border border-theme-divider grid grid-cols-3 sm:grid-cols-5 gap-2 animate-in fade-in">
                 {PRESET_EVENT_COVERS.map((url, i) => (
                   <button
                     key={i}
@@ -185,7 +185,7 @@ export const PageEventModal: React.FC<PageEventModalProps> = ({
           {/* Event Details */}
           <div className="space-y-4">
             <div>
-              <label className="text-xs font-bold text-neutral-700 block mb-1">
+              <label className="text-xs font-bold text-theme-secondary block mb-1">
                 Event Title *
               </label>
               <input
@@ -194,19 +194,19 @@ export const PageEventModal: React.FC<PageEventModalProps> = ({
                 onChange={(e) => setTitle(e.target.value)}
                 required
                 placeholder="e.g. Delta Creative Founders Meetup & Showcase"
-                className="w-full px-4 py-3 rounded-2xl border border-neutral-200 text-sm font-semibold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                className="w-full px-4 py-3 rounded-2xl border border-theme-divider text-sm font-semibold text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                <label className="text-xs font-bold text-theme-secondary block mb-1">
                   Event Format
                 </label>
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value as any)}
-                  className="w-full px-4 py-3 rounded-2xl border border-neutral-200 text-sm font-semibold text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#5E43F3] cursor-pointer"
+                  className="w-full px-4 py-3 rounded-2xl border border-theme-divider text-sm font-semibold text-theme-primary bg-theme-surface focus:outline-none focus:ring-2 focus:ring-[#5E43F3] cursor-pointer"
                 >
                   <option value="community">Community Meetup</option>
                   <option value="tournament">Competitive Tournament</option>
@@ -215,7 +215,7 @@ export const PageEventModal: React.FC<PageEventModalProps> = ({
               </div>
 
               <div>
-                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                <label className="text-xs font-bold text-theme-secondary block mb-1">
                   Location Type
                 </label>
                 <div className="flex items-center gap-2 pt-0.5">
@@ -225,7 +225,7 @@ export const PageEventModal: React.FC<PageEventModalProps> = ({
                     className={`flex-1 py-2.5 px-3 rounded-2xl text-xs font-bold border transition-all cursor-pointer ${
                       !isOnline
                         ? 'border-[#5E43F3] bg-violet-50 text-[#5E43F3]'
-                        : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'
+                        : 'border-theme-divider text-theme-secondary hover:bg-theme-base'
                     }`}
                   >
                     In-Person
@@ -236,7 +236,7 @@ export const PageEventModal: React.FC<PageEventModalProps> = ({
                     className={`flex-1 py-2.5 px-3 rounded-2xl text-xs font-bold border transition-all cursor-pointer ${
                       isOnline
                         ? 'border-[#5E43F3] bg-violet-50 text-[#5E43F3]'
-                        : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'
+                        : 'border-theme-divider text-theme-secondary hover:bg-theme-base'
                     }`}
                   >
                     Online Stage
@@ -247,7 +247,7 @@ export const PageEventModal: React.FC<PageEventModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                <label className="text-xs font-bold text-theme-secondary block mb-1">
                   Date
                 </label>
                 <input
@@ -255,12 +255,12 @@ export const PageEventModal: React.FC<PageEventModalProps> = ({
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   placeholder="e.g. November 28, 2026"
-                  className="w-full px-4 py-3 rounded-2xl border border-neutral-200 text-sm font-semibold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                  className="w-full px-4 py-3 rounded-2xl border border-theme-divider text-sm font-semibold text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                <label className="text-xs font-bold text-theme-secondary block mb-1">
                   Time
                 </label>
                 <input
@@ -268,31 +268,31 @@ export const PageEventModal: React.FC<PageEventModalProps> = ({
                   value={time}
                   onChange={(e) => setTime(e.target.value)}
                   placeholder="e.g. 4:00 PM WAT"
-                  className="w-full px-4 py-3 rounded-2xl border border-neutral-200 text-sm font-semibold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                  className="w-full px-4 py-3 rounded-2xl border border-theme-divider text-sm font-semibold text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
                 />
               </div>
             </div>
 
             {!isOnline && (
               <div>
-                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                <label className="text-xs font-bold text-theme-secondary block mb-1">
                   Venue / Physical Location
                 </label>
                 <div className="relative">
-                  <MapPin className="w-4 h-4 text-neutral-400 absolute left-4 top-3.5" />
+                  <MapPin className="w-4 h-4 text-theme-tertiary absolute left-4 top-3.5" />
                   <input
                     type="text"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     placeholder="Plot 12, Express Way, Udu Corridor"
-                    className="w-full pl-11 pr-4 py-3 rounded-2xl border border-neutral-200 text-sm font-semibold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                    className="w-full pl-11 pr-4 py-3 rounded-2xl border border-theme-divider text-sm font-semibold text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
                   />
                 </div>
               </div>
             )}
 
             <div>
-              <label className="text-xs font-bold text-neutral-700 block mb-1">
+              <label className="text-xs font-bold text-theme-secondary block mb-1">
                 Description & Agenda
               </label>
               <textarea
@@ -300,19 +300,19 @@ export const PageEventModal: React.FC<PageEventModalProps> = ({
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
                 placeholder="Give details about speaker lineups, schedule, eligibility, and what to bring..."
-                className="w-full px-4 py-3 rounded-2xl border border-neutral-200 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3] resize-none"
+                className="w-full px-4 py-3 rounded-2xl border border-theme-divider text-sm text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3] resize-none"
               />
             </div>
           </div>
 
           {/* Ticketing & Attendance Settings */}
-          <div className="p-5 rounded-3xl bg-neutral-50 border border-neutral-200/80 space-y-4">
+          <div className="p-5 rounded-3xl bg-theme-base border border-theme-divider/80 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="text-sm font-bold text-neutral-900">
+                <h4 className="text-sm font-bold text-theme-primary">
                   Ticketing & Paid Admission
                 </h4>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-theme-tertiary">
                   Issue digital QR access passes & collect payouts directly
                 </p>
               </div>
@@ -323,37 +323,37 @@ export const PageEventModal: React.FC<PageEventModalProps> = ({
                   onChange={(e) => setIsTicketed(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E43F3]" />
+                <div className="w-11 h-6 bg-theme-surface-active peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-theme-surface after:border-theme-divider-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E43F3]" />
               </label>
             </div>
 
             {isTicketed && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-neutral-200 animate-in fade-in">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-theme-divider animate-in fade-in">
                 <div>
-                  <label className="text-xs font-bold text-neutral-700 block mb-1">
+                  <label className="text-xs font-bold text-theme-secondary block mb-1">
                     Ticket Price (NGN)
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3.5 top-3 text-xs font-bold text-neutral-400">₦</span>
+                    <span className="absolute left-3.5 top-3 text-xs font-bold text-theme-tertiary">₦</span>
                     <input
                       type="number"
                       value={ticketPrice}
                       onChange={(e) => setTicketPrice(Number(e.target.value))}
                       step="500"
-                      className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-white border border-neutral-200 text-sm font-bold text-neutral-900"
+                      className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-theme-surface border border-theme-divider text-sm font-bold text-theme-primary"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-neutral-700 block mb-1">
+                  <label className="text-xs font-bold text-theme-secondary block mb-1">
                     Total Available Passes
                   </label>
                   <input
                     type="number"
                     value={availableTickets}
                     onChange={(e) => setAvailableTickets(Number(e.target.value))}
-                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-neutral-200 text-sm font-bold text-neutral-900"
+                    className="w-full px-4 py-2.5 rounded-xl bg-theme-surface border border-theme-divider text-sm font-bold text-theme-primary"
                   />
                 </div>
               </div>
@@ -375,18 +375,18 @@ export const PageEventModal: React.FC<PageEventModalProps> = ({
                   onChange={(e) => setPrizePool(Number(e.target.value))}
                   step="10000"
                   placeholder="100000"
-                  className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-white border border-amber-300 text-sm font-bold text-amber-950"
+                  className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-theme-surface border border-amber-300 text-sm font-bold text-amber-950"
                 />
               </div>
             </div>
           )}
 
           {/* Bottom Actions */}
-          <div className="pt-4 border-t border-neutral-100 flex items-center justify-end gap-3">
+          <div className="pt-4 border-t border-theme-divider-light flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 rounded-xl border border-neutral-200 text-xs font-bold text-neutral-600 hover:bg-neutral-50 transition-colors cursor-pointer"
+              className="px-5 py-2.5 rounded-xl border border-theme-divider text-xs font-bold text-theme-secondary hover:bg-theme-base transition-colors cursor-pointer"
             >
               Cancel
             </button>

@@ -330,17 +330,17 @@ export const TournamentRegisterModal: React.FC = () => {
   return (
     <div
       id="screen-tournament-registration"
-      className="absolute inset-0 z-40 bg-white flex flex-col min-h-full overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-200"
+      className="absolute inset-0 z-40 bg-theme-surface flex flex-col min-h-full overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-200"
     >
       <div className="w-full max-w-3xl mx-auto flex flex-col flex-1 pb-24">
         {/* Sticky Header */}
-        <header className="sticky top-0 z-20 bg-white/95 backdrop-blur-md px-4 sm:px-6 py-3.5 border-b border-neutral-200 flex items-center justify-between shrink-0">
+        <header className="sticky top-0 z-20 bg-theme-surface/95 backdrop-blur-md px-4 sm:px-6 py-3.5 border-b border-theme-divider flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <button
               type="button"
               id="btn-back-tournament-register"
               onClick={currentStep === 'checkout' ? () => setCurrentStep('roster') : handleClose}
-              className="p-1.5 -ml-1 rounded-full text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100 transition-colors cursor-pointer"
+              className="p-1.5 -ml-1 rounded-full text-theme-secondary hover:text-theme-primary hover:bg-theme-surface-hover transition-colors cursor-pointer"
               title="Go back"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -349,19 +349,19 @@ export const TournamentRegisterModal: React.FC = () => {
               <Swords className="w-5 h-5 stroke-[2.2]" />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-black text-neutral-950 leading-tight">
+              <h2 className="text-sm sm:text-base font-black text-theme-primary leading-tight">
                 {currentStep === 'roster' && 'Tournament Squad Entry'}
                 {currentStep === 'checkout' && 'Tournament Entry & Payment'}
                 {currentStep === 'confirmed' && 'Registration Confirmed!'}
               </h2>
-              <p className="text-[11px] text-neutral-500 line-clamp-1">{event.title}</p>
+              <p className="text-[11px] text-theme-tertiary line-clamp-1">{event.title}</p>
             </div>
           </div>
 
           <button
             type="button"
             onClick={handleClose}
-            className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+            className="p-1.5 rounded-full text-theme-tertiary hover:text-theme-secondary hover:bg-theme-surface-hover transition-colors cursor-pointer"
             title="Close"
           >
             <X className="w-5 h-5" />
@@ -369,7 +369,7 @@ export const TournamentRegisterModal: React.FC = () => {
         </header>
 
         {/* Progress Step Bar */}
-        <div className="bg-neutral-50 px-4 sm:px-6 py-2.5 border-b border-neutral-200 flex items-center justify-between text-xs font-bold text-neutral-600">
+        <div className="bg-theme-base px-4 sm:px-6 py-2.5 border-b border-theme-divider flex items-center justify-between text-xs font-bold text-theme-secondary">
           <div className="flex items-center gap-2">
             <span
               className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
@@ -380,12 +380,12 @@ export const TournamentRegisterModal: React.FC = () => {
             >
               {currentStep !== 'roster' ? '✓' : '1'}
             </span>
-            <span className={currentStep === 'roster' ? 'text-neutral-950 font-black' : ''}>
+            <span className={currentStep === 'roster' ? 'text-theme-primary font-black' : ''}>
               Squad Roster (5/5)
             </span>
           </div>
 
-          <ChevronRight className="w-4 h-4 text-neutral-300" />
+          <ChevronRight className="w-4 h-4 text-theme-tertiary" />
 
           <div className="flex items-center gap-2">
             <span
@@ -394,24 +394,24 @@ export const TournamentRegisterModal: React.FC = () => {
                   ? 'bg-[#5E43F3] text-white'
                   : currentStep === 'confirmed'
                   ? 'bg-emerald-600 text-white'
-                  : 'bg-neutral-200 text-neutral-600'
+                  : 'bg-theme-surface-active text-theme-secondary'
               }`}
             >
               {currentStep === 'confirmed' ? '✓' : '2'}
             </span>
-            <span className={currentStep === 'checkout' ? 'text-neutral-950 font-black' : ''}>
+            <span className={currentStep === 'checkout' ? 'text-theme-primary font-black' : ''}>
               Wallet & Entry
             </span>
           </div>
 
-          <ChevronRight className="w-4 h-4 text-neutral-300" />
+          <ChevronRight className="w-4 h-4 text-theme-tertiary" />
 
           <div className="flex items-center gap-2">
             <span
               className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
                 currentStep === 'confirmed'
                   ? 'bg-emerald-600 text-white'
-                  : 'bg-neutral-200 text-neutral-600'
+                  : 'bg-theme-surface-active text-theme-secondary'
               }`}
             >
               3
@@ -428,20 +428,20 @@ export const TournamentRegisterModal: React.FC = () => {
           {currentStep === 'roster' && (
             <>
               {/* Event Mini Banner */}
-              <div className="bg-neutral-50 rounded-2xl p-3.5 border border-neutral-200/80 flex items-center gap-3">
+              <div className="bg-theme-base rounded-2xl p-3.5 border border-theme-divider/80 flex items-center gap-3">
                 <img
                   src={event.coverImage}
                   alt={event.title}
-                  className="w-14 h-14 rounded-xl object-cover shrink-0 border border-neutral-200"
+                  className="w-14 h-14 rounded-xl object-cover shrink-0 border border-theme-divider"
                 />
                 <div className="min-w-0 flex-1">
                   <span className="text-[10px] font-black uppercase text-[#5E43F3] bg-violet-100 px-2 py-0.5 rounded">
                     5v5 Squad Tournament
                   </span>
-                  <h3 className="text-xs sm:text-sm font-bold text-neutral-900 truncate mt-1">
+                  <h3 className="text-xs sm:text-sm font-bold text-theme-primary truncate mt-1">
                     {event.title}
                   </h3>
-                  <div className="flex items-center gap-2 text-[11px] text-neutral-500 mt-0.5">
+                  <div className="flex items-center gap-2 text-[11px] text-theme-tertiary mt-0.5">
                     <span>{event.date}</span>
                     <span>·</span>
                     <span className="font-bold text-emerald-600">
@@ -452,39 +452,39 @@ export const TournamentRegisterModal: React.FC = () => {
               </div>
 
               {/* Team Identity Setup */}
-              <div className="bg-white rounded-2xl border border-neutral-200 p-5 space-y-5 shadow-xs">
-                <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+              <div className="bg-theme-surface rounded-2xl border border-theme-divider p-5 space-y-5 shadow-xs">
+                <div className="flex items-center justify-between pb-3 border-b border-theme-divider-light">
                   <div className="flex items-center gap-2">
                     <Shield className="w-4 h-4 text-[#5E43F3]" />
-                    <h3 className="text-xs sm:text-sm font-black text-neutral-900">
+                    <h3 className="text-xs sm:text-sm font-black text-theme-primary">
                       Team Identity & Logo
                     </h3>
                   </div>
-                  <span className="text-[10px] text-neutral-500 font-bold">
+                  <span className="text-[10px] text-theme-tertiary font-bold">
                     Stored in Player Account
                   </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="sm:col-span-2 space-y-1">
-                    <label className="text-[11px] font-bold text-neutral-600">Team Name *</label>
+                    <label className="text-[11px] font-bold text-theme-secondary">Team Name *</label>
                     <input
                       type="text"
                       value={teamName}
                       onChange={(e) => setTeamName(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs font-bold text-neutral-900 focus:outline-none focus:border-[#5E43F3]"
+                      className="w-full px-3.5 py-2.5 bg-theme-base border border-theme-divider rounded-xl text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
                       placeholder="e.g. Delta Strikers"
                       required
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-neutral-600">Team Tag (Max 4 chars)</label>
+                    <label className="text-[11px] font-bold text-theme-secondary">Team Tag (Max 4 chars)</label>
                     <input
                       type="text"
                       value={teamTag}
                       maxLength={4}
                       onChange={(e) => setTeamTag(e.target.value.toUpperCase())}
-                      className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs font-bold text-neutral-900 uppercase focus:outline-none focus:border-[#5E43F3]"
+                      className="w-full px-3.5 py-2.5 bg-theme-base border border-theme-divider rounded-xl text-xs font-bold text-theme-primary uppercase focus:outline-none focus:border-[#5E43F3]"
                       placeholder="DST"
                       required
                     />
@@ -494,7 +494,7 @@ export const TournamentRegisterModal: React.FC = () => {
                 {/* Team Logo Picker: Preset or Custom Upload */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-bold text-neutral-600">
+                    <label className="text-[11px] font-bold text-theme-secondary">
                       Team Emblem / Crest (Choose Preset or Upload Your Own)
                     </label>
                     {isCustomLogo && (
@@ -523,12 +523,12 @@ export const TournamentRegisterModal: React.FC = () => {
                       className={`h-16 px-3.5 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
                         isCustomLogo
                           ? 'border-[#5E43F3] bg-violet-50/60 shadow-xs'
-                          : 'border-neutral-300 hover:border-[#5E43F3] hover:bg-neutral-50'
+                          : 'border-theme-divider-strong hover:border-[#5E43F3] hover:bg-theme-base'
                       }`}
                       title="Upload custom logo from device"
                     >
                       <Upload className="w-4 h-4 text-[#5E43F3]" />
-                      <span className="text-[10px] font-bold text-neutral-800">Upload Image</span>
+                      <span className="text-[10px] font-bold text-theme-primary">Upload Image</span>
                     </button>
 
                     {/* Preset Logo Icons */}
@@ -543,7 +543,7 @@ export const TournamentRegisterModal: React.FC = () => {
                         className={`w-16 h-16 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer p-0.5 relative group ${
                           selectedLogo === preset.url && !isCustomLogo
                             ? 'border-[#5E43F3] scale-105 shadow-md shadow-[#5E43F3]/25'
-                            : 'border-neutral-200 opacity-70 hover:opacity-100'
+                            : 'border-theme-divider opacity-70 hover:opacity-100'
                         }`}
                         title={preset.name}
                       >
@@ -578,11 +578,11 @@ export const TournamentRegisterModal: React.FC = () => {
                 </div>
 
                 {/* Squad Roster Tracker */}
-                <div className="pt-4 border-t border-neutral-200 space-y-3">
+                <div className="pt-4 border-t border-theme-divider space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <Users className="w-4 h-4 text-[#5E43F3]" />
-                      <h3 className="text-xs sm:text-sm font-black text-neutral-900">
+                      <h3 className="text-xs sm:text-sm font-black text-theme-primary">
                         Squad Roster ({roster.length} / 5 Players Required)
                       </h3>
                     </div>
@@ -602,13 +602,13 @@ export const TournamentRegisterModal: React.FC = () => {
                     {roster.map((player) => (
                       <div
                         key={player.id}
-                        className="flex items-center justify-between p-3 rounded-xl border border-neutral-200 bg-neutral-50/70"
+                        className="flex items-center justify-between p-3 rounded-xl border border-theme-divider bg-theme-base/70"
                       >
                         <div className="flex items-center gap-3">
                           <Avatar src={player.avatar} alt={player.name} size="md" />
                           <div>
                             <div className="flex items-center gap-1.5">
-                              <span className="text-xs sm:text-sm font-bold text-neutral-900">
+                              <span className="text-xs sm:text-sm font-bold text-theme-primary">
                                 {player.name}
                               </span>
                               {player.isCaptain && (
@@ -617,7 +617,7 @@ export const TournamentRegisterModal: React.FC = () => {
                                 </span>
                               )}
                             </div>
-                            <p className="text-[11px] text-neutral-500">
+                            <p className="text-[11px] text-theme-tertiary">
                               @{player.username} · {player.role}
                             </p>
                           </div>
@@ -627,7 +627,7 @@ export const TournamentRegisterModal: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => handleRemoveTeammate(player.id)}
-                            className="text-xs text-neutral-400 hover:text-rose-600 font-bold px-2 py-1 cursor-pointer transition-colors"
+                            className="text-xs text-theme-tertiary hover:text-rose-600 font-bold px-2 py-1 cursor-pointer transition-colors"
                           >
                             Remove
                           </button>
@@ -638,13 +638,13 @@ export const TournamentRegisterModal: React.FC = () => {
                     {/* Empty Slot 5 if roster not full */}
                     {!isRosterComplete && (
                       <div className="p-4 rounded-xl border-2 border-dashed border-violet-300 bg-violet-50/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex items-center gap-2.5 text-neutral-500">
+                        <div className="flex items-center gap-2.5 text-theme-tertiary">
                           <div className="w-9 h-9 rounded-full border border-violet-300 border-dashed flex items-center justify-center bg-violet-100/50">
                             <Plus className="w-4 h-4 text-[#5E43F3]" />
                           </div>
                           <div className="text-xs">
-                            <p className="font-bold text-neutral-800">Slot 5: Roamer / Tank</p>
-                            <p className="text-[11px] text-neutral-500">
+                            <p className="font-bold text-theme-primary">Slot 5: Roamer / Tank</p>
+                            <p className="text-[11px] text-theme-tertiary">
                               Add 1 player to complete your starting five
                             </p>
                           </div>
@@ -675,7 +675,7 @@ export const TournamentRegisterModal: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => setIsInvitePickerOpen(false)}
-                            className="text-neutral-400 hover:text-neutral-700 p-0.5 cursor-pointer"
+                            className="text-theme-tertiary hover:text-theme-secondary p-0.5 cursor-pointer"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -688,13 +688,13 @@ export const TournamentRegisterModal: React.FC = () => {
                           return (
                             <div
                               key={friend.id}
-                              className="flex items-center justify-between p-3 rounded-xl bg-white border border-violet-100 shadow-2xs hover:border-violet-300 transition-all"
+                              className="flex items-center justify-between p-3 rounded-xl bg-theme-surface border border-violet-100 shadow-2xs hover:border-violet-300 transition-all"
                             >
                               <div className="flex items-center gap-3">
                                 <Avatar src={friend.avatar} alt={friend.name} size="sm" />
                                 <div>
-                                  <p className="text-xs font-bold text-neutral-900">{friend.name}</p>
-                                  <p className="text-[10px] text-neutral-500">
+                                  <p className="text-xs font-bold text-theme-primary">{friend.name}</p>
+                                  <p className="text-[10px] text-theme-tertiary">
                                     @{friend.username} · {friend.preferredRole}
                                   </p>
                                 </div>
@@ -707,7 +707,7 @@ export const TournamentRegisterModal: React.FC = () => {
                                 onClick={() => handleAddTeammate(friend)}
                                 className={`py-1.5 px-3.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                   isAlreadyInRoster
-                                    ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed'
+                                    ? 'bg-theme-surface-hover text-theme-tertiary cursor-not-allowed'
                                     : 'bg-[#5E43F3] hover:bg-[#4E34E0] text-white shadow-xs'
                                 }`}
                               >
@@ -739,7 +739,7 @@ export const TournamentRegisterModal: React.FC = () => {
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm sm:text-base font-black text-white">{teamName}</h3>
-                      <span className="text-[10px] font-black bg-white/20 text-white px-2 py-0.5 rounded">
+                      <span className="text-[10px] font-black bg-theme-surface/20 text-white px-2 py-0.5 rounded">
                         [{teamTag}]
                       </span>
                     </div>
@@ -756,26 +756,26 @@ export const TournamentRegisterModal: React.FC = () => {
               </div>
 
               {/* Tournament Details Box */}
-              <div className="bg-white rounded-2xl border border-neutral-200 p-4.5 space-y-3 shadow-xs">
-                <h4 className="text-xs font-black text-neutral-900 uppercase tracking-wider">
+              <div className="bg-theme-surface rounded-2xl border border-theme-divider p-4.5 space-y-3 shadow-xs">
+                <h4 className="text-xs font-black text-theme-primary uppercase tracking-wider">
                   Tournament Entry Details
                 </h4>
                 <div className="space-y-2 text-xs">
-                  <div className="flex justify-between py-1 border-b border-neutral-100">
-                    <span className="text-neutral-500">Event</span>
-                    <span className="font-bold text-neutral-900">{event.title}</span>
+                  <div className="flex justify-between py-1 border-b border-theme-divider-light">
+                    <span className="text-theme-tertiary">Event</span>
+                    <span className="font-bold text-theme-primary">{event.title}</span>
                   </div>
-                  <div className="flex justify-between py-1 border-b border-neutral-100">
-                    <span className="text-neutral-500">Schedule</span>
-                    <span className="font-bold text-neutral-900">{event.date} · {event.time}</span>
+                  <div className="flex justify-between py-1 border-b border-theme-divider-light">
+                    <span className="text-theme-tertiary">Schedule</span>
+                    <span className="font-bold text-theme-primary">{event.date} · {event.time}</span>
                   </div>
-                  <div className="flex justify-between py-1 border-b border-neutral-100">
-                    <span className="text-neutral-500">Bracket Format</span>
-                    <span className="font-bold text-neutral-900">5v5 Single Elimination</span>
+                  <div className="flex justify-between py-1 border-b border-theme-divider-light">
+                    <span className="text-theme-tertiary">Bracket Format</span>
+                    <span className="font-bold text-theme-primary">5v5 Single Elimination</span>
                   </div>
                   <div className="flex justify-between py-1 pt-2 font-bold text-sm">
-                    <span className="text-neutral-800">Squad Entry Fee</span>
-                    <span className={entryFee === 0 ? 'text-emerald-600 font-black' : 'text-neutral-950 font-black'}>
+                    <span className="text-theme-primary">Squad Entry Fee</span>
+                    <span className={entryFee === 0 ? 'text-emerald-600 font-black' : 'text-theme-primary font-black'}>
                       {entryFee === 0 ? 'FREE (₦0)' : `₦${entryFee.toLocaleString()} NGN`}
                     </span>
                   </div>
@@ -784,12 +784,12 @@ export const TournamentRegisterModal: React.FC = () => {
 
               {/* Payment Method Selector (if paid event) */}
               {isPaidEvent ? (
-                <div className="bg-white rounded-2xl border border-neutral-200 p-4.5 space-y-4 shadow-xs">
+                <div className="bg-theme-surface rounded-2xl border border-theme-divider p-4.5 space-y-4 shadow-xs">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-black text-neutral-900 uppercase tracking-wider">
+                    <h4 className="text-xs font-black text-theme-primary uppercase tracking-wider">
                       Select Payment Method
                     </h4>
-                    <span className="text-[11px] text-neutral-500">Secure Instant Checkout</span>
+                    <span className="text-[11px] text-theme-tertiary">Secure Instant Checkout</span>
                   </div>
 
                   <div className="space-y-2.5">
@@ -801,7 +801,7 @@ export const TournamentRegisterModal: React.FC = () => {
                       className={`w-full p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${
                         paymentMethod === 'wallet'
                           ? 'border-[#5E43F3] bg-violet-50/60 ring-2 ring-[#5E43F3]/20'
-                          : 'border-neutral-200 hover:bg-neutral-50'
+                          : 'border-theme-divider hover:bg-theme-base'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -810,15 +810,15 @@ export const TournamentRegisterModal: React.FC = () => {
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="text-xs sm:text-sm font-black text-neutral-900">
+                            <p className="text-xs sm:text-sm font-black text-theme-primary">
                               Lao Line Gamer Wallet
                             </p>
                             <span className="text-[9px] font-black uppercase bg-[#5E43F3] text-white px-1.5 py-0.2 rounded">
                               RECOMMENDED
                             </span>
                           </div>
-                          <p className="text-xs text-neutral-500 mt-0.5">
-                            Balance: <strong className="text-neutral-900">₦{wallet.balance.toLocaleString()} NGN</strong>
+                          <p className="text-xs text-theme-tertiary mt-0.5">
+                            Balance: <strong className="text-theme-primary">₦{wallet.balance.toLocaleString()} NGN</strong>
                           </p>
                         </div>
                       </div>
@@ -857,7 +857,7 @@ export const TournamentRegisterModal: React.FC = () => {
                       className={`w-full p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${
                         paymentMethod === 'paystack'
                           ? 'border-[#5E43F3] bg-violet-50/60 ring-2 ring-[#5E43F3]/20'
-                          : 'border-neutral-200 hover:bg-neutral-50'
+                          : 'border-theme-divider hover:bg-theme-base'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -865,15 +865,15 @@ export const TournamentRegisterModal: React.FC = () => {
                           <Zap className="w-5 h-5" />
                         </div>
                         <div>
-                          <p className="text-xs sm:text-sm font-black text-neutral-900">
+                          <p className="text-xs sm:text-sm font-black text-theme-primary">
                             Paystack Payment Gateway
                           </p>
-                          <p className="text-xs text-neutral-500 mt-0.5">
+                          <p className="text-xs text-theme-tertiary mt-0.5">
                             Debit Card, Apple Pay, Bank Transfer, USSD
                           </p>
                         </div>
                       </div>
-                      <span className="text-xs font-bold text-neutral-600">Instant</span>
+                      <span className="text-xs font-bold text-theme-secondary">Instant</span>
                     </button>
                   </div>
                 </div>
@@ -903,17 +903,17 @@ export const TournamentRegisterModal: React.FC = () => {
                 <span className="text-xs font-black uppercase tracking-widest text-[#5E43F3] bg-violet-100 px-3 py-1 rounded-full">
                   Official Team Registration #HOK-992
                 </span>
-                <h3 className="text-xl sm:text-2xl font-black text-neutral-950 mt-2">
+                <h3 className="text-xl sm:text-2xl font-black text-theme-primary mt-2">
                   You're in the Tournament!
                 </h3>
-                <p className="text-xs text-neutral-500 max-w-md mx-auto">
-                  Team <strong className="text-neutral-900">{teamName} [{teamTag}]</strong> is registered for{' '}
-                  <strong className="text-neutral-900">{event.title}</strong>.
+                <p className="text-xs text-theme-tertiary max-w-md mx-auto">
+                  Team <strong className="text-theme-primary">{teamName} [{teamTag}]</strong> is registered for{' '}
+                  <strong className="text-theme-primary">{event.title}</strong>.
                 </p>
               </div>
 
               {/* Digital Pass Preview Card */}
-              <div className="bg-gradient-to-br from-neutral-950 to-neutral-900 text-white rounded-3xl p-5 sm:p-6 text-left border border-neutral-800 shadow-xl max-w-md mx-auto relative overflow-hidden">
+              <div className="bg-gradient-to-br from-neutral-950 to-neutral-900 text-white rounded-3xl p-5 sm:p-6 text-left border border-theme-divider-inverse shadow-xl max-w-md mx-auto relative overflow-hidden">
                 <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
                   <div className="flex items-center gap-2">
                     <img
@@ -933,17 +933,17 @@ export const TournamentRegisterModal: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-3 text-xs mb-4">
                   <div>
-                    <span className="text-[10px] text-neutral-400 uppercase">Check-in Time</span>
+                    <span className="text-[10px] text-theme-tertiary uppercase">Check-in Time</span>
                     <p className="font-bold text-white mt-0.5">30 mins before start</p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-neutral-400 uppercase">Roster</span>
+                    <span className="text-[10px] text-theme-tertiary uppercase">Roster</span>
                     <p className="font-bold text-white mt-0.5">5/5 Players</p>
                   </div>
                 </div>
 
                 <div className="bg-black/50 rounded-xl p-2.5 border border-white/10 flex items-center justify-between text-xs">
-                  <span className="text-neutral-400 font-mono text-[11px]">Pass ID: HOK-DST-2026</span>
+                  <span className="text-theme-tertiary font-mono text-[11px]">Pass ID: HOK-DST-2026</span>
                   <span className="text-emerald-400 font-bold">Ready on Mobile</span>
                 </div>
               </div>
@@ -964,10 +964,10 @@ export const TournamentRegisterModal: React.FC = () => {
 
         {/* Action Footer for Step 1 & Step 2 */}
         {currentStep !== 'confirmed' && (
-          <footer className="sticky bottom-0 z-20 p-4 sm:px-6 border-t border-neutral-200 bg-white/95 backdrop-blur-md flex items-center justify-between gap-3 shrink-0">
+          <footer className="sticky bottom-0 z-20 p-4 sm:px-6 border-t border-theme-divider bg-theme-surface/95 backdrop-blur-md flex items-center justify-between gap-3 shrink-0">
             {currentStep === 'roster' && (
               <>
-                <div className="text-xs text-neutral-600">
+                <div className="text-xs text-theme-secondary">
                   <span>Squad: </span>
                   <strong className={isRosterComplete ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}>
                     {roster.length}/5 Players {isRosterComplete ? '(Ready)' : '(1 person needed)'}
@@ -982,7 +982,7 @@ export const TournamentRegisterModal: React.FC = () => {
                   className={`py-3 px-6 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer flex items-center gap-2 ${
                     isRosterComplete
                       ? 'bg-[#5E43F3] hover:bg-[#4E34E0] text-white shadow-lg shadow-[#5E43F3]/25 active:scale-95'
-                      : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
+                      : 'bg-theme-surface-active text-theme-tertiary cursor-not-allowed'
                   }`}
                 >
                   <span>Save Team & Proceed</span>
@@ -996,7 +996,7 @@ export const TournamentRegisterModal: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setCurrentStep('roster')}
-                  className="px-4 py-3 rounded-xl border border-neutral-200 hover:bg-neutral-50 text-neutral-700 text-xs font-bold transition-all cursor-pointer"
+                  className="px-4 py-3 rounded-xl border border-theme-divider hover:bg-theme-base text-theme-secondary text-xs font-bold transition-all cursor-pointer"
                 >
                   Back to Roster
                 </button>
@@ -1009,7 +1009,7 @@ export const TournamentRegisterModal: React.FC = () => {
                   className={`py-3 px-6 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer flex items-center gap-2 ${
                     !isProcessing && (!isPaidEvent || paymentMethod !== 'wallet' || hasEnoughWalletBalance)
                       ? 'bg-[#5E43F3] hover:bg-[#4E34E0] text-white shadow-lg shadow-[#5E43F3]/25 active:scale-95'
-                      : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
+                      : 'bg-theme-surface-active text-theme-tertiary cursor-not-allowed'
                   }`}
                 >
                   {isProcessing ? (

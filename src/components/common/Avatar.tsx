@@ -69,7 +69,7 @@ export const Avatar: React.FC<AvatarProps> = ({
     >
       {/* Inner image circle — overflow-hidden lives here, keeps photo cropped */}
       <div
-        className={`w-full h-full rounded-full overflow-hidden bg-neutral-200 border border-black/5 ${
+        className={`w-full h-full rounded-full overflow-hidden bg-theme-surface-active border border-black/5 ${
           onClick ? 'hover:opacity-90 active:scale-95 transition-all' : ''
         }`}
       >
@@ -85,7 +85,7 @@ export const Avatar: React.FC<AvatarProps> = ({
             }}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-neutral-100 text-neutral-600 font-bold">
+          <div className="flex h-full w-full items-center justify-center bg-theme-surface-hover text-theme-secondary font-bold">
             {initials}
           </div>
         )}

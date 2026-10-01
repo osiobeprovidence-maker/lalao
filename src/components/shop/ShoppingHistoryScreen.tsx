@@ -110,31 +110,31 @@ export const ShoppingHistoryScreen: React.FC<ShoppingHistoryScreenProps> = ({
     >
       <div
         id="shopping-history-container"
-        className="bg-white w-full sm:max-w-md md:max-w-lg h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 relative z-10 overflow-hidden"
+        className="bg-theme-surface w-full sm:max-w-md md:max-w-lg h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 relative z-10 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <header className="px-4 sm:px-5 py-4 border-b border-neutral-100 bg-white sticky top-0 z-20 shrink-0">
+        <header className="px-4 sm:px-5 py-4 border-b border-theme-divider-light bg-theme-surface sticky top-0 z-20 shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <button
                 id="btn-back-shopping-history"
                 type="button"
                 onClick={handleBack}
-                className="p-1.5 -ml-1 rounded-full text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer"
+                className="p-1.5 -ml-1 rounded-full text-theme-secondary hover:text-theme-primary hover:bg-theme-surface-hover active:scale-95 transition-all cursor-pointer"
                 title="Back"
                 aria-label="Back"
               >
                 <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
               </button>
               <div>
-                <h2 className="text-base font-bold text-neutral-900 flex items-center gap-2 leading-tight">
+                <h2 className="text-base font-bold text-theme-primary flex items-center gap-2 leading-tight">
                   <span>Shopping History</span>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-theme-surface-hover text-theme-secondary">
                     {userOrders.length}
                   </span>
                 </h2>
-                <p className="text-[11px] text-neutral-400">
+                <p className="text-[11px] text-theme-tertiary">
                   Your past orders & verified receipts
                 </p>
               </div>
@@ -148,7 +148,7 @@ export const ShoppingHistoryScreen: React.FC<ShoppingHistoryScreenProps> = ({
                   onClose();
                   setIsCartOpen(true);
                 }}
-                className="relative p-1.5 rounded-full text-neutral-500 hover:text-[#5E43F3] hover:bg-neutral-100 transition-colors cursor-pointer"
+                className="relative p-1.5 rounded-full text-theme-tertiary hover:text-[#5E43F3] hover:bg-theme-surface-hover transition-colors cursor-pointer"
                 title="View Shopping Cart"
                 aria-label="View Shopping Cart"
               >
@@ -163,7 +163,7 @@ export const ShoppingHistoryScreen: React.FC<ShoppingHistoryScreenProps> = ({
                 id="btn-close-shopping-history"
                 type="button"
                 onClick={onClose}
-                className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+                className="p-1.5 rounded-full text-theme-tertiary hover:text-theme-secondary hover:bg-theme-surface-hover transition-colors cursor-pointer"
                 aria-label="Close"
               >
                 <X className="w-5 h-5" />
@@ -173,20 +173,20 @@ export const ShoppingHistoryScreen: React.FC<ShoppingHistoryScreenProps> = ({
 
           {/* Search bar */}
           <div className="mt-3 relative">
-            <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-theme-tertiary absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               id="input-search-history"
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by order ID, item name, or shop..."
-              className="w-full pl-9.5 pr-4 py-2 bg-neutral-100 rounded-xl text-xs text-neutral-800 placeholder-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-[#5E43F3]/20 focus:bg-white transition-all"
+              className="w-full pl-9.5 pr-4 py-2 bg-theme-surface-hover rounded-xl text-xs text-theme-primary placeholder-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-[#5E43F3]/20 focus:bg-theme-surface transition-all"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 text-xs font-bold"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-theme-tertiary hover:text-theme-secondary text-xs font-bold"
               >
                 Clear
               </button>
@@ -210,7 +210,7 @@ export const ShoppingHistoryScreen: React.FC<ShoppingHistoryScreenProps> = ({
                 className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                   activeFilter === chip.id
                     ? 'bg-[#5E43F3] text-white shadow-xs'
-                    : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                    : 'bg-theme-surface-hover text-theme-secondary hover:bg-theme-surface-active'
                 }`}
               >
                 {chip.label}
@@ -224,22 +224,22 @@ export const ShoppingHistoryScreen: React.FC<ShoppingHistoryScreenProps> = ({
           {isLoading ? (
             <div className="py-16 text-center space-y-3">
               <div className="w-8 h-8 border-3 border-[#5E43F3] border-t-transparent rounded-full animate-spin mx-auto" />
-              <p className="text-xs text-neutral-500">Loading shopping history...</p>
+              <p className="text-xs text-theme-tertiary">Loading shopping history...</p>
             </div>
           ) : filteredOrders.length === 0 ? (
             <div
               id="empty-shopping-history"
               className="py-16 px-6 text-center flex flex-col items-center justify-center space-y-3"
             >
-              <div className="w-16 h-16 rounded-3xl bg-neutral-100 flex items-center justify-center text-neutral-400 mb-1">
+              <div className="w-16 h-16 rounded-3xl bg-theme-surface-hover flex items-center justify-center text-theme-tertiary mb-1">
                 <ShoppingBag className="w-8 h-8 stroke-[1.5]" />
               </div>
-              <h3 className="text-base font-bold text-neutral-900">
+              <h3 className="text-base font-bold text-theme-primary">
                 {searchQuery || activeFilter !== 'all'
                   ? 'No matching orders found'
                   : 'No orders placed yet'}
               </h3>
-              <p className="text-xs text-neutral-500 max-w-xs leading-relaxed">
+              <p className="text-xs text-theme-tertiary max-w-xs leading-relaxed">
                 {searchQuery || activeFilter !== 'all'
                   ? 'Try adjusting your search terms or filter criteria.'
                   : 'When you make purchases from verified shops on LAO LINE, your orders and receipts will appear here.'}
@@ -252,7 +252,7 @@ export const ShoppingHistoryScreen: React.FC<ShoppingHistoryScreenProps> = ({
                     setSearchQuery('');
                     setActiveFilter('all');
                   }}
-                  className="mt-3 px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold cursor-pointer transition-colors"
+                  className="mt-3 px-4 py-2 rounded-xl bg-theme-surface-hover hover:bg-theme-surface-active text-theme-secondary text-xs font-bold cursor-pointer transition-colors"
                 >
                   Reset Filters
                 </button>
@@ -289,7 +289,7 @@ export const ShoppingHistoryScreen: React.FC<ShoppingHistoryScreenProps> = ({
                   key={order.id}
                   id={`order-card-${order.id}`}
                   onClick={() => onSelectOrder(order)}
-                  className="p-4 rounded-2xl border border-neutral-200/90 bg-white hover:border-[#5E43F3]/50 hover:shadow-md transition-all cursor-pointer space-y-3 group"
+                  className="p-4 rounded-2xl border border-theme-divider/90 bg-theme-surface hover:border-[#5E43F3]/50 hover:shadow-md transition-all cursor-pointer space-y-3 group"
                 >
                   {/* Shop & Date Header */}
                   <div className="flex items-center justify-between">
@@ -301,18 +301,18 @@ export const ShoppingHistoryScreen: React.FC<ShoppingHistoryScreenProps> = ({
                       />
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <h4 className="text-xs font-bold text-neutral-900 truncate">
+                          <h4 className="text-xs font-bold text-theme-primary truncate">
                             {order.storeName}
                           </h4>
                           <Badge type={order.storeBadge || 'BIZ'} size="sm" />
                         </div>
-                        <p className="text-[10px] text-neutral-400 font-mono">
+                        <p className="text-[10px] text-theme-tertiary font-mono">
                           {order.dateFormatted} · #{order.id}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1 text-neutral-400 group-hover:text-[#5E43F3] transition-colors">
+                    <div className="flex items-center gap-1 text-theme-tertiary group-hover:text-[#5E43F3] transition-colors">
                       <span className="text-[11px] font-semibold hidden sm:inline">Details</span>
                       <ChevronRight className="w-4 h-4" />
                     </div>
@@ -321,7 +321,7 @@ export const ShoppingHistoryScreen: React.FC<ShoppingHistoryScreenProps> = ({
                   {/* Items Preview */}
                   <div className="flex items-center gap-3 pt-1">
                     {/* First product image */}
-                    <div className="w-14 h-14 rounded-xl bg-neutral-100 overflow-hidden shrink-0 border border-neutral-100">
+                    <div className="w-14 h-14 rounded-xl bg-theme-surface-hover overflow-hidden shrink-0 border border-theme-divider-light">
                       <img
                         src={order.items[0]?.product.image}
                         alt={order.items[0]?.product.name}
@@ -335,21 +335,21 @@ export const ShoppingHistoryScreen: React.FC<ShoppingHistoryScreenProps> = ({
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-neutral-900 line-clamp-1">
+                      <p className="text-xs font-bold text-theme-primary line-clamp-1">
                         {order.items?.[0]?.product?.name || 'Order Item'}
                       </p>
-                      <p className="text-[11px] text-neutral-500 mt-0.5">
+                      <p className="text-[11px] text-theme-tertiary mt-0.5">
                         {(order.items?.length || 0) === 1
                           ? `Qty: ${order.items?.[0]?.quantity || 1}`
                           : `+${(order.items?.length || 0) - 1} other item${(order.items?.length || 0) > 2 ? 's' : ''} (Total: ${order.items?.reduce((s, it) => s + (it.quantity || 0), 0) || 0} units)`}
                       </p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs font-black text-neutral-950">
+                        <span className="text-xs font-black text-theme-primary">
                           {currency}
                           {order.totalAmount.toLocaleString()}
                         </span>
                         {order.deliveryType === 'pickup' && (
-                          <span className="text-[10px] text-neutral-400 font-medium">
+                          <span className="text-[10px] text-theme-tertiary font-medium">
                             · Store Pickup
                           </span>
                         )}
@@ -358,7 +358,7 @@ export const ShoppingHistoryScreen: React.FC<ShoppingHistoryScreenProps> = ({
                   </div>
 
                   {/* Footer Status Indicators */}
-                  <div className="pt-2 border-t border-neutral-100 flex items-center justify-between text-[11px]">
+                  <div className="pt-2 border-t border-theme-divider-light flex items-center justify-between text-[11px]">
                     <div className="flex items-center gap-1.5">
                       {order.paymentStatus === 'paid' ? (
                         <span className="inline-flex items-center gap-1 text-emerald-600 font-bold">
@@ -370,7 +370,7 @@ export const ShoppingHistoryScreen: React.FC<ShoppingHistoryScreenProps> = ({
                           Payment Pending
                         </span>
                       )}
-                      <span className="text-neutral-300">·</span>
+                      <span className="text-theme-tertiary">·</span>
                       <span
                         className={`font-semibold capitalize ${
                           isDelivered
@@ -384,7 +384,7 @@ export const ShoppingHistoryScreen: React.FC<ShoppingHistoryScreenProps> = ({
                       </span>
                     </div>
 
-                    <span className="text-[10px] text-neutral-400 group-hover:text-[#5E43F3] font-medium transition-colors">
+                    <span className="text-[10px] text-theme-tertiary group-hover:text-[#5E43F3] font-medium transition-colors">
                       View Receipt →
                     </span>
                   </div>

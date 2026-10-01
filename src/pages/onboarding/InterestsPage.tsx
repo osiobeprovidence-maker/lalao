@@ -71,16 +71,16 @@ export const InterestsPage: React.FC = () => {
         
         {/* Selection count */}
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-neutral-500">
+          <span className="text-sm font-semibold text-theme-tertiary">
             {selected.size} selected 
             {selected.size < MIN_REQUIRED && (
-              <span className="text-neutral-400 font-medium ml-1">
+              <span className="text-theme-tertiary font-medium ml-1">
                 (Select at least {MIN_REQUIRED - selected.size} more)
               </span>
             )}
           </span>
           {selected.size >= MIN_REQUIRED && (
-            <span className="text-xs font-bold text-[#3823A4] bg-[#F8F7FF] px-2.5 py-1 rounded-full border border-indigo-100">
+            <span className="text-xs font-bold text-[#3823A4] bg-theme-base px-2.5 py-1 rounded-full border border-indigo-100">
               ✓ Good to go
             </span>
           )}
@@ -98,7 +98,7 @@ export const InterestsPage: React.FC = () => {
                 className={`px-4 py-2.5 rounded-full border-2 text-sm font-bold transition-all cursor-pointer active:scale-[0.97] ${
                   isSelected
                     ? 'border-[#3823A4] bg-[#3823A4] text-white shadow-md shadow-[#3823A4]/20'
-                    : 'border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300 hover:bg-neutral-50'
+                    : 'border-theme-divider bg-theme-surface text-theme-secondary hover:border-theme-divider-strong hover:bg-theme-base'
                 }`}
               >
                 {label}

@@ -58,11 +58,11 @@ export const EventDetailModal: React.FC = () => {
   return (
     <div
       id="screen-event-detail"
-      className="absolute inset-0 z-40 bg-white flex flex-col min-h-full overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-200"
+      className="absolute inset-0 z-40 bg-theme-surface flex flex-col min-h-full overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-200"
     >
       <div className="w-full max-w-3xl mx-auto flex flex-col flex-1 pb-24">
         {/* Banner with Floating Actions */}
-        <div className="relative aspect-16/9 sm:aspect-21/9 bg-neutral-950 shrink-0 overflow-hidden sm:rounded-b-3xl">
+        <div className="relative aspect-16/9 sm:aspect-21/9 bg-theme-inverse shrink-0 overflow-hidden sm:rounded-b-3xl">
           <img
             src={event.coverImage}
             alt={event.title}
@@ -103,12 +103,12 @@ export const EventDetailModal: React.FC = () => {
                 {event.type.toUpperCase()}
               </span>
               {event.isOnline ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/20 backdrop-blur-md text-white">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-theme-surface/20 backdrop-blur-md text-white">
                   <Globe className="w-3 h-3 text-blue-300" />
                   Online
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/20 backdrop-blur-md text-white">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-theme-surface/20 backdrop-blur-md text-white">
                   <MapPin className="w-3 h-3 text-rose-300" />
                   Live Arena
                 </span>
@@ -132,7 +132,7 @@ export const EventDetailModal: React.FC = () => {
                 setIsEventDetailOpen(false);
                 openHonorOfKingsPage();
               }}
-              className="mt-2 flex items-center gap-2 text-xs text-neutral-200 hover:text-white group cursor-pointer"
+              className="mt-2 flex items-center gap-2 text-xs text-theme-tertiary hover:text-white group cursor-pointer"
             >
               <Avatar
                 src={event.organizationAvatar}
@@ -149,20 +149,20 @@ export const EventDetailModal: React.FC = () => {
         </div>
 
         {/* Quick Highlights Bar */}
-        <div className="bg-neutral-50 px-4 sm:px-6 py-3 border-b border-neutral-200 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+        <div className="bg-theme-base px-4 sm:px-6 py-3 border-b border-theme-divider grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-[#5E43F3] shrink-0" />
             <div>
-              <p className="text-[10px] text-neutral-500 font-medium uppercase">Date</p>
-              <p className="font-bold text-neutral-900">{event.date}</p>
+              <p className="text-[10px] text-theme-tertiary font-medium uppercase">Date</p>
+              <p className="font-bold text-theme-primary">{event.date}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-[#5E43F3] shrink-0" />
             <div>
-              <p className="text-[10px] text-neutral-500 font-medium uppercase">Time</p>
-              <p className="font-bold text-neutral-900">{event.time}</p>
+              <p className="text-[10px] text-theme-tertiary font-medium uppercase">Time</p>
+              <p className="font-bold text-theme-primary">{event.time}</p>
             </div>
           </div>
 
@@ -170,33 +170,33 @@ export const EventDetailModal: React.FC = () => {
             <div className="flex items-center gap-2">
               <Trophy className="w-4 h-4 text-amber-600 shrink-0" />
               <div>
-                <p className="text-[10px] text-neutral-500 font-medium uppercase">Prize Pool</p>
-                <p className="font-black text-neutral-950">₦{event.prizePool.toLocaleString()}</p>
+                <p className="text-[10px] text-theme-tertiary font-medium uppercase">Prize Pool</p>
+                <p className="font-black text-theme-primary">₦{event.prizePool.toLocaleString()}</p>
               </div>
             </div>
           ) : isTicketEligible && event.ticketPrice ? (
             <div className="flex items-center gap-2">
               <Ticket className="w-4 h-4 text-violet-600 shrink-0" />
               <div>
-                <p className="text-[10px] text-neutral-500 font-medium uppercase">Ticket</p>
-                <p className="font-black text-neutral-950">₦{event.ticketPrice.toLocaleString()}</p>
+                <p className="text-[10px] text-theme-tertiary font-medium uppercase">Ticket</p>
+                <p className="font-black text-theme-primary">₦{event.ticketPrice.toLocaleString()}</p>
               </div>
             </div>
           ) : (
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
               <div>
-                <p className="text-[10px] text-neutral-500 font-medium uppercase">Admission</p>
+                <p className="text-[10px] text-theme-tertiary font-medium uppercase">Admission</p>
                 <p className="font-bold text-emerald-700">Free Entry</p>
               </div>
             </div>
           )}
 
           <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-neutral-500 shrink-0" />
+            <Users className="w-4 h-4 text-theme-tertiary shrink-0" />
             <div>
-              <p className="text-[10px] text-neutral-500 font-medium uppercase">Capacity</p>
-              <p className="font-bold text-neutral-900">
+              <p className="text-[10px] text-theme-tertiary font-medium uppercase">Capacity</p>
+              <p className="font-bold text-theme-primary">
                 {event.isTournament
                   ? `${event.registeredTeamsCount ?? 0}/${event.teamsCount ?? 32} Teams`
                   : `${event.availableTickets ?? 'Open'} Spots`}
@@ -206,14 +206,14 @@ export const EventDetailModal: React.FC = () => {
         </div>
 
         {/* Section Tabs: Overview | Rules | Schedule | Teams */}
-        <div className="flex items-center border-b border-neutral-200 px-4 sm:px-6 gap-6 bg-white overflow-x-auto text-xs font-bold">
+        <div className="flex items-center border-b border-theme-divider px-4 sm:px-6 gap-6 bg-theme-surface overflow-x-auto text-xs font-bold">
           <button
             type="button"
             onClick={() => setActiveTab('overview')}
             className={`py-3 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
               activeTab === 'overview'
                 ? 'border-[#5E43F3] text-[#5E43F3]'
-                : 'border-transparent text-neutral-500 hover:text-neutral-900'
+                : 'border-transparent text-theme-tertiary hover:text-theme-primary'
             }`}
           >
             Overview
@@ -225,7 +225,7 @@ export const EventDetailModal: React.FC = () => {
               className={`py-3 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
                 activeTab === 'rules'
                   ? 'border-[#5E43F3] text-[#5E43F3]'
-                  : 'border-transparent text-neutral-500 hover:text-neutral-900'
+                  : 'border-transparent text-theme-tertiary hover:text-theme-primary'
               }`}
             >
               Rules & Format
@@ -238,7 +238,7 @@ export const EventDetailModal: React.FC = () => {
               className={`py-3 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
                 activeTab === 'schedule'
                   ? 'border-[#5E43F3] text-[#5E43F3]'
-                  : 'border-transparent text-neutral-500 hover:text-neutral-900'
+                  : 'border-transparent text-theme-tertiary hover:text-theme-primary'
               }`}
             >
               Schedule
@@ -251,7 +251,7 @@ export const EventDetailModal: React.FC = () => {
               className={`py-3 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
                 activeTab === 'teams'
                   ? 'border-[#5E43F3] text-[#5E43F3]'
-                  : 'border-transparent text-neutral-500 hover:text-neutral-900'
+                  : 'border-transparent text-theme-tertiary hover:text-theme-primary'
               }`}
             >
               Registered Teams ({event.registeredTeams.length})
@@ -265,22 +265,22 @@ export const EventDetailModal: React.FC = () => {
             <>
               {/* Description */}
               <div>
-                <h3 className="text-sm font-bold text-neutral-900 mb-2">About This Event</h3>
-                <p className="text-xs sm:text-sm text-neutral-700 leading-relaxed">
+                <h3 className="text-sm font-bold text-theme-primary mb-2">About This Event</h3>
+                <p className="text-xs sm:text-sm text-theme-secondary leading-relaxed">
                   {event.description}
                 </p>
               </div>
 
               {/* Venue / Location Details */}
-              <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-200 space-y-2">
+              <div className="bg-theme-base rounded-2xl p-4 border border-theme-divider space-y-2">
                 <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-white border border-neutral-200 text-[#5E43F3]">
+                  <div className="p-2 rounded-xl bg-theme-surface border border-theme-divider text-[#5E43F3]">
                     <MapPin className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-neutral-900">Location & Attendance</h4>
-                    <p className="text-xs text-neutral-600 mt-0.5">{event.location}</p>
-                    <p className="text-[11px] text-neutral-400 mt-1">
+                    <h4 className="text-xs font-bold text-theme-primary">Location & Attendance</h4>
+                    <p className="text-xs text-theme-secondary mt-0.5">{event.location}</p>
+                    <p className="text-[11px] text-theme-tertiary mt-1">
                       {event.isOnline
                         ? 'Discord voice & match lobbies will be coordinated with all verified team captains.'
                         : 'Please show your digital event QR code at the Lao Line Arena check-in desk.'}
@@ -294,7 +294,7 @@ export const EventDetailModal: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <Trophy className="w-4 h-4 text-amber-600" />
-                    <h3 className="text-sm font-bold text-neutral-900">Prize Pool Distribution</h3>
+                    <h3 className="text-sm font-bold text-theme-primary">Prize Pool Distribution</h3>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {event.prizes.map((prize, idx) => (
@@ -324,7 +324,7 @@ export const EventDetailModal: React.FC = () => {
                   <h4 className="text-xs font-bold text-[#5E43F3]">
                     Full Event Lifecycle on Lao Line
                   </h4>
-                  <p className="text-xs text-neutral-600 mt-0.5">
+                  <p className="text-xs text-theme-secondary mt-0.5">
                     Honor of Kings uses Lao Line to manage team formations, player verification,
                     instant ticketing, and digital entry passes.
                   </p>
@@ -337,13 +337,13 @@ export const EventDetailModal: React.FC = () => {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <ShieldAlert className="w-4 h-4 text-[#5E43F3]" />
-                <h3 className="text-sm font-bold text-neutral-900">Tournament Rules & Guidelines</h3>
+                <h3 className="text-sm font-bold text-theme-primary">Tournament Rules & Guidelines</h3>
               </div>
               <ul className="space-y-2.5">
                 {event.rules.map((rule, idx) => (
                   <li
                     key={idx}
-                    className="flex items-start gap-2.5 text-xs text-neutral-700 bg-neutral-50 p-3 rounded-xl border border-neutral-100"
+                    className="flex items-start gap-2.5 text-xs text-theme-secondary bg-theme-base p-3 rounded-xl border border-theme-divider-light"
                   >
                     <span className="w-5 h-5 rounded-full bg-violet-100 text-[#5E43F3] font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">
                       {idx + 1}
@@ -359,16 +359,16 @@ export const EventDetailModal: React.FC = () => {
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-[#5E43F3]" />
-                <h3 className="text-sm font-bold text-neutral-900">Match Timeline</h3>
+                <h3 className="text-sm font-bold text-theme-primary">Match Timeline</h3>
               </div>
-              <div className="space-y-2 relative before:absolute before:left-3 before:top-3 before:bottom-3 before:w-0.5 before:bg-neutral-200">
+              <div className="space-y-2 relative before:absolute before:left-3 before:top-3 before:bottom-3 before:w-0.5 before:bg-theme-surface-active">
                 {event.schedule.map((item, idx) => (
                   <div key={idx} className="relative flex items-center gap-4 pl-8 py-1.5">
                     <div className="absolute left-1.5 w-3 h-3 rounded-full bg-[#5E43F3] ring-4 ring-white" />
-                    <span className="text-xs font-black text-neutral-900 w-18 shrink-0">
+                    <span className="text-xs font-black text-theme-primary w-18 shrink-0">
                       {item.time}
                     </span>
-                    <span className="text-xs text-neutral-700 font-medium">{item.activity}</span>
+                    <span className="text-xs text-theme-secondary font-medium">{item.activity}</span>
                   </div>
                 ))}
               </div>
@@ -378,10 +378,10 @@ export const EventDetailModal: React.FC = () => {
           {activeTab === 'teams' && event.registeredTeams && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-neutral-900">
+                <h3 className="text-sm font-bold text-theme-primary">
                   Confirmed Squads ({event.registeredTeams.length})
                 </h3>
-                <span className="text-xs text-neutral-500 font-medium">
+                <span className="text-xs text-theme-tertiary font-medium">
                   {event.maxTeams ? `${event.maxTeams - event.registeredTeams.length} slots left` : ''}
                 </span>
               </div>
@@ -389,24 +389,24 @@ export const EventDetailModal: React.FC = () => {
                 {event.registeredTeams.map((team) => (
                   <div
                     key={team.id}
-                    className="p-3 rounded-xl border border-neutral-200 bg-white flex items-center gap-3"
+                    className="p-3 rounded-xl border border-theme-divider bg-theme-surface flex items-center gap-3"
                   >
                     <img
                       src={team.logo}
                       alt={team.name}
                       referrerPolicy="no-referrer"
-                      className="w-10 h-10 rounded-xl object-cover border border-neutral-100 bg-neutral-100"
+                      className="w-10 h-10 rounded-xl object-cover border border-theme-divider-light bg-theme-surface-hover"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <h4 className="text-xs font-bold text-neutral-900 truncate">
+                        <h4 className="text-xs font-bold text-theme-primary truncate">
                           {team.name}
                         </h4>
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-neutral-100 text-neutral-600">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-theme-surface-hover text-theme-secondary">
                           [{team.tag}]
                         </span>
                       </div>
-                      <p className="text-[11px] text-neutral-500 truncate mt-0.5">
+                      <p className="text-[11px] text-theme-tertiary truncate mt-0.5">
                         Captain: {team.captain} · {team.membersCount} Players
                       </p>
                     </div>
@@ -418,10 +418,10 @@ export const EventDetailModal: React.FC = () => {
         </div>
 
         {/* Sticky Action Footer */}
-        <div className="sticky bottom-0 z-20 p-4 sm:px-6 bg-white/95 backdrop-blur-md border-t border-neutral-200 flex items-center justify-between gap-3 shrink-0">
+        <div className="sticky bottom-0 z-20 p-4 sm:px-6 bg-theme-surface/95 backdrop-blur-md border-t border-theme-divider flex items-center justify-between gap-3 shrink-0">
           <div className="text-xs">
-            <span className="text-neutral-500">Status: </span>
-            <span className="font-bold text-neutral-900 capitalize">
+            <span className="text-theme-tertiary">Status: </span>
+            <span className="font-bold text-theme-primary capitalize">
               {event.registrationStatus.replace('_', ' ')}
             </span>
           </div>
@@ -444,7 +444,7 @@ export const EventDetailModal: React.FC = () => {
                 type="button"
                 id="btn-detail-get-ticket"
                 onClick={handleTicketClick}
-                className="py-2.5 px-5 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-white text-xs font-black transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-2"
+                className="py-2.5 px-5 rounded-xl bg-theme-inverse hover:bg-theme-inverse text-theme-text-inverse text-xs font-black transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-2"
               >
                 <Ticket className="w-4 h-4 text-violet-300" />
                 <span>Get Ticket (₦{event.ticketPrice?.toLocaleString()})</span>

@@ -798,17 +798,17 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
   return (
     <div
       id="create-cycle-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black overflow-hidden animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-theme-inverse overflow-hidden animate-in fade-in duration-200"
     >
       <div
         ref={containerRef}
         id="create-cycle-fullscreen"
         className={`relative w-full h-full max-w-[500px] flex flex-col transition-colors duration-500 ${
-          contentType === 'text' ? `bg-gradient-to-br ${selectedGradient}` : 'bg-black'
+          contentType === 'text' ? `bg-gradient-to-br ${selectedGradient}` : 'bg-theme-inverse'
         }`}
       >
                 {step === 'camera' && (
-          <div className="absolute inset-0 z-40 bg-black">
+          <div className="absolute inset-0 z-40 bg-theme-inverse">
             <video ref={videoPreviewRef} autoPlay playsInline muted className="w-full h-full object-cover" />
             
             {/* Top controls */}
@@ -821,7 +821,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
               </button>
               {isRecordingVideo && (
                 <div className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold flex items-center gap-2 animate-pulse">
-                  <div className="w-2 h-2 bg-white rounded-full" /> {recordingSeconds}s
+                  <div className="w-2 h-2 bg-theme-surface rounded-full" /> {recordingSeconds}s
                 </div>
               )}
             </div>
@@ -829,7 +829,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
             {/* Bottom controls */}
             <div className="absolute bottom-10 left-0 right-0 flex justify-center items-center gap-8 z-50">
                {!isRecordingVideo && (
-                 <button onClick={takePhoto} className="w-16 h-16 rounded-full border-4 border-white bg-white/30 flex items-center justify-center">
+                 <button onClick={takePhoto} className="w-16 h-16 rounded-full border-4 border-white bg-theme-surface/30 flex items-center justify-center">
                     <Camera className="w-8 h-8 text-white" />
                  </button>
                )}
@@ -841,7 +841,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
         
         {/* Media Background */}
         {contentType !== 'text' && selectedMedia && (
-          <div className="absolute inset-0 z-0 flex items-center justify-center bg-black overflow-hidden">
+          <div className="absolute inset-0 z-0 flex items-center justify-center bg-theme-inverse overflow-hidden">
              {/* Blurred background for letterboxing */}
              <div className="absolute inset-0 z-0 pointer-events-none">
                 {mediaType === 'video' ? (
@@ -904,7 +904,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
           <button
             type="button"
             onClick={onClose}
-            className="p-2 -ml-2 rounded-full text-white hover:bg-white/10 transition-colors"
+            className="p-2 -ml-2 rounded-full text-white hover:bg-theme-surface/10 transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
@@ -914,7 +914,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
               <button
                 type="button"
                 onClick={() => setVideoMuted(!videoMuted)}
-                className="p-2 rounded-full text-white hover:bg-white/10 transition-colors"
+                className="p-2 rounded-full text-white hover:bg-theme-surface/10 transition-colors"
                 title={videoMuted ? "Unmute Video" : "Mute Video"}
               >
                 {videoMuted ? <VolumeX className="w-6 h-6 text-rose-400" /> : <Volume2 className="w-6 h-6" />}
@@ -930,7 +930,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
                 setContentType('text');
                 setSelectedMedia('');
               }}
-              className="p-2 rounded-full text-white hover:bg-white/10 transition-colors"
+              className="p-2 rounded-full text-white hover:bg-theme-surface/10 transition-colors"
               title="Change Background Color"
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -942,7 +942,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
               <button
                 type="button"
                 onClick={() => setEmojiPickerOpen((prev) => !prev)}
-                className="p-2 rounded-full text-white hover:bg-white/10 transition-colors"
+                className="p-2 rounded-full text-white hover:bg-theme-surface/10 transition-colors"
                 title="Emoji"
               >
                 <Smile className="w-6 h-6" />
@@ -957,7 +957,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
             <button
               type="button"
               onClick={() => setStickerLibraryOpen((prev) => !prev)}
-              className="p-2 rounded-full text-white hover:bg-white/10 transition-colors"
+              className="p-2 rounded-full text-white hover:bg-theme-surface/10 transition-colors"
               title="Stickers"
             >
               <Sticker className="w-6 h-6" />
@@ -966,7 +966,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
             <button
               type="button"
               onClick={() => setStep(step === 'audio' ? 'customize' : 'audio')}
-              className="p-2 rounded-full text-white hover:bg-white/10 transition-colors"
+              className="p-2 rounded-full text-white hover:bg-theme-surface/10 transition-colors"
               title="Music"
             >
               <Music className="w-6 h-6" />
@@ -1076,7 +1076,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
               aria-label="Stop recording"
               className="mt-2 w-14 h-14 rounded-full bg-rose-500 hover:bg-rose-400 flex items-center justify-center shadow-xl active:scale-95 transition-all"
             >
-              <div className="w-5 h-5 rounded bg-white" />
+              <div className="w-5 h-5 rounded bg-theme-surface" />
             </button>
             <p className="text-white/50 text-xs">Tap to stop</p>
           </div>
@@ -1104,7 +1104,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
                 type="button"
                 onClick={toggleAudioPlayback}
                 aria-label={isPlayingAudio ? 'Pause audio' : 'Play audio'}
-                className="w-12 h-12 rounded-full bg-white/15 hover:bg-white/25 border border-white/20 flex items-center justify-center text-white transition-all active:scale-95"
+                className="w-12 h-12 rounded-full bg-theme-surface/15 hover:bg-theme-surface/25 border border-white/20 flex items-center justify-center text-white transition-all active:scale-95"
               >
                 {isPlayingAudio ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 translate-x-[1px]" />}
               </button>
@@ -1146,10 +1146,10 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
 
         {/* Overlays */}
         {stickerLibraryOpen && (
-          <div className="absolute inset-x-0 bottom-24 z-40 bg-white/95 backdrop-blur-xl rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.2)] max-h-[50vh] flex flex-col animate-in slide-in-from-bottom-10">
-            <div className="flex items-center justify-between p-4 border-b border-neutral-100">
-              <h4 className="font-bold text-neutral-900">Stickers</h4>
-              <button onClick={() => setStickerLibraryOpen(false)} className="p-1 text-neutral-500 hover:bg-neutral-100 rounded-full">
+          <div className="absolute inset-x-0 bottom-24 z-40 bg-theme-surface/95 backdrop-blur-xl rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.2)] max-h-[50vh] flex flex-col animate-in slide-in-from-bottom-10">
+            <div className="flex items-center justify-between p-4 border-b border-theme-divider-light">
+              <h4 className="font-bold text-theme-primary">Stickers</h4>
+              <button onClick={() => setStickerLibraryOpen(false)} className="p-1 text-theme-tertiary hover:bg-theme-surface-hover rounded-full">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1160,7 +1160,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
                     key={collection.id}
                     onClick={() => setStickerCollection(collection.id)}
                     className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap ${
-                      stickerCollection === collection.id ? 'bg-[#5E43F3] text-white' : 'bg-neutral-100 text-neutral-600'
+                      stickerCollection === collection.id ? 'bg-[#5E43F3] text-white' : 'bg-theme-surface-hover text-theme-secondary'
                     }`}
                   >
                     {collection.name}
@@ -1172,7 +1172,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
                   <button
                     key={sticker.id}
                     onClick={() => addSticker(sticker)}
-                    className="aspect-square flex flex-col items-center justify-center rounded-2xl bg-neutral-50 hover:bg-neutral-100 transition-colors"
+                    className="aspect-square flex flex-col items-center justify-center rounded-2xl bg-theme-base hover:bg-theme-surface-hover transition-colors"
                   >
                     <span className="text-3xl">{sticker.asset}</span>
                   </button>
@@ -1186,7 +1186,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
           <div className="absolute inset-x-0 bottom-24 z-40 bg-black/90 backdrop-blur-xl rounded-t-3xl border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.4)] max-h-[50vh] flex flex-col animate-in slide-in-from-bottom-10">
             <div className="flex items-center justify-between p-4 border-b border-white/10">
               <h4 className="font-bold text-white">Music</h4>
-              <button onClick={() => setStep('customize')} className="p-1 text-neutral-400 hover:bg-white/10 rounded-full">
+              <button onClick={() => setStep('customize')} className="p-1 text-theme-tertiary hover:bg-theme-surface/10 rounded-full">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1195,7 +1195,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
                 <div
                   key={track.id}
                   onClick={() => { setSelectedAudio(track.title); setStep('customize'); }}
-                  className="group p-3 rounded-xl hover:bg-white/10 transition-colors flex items-center justify-between cursor-pointer"
+                  className="group p-3 rounded-xl hover:bg-theme-surface/10 transition-colors flex items-center justify-between cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <div className="relative w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center overflow-hidden shadow-sm">
@@ -1206,10 +1206,10 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
                     </div>
                     <div>
                       <h4 className="font-bold text-sm text-white">{track.title}</h4>
-                      <p className="text-xs text-neutral-400">{track.artist}</p>
+                      <p className="text-xs text-theme-tertiary">{track.artist}</p>
                     </div>
                   </div>
-                  <span className="text-xs font-medium text-neutral-500">{track.duration}</span>
+                  <span className="text-xs font-medium text-theme-tertiary">{track.duration}</span>
                 </div>
               ))}
             </div>
@@ -1234,7 +1234,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
             {/* Filmstrip + draggable window */}
             <div
               ref={trimmerRef}
-              className="relative w-full h-14 bg-neutral-900 rounded-xl overflow-hidden select-none touch-none"
+              className="relative w-full h-14 bg-theme-inverse rounded-xl overflow-hidden select-none touch-none"
               onPointerDown={(e) => {
                 const rect = trimmerRef.current?.getBoundingClientRect();
                 if (!rect) return;
@@ -1330,15 +1330,15 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
                 }}
               >
                 {/* Top border */}
-                <div className="absolute top-0 left-0 right-0 h-[3px] bg-white rounded-tl-sm rounded-tr-sm" />
+                <div className="absolute top-0 left-0 right-0 h-[3px] bg-theme-surface rounded-tl-sm rounded-tr-sm" />
                 {/* Bottom border */}
-                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white rounded-bl-sm rounded-br-sm" />
+                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-theme-surface rounded-bl-sm rounded-br-sm" />
                 {/* Left handle */}
-                <div className="absolute left-0 top-0 bottom-0 w-[12px] -ml-[6px] bg-white rounded-sm flex items-center justify-center cursor-ew-resize pointer-events-auto shadow-md">
+                <div className="absolute left-0 top-0 bottom-0 w-[12px] -ml-[6px] bg-theme-surface rounded-sm flex items-center justify-center cursor-ew-resize pointer-events-auto shadow-md">
                   <div className="w-[2px] h-5 bg-black/40 rounded-full pointer-events-none" />
                 </div>
                 {/* Right handle */}
-                <div className="absolute right-0 top-0 bottom-0 w-[12px] -mr-[6px] bg-white rounded-sm flex items-center justify-center cursor-ew-resize pointer-events-auto shadow-md">
+                <div className="absolute right-0 top-0 bottom-0 w-[12px] -mr-[6px] bg-theme-surface rounded-sm flex items-center justify-center cursor-ew-resize pointer-events-auto shadow-md">
                   <div className="w-[2px] h-5 bg-black/40 rounded-full pointer-events-none" />
                 </div>
               </div>
@@ -1365,7 +1365,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
             <button
               type="button"
               onClick={handleCameraCapture}
-              className="p-2 rounded-full text-white hover:bg-white/20 transition-colors"
+              className="p-2 rounded-full text-white hover:bg-theme-surface/20 transition-colors"
               title="Camera"
               aria-label="Take a photo"
             >
@@ -1374,7 +1374,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
             <button
               type="button"
               onClick={handleGalleryClick}
-              className="p-2 rounded-full text-white hover:bg-white/20 transition-colors"
+              className="p-2 rounded-full text-white hover:bg-theme-surface/20 transition-colors"
               title="Gallery"
               aria-label="Pick from gallery"
             >
@@ -1384,7 +1384,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
               type="button"
               onClick={isRecordingVoice ? handleStopAudioRecording : handleStartAudioRecording}
               className={`p-2 rounded-full transition-colors ${
-                isRecordingVoice ? 'text-rose-500 bg-rose-500/20' : 'text-white hover:bg-white/20'
+                isRecordingVoice ? 'text-rose-500 bg-rose-500/20' : 'text-white hover:bg-theme-surface/20'
               }`}
               title={isRecordingVoice ? 'Stop Recording' : 'Record Voice'}
               aria-label={isRecordingVoice ? 'Stop recording' : 'Record voice note'}
@@ -1396,14 +1396,14 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
               type="button"
               onClick={() => setIsExcludeSheetOpen(true)}
               className={`p-2 rounded-full transition-colors relative ${
-                excludedUsers.length > 0 ? 'text-amber-400 bg-amber-400/20' : 'text-white hover:bg-white/20'
+                excludedUsers.length > 0 ? 'text-amber-400 bg-amber-400/20' : 'text-white hover:bg-theme-surface/20'
               }`}
               title="Exclude people from Status"
               aria-label="Exclude people from Status"
             >
               <EyeOff className="w-7 h-7" />
               {excludedUsers.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 text-black text-[9px] font-black flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 text-theme-primary text-[9px] font-black flex items-center justify-center">
                   {excludedUsers.length}
                 </span>
               )}
@@ -1413,7 +1413,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
           <button
             type="button"
             onClick={handlePublish}
-            className="px-6 py-3 rounded-full bg-white text-purple-700 font-bold text-[15px] shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
+            className="px-6 py-3 rounded-full bg-theme-surface text-purple-700 font-bold text-[15px] shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
             aria-label="Share Cycle"
           >
             Share Cycle
@@ -1428,17 +1428,17 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
           >
             <div
               onClick={(e) => e.stopPropagation()}
-              className="w-full bg-neutral-950 border-t border-neutral-800 rounded-t-3xl p-5 flex flex-col gap-4 animate-in slide-in-from-bottom max-h-[75vh] overflow-y-auto"
+              className="w-full bg-theme-inverse border-t border-theme-divider-inverse rounded-t-3xl p-5 flex flex-col gap-4 animate-in slide-in-from-bottom max-h-[75vh] overflow-y-auto"
             >
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-sm font-bold text-white">Hide Status from</h4>
-                  <p className="text-xs text-neutral-400 mt-0.5">Selected people won't see this Status</p>
+                  <p className="text-xs text-theme-tertiary mt-0.5">Selected people won't see this Status</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsExcludeSheetOpen(false)}
-                  className="p-1.5 rounded-full hover:bg-white/10 text-neutral-400"
+                  className="p-1.5 rounded-full hover:bg-theme-surface/10 text-theme-tertiary"
                   aria-label="Close"
                 >
                   <X className="w-5 h-5" />
@@ -1451,18 +1451,18 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
                 placeholder="Search people..."
                 value={excludeSearch}
                 onChange={(e) => setExcludeSearch(e.target.value)}
-                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2.5 text-white text-sm placeholder:text-neutral-500 focus:outline-none focus:border-violet-500 transition-colors"
+                className="w-full bg-theme-inverse border border-theme-divider-inverse rounded-xl px-4 py-2.5 text-theme-text-inverse text-sm placeholder:text-theme-tertiary focus:outline-none focus:border-violet-500 transition-colors"
                 aria-label="Search people to exclude"
               />
 
               {/* Currently excluded */}
               {excludedUsers.length > 0 && (
                 <div className="flex flex-col gap-2">
-                  <p className="text-xs text-neutral-500 uppercase tracking-wide font-bold">Excluded ({excludedUsers.length})</p>
+                  <p className="text-xs text-theme-tertiary uppercase tracking-wide font-bold">Excluded ({excludedUsers.length})</p>
                   {excludedUsers.map(user => (
                     <div key={user.id} className="flex items-center justify-between py-2 px-1">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-neutral-700 flex items-center justify-center text-white text-sm font-bold">
+                        <div className="w-9 h-9 rounded-full bg-theme-inverse flex items-center justify-center text-theme-text-inverse text-sm font-bold">
                           {user.name[0]?.toUpperCase()}
                         </div>
                         <span className="text-white text-sm font-medium">{user.name}</span>
@@ -1481,7 +1481,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
               )}
 
               {/* Hint: In a real app, show a list of followers to pick from */}
-              <p className="text-center text-neutral-600 text-xs py-2">
+              <p className="text-center text-theme-secondary text-xs py-2">
                 {excludeSearch
                   ? 'Follower search results will appear here when connected.'
                   : excludedUsers.length === 0

@@ -39,8 +39,8 @@ export const ProfileSetupPage: React.FC = () => {
         
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-neutral-500 tracking-wider uppercase">Bio</label>
-            <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+            <label className="text-xs font-bold text-theme-tertiary tracking-wider uppercase">Bio</label>
+            <span className="text-[11px] font-bold text-theme-tertiary uppercase tracking-wider">
               {bio.length}/150
             </span>
           </div>
@@ -49,7 +49,7 @@ export const ProfileSetupPage: React.FC = () => {
             onChange={(e) => setBio(e.target.value.slice(0, 150))}
             placeholder="Tell people a little about yourself..."
             rows={5}
-            className="w-full px-4 py-3.5 rounded-xl border-2 border-neutral-200 bg-white text-base text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#3823A4] focus:ring-4 focus:ring-[#3823A4]/10 transition-all resize-none"
+            className="w-full px-4 py-3.5 rounded-xl border-2 border-theme-divider bg-theme-surface text-base text-theme-primary placeholder-neutral-400 focus:outline-none focus:border-[#3823A4] focus:ring-4 focus:ring-[#3823A4]/10 transition-all resize-none"
             autoFocus
           />
         </div>
@@ -71,7 +71,7 @@ export const ProfileSetupPage: React.FC = () => {
           <button
             type="button"
             onClick={handleSkip}
-            className="w-full py-3.5 rounded-xl bg-transparent text-neutral-500 font-bold text-sm flex items-center justify-center hover:bg-neutral-50 hover:text-neutral-700 transition-colors cursor-pointer"
+            className="w-full py-3.5 rounded-xl bg-transparent text-theme-tertiary font-bold text-sm flex items-center justify-center hover:bg-theme-base hover:text-theme-secondary transition-colors cursor-pointer"
           >
             Skip for now
           </button>

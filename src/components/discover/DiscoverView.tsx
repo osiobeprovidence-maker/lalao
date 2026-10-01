@@ -223,24 +223,24 @@ export const DiscoverView: React.FC = () => {
   const isSearching = debouncedQuery.length > 0;
 
   return (
-    <div id="discover-view-container" className="min-h-screen bg-[#f6f3ee] pb-24">
+    <div id="discover-view-container" className="min-h-screen bg-theme-base pb-24">
       {/* Top Search Header */}
-      <div className="sticky top-0 z-20 bg-[#f6f3ee]/95 backdrop-blur-md border-b border-neutral-200/80 px-4 py-2.5 space-y-2">
+      <div className="sticky top-0 z-20 bg-theme-base/95 backdrop-blur-md border-b border-theme-divider/80 px-4 py-2.5 space-y-2">
         <div className="flex items-center gap-1.5">
           <div className="relative flex-1 flex items-center">
-            <Search className="w-4 h-4 text-neutral-400 absolute left-3 pointer-events-none" />
+            <Search className="w-4 h-4 text-theme-tertiary absolute left-3 pointer-events-none" />
             <input
               id="input-discover-search"
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={`Search people, content, pages...`}
-              className="w-full pl-9 pr-9 py-2 rounded-full bg-neutral-100 hover:bg-neutral-200/60 focus:bg-white focus:ring-2 focus:ring-[#5E43F3]/20 focus:border-[#5E43F3] border border-transparent text-sm text-neutral-900 placeholder:text-neutral-400 transition-all outline-none"
+              className="w-full pl-9 pr-9 py-2 rounded-full bg-theme-surface-hover hover:bg-theme-surface-active/60 focus:bg-theme-surface focus:ring-2 focus:ring-[#5E43F3]/20 focus:border-[#5E43F3] border border-transparent text-sm text-theme-primary placeholder:text-theme-tertiary transition-all outline-none"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 p-1 rounded-full text-neutral-400 hover:text-neutral-600 cursor-pointer"
+                className="absolute right-3 p-1 rounded-full text-theme-tertiary hover:text-theme-secondary cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -265,7 +265,7 @@ export const DiscoverView: React.FC = () => {
             </button>
 
             {isLocationModeMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-neutral-100 overflow-hidden z-50">
+              <div className="absolute right-0 top-full mt-2 w-48 bg-theme-surface rounded-xl shadow-xl border border-theme-divider-light overflow-hidden z-50">
                 <div className="p-2 space-y-1">
                   <button
                     onClick={() => {
@@ -273,7 +273,7 @@ export const DiscoverView: React.FC = () => {
                       setIsLocationModeMenuOpen(false);
                     }}
                     className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                      locationMode === 'current' ? 'bg-[#5E43F3]/10 text-[#5E43F3]' : 'text-neutral-700 hover:bg-neutral-50'
+                      locationMode === 'current' ? 'bg-[#5E43F3]/10 text-[#5E43F3]' : 'text-theme-secondary hover:bg-theme-base'
                     }`}
                   >
                     <div className="flex items-center gap-2">
@@ -289,7 +289,7 @@ export const DiscoverView: React.FC = () => {
                       setIsLocationModalOpen(true);
                     }}
                     className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                      locationMode === 'selected' ? 'bg-[#5E43F3]/10 text-[#5E43F3]' : 'text-neutral-700 hover:bg-neutral-50'
+                      locationMode === 'selected' ? 'bg-[#5E43F3]/10 text-[#5E43F3]' : 'text-theme-secondary hover:bg-theme-base'
                     }`}
                   >
                     <div className="flex items-center gap-2">
@@ -304,7 +304,7 @@ export const DiscoverView: React.FC = () => {
                       setIsLocationModeMenuOpen(false);
                     }}
                     className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                      locationMode === 'global' ? 'bg-[#5E43F3]/10 text-[#5E43F3]' : 'text-neutral-700 hover:bg-neutral-50'
+                      locationMode === 'global' ? 'bg-[#5E43F3]/10 text-[#5E43F3]' : 'text-theme-secondary hover:bg-theme-base'
                     }`}
                   >
                     <div className="flex items-center gap-2">
@@ -327,8 +327,8 @@ export const DiscoverView: React.FC = () => {
               onClick={() => setActiveFilter(filter as any)}
               className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                 activeFilter === filter
-                  ? 'bg-neutral-900 text-white shadow-sm'
-                  : 'bg-white text-neutral-600 border border-neutral-200/80 hover:bg-neutral-50 hover:text-neutral-900'
+                  ? 'bg-theme-inverse text-theme-text-inverse shadow-sm'
+                  : 'bg-theme-surface text-theme-secondary border border-theme-divider/80 hover:bg-theme-base hover:text-theme-primary'
               }`}
             >
               {filter.charAt(0).toUpperCase() + filter.slice(1)}
@@ -357,7 +357,7 @@ export const DiscoverView: React.FC = () => {
             className="bg-gradient-to-br from-[#5E43F3] to-[#4E34E0] rounded-2xl p-5 cursor-pointer hover:shadow-lg hover:shadow-indigo-500/20 transition-all flex items-center justify-between group overflow-hidden relative"
           >
             {/* Background decoration */}
-            <div className="absolute -right-6 -top-6 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl group-hover:scale-110 transition-transform"></div>
+            <div className="absolute -right-6 -top-6 w-32 h-32 bg-theme-surface opacity-10 rounded-full blur-2xl group-hover:scale-110 transition-transform"></div>
             
             <div>
               <h3 className="text-white font-black text-xl mb-1 flex items-center gap-2">
@@ -369,7 +369,7 @@ export const DiscoverView: React.FC = () => {
               </p>
             </div>
             
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0 backdrop-blur-sm group-hover:bg-white/30 transition-colors">
+            <div className="w-10 h-10 rounded-full bg-theme-surface/20 flex items-center justify-center shrink-0 backdrop-blur-sm group-hover:bg-theme-surface/30 transition-colors">
               <ChevronRight className="w-5 h-5 text-white" />
             </div>
           </div>
@@ -384,13 +384,13 @@ export const DiscoverView: React.FC = () => {
         {isSearching ? (
           <div className="space-y-6">
             <div className="px-4 pb-2">
-              <h2 className="text-sm font-bold text-neutral-900">Search results for "{debouncedQuery}"</h2>
+              <h2 className="text-sm font-bold text-theme-primary">Search results for "{debouncedQuery}"</h2>
             </div>
             
             {activeFilter === 'trending' ? (
               <div className="px-4 py-8 text-center space-y-2">
-                 <p className="text-sm font-bold text-neutral-900">Search for this type of content isn't available yet.</p>
-                 <p className="text-xs text-neutral-500">We're working on bringing Trending searches to Lalao.</p>
+                 <p className="text-sm font-bold text-theme-primary">Search for this type of content isn't available yet.</p>
+                 <p className="text-xs text-theme-tertiary">We're working on bringing Trending searches to Lalao.</p>
               </div>
             ) : searchResults === undefined ? (
               <div className="flex justify-center p-8">
@@ -398,8 +398,8 @@ export const DiscoverView: React.FC = () => {
               </div>
             ) : (searchResults.people.length === 0 && searchResults.content.length === 0 && searchResults.pages.length === 0) ? (
               <div className="px-4 py-8 text-center space-y-2">
-                <p className="text-sm font-bold text-neutral-900">No results found for "{debouncedQuery}".</p>
-                <p className="text-xs text-neutral-500">Try searching for a different name, username, or keyword.</p>
+                <p className="text-sm font-bold text-theme-primary">No results found for "{debouncedQuery}".</p>
+                <p className="text-xs text-theme-tertiary">Try searching for a different name, username, or keyword.</p>
               </div>
             ) : (
               <>
@@ -408,7 +408,7 @@ export const DiscoverView: React.FC = () => {
                   <section className="px-4">
                     <div className="flex items-center gap-1.5 mb-3">
                       <Users className="w-4 h-4 text-[#5E43F3]" />
-                      <h2 className="text-sm font-bold text-neutral-900 tracking-tight">People</h2>
+                      <h2 className="text-sm font-bold text-theme-primary tracking-tight">People</h2>
                     </div>
                     <div className="divide-y divide-neutral-200/80">
                       {searchResults.people.map((user: any) => (
@@ -420,9 +420,9 @@ export const DiscoverView: React.FC = () => {
                             <Avatar src={user?.avatar} alt={user?.name || 'User'} size="md" />
                             <div className="min-w-0">
                               <div className="flex items-center gap-1">
-                                <span className="font-bold text-sm text-neutral-900 truncate">{user.name}</span>
+                                <span className="font-bold text-sm text-theme-primary truncate">{user.name}</span>
                               </div>
-                              <div className="flex items-center gap-1.5 text-xs text-neutral-400 mt-0.5">
+                              <div className="flex items-center gap-1.5 text-xs text-theme-tertiary mt-0.5">
                                 <span className="truncate">@{user.username}</span>
                                 {user.location && (
                                   <>
@@ -437,12 +437,12 @@ export const DiscoverView: React.FC = () => {
                             onClick={() => toggleFollowUser(user.id)}
                             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shrink-0 ml-2 flex items-center gap-1 ${
                               user.relationship === 'friends'
-                                ? 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
+                                ? 'border border-theme-divider-strong text-theme-secondary hover:bg-theme-surface-hover'
                                 : user.relationship === 'follower'
                                 ? 'bg-[#5E43F3] hover:bg-[#4E34E0] text-white'
                                 : user.isFollowing
-                                ? 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
-                                : 'bg-neutral-950 text-white hover:bg-neutral-800'
+                                ? 'border border-theme-divider-strong text-theme-secondary hover:bg-theme-surface-hover'
+                                : 'bg-theme-inverse text-theme-text-inverse hover:bg-theme-inverse'
                             }`}
                           >
                             {user.relationship === 'friends' ? (
@@ -470,23 +470,23 @@ export const DiscoverView: React.FC = () => {
                   <section className="px-4">
                     <div className="flex items-center gap-1.5 mb-3">
                       <Building className="w-4 h-4 text-[#5E43F3]" />
-                      <h2 className="text-sm font-bold text-neutral-900 tracking-tight">Pages & Businesses</h2>
+                      <h2 className="text-sm font-bold text-theme-primary tracking-tight">Pages & Businesses</h2>
                     </div>
                     <div className="divide-y divide-neutral-200/80">
                       {searchResults.pages.map((page: any) => (
                         <div 
                           key={page.id} 
-                          className="py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-neutral-50/50 transition-colors"
+                          className="py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-theme-base/50 transition-colors"
                           onClick={() => navigate('/app/page/' + page.id)}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <Avatar src={page?.avatar} alt={page?.name || 'Page'} size="md" />
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
-                                <h3 className="font-bold text-sm text-neutral-900 truncate">{page.name}</h3>
+                                <h3 className="font-bold text-sm text-theme-primary truncate">{page.name}</h3>
                                 {page.badge && <Badge type={page.badge} />}
                               </div>
-                              <p className="text-xs text-neutral-400 truncate">@{page.username}</p>
+                              <p className="text-xs text-theme-tertiary truncate">@{page.username}</p>
                               {page.category && <p className="text-[11px] text-[#5E43F3] mt-0.5">{page.category}</p>}
                             </div>
                           </div>
@@ -497,7 +497,7 @@ export const DiscoverView: React.FC = () => {
                             }}
                             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                               page.isFollowing
-                                ? 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
+                                ? 'border border-theme-divider-strong text-theme-secondary hover:bg-theme-surface-hover'
                                 : 'bg-[#5E43F3] text-white hover:bg-[#4E34E0]'
                             }`}
                           >
@@ -524,8 +524,8 @@ export const DiscoverView: React.FC = () => {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-1.5">
                     <Users className="w-4 h-4 text-[#5E43F3]" />
-                    <h2 className="text-sm font-bold text-neutral-900 tracking-tight">People Near You</h2>
-                    <span className="text-xs text-neutral-400">({filteredPeople.length})</span>
+                    <h2 className="text-sm font-bold text-theme-primary tracking-tight">People Near You</h2>
+                    <span className="text-xs text-theme-tertiary">({filteredPeople.length})</span>
                   </div>
                 </div>
 
@@ -544,19 +544,19 @@ export const DiscoverView: React.FC = () => {
                             <Avatar src={user?.avatar} alt={user?.name || 'User'} size="md" />
                             <div className="min-w-0">
                               <div className="flex items-center gap-1">
-                                <span className="font-bold text-sm text-neutral-900 truncate">{user.name}</span>
+                                <span className="font-bold text-sm text-theme-primary truncate">{user.name}</span>
                                 {(user as any).badge && <Badge type={(user as any).badge} />}
                               </div>
-                              <div className="flex items-center gap-1.5 text-xs text-neutral-400 mt-0.5">
+                              <div className="flex items-center gap-1.5 text-xs text-theme-tertiary mt-0.5">
                                 <span className="truncate">@{user.username}</span>
                                 <span>·</span>
-                                <span className="inline-flex items-center gap-1 text-neutral-600 font-semibold text-[11px]">
+                                <span className="inline-flex items-center gap-1 text-theme-secondary font-semibold text-[11px]">
                                   <span className={`w-1.5 h-1.5 rounded-full ${prox.dotColor}`} />
                                   {distFormatted}
                                 </span>
                               </div>
                               {user.bio && (
-                                <p className="text-xs text-neutral-600 truncate mt-0.5 max-w-[200px]">{user.bio}</p>
+                                <p className="text-xs text-theme-secondary truncate mt-0.5 max-w-[200px]">{user.bio}</p>
                               )}
                             </div>
                           </div>
@@ -564,12 +564,12 @@ export const DiscoverView: React.FC = () => {
                             onClick={() => toggleFollowUser(user.id)}
                             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shrink-0 ml-2 flex items-center gap-1 ${
                               user.relationship === 'friends'
-                                ? 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
+                                ? 'border border-theme-divider-strong text-theme-secondary hover:bg-theme-surface-hover'
                                 : user.relationship === 'follower'
                                 ? 'bg-[#5E43F3] hover:bg-[#4E34E0] text-white'
                                 : user.isFollowing
-                                ? 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
-                                : 'bg-neutral-950 text-white hover:bg-neutral-800'
+                                ? 'border border-theme-divider-strong text-theme-secondary hover:bg-theme-surface-hover'
+                                : 'bg-theme-inverse text-theme-text-inverse hover:bg-theme-inverse'
                             }`}
                           >
                             {user.relationship === 'friends' ? (
@@ -591,8 +591,8 @@ export const DiscoverView: React.FC = () => {
                     })}
                   </div>
                 ) : (
-                  <div className="p-5 rounded-2xl bg-neutral-50 text-center border border-neutral-100 space-y-2">
-                    <p className="text-xs text-neutral-600">
+                  <div className="p-5 rounded-2xl bg-theme-base text-center border border-theme-divider-light space-y-2">
+                    <p className="text-xs text-theme-secondary">
                       No people found within {location.radiusKm} km of {location.name}.
                     </p>
                     <button
@@ -613,10 +613,10 @@ export const DiscoverView: React.FC = () => {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-1.5">
                     <Building className="w-4 h-4 text-[#5E43F3]" />
-                    <h2 className="text-sm font-bold text-neutral-900 tracking-tight">
+                    <h2 className="text-sm font-bold text-theme-primary tracking-tight">
                       {activeFilter === 'pages' ? 'Local Pages' : 'Local Shops & Businesses'}
                     </h2>
-                    <span className="text-xs text-neutral-400">
+                    <span className="text-xs text-theme-tertiary">
                       ({activeFilter === 'pages' ? filteredPages.length : filteredShop.length})
                     </span>
                   </div>
@@ -635,18 +635,18 @@ export const DiscoverView: React.FC = () => {
                       return (
                         <div 
                           key={page.id} 
-                          className="py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-neutral-50/50 transition-colors"
+                          className="py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-theme-base/50 transition-colors"
                           onClick={() => navigate('/app/page/' + page.id)}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <Avatar src={page?.avatar} alt={page?.name || 'Page'} size="md" />
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
-                                <h3 className="font-bold text-sm text-neutral-900 truncate">{page.name}</h3>
+                                <h3 className="font-bold text-sm text-theme-primary truncate">{page.name}</h3>
                                 {page.badge && <Badge type={page.badge} />}
                               </div>
-                              <p className="text-xs text-neutral-400 truncate">@{page.username}</p>
-                              <div className="flex items-center gap-1.5 text-[11px] text-neutral-500 mt-0.5 flex-wrap">
+                              <p className="text-xs text-theme-tertiary truncate">@{page.username}</p>
+                              <div className="flex items-center gap-1.5 text-[11px] text-theme-tertiary mt-0.5 flex-wrap">
                                 {prox && <span className={`w-1.5 h-1.5 rounded-full ${prox.dotColor}`} />}
                                 <MapPin className="w-3 h-3 text-[#5E43F3]" />
                                 <span>{page.location}</span>
@@ -661,7 +661,7 @@ export const DiscoverView: React.FC = () => {
                             }}
                             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                               page.isFollowing
-                                ? 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
+                                ? 'border border-theme-divider-strong text-theme-secondary hover:bg-theme-surface-hover'
                                 : 'bg-[#5E43F3] text-white hover:bg-[#4E34E0]'
                             }`}
                           >
@@ -672,15 +672,15 @@ export const DiscoverView: React.FC = () => {
                     })}
                   </div>
                 ) : (
-                  <div className="p-5 rounded-2xl bg-neutral-50 text-center border border-neutral-100 space-y-4">
-                    <div className="mx-auto w-12 h-12 rounded-full bg-white flex items-center justify-center mb-1 border border-neutral-100 shadow-sm">
+                  <div className="p-5 rounded-2xl bg-theme-base text-center border border-theme-divider-light space-y-4">
+                    <div className="mx-auto w-12 h-12 rounded-full bg-theme-surface flex items-center justify-center mb-1 border border-theme-divider-light shadow-sm">
                       <Building className="w-5 h-5 text-[#5E43F3]" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-bold text-neutral-900 mb-1">
+                      <p className="text-[13px] font-bold text-theme-primary mb-1">
                         No local {activeFilter === 'pages' ? 'Pages' : 'Shops'} found
                       </p>
-                      <p className="text-[11px] text-neutral-500 leading-relaxed max-w-[280px] mx-auto">
+                      <p className="text-[11px] text-theme-tertiary leading-relaxed max-w-[280px] mx-auto">
                         No local {activeFilter === 'pages' ? 'Pages' : 'Shops'} found within {location.radiusKm} km of {location.name}.
                         <br/><br/>
                         Be the first to create one in your area and let people nearby discover you.

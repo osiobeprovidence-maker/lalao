@@ -42,7 +42,7 @@ export const AdminSubPlatforms: React.FC = () => {
                 <tr key={p._id} className="hover:bg-slate-800/30 transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <img src={p.logo} alt={p.name} className="w-8 h-8 rounded bg-white object-contain" />
+                      <img src={p.logo} alt={p.name} className="w-8 h-8 rounded bg-theme-surface object-contain" />
                       <div>
                         <p className="font-semibold text-white">{p.name}</p>
                         <p className="text-[11px] text-slate-500 font-mono">{p.slug}</p>

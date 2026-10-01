@@ -21,9 +21,9 @@ export const ForgotPasswordPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12">
+    <div className="min-h-screen bg-theme-surface flex flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm mb-8">
-        <Link to="/login" className="inline-flex items-center gap-2 text-sm font-semibold text-neutral-500 hover:text-neutral-900 transition-colors">
+        <Link to="/login" className="inline-flex items-center gap-2 text-sm font-semibold text-theme-tertiary hover:text-theme-primary transition-colors">
           <ArrowLeft className="w-4 h-4" />
           Back to login
         </Link>
@@ -35,14 +35,14 @@ export const ForgotPasswordPage: React.FC = () => {
           <div className="w-9 h-9 rounded-xl bg-[#5E43F3] flex items-center justify-center">
             <AppIcon className="w-4 h-4" fallbackClassName="text-white fill-white" />
           </div>
-          <span className="lalao-wordmark text-xl text-neutral-900">lalao</span>
+          <span className="lalao-wordmark text-xl text-theme-primary">lalao</span>
         </div>
 
         {!sent ? (
           <>
             <div className="space-y-2">
-              <h1 className="text-3xl font-black text-neutral-950 tracking-tight">Reset password</h1>
-              <p className="text-neutral-500 text-sm leading-relaxed">
+              <h1 className="text-3xl font-black text-theme-primary tracking-tight">Reset password</h1>
+              <p className="text-theme-tertiary text-sm leading-relaxed">
                 Enter the email or phone number linked to your account and we'll send you a reset link.
               </p>
             </div>
@@ -54,18 +54,18 @@ export const ForgotPasswordPage: React.FC = () => {
                 </div>
               )}
               <div className="space-y-1.5">
-                <label htmlFor="forgot-identifier" className="text-xs font-bold text-neutral-700 tracking-wide uppercase">
+                <label htmlFor="forgot-identifier" className="text-xs font-bold text-theme-secondary tracking-wide uppercase">
                   Email or Phone
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-tertiary" />
                   <input
                     id="forgot-identifier"
                     type="text"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     placeholder="you@example.com or 0801..."
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-neutral-200 bg-neutral-50 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3] transition-all"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-theme-divider bg-theme-base text-sm text-theme-primary placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3] transition-all"
                   />
                 </div>
               </div>
@@ -83,7 +83,7 @@ export const ForgotPasswordPage: React.FC = () => {
               </button>
             </form>
 
-            <p className="text-center text-sm text-neutral-500">
+            <p className="text-center text-sm text-theme-tertiary">
               Remember it?{' '}
               <Link to="/login" className="font-bold text-[#5E43F3] hover:text-[#4E34E0] transition-colors">Sign in</Link>
             </p>
@@ -97,9 +97,9 @@ export const ForgotPasswordPage: React.FC = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <h2 className="text-2xl font-black text-neutral-950 tracking-tight">Check your inbox</h2>
-              <p className="text-neutral-500 text-sm leading-relaxed max-w-xs mx-auto">
-                We sent a reset link to <span className="font-bold text-neutral-800">{identifier}</span>. 
+              <h2 className="text-2xl font-black text-theme-primary tracking-tight">Check your inbox</h2>
+              <p className="text-theme-tertiary text-sm leading-relaxed max-w-xs mx-auto">
+                We sent a reset link to <span className="font-bold text-theme-primary">{identifier}</span>. 
                 Check your spam folder if you don't see it.
               </p>
             </div>
@@ -113,7 +113,7 @@ export const ForgotPasswordPage: React.FC = () => {
             <button
               type="button"
               onClick={() => { setSent(false); setIdentifier(''); }}
-              className="text-sm text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer font-medium"
+              className="text-sm text-theme-tertiary hover:text-theme-secondary transition-colors cursor-pointer font-medium"
             >
               Try a different address
             </button>

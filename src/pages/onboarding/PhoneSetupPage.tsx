@@ -77,9 +77,9 @@ export const PhoneSetupPage: React.FC = () => {
         )}
 
         <div className="space-y-1.5">
-          <label className="text-xs font-bold text-neutral-500 tracking-wider uppercase">Phone Number</label>
+          <label className="text-xs font-bold text-theme-tertiary tracking-wider uppercase">Phone Number</label>
           <div className="flex gap-2">
-            <div className="px-4 py-3.5 rounded-xl border-2 border-neutral-200 bg-neutral-50 text-base text-neutral-900 flex items-center justify-center font-semibold select-none">
+            <div className="px-4 py-3.5 rounded-xl border-2 border-theme-divider bg-theme-base text-base text-theme-primary flex items-center justify-center font-semibold select-none">
               +234
             </div>
             <input
@@ -87,7 +87,7 @@ export const PhoneSetupPage: React.FC = () => {
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
               placeholder="e.g. 08012345678"
-              className="flex-1 px-4 py-3.5 rounded-xl border-2 border-neutral-200 bg-white text-base text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#3823A4] focus:ring-4 focus:ring-[#3823A4]/10 transition-all"
+              className="flex-1 px-4 py-3.5 rounded-xl border-2 border-theme-divider bg-theme-surface text-base text-theme-primary placeholder-neutral-400 focus:outline-none focus:border-[#3823A4] focus:ring-4 focus:ring-[#3823A4]/10 transition-all"
               autoFocus
             />
           </div>

@@ -160,7 +160,7 @@ export const DesktopSidebar: React.FC = () => {
   return (
     <aside
       id="desktop-navigation-sidebar"
-      className="hidden lg:flex flex-col h-screen sticky top-0 shrink-0 w-[220px] xl:w-[240px] bg-[#f6f3ee] border-r border-neutral-200/80 px-4 py-5 select-none z-30"
+      className="hidden lg:flex flex-col h-screen sticky top-0 shrink-0 w-[220px] xl:w-[240px] bg-theme-base border-r border-theme-divider/80 px-4 py-5 select-none z-30"
     >
       <div className="flex flex-col gap-6 h-full">
 
@@ -177,7 +177,7 @@ export const DesktopSidebar: React.FC = () => {
             className="text-left cursor-pointer"
             aria-label="Go to home feed"
           >
-            <span className="lalao-wordmark text-[26px] text-neutral-950">lalao</span>
+            <span className="lalao-wordmark text-[26px] text-theme-primary">lalao</span>
           </button>
 
           {/* Right side controls: + and Hamburger */}
@@ -190,7 +190,7 @@ export const DesktopSidebar: React.FC = () => {
                 setIsCreateSheetOpen(false);
                 setActiveTab('create-post');
               }}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-neutral-200 bg-[#f9f7f4] text-neutral-700 transition hover:border-neutral-300 hover:text-neutral-950 cursor-pointer"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-theme-divider bg-theme-base text-theme-secondary transition hover:border-theme-divider-strong hover:text-theme-primary cursor-pointer"
               aria-label="Create post"
               title="Create"
             >
@@ -205,7 +205,7 @@ export const DesktopSidebar: React.FC = () => {
               className={`flex h-8 w-8 items-center justify-center rounded-full transition cursor-pointer ${
                 isMenuOpen
                   ? 'bg-[#5E43F3]/10 text-[#5E43F3]'
-                  : 'text-neutral-500 hover:bg-neutral-200/70 hover:text-neutral-900'
+                  : 'text-theme-tertiary hover:bg-theme-surface-active/70 hover:text-theme-primary'
               }`}
               aria-label="Open menu"
               aria-expanded={isMenuOpen}
@@ -225,11 +225,11 @@ export const DesktopSidebar: React.FC = () => {
               ref={menuRef}
               role="menu"
               aria-label="Secondary navigation"
-              className="absolute top-full left-0 mt-2 w-52 bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-neutral-100 py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+              className="absolute top-full left-0 mt-2 w-52 bg-theme-surface rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-theme-divider-light py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
             >
               {/* DISCOVER section */}
               <div className="px-3 pb-1">
-                <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
+                <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-theme-tertiary">
                   Discover
                 </div>
                 <div className="space-y-0.5">
@@ -247,7 +247,7 @@ export const DesktopSidebar: React.FC = () => {
                       className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition cursor-pointer ${
                         isMenuItemActive(id)
                           ? 'bg-[#5E43F3]/10 text-[#5E43F3]'
-                          : 'text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950'
+                          : 'text-theme-secondary hover:bg-theme-base hover:text-theme-primary'
                       }`}
                     >
                       <Icon className="h-4 w-4 shrink-0 stroke-[1.8]" />
@@ -258,11 +258,11 @@ export const DesktopSidebar: React.FC = () => {
               </div>
 
               {/* Divider */}
-              <div className="my-2 mx-3 border-t border-neutral-100" />
+              <div className="my-2 mx-3 border-t border-theme-divider-light" />
 
               {/* ACCOUNT section */}
               <div className="px-3 pt-1">
-                <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
+                <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-theme-tertiary">
                   Account
                 </div>
                 <div className="space-y-0.5">
@@ -276,7 +276,7 @@ export const DesktopSidebar: React.FC = () => {
                         if (id === 'orders') setIsShoppingHistoryOpen(true);
                         setIsMenuOpen(false);
                       }}
-                      className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition cursor-pointer text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950"
+                      className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition cursor-pointer text-theme-secondary hover:bg-theme-base hover:text-theme-primary"
                     >
                       <Icon className="h-4 w-4 shrink-0 stroke-[1.8]" />
                       <span className="text-[14px] font-medium">{label}</span>
@@ -292,7 +292,7 @@ export const DesktopSidebar: React.FC = () => {
         <button
           type="button"
           onClick={() => setIsLocationModalOpen(true)}
-          className="flex items-center justify-between border-b border-neutral-200/80 px-2 pb-3 text-left cursor-pointer"
+          className="flex items-center justify-between border-b border-theme-divider/80 px-2 pb-3 text-left cursor-pointer"
           aria-label="Change location"
         >
           <div className="flex items-center gap-2 min-w-0">
@@ -300,7 +300,7 @@ export const DesktopSidebar: React.FC = () => {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#5E43F3] opacity-75" />
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#5E43F3]" />
             </span>
-            <span className="truncate text-[11px] font-bold text-neutral-900">{location.name}</span>
+            <span className="truncate text-[11px] font-bold text-theme-primary">{location.name}</span>
           </div>
           <span className="rounded-full bg-[#5E43F3]/10 px-1.5 py-0.5 text-[10px] font-bold text-[#5E43F3]">
             {location.radiusKm}km
@@ -319,7 +319,7 @@ export const DesktopSidebar: React.FC = () => {
                 className={`group flex items-center justify-between rounded-full px-3 py-2.5 text-left transition cursor-pointer ${
                   item.isActive
                     ? 'bg-[#5E43F3] text-white shadow-sm shadow-[#5E43F3]/20'
-                    : 'text-neutral-700 hover:bg-[#f8f6f3] hover:text-neutral-950'
+                    : 'text-theme-secondary hover:bg-theme-base hover:text-theme-primary'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -327,7 +327,7 @@ export const DesktopSidebar: React.FC = () => {
                   <span className="text-[15px] font-medium">{item.label}</span>
                 </div>
                 {item.badge !== undefined && item.badge > 0 && (
-                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${item.isActive ? 'bg-white text-[#5E43F3]' : 'bg-[#5E43F3] text-white'}`}>
+                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${item.isActive ? 'bg-theme-surface text-[#5E43F3]' : 'bg-[#5E43F3] text-white'}`}>
                     {item.badge}
                   </span>
                 )}
@@ -338,7 +338,7 @@ export const DesktopSidebar: React.FC = () => {
 
         {/* ── MY PAGES ── */}
         <div className="space-y-1">
-          <div className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
+          <div className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-theme-tertiary">
             My Pages
           </div>
           {myPagesNav.map(({ id, label, icon: Icon }) => (
@@ -353,7 +353,7 @@ export const DesktopSidebar: React.FC = () => {
               className={`flex w-full items-center gap-3 rounded-full px-3 py-2 text-left transition cursor-pointer ${
                 activeTab === id
                   ? 'bg-[#5E43F3]/10 text-[#5E43F3]'
-                  : 'text-neutral-600 hover:bg-[#f8f6f3] hover:text-neutral-950'
+                  : 'text-theme-secondary hover:bg-theme-base hover:text-theme-primary'
               }`}
             >
               <Icon className="h-4 w-4 stroke-[1.8]" />
@@ -363,10 +363,10 @@ export const DesktopSidebar: React.FC = () => {
         </div>
 
         {/* ── USER FOOTER ── */}
-        <div className="mt-auto pt-4 border-t border-neutral-200/80">
+        <div className="mt-auto pt-4 border-t border-theme-divider/80">
           {isAuthenticated ? (
             <>
-              <div className="flex w-full items-center justify-between gap-2 rounded-full px-2 py-2 transition hover:bg-[#f8f6f3]">
+              <div className="flex w-full items-center justify-between gap-2 rounded-full px-2 py-2 transition hover:bg-theme-base">
                 <button
                   type="button"
                   onClick={() => {
@@ -378,8 +378,8 @@ export const DesktopSidebar: React.FC = () => {
                 >
                   <Avatar src={currentUser?.avatar} alt={currentUser?.name} size="sm" />
                   <div className="min-w-0">
-                    <div className="truncate text-[12px] font-bold text-neutral-900">{currentUser?.name}</div>
-                    <div className="truncate text-[11px] text-neutral-500">@{currentUser?.username}</div>
+                    <div className="truncate text-[12px] font-bold text-theme-primary">{currentUser?.name}</div>
+                    <div className="truncate text-[11px] text-theme-tertiary">@{currentUser?.username}</div>
                   </div>
                 </button>
 

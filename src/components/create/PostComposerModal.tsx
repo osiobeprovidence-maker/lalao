@@ -14,7 +14,7 @@ export const PostComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded =
 
   if (embedded) {
     return (
-      <div className="relative w-full min-h-[calc(100vh-5rem)] bg-[#f6f3ee] flex flex-col overflow-y-auto animate-in fade-in duration-200">
+      <div className="relative w-full min-h-[calc(100vh-5rem)] bg-theme-base flex flex-col overflow-y-auto animate-in fade-in duration-200">
         <PostComposer embedded onClose={handleClose} />
       </div>
     );

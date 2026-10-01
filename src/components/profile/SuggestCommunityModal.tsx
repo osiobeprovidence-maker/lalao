@@ -74,23 +74,23 @@ export const SuggestCommunityModal: React.FC<SuggestCommunityModalProps> = ({
       onClick={handleClose}
     >
       <div
-        className="bg-white w-full max-w-lg rounded-2xl shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-250"
+        className="bg-theme-surface w-full max-w-lg rounded-2xl shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-250"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-theme-divider-light shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#5E43F3]/10 flex items-center justify-center">
               <Lightbulb className="w-4.5 h-4.5 text-[#5E43F3]" />
             </div>
             <div>
-              <h2 className="font-bold text-neutral-950 text-base">Suggest a Community</h2>
-              <p className="text-[11px] text-neutral-500">This is not community creation</p>
+              <h2 className="font-bold text-theme-primary text-base">Suggest a Community</h2>
+              <p className="text-[11px] text-theme-tertiary">This is not community creation</p>
             </div>
           </div>
           <button
             onClick={handleClose}
-            className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+            className="p-1.5 rounded-full text-theme-tertiary hover:text-theme-secondary hover:bg-theme-surface-hover transition-colors cursor-pointer"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
@@ -103,8 +103,8 @@ export const SuggestCommunityModal: React.FC<SuggestCommunityModalProps> = ({
             <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
               <Lightbulb className="w-7 h-7 text-emerald-600" />
             </div>
-            <h3 className="font-bold text-lg text-neutral-950 mb-2">Suggestion Submitted</h3>
-            <p className="text-sm text-neutral-500 max-w-xs">
+            <h3 className="font-bold text-lg text-theme-primary mb-2">Suggestion Submitted</h3>
+            <p className="text-sm text-theme-tertiary max-w-xs">
               Your community suggestion has been submitted for review. We'll notify you when there's an update.
             </p>
             <button
@@ -118,7 +118,7 @@ export const SuggestCommunityModal: React.FC<SuggestCommunityModalProps> = ({
           <>
             {/* Form */}
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
-              <p className="text-xs text-neutral-500 leading-relaxed">
+              <p className="text-xs text-theme-tertiary leading-relaxed">
                 Know a community that should be on Lalao? Suggest it for review. This does not create the community — our team will review your suggestion.
               </p>
 
@@ -130,7 +130,7 @@ export const SuggestCommunityModal: React.FC<SuggestCommunityModalProps> = ({
 
               {/* Community Name */}
               <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1.5">
+                <label className="block text-xs font-bold text-theme-secondary mb-1.5">
                   Community Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -138,13 +138,13 @@ export const SuggestCommunityModal: React.FC<SuggestCommunityModalProps> = ({
                   value={communityName}
                   onChange={(e) => setCommunityName(e.target.value)}
                   placeholder="e.g. Warri Developers Community"
-                  className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3]"
+                  className="w-full px-3 py-2.5 border border-theme-divider rounded-xl text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3]"
                 />
               </div>
 
               {/* Description */}
               <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1.5">
+                <label className="block text-xs font-bold text-theme-secondary mb-1.5">
                   What is this community about? <span className="text-red-500">*</span>
                 </label>
                 <textarea
@@ -152,17 +152,17 @@ export const SuggestCommunityModal: React.FC<SuggestCommunityModalProps> = ({
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe the purpose, topic, and activities of this community..."
                   rows={3}
-                  className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3] resize-none"
+                  className="w-full px-3 py-2.5 border border-theme-divider rounded-xl text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3] resize-none"
                 />
               </div>
 
               {/* Category */}
               <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1.5">Category</label>
+                <label className="block text-xs font-bold text-theme-secondary mb-1.5">Category</label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3] bg-white"
+                  className="w-full px-3 py-2.5 border border-theme-divider rounded-xl text-sm text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3] bg-theme-surface"
                 >
                   <option value="">Select a category</option>
                   <option value="Technology">Technology</option>
@@ -182,19 +182,19 @@ export const SuggestCommunityModal: React.FC<SuggestCommunityModalProps> = ({
 
               {/* Location */}
               <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1.5">Location</label>
+                <label className="block text-xs font-bold text-theme-secondary mb-1.5">Location</label>
                 <input
                   type="text"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="e.g. Warri, Delta State"
-                  className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3]"
+                  className="w-full px-3 py-2.5 border border-theme-divider rounded-xl text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3]"
                 />
               </div>
 
               {/* Reason */}
               <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1.5">
+                <label className="block text-xs font-bold text-theme-secondary mb-1.5">
                   Why should Lalao add this community?
                 </label>
                 <textarea
@@ -202,13 +202,13 @@ export const SuggestCommunityModal: React.FC<SuggestCommunityModalProps> = ({
                   onChange={(e) => setReason(e.target.value)}
                   placeholder="Explain why this community would be valuable on Lalao..."
                   rows={2}
-                  className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3] resize-none"
+                  className="w-full px-3 py-2.5 border border-theme-divider rounded-xl text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3] resize-none"
                 />
               </div>
 
               {/* Website */}
               <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1.5">
+                <label className="block text-xs font-bold text-theme-secondary mb-1.5">
                   Community link / website
                 </label>
                 <input
@@ -216,13 +216,13 @@ export const SuggestCommunityModal: React.FC<SuggestCommunityModalProps> = ({
                   value={website}
                   onChange={(e) => setWebsite(e.target.value)}
                   placeholder="https://..."
-                  className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3]"
+                  className="w-full px-3 py-2.5 border border-theme-divider rounded-xl text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3]"
                 />
               </div>
 
               {/* Additional Info */}
               <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1.5">
+                <label className="block text-xs font-bold text-theme-secondary mb-1.5">
                   Anything else?
                 </label>
                 <textarea
@@ -230,16 +230,16 @@ export const SuggestCommunityModal: React.FC<SuggestCommunityModalProps> = ({
                   onChange={(e) => setAdditionalInfo(e.target.value)}
                   placeholder="Any other details that might help..."
                   rows={2}
-                  className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3] resize-none"
+                  className="w-full px-3 py-2.5 border border-theme-divider rounded-xl text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3] resize-none"
                 />
               </div>
             </div>
 
             {/* Footer */}
-            <div className="px-5 py-4 border-t border-neutral-100 flex items-center justify-end gap-3 shrink-0">
+            <div className="px-5 py-4 border-t border-theme-divider-light flex items-center justify-end gap-3 shrink-0">
               <button
                 onClick={handleClose}
-                className="px-4 py-2.5 text-sm font-bold text-neutral-600 hover:bg-neutral-100 rounded-full transition-colors cursor-pointer"
+                className="px-4 py-2.5 text-sm font-bold text-theme-secondary hover:bg-theme-surface-hover rounded-full transition-colors cursor-pointer"
               >
                 Cancel
               </button>

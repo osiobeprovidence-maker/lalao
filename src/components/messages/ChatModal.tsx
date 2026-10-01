@@ -27,7 +27,7 @@ export const MessageReceiptIndicator: React.FC<{
     return (
       <span
         className={`inline-flex items-center ${
-          theme === 'dark-bubble' ? 'text-indigo-200/70' : 'text-neutral-400'
+          theme === 'dark-bubble' ? 'text-indigo-200/70' : 'text-theme-tertiary'
         } ${className}`}
         title="Sending..."
       >
@@ -40,7 +40,7 @@ export const MessageReceiptIndicator: React.FC<{
     return (
       <span
         className={`inline-flex items-center ${
-          theme === 'dark-bubble' ? 'text-indigo-200/90' : 'text-neutral-400'
+          theme === 'dark-bubble' ? 'text-indigo-200/90' : 'text-theme-tertiary'
         } ${className}`}
         title="Sent"
       >
@@ -53,7 +53,7 @@ export const MessageReceiptIndicator: React.FC<{
     return (
       <span
         className={`inline-flex items-center ${
-          theme === 'dark-bubble' ? 'text-indigo-200' : 'text-neutral-400'
+          theme === 'dark-bubble' ? 'text-indigo-200' : 'text-theme-tertiary'
         } ${className}`}
         title="Delivered"
       >
@@ -284,17 +284,17 @@ export const ChatModal: React.FC = () => {
   return (
     <div
       id="chat-screen"
-      className="w-full min-h-screen bg-[#f6f3ee] flex justify-center overflow-hidden animate-in fade-in duration-200"
+      className="w-full min-h-screen bg-theme-base flex justify-center overflow-hidden animate-in fade-in duration-200"
     >
-      <div className="w-full max-w-[960px] min-h-screen bg-[#f6f3ee] flex flex-col border-x border-neutral-200/80">
-        <header className="shrink-0 border-b border-neutral-200/80 bg-[#f6f3ee]/95 backdrop-blur-md px-3 sm:px-4 py-2.5">
+      <div className="w-full max-w-[960px] min-h-screen bg-theme-base flex flex-col border-x border-theme-divider/80">
+        <header className="shrink-0 border-b border-theme-divider/80 bg-theme-base/95 backdrop-blur-md px-3 sm:px-4 py-2.5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2.5">
               <button
                 id="btn-chat-back"
                 type="button"
                 onClick={() => setActiveChatId(null)}
-                className="p-1.5 -ml-1 rounded-full text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer"
+                className="p-1.5 -ml-1 rounded-full text-theme-secondary hover:text-theme-primary hover:bg-theme-surface-hover active:scale-95 transition-all cursor-pointer"
                 aria-label="Back to messages"
               >
                 <ArrowLeft className="w-5 h-5 stroke-[2.2]" />
@@ -317,12 +317,12 @@ export const ChatModal: React.FC = () => {
 
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="truncate text-sm font-bold text-neutral-950">
+                    <span className="truncate text-sm font-bold text-theme-primary">
                       {conv.participant.name}
                     </span>
                     {isVerified && <VerifiedBadge />}
                   </div>
-                  <span className="block truncate text-[11px] text-neutral-500">
+                  <span className="block truncate text-[11px] text-theme-tertiary">
                     @{conv.participant.username}
                   </span>
                 </div>
@@ -332,7 +332,7 @@ export const ChatModal: React.FC = () => {
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => triggerShareToast('Voice calls coming in v0.2')}
-                className="rounded-full p-2 text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950 transition-colors cursor-pointer"
+                className="rounded-full p-2 text-theme-secondary hover:bg-theme-surface-hover hover:text-theme-primary transition-colors cursor-pointer"
                 title="Voice call"
                 aria-label="Voice call"
               >
@@ -340,7 +340,7 @@ export const ChatModal: React.FC = () => {
               </button>
               <button
                 type="button"
-                className="rounded-full p-2 text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950 transition-colors cursor-pointer"
+                className="rounded-full p-2 text-theme-secondary hover:bg-theme-surface-hover hover:text-theme-primary transition-colors cursor-pointer"
                 title="More actions"
                 aria-label="More actions"
               >
@@ -352,13 +352,13 @@ export const ChatModal: React.FC = () => {
 
         <div
           ref={chatScrollRef}
-          className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 space-y-4 bg-[#f6f3ee] min-h-0"
+          className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 space-y-4 bg-theme-base min-h-0"
         >
-          <div className="rounded-2xl border border-neutral-200/80 bg-white/70 px-3 py-2 text-center shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+          <div className="rounded-2xl border border-theme-divider/80 bg-theme-surface/70 px-3 py-2 text-center shadow-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-theme-tertiary">
               {conv.participant.name}
             </p>
-            <p className="mt-1 text-xs text-neutral-600">
+            <p className="mt-1 text-xs text-theme-secondary">
               {followersStr} followers · {postsStr} posts · {mutualFollowStr}
             </p>
           </div>
@@ -379,7 +379,7 @@ export const ChatModal: React.FC = () => {
                       {matchedSticker ? matchedSticker.render() : <Sparkles className="w-12 h-12 text-amber-500" />}
                     </div>
                     <div className="flex items-center gap-1 mt-0.5 pr-2 select-none">
-                      <span className="text-[10px] text-neutral-400">
+                      <span className="text-[10px] text-theme-tertiary">
                         {msg.timestamp}
                       </span>
                       {msg.isMine && (
@@ -406,13 +406,13 @@ export const ChatModal: React.FC = () => {
                   className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-xs sm:text-sm leading-relaxed ${
                     msg.isMine
                       ? 'bg-[#5E43F3] text-white rounded-br-xs'
-                      : 'bg-neutral-100 text-neutral-900 rounded-bl-xs'
+                      : 'bg-theme-surface-hover text-theme-primary rounded-bl-xs'
                   }`}
                 >
                   <p className="break-words">{msg.text}</p>
                   <div
                     className={`flex items-center justify-end gap-1.5 mt-1 select-none ${
-                      msg.isMine ? 'text-indigo-200' : 'text-neutral-400'
+                      msg.isMine ? 'text-indigo-200' : 'text-theme-tertiary'
                     }`}
                   >
                     <span className="text-[10px] tracking-tight">
@@ -435,16 +435,16 @@ export const ChatModal: React.FC = () => {
         {showStickerTray && (
           <div
             id="sticker-tray"
-            className="border-t border-neutral-200/80 bg-[#f7f4f0] px-4 pt-3 pb-2 shrink-0 animate-in fade-in slide-in-from-bottom-2 duration-150"
+            className="border-t border-theme-divider/80 bg-theme-base px-4 pt-3 pb-2 shrink-0 animate-in fade-in slide-in-from-bottom-2 duration-150"
           >
-            <div className="mb-3 flex items-center justify-between text-neutral-500">
-              <span className="text-xs font-semibold text-neutral-600">
+            <div className="mb-3 flex items-center justify-between text-theme-tertiary">
+              <span className="text-xs font-semibold text-theme-secondary">
                 Say hello by sending a sticker
               </span>
               <button
                 type="button"
                 onClick={() => setShowStickerTray(false)}
-                className="p-1 -mr-1 rounded-full text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700 transition-colors cursor-pointer"
+                className="p-1 -mr-1 rounded-full text-theme-tertiary hover:bg-theme-surface-active hover:text-theme-secondary transition-colors cursor-pointer"
                 title="Dismiss sticker tray"
                 aria-label="Dismiss stickers"
               >
@@ -458,7 +458,7 @@ export const ChatModal: React.FC = () => {
                   key={stk.id}
                   type="button"
                   onClick={() => handleSendSticker(stk)}
-                  className="flex items-center justify-center rounded-xl p-1 transition-transform hover:bg-white active:scale-110 cursor-pointer"
+                  className="flex items-center justify-center rounded-xl p-1 transition-transform hover:bg-theme-surface active:scale-110 cursor-pointer"
                   title={`Send ${stk.name} sticker`}
                 >
                   {stk.render()}
@@ -468,7 +468,7 @@ export const ChatModal: React.FC = () => {
           </div>
         )}
 
-        <div className="border-t border-neutral-200/80 bg-[#f7f4f0] p-3 shrink-0">
+        <div className="border-t border-theme-divider/80 bg-theme-base p-3 shrink-0">
           <form onSubmit={handleSend} className="flex items-center gap-2">
             <div className="relative flex-1">
               <input
@@ -477,28 +477,28 @@ export const ChatModal: React.FC = () => {
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 placeholder="Message"
-                className="w-full rounded-full border border-neutral-200 bg-white pl-4 pr-16 py-3 text-sm text-neutral-900 placeholder:text-neutral-500 outline-none transition-all focus:border-[#5E43F3] focus:ring-2 focus:ring-[#5E43F3]/15"
+                className="w-full rounded-full border border-theme-divider bg-theme-surface pl-4 pr-16 py-3 text-sm text-theme-primary placeholder:text-theme-tertiary outline-none transition-all focus:border-[#5E43F3] focus:ring-2 focus:ring-[#5E43F3]/15"
                 autoFocus
               />
 
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-neutral-400">
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-theme-tertiary">
                 {!showStickerTray && (
                   <button
                     type="button"
                     onClick={() => setShowStickerTray(true)}
-                    className="rounded-full p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors cursor-pointer"
+                    className="rounded-full p-1.5 text-theme-tertiary hover:bg-theme-surface-hover hover:text-theme-secondary transition-colors cursor-pointer"
                     title="Show stickers"
                   >
                     <Smile className="w-4 h-4" />
                   </button>
                 )}
 
-                <label className="rounded-full p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors cursor-pointer" title="Attach image">
+                <label className="rounded-full p-1.5 text-theme-tertiary hover:bg-theme-surface-hover hover:text-theme-secondary transition-colors cursor-pointer" title="Attach image">
                   <ImageIcon className="w-4 h-4" />
                   <input type="file" accept="image/*,video/*" className="hidden" onChange={() => triggerShareToast('Gallery selected')} />
                 </label>
 
-                <label className="rounded-full p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors cursor-pointer" title="Camera snap">
+                <label className="rounded-full p-1.5 text-theme-tertiary hover:bg-theme-surface-hover hover:text-theme-secondary transition-colors cursor-pointer" title="Camera snap">
                   <Camera className="w-4 h-4" />
                   <input type="file" accept="image/*,video/*" capture="environment" className="hidden" onChange={() => triggerShareToast('Camera snapped')} />
                 </label>
@@ -509,7 +509,7 @@ export const ChatModal: React.FC = () => {
                   className={`rounded-full p-1.5 transition-all cursor-pointer ${
                     isRecording
                       ? 'bg-rose-500 text-white animate-pulse'
-                      : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700'
+                      : 'text-theme-tertiary hover:bg-theme-surface-hover hover:text-theme-secondary'
                   }`}
                   title="Voice Note"
                 >
@@ -525,7 +525,7 @@ export const ChatModal: React.FC = () => {
               className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all cursor-pointer ${
                 inputMessage.trim()
                   ? 'bg-[#5E43F3] text-white hover:bg-[#4E34E0] active:scale-95 shadow-md shadow-[#5E43F3]/20'
-                  : 'bg-neutral-200 text-neutral-500'
+                  : 'bg-theme-surface-active text-theme-tertiary'
               }`}
               title="Send message"
             >
@@ -533,7 +533,7 @@ export const ChatModal: React.FC = () => {
             </button>
           </form>
 
-          <div className="mx-auto mt-2.5 h-1 w-24 rounded-full bg-neutral-300" />
+          <div className="mx-auto mt-2.5 h-1 w-24 rounded-full bg-theme-divider-strong" />
         </div>
       </div>
     </div>

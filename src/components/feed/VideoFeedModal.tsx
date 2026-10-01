@@ -46,19 +46,19 @@ export const VideoFeedModal: React.FC = () => {
   if (!activeVideoFeedPostId) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black text-white flex justify-center animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] bg-theme-inverse text-theme-text-inverse flex justify-center animate-in fade-in duration-200">
       
       {/* Top Controls */}
       <div className="absolute top-0 inset-x-0 p-4 md:p-6 flex justify-between items-center z-[110] pointer-events-none">
         <button 
           onClick={() => setActiveVideoFeedPostId(null)}
-          className="p-2 hover:bg-white/10 rounded-full text-white transition pointer-events-auto"
+          className="p-2 hover:bg-theme-surface/10 rounded-full text-white transition pointer-events-auto"
           aria-label="Close video viewer"
         >
           <X className="w-7 h-7" />
         </button>
         <button 
-          className="p-2 hover:bg-white/10 rounded-full text-white transition pointer-events-auto"
+          className="p-2 hover:bg-theme-surface/10 rounded-full text-white transition pointer-events-auto"
           aria-label="More options"
         >
           <MoreHorizontal className="w-7 h-7" />
@@ -105,7 +105,7 @@ const VideoFeedItem: React.FC<{ post: Post, isActive: boolean, onIntersect: () =
   const { toggleLikePost, toggleSavePost, setActiveCommentsPostId } = useLalao();
 
   return (
-    <div ref={itemRef} className="relative w-full h-full flex items-center justify-center bg-black overflow-hidden py-16 md:py-20 px-4">
+    <div ref={itemRef} className="relative w-full h-full flex items-center justify-center bg-theme-inverse overflow-hidden py-16 md:py-20 px-4">
       
       {/* Flex container that shrinks to fit its content's intrinsic width */}
       <div className="relative flex flex-col h-full w-fit max-w-full mx-auto">
@@ -124,7 +124,7 @@ const VideoFeedItem: React.FC<{ post: Post, isActive: boolean, onIntersect: () =
                 className="h-full !w-auto max-w-full object-contain"
               />
           ) : (
-            <div className="w-[300px] h-full bg-black animate-pulse flex items-center justify-center">
+            <div className="w-[300px] h-full bg-theme-inverse animate-pulse flex items-center justify-center">
               <div className="w-8 h-8 border-2 border-[#5E43F3] border-t-transparent rounded-full animate-spin" />
             </div>
           )}
@@ -195,7 +195,7 @@ const VideoFeedItem: React.FC<{ post: Post, isActive: boolean, onIntersect: () =
 
             <button 
               onClick={onToggleMute} 
-              className="flex items-center justify-center p-2 rounded-full hover:bg-white/10 transition text-white/80 hover:text-white ml-6 shrink-0"
+              className="flex items-center justify-center p-2 rounded-full hover:bg-theme-surface/10 transition text-white/80 hover:text-white ml-6 shrink-0"
               aria-label={isMuted ? "Unmute" : "Mute"}
             >
               {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}

@@ -142,17 +142,17 @@ export const CreatePostPage: React.FC = () => {
   ];
 
   return (
-    <div className="mx-auto w-full max-w-[600px] h-screen bg-white flex flex-col relative sm:h-auto sm:my-8 sm:rounded-2xl sm:border sm:border-neutral-200 sm:shadow-xl">
+    <div className="mx-auto w-full max-w-[600px] h-screen bg-theme-surface flex flex-col relative sm:h-auto sm:my-8 sm:rounded-2xl sm:border sm:border-theme-divider sm:shadow-xl">
       {/* Top Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100 shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-theme-divider-light shrink-0">
         <button
           type="button"
           onClick={handleExit}
-          className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-neutral-100 text-neutral-900 transition"
+          className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-theme-surface-hover text-theme-primary transition"
         >
           <X className="h-5 w-5" />
         </button>
-        <h1 className="text-lg font-bold text-neutral-900">Create Post</h1>
+        <h1 className="text-lg font-bold text-theme-primary">Create Post</h1>
         <button
           type="button"
           onClick={handleSubmit}
@@ -171,7 +171,7 @@ export const CreatePostPage: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-4 flex gap-3">
         {/* Avatar */}
         <div className="shrink-0 pt-1">
-          <div className="w-10 h-10 rounded-full bg-neutral-200 overflow-hidden">
+          <div className="w-10 h-10 rounded-full bg-theme-surface-active overflow-hidden">
             {currentUser?.avatarUrl ? (
               <img src={currentUser.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
@@ -185,7 +185,7 @@ export const CreatePostPage: React.FC = () => {
         {/* Post Content */}
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-bold text-neutral-900">{currentUser?.displayName || currentUser?.username || 'You'}</span>
+            <span className="font-bold text-theme-primary">{currentUser?.displayName || currentUser?.username || 'You'}</span>
             {currentUser?.isVerified && (
               <CheckCircle2 className="w-4 h-4 text-[#5E43F3] fill-[#5E43F3] text-white" />
             )}
@@ -196,7 +196,7 @@ export const CreatePostPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsAudienceMenuOpen(!isAudienceMenuOpen)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-neutral-200 text-xs font-bold text-[#5E43F3] hover:bg-[#5E43F3]/5 transition"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-theme-divider text-xs font-bold text-[#5E43F3] hover:bg-[#5E43F3]/5 transition"
             >
               {audienceOptions.find(o => o.id === audience)?.icon}
               {audience}
@@ -204,7 +204,7 @@ export const CreatePostPage: React.FC = () => {
             </button>
             
             {isAudienceMenuOpen && (
-              <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-xl shadow-lg border border-neutral-100 py-1.5 z-50">
+              <div className="absolute top-full left-0 mt-1 w-48 bg-theme-surface rounded-xl shadow-lg border border-theme-divider-light py-1.5 z-50">
                 {audienceOptions.map(opt => (
                   <button
                     key={opt.id}
@@ -213,7 +213,7 @@ export const CreatePostPage: React.FC = () => {
                       setAudience(opt.id as Audience);
                       setIsAudienceMenuOpen(false);
                     }}
-                    className={`w-full flex items-center justify-between px-4 py-2 text-sm text-left hover:bg-neutral-50 transition ${audience === opt.id ? 'font-bold text-[#5E43F3]' : 'font-medium text-neutral-700'}`}
+                    className={`w-full flex items-center justify-between px-4 py-2 text-sm text-left hover:bg-theme-base transition ${audience === opt.id ? 'font-bold text-[#5E43F3]' : 'font-medium text-theme-secondary'}`}
                   >
                     <span className="flex items-center gap-2">{opt.icon} {opt.id}</span>
                   </button>
@@ -226,7 +226,7 @@ export const CreatePostPage: React.FC = () => {
             value={caption}
             onChange={(event) => setCaption(event.target.value.slice(0, maxChars))}
             placeholder="What's happening?"
-            className="w-full resize-none bg-transparent text-xl text-neutral-900 placeholder:text-neutral-500 outline-none min-h-[120px]"
+            className="w-full resize-none bg-transparent text-xl text-theme-primary placeholder:text-theme-tertiary outline-none min-h-[120px]"
           />
 
           {error && !mediaUrl && (
@@ -236,7 +236,7 @@ export const CreatePostPage: React.FC = () => {
           )}
 
           {mediaUrl && (
-            <div className="relative w-full mt-3 rounded-2xl overflow-hidden border border-neutral-100 group">
+            <div className="relative w-full mt-3 rounded-2xl overflow-hidden border border-theme-divider-light group">
               <button
                 type="button"
                 onClick={() => {
@@ -248,7 +248,7 @@ export const CreatePostPage: React.FC = () => {
                 <X className="w-4 h-4" />
               </button>
               {mediaType === 'video' ? (
-                <video src={mediaUrl} controls className="w-full max-h-[400px] object-contain bg-black" />
+                <video src={mediaUrl} controls className="w-full max-h-[400px] object-contain bg-theme-inverse" />
               ) : (
                 <img src={mediaUrl} alt="Attached" className="w-full max-h-[400px] object-cover" />
               )}
@@ -258,7 +258,7 @@ export const CreatePostPage: React.FC = () => {
       </div>
 
       {/* Bottom Toolbar */}
-      <div className="px-4 py-3 border-t border-neutral-100 flex items-center justify-between bg-white relative">
+      <div className="px-4 py-3 border-t border-theme-divider-light flex items-center justify-between bg-theme-surface relative">
         <div className="flex items-center gap-1">
           {/* Gallery Button */}
           <button
@@ -310,16 +310,16 @@ export const CreatePostPage: React.FC = () => {
           </button>
         </div>
 
-        <div className="text-xs font-medium text-neutral-400">
+        <div className="text-xs font-medium text-theme-tertiary">
           {caption.length} / {maxChars}
         </div>
 
         {/* Simple Emoji Picker Dropdown */}
         {showEmojiPicker && (
-          <div className="absolute bottom-[110%] left-4 bg-white border border-neutral-100 shadow-xl rounded-xl p-2 w-64 z-50">
-            <div className="flex items-center justify-between mb-2 pb-1 border-b border-neutral-100">
-              <span className="text-xs font-bold text-neutral-500">Pick Emoji</span>
-              <button onClick={() => setShowEmojiPicker(false)}><X className="w-3.5 h-3.5 text-neutral-400" /></button>
+          <div className="absolute bottom-[110%] left-4 bg-theme-surface border border-theme-divider-light shadow-xl rounded-xl p-2 w-64 z-50">
+            <div className="flex items-center justify-between mb-2 pb-1 border-b border-theme-divider-light">
+              <span className="text-xs font-bold text-theme-tertiary">Pick Emoji</span>
+              <button onClick={() => setShowEmojiPicker(false)}><X className="w-3.5 h-3.5 text-theme-tertiary" /></button>
             </div>
             <div className="grid grid-cols-6 gap-1">
               {emojis.map(e => (
@@ -327,7 +327,7 @@ export const CreatePostPage: React.FC = () => {
                   key={e} 
                   type="button"
                   onClick={() => insertEmoji(e)} 
-                  className="h-8 w-8 flex items-center justify-center hover:bg-neutral-100 rounded-lg text-lg"
+                  className="h-8 w-8 flex items-center justify-center hover:bg-theme-surface-hover rounded-lg text-lg"
                 >
                   {e}
                 </button>

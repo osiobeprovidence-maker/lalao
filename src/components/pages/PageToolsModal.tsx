@@ -57,21 +57,21 @@ export const PageToolsModal: React.FC<PageToolsModalProps> = ({
   };
 
   return (
-    <div className="absolute inset-0 z-50 bg-white overflow-y-auto flex flex-col animate-in fade-in slide-in-from-right-4 duration-250">
+    <div className="absolute inset-0 z-50 bg-theme-surface overflow-y-auto flex flex-col animate-in fade-in slide-in-from-right-4 duration-250">
       {/* Top Sticky App Bar */}
-      <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-neutral-100 px-4 py-3 sm:px-6 flex items-center justify-between z-20 shrink-0">
+      <div className="sticky top-0 bg-theme-surface/95 backdrop-blur-md border-b border-theme-divider-light px-4 py-3 sm:px-6 flex items-center justify-between z-20 shrink-0">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="p-2 -ml-2 rounded-full hover:bg-neutral-100 text-neutral-800 transition-colors cursor-pointer"
+            className="p-2 -ml-2 rounded-full hover:bg-theme-surface-hover text-theme-primary transition-colors cursor-pointer"
             aria-label="Back"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h3 className="text-base font-black text-neutral-950">Business Tools</h3>
-            <p className="text-xs text-neutral-500 font-medium truncate max-w-[180px] sm:max-w-md">
+            <h3 className="text-base font-black text-theme-primary">Business Tools</h3>
+            <p className="text-xs text-theme-tertiary font-medium truncate max-w-[180px] sm:max-w-md">
               Configure & Extend your Page
             </p>
           </div>
@@ -79,7 +79,7 @@ export const PageToolsModal: React.FC<PageToolsModalProps> = ({
         <button
           onClick={() => isEditingSettings ? handleSaveSettings() : setIsEditingSettings(true)}
           disabled={isSaving}
-          className="px-4 py-1.5 bg-neutral-900 text-white text-sm font-semibold rounded-full hover:bg-neutral-800 transition-colors disabled:opacity-50"
+          className="px-4 py-1.5 bg-theme-inverse text-theme-text-inverse text-sm font-semibold rounded-full hover:bg-theme-inverse transition-colors disabled:opacity-50"
         >
           {isSaving ? 'Saving...' : (isEditingSettings ? 'Save Configuration' : 'Configure')}
         </button>
@@ -88,7 +88,7 @@ export const PageToolsModal: React.FC<PageToolsModalProps> = ({
       <div className="w-full max-w-2xl mx-auto p-4 sm:p-6 pb-24 flex-1 flex flex-col">
         {isEditingSettings ? (
           <div className="mb-8">
-            <h4 className="text-lg font-bold text-neutral-900 mb-4">Select Business Type</h4>
+            <h4 className="text-lg font-bold text-theme-primary mb-4">Select Business Type</h4>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
               {[
                 { id: 'commerce', label: 'Commerce', desc: 'Shop & Products' },
@@ -99,27 +99,27 @@ export const PageToolsModal: React.FC<PageToolsModalProps> = ({
                   key={type.id}
                   onClick={() => setBusinessType(type.id as any)}
                   className={`p-4 rounded-xl border text-left transition-colors cursor-pointer ${
-                    businessType === type.id ? 'border-[#5E43F3] bg-[#5E43F3]/5' : 'border-neutral-200 hover:border-neutral-300'
+                    businessType === type.id ? 'border-[#5E43F3] bg-[#5E43F3]/5' : 'border-theme-divider hover:border-theme-divider-strong'
                   }`}
                 >
                   <div className="flex justify-between items-start mb-1">
-                    <span className={`font-bold ${businessType === type.id ? 'text-[#5E43F3]' : 'text-neutral-900'}`}>{type.label}</span>
+                    <span className={`font-bold ${businessType === type.id ? 'text-[#5E43F3]' : 'text-theme-primary'}`}>{type.label}</span>
                     {businessType === type.id && <Check className="w-4 h-4 text-[#5E43F3]" />}
                   </div>
-                  <span className="text-xs text-neutral-500">{type.desc}</span>
+                  <span className="text-xs text-theme-tertiary">{type.desc}</span>
                 </button>
               ))}
             </div>
             
-            <h4 className="text-lg font-bold text-neutral-900 mb-4">Toggle Active Tools</h4>
+            <h4 className="text-lg font-bold text-theme-primary mb-4">Toggle Active Tools</h4>
           </div>
         ) : (
           <div className="text-center mt-6 mb-12">
             <div className="w-16 h-16 bg-[#5E43F3]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Briefcase className="w-8 h-8 text-[#5E43F3]" />
             </div>
-            <h2 className="text-2xl font-black text-neutral-900 mb-3">Power up your business</h2>
-            <p className="text-neutral-500 text-sm max-w-md mx-auto leading-relaxed">
+            <h2 className="text-2xl font-black text-theme-primary mb-3">Power up your business</h2>
+            <p className="text-theme-tertiary text-sm max-w-md mx-auto leading-relaxed">
               Your page is configured as a <span className="font-bold uppercase">{businessType}</span> business.
             </p>
           </div>
@@ -130,7 +130,7 @@ export const PageToolsModal: React.FC<PageToolsModalProps> = ({
           {/* COMMERCE SECTION */}
           {(businessType === 'commerce' || businessType === 'hybrid' || isEditingSettings) && (
             <div>
-              <h3 className="text-sm font-bold text-neutral-400 uppercase tracking-wider mb-3">Commerce Tools</h3>
+              <h3 className="text-sm font-bold text-theme-tertiary uppercase tracking-wider mb-3">Commerce Tools</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <ToolCard
                   title="Shop"
@@ -157,7 +157,7 @@ export const PageToolsModal: React.FC<PageToolsModalProps> = ({
           {/* SUBSCRIPTION SECTION */}
           {(businessType === 'subscription' || businessType === 'hybrid' || isEditingSettings) && (
             <div>
-              <h3 className="text-sm font-bold text-neutral-400 uppercase tracking-wider mb-3">Subscription Tools</h3>
+              <h3 className="text-sm font-bold text-theme-tertiary uppercase tracking-wider mb-3">Subscription Tools</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <button
                   type="button"
@@ -171,21 +171,21 @@ export const PageToolsModal: React.FC<PageToolsModalProps> = ({
                   }}
                   className={`p-5 rounded-2xl border flex flex-col gap-3 text-left transition-colors ${
                     !activeTools.includes('subscriptions') && !isEditingSettings ? 'opacity-50 pointer-events-none' : ''
-                  } ${isEditingSettings ? 'cursor-pointer hover:bg-neutral-50' : 'cursor-pointer hover:bg-[#5E43F3]/5 border-[#5E43F3]/20 shadow-sm'}`}
+                  } ${isEditingSettings ? 'cursor-pointer hover:bg-theme-base' : 'cursor-pointer hover:bg-[#5E43F3]/5 border-[#5E43F3]/20 shadow-sm'}`}
                 >
                   <div className="flex justify-between items-start w-full">
                     <div className="w-10 h-10 bg-[#5E43F3]/10 rounded-xl flex items-center justify-center text-[#5E43F3]">
                       <Repeat className="w-5 h-5" />
                     </div>
                     {isEditingSettings && (
-                      <div className={`w-12 h-6 rounded-full flex items-center p-1 transition-colors ${activeTools.includes('subscriptions') ? 'bg-[#5E43F3]' : 'bg-neutral-200'}`}>
-                        <div className={`w-4 h-4 rounded-full bg-white transition-transform ${activeTools.includes('subscriptions') ? 'translate-x-6' : ''}`} />
+                      <div className={`w-12 h-6 rounded-full flex items-center p-1 transition-colors ${activeTools.includes('subscriptions') ? 'bg-[#5E43F3]' : 'bg-theme-surface-active'}`}>
+                        <div className={`w-4 h-4 rounded-full bg-theme-surface transition-transform ${activeTools.includes('subscriptions') ? 'translate-x-6' : ''}`} />
                       </div>
                     )}
                   </div>
                   <div>
-                    <h4 className="font-bold text-neutral-900 mb-1">Subscription CRM</h4>
-                    <p className="text-xs text-neutral-500">Manage premium memberships, slots, and recurring revenue.</p>
+                    <h4 className="font-bold text-theme-primary mb-1">Subscription CRM</h4>
+                    <p className="text-xs text-theme-tertiary">Manage premium memberships, slots, and recurring revenue.</p>
                   </div>
                 </button>
               </div>
@@ -194,8 +194,8 @@ export const PageToolsModal: React.FC<PageToolsModalProps> = ({
 
           {/* SUPER PAGE TOOLS SECTION */}
           <div>
-            <h3 className="text-sm font-bold text-neutral-400 uppercase tracking-wider mb-3">Super Page Tools</h3>
-            <p className="text-xs text-neutral-500 mb-4">Turn your Page into a specialized business experience.</p>
+            <h3 className="text-sm font-bold text-theme-tertiary uppercase tracking-wider mb-3">Super Page Tools</h3>
+            <p className="text-xs text-theme-tertiary mb-4">Turn your Page into a specialized business experience.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <ToolCard
                 title="Shop"
@@ -256,7 +256,7 @@ export const PageToolsModal: React.FC<PageToolsModalProps> = ({
 
           {/* CUSTOMER ENGAGEMENT SECTION - Temporarily hidden as backend schema is not implemented
           <div>
-            <h3 className="text-sm font-bold text-neutral-400 uppercase tracking-wider mb-3">Customer Engagement</h3>
+            <h3 className="text-sm font-bold text-theme-tertiary uppercase tracking-wider mb-3">Customer Engagement</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <ToolCard
                 title="Loyalty & Rewards"
@@ -306,23 +306,23 @@ const ToolCard = ({ title, desc, icon, color, isActive, isEditing, onToggle }: a
   return (
     <button
       onClick={() => isEditing && onToggle()}
-      className={`p-5 rounded-2xl border border-neutral-200 bg-neutral-50/50 flex flex-col gap-3 text-left transition-colors ${
+      className={`p-5 rounded-2xl border border-theme-divider bg-theme-base/50 flex flex-col gap-3 text-left transition-colors ${
         !isActive && !isEditing ? 'opacity-50' : ''
-      } ${isEditing ? 'cursor-pointer hover:bg-neutral-100' : 'cursor-default'}`}
+      } ${isEditing ? 'cursor-pointer hover:bg-theme-surface-hover' : 'cursor-default'}`}
     >
       <div className="flex justify-between items-start w-full">
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorMap[color]}`}>
           {React.cloneElement(icon, { className: 'w-5 h-5' })}
         </div>
         {isEditing && (
-          <div className={`w-12 h-6 rounded-full flex items-center p-1 transition-colors ${isActive ? 'bg-[#5E43F3]' : 'bg-neutral-200'}`}>
-            <div className={`w-4 h-4 rounded-full bg-white transition-transform ${isActive ? 'translate-x-6' : ''}`} />
+          <div className={`w-12 h-6 rounded-full flex items-center p-1 transition-colors ${isActive ? 'bg-[#5E43F3]' : 'bg-theme-surface-active'}`}>
+            <div className={`w-4 h-4 rounded-full bg-theme-surface transition-transform ${isActive ? 'translate-x-6' : ''}`} />
           </div>
         )}
       </div>
       <div>
-        <h4 className="font-bold text-neutral-900 mb-1">{title}</h4>
-        <p className="text-xs text-neutral-500">{desc}</p>
+        <h4 className="font-bold text-theme-primary mb-1">{title}</h4>
+        <p className="text-xs text-theme-tertiary">{desc}</p>
       </div>
     </button>
   );

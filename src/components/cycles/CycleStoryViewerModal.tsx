@@ -305,7 +305,7 @@ export const CycleStoryViewerModal: React.FC = () => {
   return (
     <div
       id="modal-cycle-story-viewer-backdrop"
-      className="fixed inset-0 z-50 bg-neutral-950/95 backdrop-blur-md flex items-center justify-center select-none animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 bg-theme-inverse/95 backdrop-blur-md flex items-center justify-center select-none animate-in fade-in duration-200"
       onKeyDown={(e) => {
         if (e.key === 'Escape') closeCycleStory();
         if (e.key === 'ArrowRight') handleNextSlide();
@@ -318,7 +318,7 @@ export const CycleStoryViewerModal: React.FC = () => {
       <button
         id="btn-close-cycle-story-overlay"
         onClick={closeCycleStory}
-        className="fixed top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 backdrop-blur-md flex items-center justify-center text-white cursor-pointer z-50 transition-all shadow-lg border border-white/20"
+        className="fixed top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-theme-surface/15 hover:bg-theme-surface/25 active:scale-95 backdrop-blur-md flex items-center justify-center text-white cursor-pointer z-50 transition-all shadow-lg border border-white/20"
         title="Close Story (Esc)"
       >
         <X className="w-5 h-5" />
@@ -327,7 +327,7 @@ export const CycleStoryViewerModal: React.FC = () => {
       {/* Main Story Phone Viewport */}
       <div
         id="cycle-story-viewer-card"
-        className="w-full h-[100dvh] sm:h-[90dvh] sm:max-h-[840px] sm:max-w-[420px] sm:rounded-2xl relative overflow-hidden bg-black shadow-2xl flex flex-col justify-between"
+        className="w-full h-[100dvh] sm:h-[90dvh] sm:max-h-[840px] sm:max-w-[420px] sm:rounded-2xl relative overflow-hidden bg-theme-inverse shadow-2xl flex flex-col justify-between"
       >
         {/* 1. TOP SEGMENTED PROGRESS BARS */}
         <div className="absolute top-0 left-0 right-0 z-30 px-3 pt-3 flex items-center gap-1.5 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
@@ -339,14 +339,14 @@ export const CycleStoryViewerModal: React.FC = () => {
             return (
               <div
                 key={item.id}
-                className="flex-1 h-1 rounded-full bg-white/30 overflow-hidden cursor-pointer backdrop-blur-xs"
+                className="flex-1 h-1 rounded-full bg-theme-surface/30 overflow-hidden cursor-pointer backdrop-blur-xs"
                 onClick={(e) => {
                   e.stopPropagation();
                   setActiveStoryIndex(idx);
                 }}
               >
                 <div
-                  className="h-full bg-white rounded-full transition-all duration-75"
+                  className="h-full bg-theme-surface rounded-full transition-all duration-75"
                   style={{ width: `${widthPercent}%` }}
                 />
               </div>
@@ -382,7 +382,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                   <CheckCircle2 className="w-3.5 h-3.5 text-blue-400 fill-blue-400/20 shrink-0" />
                 )}
               </div>
-              <span className="text-[11px] text-neutral-300 font-medium drop-shadow-xs">
+              <span className="text-[11px] text-theme-tertiary font-medium drop-shadow-xs">
                 {formatTime(currentItem.createdAt)}
               </span>
             </div>
@@ -398,7 +398,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                 e.stopPropagation();
                 setIsPaused((p) => !p);
               }}
-              className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 backdrop-blur-xs flex items-center justify-center text-white cursor-pointer transition-colors"
+              className="w-8 h-8 rounded-full bg-theme-surface/10 hover:bg-theme-surface/20 active:scale-95 backdrop-blur-xs flex items-center justify-center text-white cursor-pointer transition-colors"
               title={isPaused ? 'Resume' : 'Pause'}
             >
               {isPaused ? (
@@ -422,7 +422,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                     if (!next) videoRef.current.volume = 1;
                   }
                 }}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 backdrop-blur-xs flex items-center justify-center text-white cursor-pointer transition-colors mr-1"
+                className="w-8 h-8 rounded-full bg-theme-surface/10 hover:bg-theme-surface/20 active:scale-95 backdrop-blur-xs flex items-center justify-center text-white cursor-pointer transition-colors mr-1"
                 title={isMuted ? 'Unmute' : 'Mute'}
               >
                 {isMuted ? <VolumeX className="w-4 h-4 text-white" /> : <Volume2 className="w-4 h-4 text-white" />}
@@ -438,7 +438,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                 setIsPaused(true);
                 setIsMoreMenuOpen(true);
               }}
-              className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 backdrop-blur-xs flex items-center justify-center text-white cursor-pointer transition-colors"
+              className="w-8 h-8 rounded-full bg-theme-surface/10 hover:bg-theme-surface/20 active:scale-95 backdrop-blur-xs flex items-center justify-center text-white cursor-pointer transition-colors"
               title="Options"
             >
               <MoreHorizontal className="w-4 h-4 text-white" />
@@ -492,7 +492,7 @@ export const CycleStoryViewerModal: React.FC = () => {
         ))}
 
         {/* 4. STORY CONTENT CANVAS */}
-        <div className="flex-1 w-full h-full flex items-center justify-center overflow-hidden relative bg-black">
+        <div className="flex-1 w-full h-full flex items-center justify-center overflow-hidden relative bg-theme-inverse">
           {currentItem.mediaType === 'image' && currentItem.mediaUrl ? (
             <div className="w-full h-full relative flex items-center justify-center">
               <img
@@ -510,7 +510,7 @@ export const CycleStoryViewerModal: React.FC = () => {
               )}
             </div>
           ) : currentItem.mediaType === 'video' && currentItem.mediaUrl ? (
-            <div className="w-full h-full relative flex items-center justify-center bg-black">
+            <div className="w-full h-full relative flex items-center justify-center bg-theme-inverse">
               {/* Blurred background fill */}
               <video
                 src={currentItem.mediaUrl}
@@ -569,8 +569,8 @@ export const CycleStoryViewerModal: React.FC = () => {
               }`}
             >
               {/* Ambient decorative rings */}
-              <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/5 blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-white/5 blur-3xl pointer-events-none" />
+              <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-theme-surface/5 blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-theme-surface/5 blur-3xl pointer-events-none" />
 
               {currentItem.text && (
                 <p className="relative z-10 text-3xl sm:text-4xl font-bold text-white leading-relaxed drop-shadow-md whitespace-pre-wrap w-full">
@@ -596,7 +596,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                   setIsPaused(true);
                   setIsViewersSheetOpen(true);
                 }}
-                className="flex items-center gap-4 bg-white/10 hover:bg-white/20 active:scale-98 backdrop-blur-md rounded-full px-4 py-2 border border-white/20 text-white text-xs font-semibold cursor-pointer transition-all shadow-md"
+                className="flex items-center gap-4 bg-theme-surface/10 hover:bg-theme-surface/20 active:scale-98 backdrop-blur-md rounded-full px-4 py-2 border border-white/20 text-white text-xs font-semibold cursor-pointer transition-all shadow-md"
                 title="View story insights & viewers"
               >
                 {/* 👁 Viewers */}
@@ -605,7 +605,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                   <span>{totalViews}</span>
                 </div>
 
-                <div className="w-[1px] h-3 bg-white/30" />
+                <div className="w-[1px] h-3 bg-theme-surface/30" />
 
                 {/* 🤍 Likes */}
                 <div className="flex items-center gap-1.5 hover:text-rose-400 transition-colors">
@@ -613,7 +613,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                   <span>{totalLikes}</span>
                 </div>
 
-                <div className="w-[1px] h-3 bg-white/30" />
+                <div className="w-[1px] h-3 bg-theme-surface/30" />
 
                 {/* 💬 Replies */}
                 <div className="flex items-center gap-1.5 hover:text-emerald-300 transition-colors">
@@ -630,7 +630,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                   closeCycleStory();
                   setIsCreateCycleOpen(true);
                 }}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 text-white text-xs font-bold border border-white/20 backdrop-blur-md transition-all cursor-pointer shadow-md"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-theme-surface/15 hover:bg-theme-surface/25 active:scale-95 text-white text-xs font-bold border border-white/20 backdrop-blur-md transition-all cursor-pointer shadow-md"
               >
                 <Plus className="w-3.5 h-3.5 stroke-[3]" />
                 <span>Add</span>
@@ -664,7 +664,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                 {/* Rounded Comment Input Pill */}
                 <form
                   onSubmit={handleSendComment}
-                  className="flex-1 flex items-center bg-white/10 hover:bg-white/15 focus-within:bg-white/20 border border-white/25 rounded-full px-4 py-2.5 backdrop-blur-md transition-all shadow-inner"
+                  className="flex-1 flex items-center bg-theme-surface/10 hover:bg-theme-surface/15 focus-within:bg-theme-surface/20 border border-white/25 rounded-full px-4 py-2.5 backdrop-blur-md transition-all shadow-inner"
                 >
                   <input
                     ref={commentInputRef}
@@ -682,7 +682,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                     }}
                     onChange={(e) => setCommentText(e.target.value)}
                     placeholder="Comment on this story..."
-                    className="w-full bg-transparent text-xs sm:text-sm text-white placeholder:text-neutral-400 focus:outline-none"
+                    className="w-full bg-transparent text-xs sm:text-sm text-white placeholder:text-theme-tertiary focus:outline-none"
                   />
 
                   {commentText.trim() ? (
@@ -751,7 +751,7 @@ export const CycleStoryViewerModal: React.FC = () => {
           >
             <div
               onClick={(e) => e.stopPropagation()}
-              className="w-full bg-neutral-900 border-t border-neutral-800 rounded-t-3xl p-5 flex flex-col gap-2 animate-in slide-in-from-bottom max-w-md mx-auto"
+              className="w-full bg-theme-inverse border-t border-theme-divider-inverse rounded-t-3xl p-5 flex flex-col gap-2 animate-in slide-in-from-bottom max-w-md mx-auto"
             >
               {isMyCycle ? (
                 <>
@@ -764,7 +764,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                       if (items.length <= 1) closeCycleStory();
                       else handleNextSlide();
                     }}
-                    className="w-full py-3 px-3 rounded-xl hover:bg-neutral-800 flex items-center gap-3 text-rose-400 text-sm font-semibold transition-colors cursor-pointer text-left"
+                    className="w-full py-3 px-3 rounded-xl hover:bg-theme-inverse flex items-center gap-3 text-rose-400 text-sm font-semibold transition-colors cursor-pointer text-left"
                   >
                     <Trash2 className="w-5 h-5" />
                     <span>Delete This Status</span>
@@ -778,12 +778,12 @@ export const CycleStoryViewerModal: React.FC = () => {
                       setIsMoreMenuOpen(false);
                       handleOpenProfile();
                     }}
-                    className="flex items-center gap-3 pb-3 border-b border-neutral-800 cursor-pointer hover:opacity-90"
+                    className="flex items-center gap-3 pb-3 border-b border-theme-divider-inverse cursor-pointer hover:opacity-90"
                   >
                     <Avatar src={authorAvatar} alt={authorName} size="md" />
                     <div className="min-w-0 flex-1">
                       <h4 className="text-sm font-bold text-white truncate">{authorName}</h4>
-                      <p className="text-xs text-neutral-400 truncate">@{authorName}</p>
+                      <p className="text-xs text-theme-tertiary truncate">@{authorName}</p>
                     </div>
                     <span className="text-xs font-bold text-[#5E43F3] bg-[#5E43F3]/20 px-2.5 py-1 rounded-full">
                       Profile
@@ -796,7 +796,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                       setIsMoreMenuOpen(false);
                       handleOpenProfile();
                     }}
-                    className="w-full py-3 px-3 rounded-xl hover:bg-neutral-800 flex items-center gap-3 text-white text-sm font-semibold transition-colors cursor-pointer text-left"
+                    className="w-full py-3 px-3 rounded-xl hover:bg-theme-inverse flex items-center gap-3 text-theme-text-inverse text-sm font-semibold transition-colors cursor-pointer text-left"
                   >
                     <UserIcon className="w-5 h-5 text-[#5E43F3]" />
                     <span>View @{authorName}&apos;s Profile</span>
@@ -809,9 +809,9 @@ export const CycleStoryViewerModal: React.FC = () => {
                       setIsPaused(false);
                       handleShareStory();
                     }}
-                    className="w-full py-3 px-3 rounded-xl hover:bg-neutral-800 flex items-center gap-3 text-white text-sm font-semibold transition-colors cursor-pointer text-left"
+                    className="w-full py-3 px-3 rounded-xl hover:bg-theme-inverse flex items-center gap-3 text-theme-text-inverse text-sm font-semibold transition-colors cursor-pointer text-left"
                   >
-                    <Share2 className="w-5 h-5 text-neutral-300" />
+                    <Share2 className="w-5 h-5 text-theme-tertiary" />
                     <span>Share Story</span>
                   </button>
 
@@ -822,9 +822,9 @@ export const CycleStoryViewerModal: React.FC = () => {
                       setIsPaused(false);
                       triggerShareToast(`Muted updates from @${authorName}`);
                     }}
-                    className="w-full py-3 px-3 rounded-xl hover:bg-neutral-800 flex items-center gap-3 text-neutral-300 text-sm font-semibold transition-colors cursor-pointer text-left"
+                    className="w-full py-3 px-3 rounded-xl hover:bg-theme-inverse flex items-center gap-3 text-theme-tertiary text-sm font-semibold transition-colors cursor-pointer text-left"
                   >
-                    <VolumeX className="w-5 h-5 text-neutral-400" />
+                    <VolumeX className="w-5 h-5 text-theme-tertiary" />
                     <span>Mute Updates</span>
                   </button>
 
@@ -835,7 +835,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                       setIsPaused(false);
                       triggerShareToast('Story reported to moderators');
                     }}
-                    className="w-full py-3 px-3 rounded-xl hover:bg-neutral-800 flex items-center gap-3 text-rose-400 text-sm font-semibold transition-colors cursor-pointer text-left"
+                    className="w-full py-3 px-3 rounded-xl hover:bg-theme-inverse flex items-center gap-3 text-rose-400 text-sm font-semibold transition-colors cursor-pointer text-left"
                   >
                     <Flag className="w-5 h-5" />
                     <span>Report Story</span>
@@ -849,7 +849,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                   setIsMoreMenuOpen(false);
                   setIsPaused(false);
                 }}
-                className="w-full py-2.5 mt-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold transition-colors cursor-pointer text-center"
+                className="w-full py-2.5 mt-2 rounded-xl bg-theme-inverse hover:bg-theme-inverse text-theme-text-inverse text-xs font-bold transition-colors cursor-pointer text-center"
               >
                 Cancel
               </button>
@@ -869,10 +869,10 @@ export const CycleStoryViewerModal: React.FC = () => {
           >
             <div
               onClick={(e) => e.stopPropagation()}
-              className="w-full bg-neutral-900 border-t border-neutral-800 rounded-t-3xl p-5 max-h-[70%] flex flex-col animate-in slide-in-from-bottom max-w-md mx-auto"
+              className="w-full bg-theme-inverse border-t border-theme-divider-inverse rounded-t-3xl p-5 max-h-[70%] flex flex-col animate-in slide-in-from-bottom max-w-md mx-auto"
             >
               {/* Sheet Header with Navigation Tabs */}
-              <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
+              <div className="flex items-center justify-between pb-3 border-b border-theme-divider-inverse">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -880,7 +880,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                     className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                       activeSheetTab === 'viewers'
                         ? 'bg-[#5E43F3] text-white'
-                        : 'bg-neutral-800 text-neutral-400 hover:text-white'
+                        : 'bg-theme-inverse text-theme-tertiary hover:text-theme-text-inverse'
                     }`}
                   >
                     <Eye className="w-3.5 h-3.5" />
@@ -893,7 +893,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                     className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                       activeSheetTab === 'likes'
                         ? 'bg-rose-600 text-white'
-                        : 'bg-neutral-800 text-neutral-400 hover:text-white'
+                        : 'bg-theme-inverse text-theme-tertiary hover:text-theme-text-inverse'
                     }`}
                   >
                     <Heart className="w-3.5 h-3.5" />
@@ -906,7 +906,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                     className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                       activeSheetTab === 'replies'
                         ? 'bg-emerald-600 text-white'
-                        : 'bg-neutral-800 text-neutral-400 hover:text-white'
+                        : 'bg-theme-inverse text-theme-tertiary hover:text-theme-text-inverse'
                     }`}
                   >
                     <MessageCircle className="w-3.5 h-3.5" />
@@ -919,7 +919,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                     setIsViewersSheetOpen(false);
                     setIsPaused(false);
                   }}
-                  className="p-1 rounded-full text-neutral-400 hover:text-white cursor-pointer"
+                  className="p-1 rounded-full text-theme-tertiary hover:text-white cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -947,7 +947,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                             followingCount: 89,
                           });
                         }}
-                        className="py-2.5 flex items-center justify-between text-left cursor-pointer hover:bg-neutral-800/50 px-2 rounded-xl transition-colors"
+                        className="py-2.5 flex items-center justify-between text-left cursor-pointer hover:bg-theme-inverse/50 px-2 rounded-xl transition-colors"
                       >
                         <div className="flex items-center gap-2.5">
                           <Avatar src={viewer?.avatar} alt={viewer?.name || 'Viewer'} size="sm" />
@@ -955,16 +955,16 @@ export const CycleStoryViewerModal: React.FC = () => {
                             <p className="text-xs font-bold text-white leading-tight">
                               {viewer?.name}
                             </p>
-                            <p className="text-[10px] text-neutral-400">{viewer?.viewedAt}</p>
+                            <p className="text-[10px] text-theme-tertiary">{viewer?.viewedAt}</p>
                           </div>
                         </div>
-                        <span className="text-[10px] px-2.5 py-1 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-medium">
+                        <span className="text-[10px] px-2.5 py-1 rounded-full bg-theme-inverse hover:bg-theme-inverse text-theme-tertiary font-medium">
                           Profile
                         </span>
                       </div>
                     ))
                   ) : (
-                    <div className="py-8 text-center text-xs text-neutral-400">
+                    <div className="py-8 text-center text-xs text-theme-tertiary">
                       <Eye className="w-6 h-6 mx-auto mb-2 opacity-40" />
                       No viewers yet. Local residents who view your status will appear here!
                     </div>
@@ -996,7 +996,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                       </div>
                     ))
                   ) : (
-                    <div className="py-8 text-center text-xs text-neutral-400">
+                    <div className="py-8 text-center text-xs text-theme-tertiary">
                       <Heart className="w-6 h-6 mx-auto mb-2 opacity-40 text-rose-400" />
                       No heart reactions yet on this status.
                     </div>
@@ -1011,7 +1011,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                     currentItem.replies.map((reply) => (
                       <div
                         key={reply.id}
-                        className="py-3 flex flex-col gap-1.5 px-2 rounded-xl bg-neutral-800/30 mb-2 border border-neutral-800"
+                        className="py-3 flex flex-col gap-1.5 px-2 rounded-xl bg-theme-inverse/30 mb-2 border border-theme-divider-inverse"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -1020,15 +1020,15 @@ export const CycleStoryViewerModal: React.FC = () => {
                               {reply.user?.name}
                             </span>
                           </div>
-                          <span className="text-[10px] text-neutral-400">{reply.createdAt}</span>
+                          <span className="text-[10px] text-theme-tertiary">{reply.createdAt}</span>
                         </div>
-                        <p className="text-xs text-neutral-200 pl-7 leading-relaxed">
+                        <p className="text-xs text-theme-tertiary pl-7 leading-relaxed">
                           {reply.text}
                         </p>
                       </div>
                     ))
                   ) : (
-                    <div className="py-8 text-center text-xs text-neutral-400">
+                    <div className="py-8 text-center text-xs text-theme-tertiary">
                       <MessageCircle className="w-6 h-6 mx-auto mb-2 opacity-40 text-emerald-400" />
                       No comments or replies on this status yet.
                     </div>

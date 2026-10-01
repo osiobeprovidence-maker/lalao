@@ -1,7 +1,62 @@
 @import "tailwindcss";
 
+@theme {
+  --color-theme-base: var(--color-theme-base);
+  --color-theme-surface: var(--color-theme-surface);
+  --color-theme-surface-hover: var(--color-theme-surface-hover);
+  --color-theme-surface-active: var(--color-theme-surface-active);
+  --color-theme-inverse: var(--color-theme-inverse);
+  
+  --color-theme-primary: var(--color-theme-primary);
+  --color-theme-secondary: var(--color-theme-secondary);
+  --color-theme-tertiary: var(--color-theme-tertiary);
+  --color-theme-text-inverse: var(--color-theme-text-inverse);
+  
+  --color-theme-divider-light: var(--color-theme-divider-light);
+  --color-theme-divider: var(--color-theme-divider);
+  --color-theme-divider-strong: var(--color-theme-divider-strong);
+  --color-theme-divider-inverse: var(--color-theme-divider-inverse);
+}
+
 :root {
   --font-lalao: 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  
+  /* Light Mode Tokens (Original Lalao Colors) */
+  --color-theme-base: #f6f3ee;
+  --color-theme-surface: #FFFFFF;
+  --color-theme-surface-hover: #F5F5F5;
+  --color-theme-surface-active: #E5E5E5;
+  --color-theme-inverse: #171717;
+  
+  --color-theme-primary: #171717; /* neutral-900 / 800 */
+  --color-theme-secondary: #525252; /* neutral-600 / 700 */
+  --color-theme-tertiary: #737373; /* neutral-500 */
+  --color-theme-text-inverse: #FFFFFF;
+  
+  --color-theme-divider-light: #F5F5F5; /* neutral-100 */
+  --color-theme-divider: #E5E5E5; /* neutral-200 */
+  --color-theme-divider-strong: #D4D4D4; /* neutral-300 */
+  --color-theme-divider-inverse: #262626; /* neutral-800 */
+}
+
+/* Dark Mode Tokens (Warm/Beige Dark) */
+html.dark {
+  /* Use a warm dark tone instead of pure black. Derived from #f6f3ee */
+  --color-theme-base: #1A1816; 
+  --color-theme-surface: #24211F;
+  --color-theme-surface-hover: #2D2A27;
+  --color-theme-surface-active: #383431;
+  --color-theme-inverse: #f6f3ee;
+  
+  --color-theme-primary: #F5F5F5;
+  --color-theme-secondary: #A8A29E; /* Stone-400 equivalent for warmth */
+  --color-theme-tertiary: #78716C; /* Stone-500 equivalent for warmth */
+  --color-theme-text-inverse: #1A1816;
+  
+  --color-theme-divider-light: #2D2A27;
+  --color-theme-divider: #312F2D;
+  --color-theme-divider-strong: #403E3C;
+  --color-theme-divider-inverse: #F5F5F5;
 }
 
 @layer base {
@@ -11,8 +66,8 @@
 
   body {
     font-family: var(--font-lalao);
-    color: #0F1419;
-    background-color: #F8F9FA;
+    color: var(--color-theme-primary);
+    background-color: var(--color-theme-base);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overscroll-behavior-y: none;

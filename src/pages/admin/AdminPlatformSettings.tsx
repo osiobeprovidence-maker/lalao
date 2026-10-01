@@ -141,12 +141,12 @@ export const AdminPlatformSettings: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-black text-neutral-900">Branding & Appearance</h1>
-          <p className="text-sm text-neutral-500 mt-1">Configure global platform identity, colors, and metadata</p>
+          <h1 className="text-2xl font-black text-theme-primary">Branding & Appearance</h1>
+          <p className="text-sm text-theme-tertiary mt-1">Configure global platform identity, colors, and metadata</p>
         </div>
         <button
           onClick={resetToDefaults}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold text-neutral-600 hover:bg-neutral-200 transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold text-theme-secondary hover:bg-theme-surface-active transition-colors"
         >
           <RotateCcw className="w-4 h-4" />
           Reset Defaults
@@ -156,52 +156,52 @@ export const AdminPlatformSettings: React.FC = () => {
       <form onSubmit={handleSave} className="space-y-8">
         
         {/* Basic Info Section */}
-        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-bold text-neutral-900 mb-6 uppercase tracking-wider">Basic Identity</h2>
+        <div className="rounded-2xl border border-theme-divider bg-theme-surface p-6 shadow-sm">
+          <h2 className="text-sm font-bold text-theme-primary mb-6 uppercase tracking-wider">Basic Identity</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-xs font-bold text-neutral-500 mb-1.5">Platform Name</label>
+              <label className="block text-xs font-bold text-theme-tertiary mb-1.5">Platform Name</label>
               <input
                 type="text"
                 name="platformName"
                 value={formData.platformName}
                 onChange={handleChange}
                 placeholder="e.g. Lalao"
-                className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-neutral-900 text-sm focus:border-indigo-500 focus:outline-none"
+                className="w-full px-3 py-2 rounded-xl bg-theme-base border border-theme-divider text-theme-primary text-sm focus:border-indigo-500 focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-neutral-500 mb-1.5">Short Name</label>
+              <label className="block text-xs font-bold text-theme-tertiary mb-1.5">Short Name</label>
               <input
                 type="text"
                 name="shortName"
                 value={formData.shortName}
                 onChange={handleChange}
                 placeholder="e.g. Lalao"
-                className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-neutral-900 text-sm focus:border-indigo-500 focus:outline-none"
+                className="w-full px-3 py-2 rounded-xl bg-theme-base border border-theme-divider text-theme-primary text-sm focus:border-indigo-500 focus:outline-none"
               />
             </div>
           </div>
         </div>
 
         {/* Visual Assets Section */}
-        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-bold text-neutral-900 mb-6 uppercase tracking-wider">Visual Assets</h2>
+        <div className="rounded-2xl border border-theme-divider bg-theme-surface p-6 shadow-sm">
+          <h2 className="text-sm font-bold text-theme-primary mb-6 uppercase tracking-wider">Visual Assets</h2>
           <div className="space-y-6">
             
             {/* Wordmark */}
             <div>
-              <label className="block text-xs font-bold text-neutral-500 mb-1.5">Logo Wordmark (Header)</label>
+              <label className="block text-xs font-bold text-theme-tertiary mb-1.5">Logo Wordmark (Header)</label>
               <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-                <div className="w-full sm:w-48 h-16 rounded-xl border border-neutral-200 bg-neutral-50 flex items-center justify-center overflow-hidden shrink-0">
+                <div className="w-full sm:w-48 h-16 rounded-xl border border-theme-divider bg-theme-base flex items-center justify-center overflow-hidden shrink-0">
                   {formData.wordmarkUrl ? (
                     <img src={formData.wordmarkUrl} alt="Wordmark preview" className="max-h-12 object-contain" />
                   ) : (
-                    <span className="text-xs text-neutral-400">No wordmark uploaded</span>
+                    <span className="text-xs text-theme-tertiary">No wordmark uploaded</span>
                   )}
                 </div>
                 <div className="flex-1 w-full sm:w-auto">
-                  <label className="w-full sm:w-auto cursor-pointer inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-sm font-bold transition-colors">
+                  <label className="w-full sm:w-auto cursor-pointer inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-theme-surface-hover hover:bg-theme-surface-active text-theme-secondary text-sm font-bold transition-colors">
                     <Upload className="w-4 h-4" />
                     Upload Image
                     <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e, 'wordmarkUrl')} />
@@ -213,16 +213,16 @@ export const AdminPlatformSettings: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* App Icon */}
               <div>
-                <label className="block text-xs font-bold text-neutral-500 mb-1.5">App Icon (PWA & Square)</label>
+                <label className="block text-xs font-bold text-theme-tertiary mb-1.5">App Icon (PWA & Square)</label>
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl border border-neutral-200 bg-neutral-50 flex items-center justify-center overflow-hidden shrink-0">
+                  <div className="w-16 h-16 rounded-2xl border border-theme-divider bg-theme-base flex items-center justify-center overflow-hidden shrink-0">
                     {formData.appIconUrl ? (
                       <img src={formData.appIconUrl} alt="Icon preview" className="w-full h-full object-cover" />
                     ) : (
-                      <ImageIcon className="w-6 h-6 text-neutral-300" />
+                      <ImageIcon className="w-6 h-6 text-theme-tertiary" />
                     )}
                   </div>
-                  <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold transition-colors">
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-theme-surface-hover hover:bg-theme-surface-active text-theme-secondary text-xs font-bold transition-colors">
                     <Upload className="w-3.5 h-3.5" />
                     Upload
                     <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e, 'appIconUrl')} />
@@ -232,16 +232,16 @@ export const AdminPlatformSettings: React.FC = () => {
 
               {/* Favicon */}
               <div>
-                <label className="block text-xs font-bold text-neutral-500 mb-1.5">Favicon (Browser Tab)</label>
+                <label className="block text-xs font-bold text-theme-tertiary mb-1.5">Favicon (Browser Tab)</label>
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-lg border border-neutral-200 bg-neutral-50 flex items-center justify-center overflow-hidden shrink-0">
+                  <div className="w-12 h-12 rounded-lg border border-theme-divider bg-theme-base flex items-center justify-center overflow-hidden shrink-0">
                     {formData.faviconUrl ? (
                       <img src={formData.faviconUrl} alt="Favicon preview" className="w-8 h-8 object-contain" />
                     ) : (
-                      <ImageIcon className="w-5 h-5 text-neutral-300" />
+                      <ImageIcon className="w-5 h-5 text-theme-tertiary" />
                     )}
                   </div>
-                  <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold transition-colors">
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-theme-surface-hover hover:bg-theme-surface-active text-theme-secondary text-xs font-bold transition-colors">
                     <Upload className="w-3.5 h-3.5" />
                     Upload
                     <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e, 'faviconUrl')} />
@@ -253,49 +253,49 @@ export const AdminPlatformSettings: React.FC = () => {
         </div>
 
         {/* Authentication / Sign-in Branding Section */}
-        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-bold text-neutral-900 mb-6 uppercase tracking-wider">Authentication / Sign-in Branding</h2>
+        <div className="rounded-2xl border border-theme-divider bg-theme-surface p-6 shadow-sm">
+          <h2 className="text-sm font-bold text-theme-primary mb-6 uppercase tracking-wider">Authentication / Sign-in Branding</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-xs font-bold text-neutral-500 mb-1.5">Auth Wordmark (Text)</label>
+              <label className="block text-xs font-bold text-theme-tertiary mb-1.5">Auth Wordmark (Text)</label>
               <input
                 type="text"
                 name="authWordmark"
                 value={formData.authWordmark}
                 onChange={handleChange}
                 placeholder="e.g. lalao"
-                className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-neutral-900 text-sm focus:border-indigo-500 focus:outline-none"
+                className="w-full px-3 py-2 rounded-xl bg-theme-base border border-theme-divider text-theme-primary text-sm focus:border-indigo-500 focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-neutral-500 mb-1.5">Auth Logo (Image)</label>
+              <label className="block text-xs font-bold text-theme-tertiary mb-1.5">Auth Logo (Image)</label>
               <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-                <div className="w-full sm:w-48 h-16 rounded-xl border border-neutral-200 bg-neutral-50 flex items-center justify-center overflow-hidden shrink-0">
+                <div className="w-full sm:w-48 h-16 rounded-xl border border-theme-divider bg-theme-base flex items-center justify-center overflow-hidden shrink-0">
                   {formData.authLogoUrl ? (
                     <img src={formData.authLogoUrl} alt="Auth Logo preview" className="max-h-12 object-contain" />
                   ) : (
-                    <span className="text-xs text-neutral-400">No logo uploaded</span>
+                    <span className="text-xs text-theme-tertiary">No logo uploaded</span>
                   )}
                 </div>
                 <div className="flex-1 w-full sm:w-auto">
-                  <label className="w-full sm:w-auto cursor-pointer inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-sm font-bold transition-colors">
+                  <label className="w-full sm:w-auto cursor-pointer inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-theme-surface-hover hover:bg-theme-surface-active text-theme-secondary text-sm font-bold transition-colors">
                     <Upload className="w-4 h-4" />
                     Upload Image
                     <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e, 'authLogoUrl')} />
                   </label>
                 </div>
               </div>
-              <p className="text-xs text-neutral-500 mt-2">If both are set, the logo image will take precedence.</p>
+              <p className="text-xs text-theme-tertiary mt-2">If both are set, the logo image will take precedence.</p>
             </div>
           </div>
         </div>
 
         {/* Colors Section */}
-        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-bold text-neutral-900 mb-6 uppercase tracking-wider">Brand Colors</h2>
+        <div className="rounded-2xl border border-theme-divider bg-theme-surface p-6 shadow-sm">
+          <h2 className="text-sm font-bold text-theme-primary mb-6 uppercase tracking-wider">Brand Colors</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label className="block text-xs font-bold text-neutral-500 mb-1.5">Primary Color</label>
+              <label className="block text-xs font-bold text-theme-tertiary mb-1.5">Primary Color</label>
               <div className="flex items-center gap-3">
                 <input
                   type="color"
@@ -304,11 +304,11 @@ export const AdminPlatformSettings: React.FC = () => {
                   onChange={handleChange}
                   className="w-10 h-10 rounded cursor-pointer border-0 p-0 bg-transparent"
                 />
-                <span className="text-sm font-mono text-neutral-600 uppercase">{formData.primaryColor}</span>
+                <span className="text-sm font-mono text-theme-secondary uppercase">{formData.primaryColor}</span>
               </div>
             </div>
             <div>
-              <label className="block text-xs font-bold text-neutral-500 mb-1.5">Accent Color</label>
+              <label className="block text-xs font-bold text-theme-tertiary mb-1.5">Accent Color</label>
               <div className="flex items-center gap-3">
                 <input
                   type="color"
@@ -317,11 +317,11 @@ export const AdminPlatformSettings: React.FC = () => {
                   onChange={handleChange}
                   className="w-10 h-10 rounded cursor-pointer border-0 p-0 bg-transparent"
                 />
-                <span className="text-sm font-mono text-neutral-600 uppercase">{formData.accentColor}</span>
+                <span className="text-sm font-mono text-theme-secondary uppercase">{formData.accentColor}</span>
               </div>
             </div>
             <div>
-              <label className="block text-xs font-bold text-neutral-500 mb-1.5">Background Theme</label>
+              <label className="block text-xs font-bold text-theme-tertiary mb-1.5">Background Theme</label>
               <div className="flex items-center gap-3">
                 <input
                   type="color"
@@ -330,58 +330,58 @@ export const AdminPlatformSettings: React.FC = () => {
                   onChange={handleChange}
                   className="w-10 h-10 rounded cursor-pointer border-0 p-0 bg-transparent"
                 />
-                <span className="text-sm font-mono text-neutral-600 uppercase">{formData.backgroundColor}</span>
+                <span className="text-sm font-mono text-theme-secondary uppercase">{formData.backgroundColor}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* SEO & Metadata Section */}
-        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-bold text-neutral-900 mb-6 uppercase tracking-wider">Browser & SEO</h2>
+        <div className="rounded-2xl border border-theme-divider bg-theme-surface p-6 shadow-sm">
+          <h2 className="text-sm font-bold text-theme-primary mb-6 uppercase tracking-wider">Browser & SEO</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-xs font-bold text-neutral-500 mb-1.5">Browser Tab Title</label>
+              <label className="block text-xs font-bold text-theme-tertiary mb-1.5">Browser Tab Title</label>
               <input
                 type="text"
                 name="browserTitle"
                 value={formData.browserTitle}
                 onChange={handleChange}
                 placeholder="e.g. Lalao | Community Platform"
-                className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-neutral-900 text-sm focus:border-indigo-500 focus:outline-none"
+                className="w-full px-3 py-2 rounded-xl bg-theme-base border border-theme-divider text-theme-primary text-sm focus:border-indigo-500 focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-neutral-500 mb-1.5">Browser Description</label>
+              <label className="block text-xs font-bold text-theme-tertiary mb-1.5">Browser Description</label>
               <input
                 type="text"
                 name="browserDescription"
                 value={formData.browserDescription}
                 onChange={handleChange}
                 placeholder="Brief description for search engines"
-                className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-neutral-900 text-sm focus:border-indigo-500 focus:outline-none"
+                className="w-full px-3 py-2 rounded-xl bg-theme-base border border-theme-divider text-theme-primary text-sm focus:border-indigo-500 focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-neutral-500 mb-1.5">PWA Name (Install Prompt)</label>
+              <label className="block text-xs font-bold text-theme-tertiary mb-1.5">PWA Name (Install Prompt)</label>
               <input
                 type="text"
                 name="pwaName"
                 value={formData.pwaName}
                 onChange={handleChange}
                 placeholder="e.g. Lalao Web App"
-                className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-neutral-900 text-sm focus:border-indigo-500 focus:outline-none"
+                className="w-full px-3 py-2 rounded-xl bg-theme-base border border-theme-divider text-theme-primary text-sm focus:border-indigo-500 focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-neutral-500 mb-1.5">PWA Short Name</label>
+              <label className="block text-xs font-bold text-theme-tertiary mb-1.5">PWA Short Name</label>
               <input
                 type="text"
                 name="pwaShortName"
                 value={formData.pwaShortName}
                 onChange={handleChange}
                 placeholder="e.g. Lalao"
-                className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-neutral-900 text-sm focus:border-indigo-500 focus:outline-none"
+                className="w-full px-3 py-2 rounded-xl bg-theme-base border border-theme-divider text-theme-primary text-sm focus:border-indigo-500 focus:outline-none"
               />
             </div>
           </div>
@@ -412,9 +412,9 @@ export const AdminPlatformSettings: React.FC = () => {
       </form>
 
       {/* Feature Flags Section */}
-      <form onSubmit={handleSaveFlags} className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mt-8 space-y-6">
+      <form onSubmit={handleSaveFlags} className="rounded-2xl border border-theme-divider bg-theme-surface p-6 shadow-sm mt-8 space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-neutral-900 uppercase tracking-wider">Feature Flags</h2>
+          <h2 className="text-sm font-bold text-theme-primary uppercase tracking-wider">Feature Flags</h2>
           <div className="flex items-center gap-3">
             {saveFlagsSuccess && (
               <span className="text-emerald-600 text-xs font-bold">Saved!</span>
@@ -422,7 +422,7 @@ export const AdminPlatformSettings: React.FC = () => {
             <button
               type="submit"
               disabled={isSavingFlags}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 disabled:opacity-50 text-white text-xs font-bold transition-all"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-theme-inverse hover:bg-theme-inverse disabled:opacity-50 text-theme-text-inverse text-xs font-bold transition-all"
             >
               {isSavingFlags ? "Saving..." : "Save Flags"}
             </button>
@@ -430,10 +430,10 @@ export const AdminPlatformSettings: React.FC = () => {
         </div>
 
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 rounded-xl border border-neutral-100 bg-neutral-50/50">
+          <div className="flex items-center justify-between p-4 rounded-xl border border-theme-divider-light bg-theme-base/50">
             <div>
-              <p className="text-sm font-bold text-neutral-900">Communities</p>
-              <p className="text-xs text-neutral-500 mt-0.5">Enable or disable the Communities feature globally</p>
+              <p className="text-sm font-bold text-theme-primary">Communities</p>
+              <p className="text-xs text-theme-tertiary mt-0.5">Enable or disable the Communities feature globally</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -442,14 +442,14 @@ export const AdminPlatformSettings: React.FC = () => {
                 checked={flagsForm.communityEnabled}
                 onChange={(e) => setFlagsForm(prev => ({ ...prev, communityEnabled: e.target.checked }))}
               />
-              <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+              <div className="w-11 h-6 bg-theme-surface-active peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-theme-surface after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
             </label>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-xl border border-neutral-100 bg-neutral-50/50">
+          <div className="flex items-center justify-between p-4 rounded-xl border border-theme-divider-light bg-theme-base/50">
             <div>
-              <p className="text-sm font-bold text-neutral-900">Show Roomy in Explore</p>
-              <p className="text-xs text-neutral-500 mt-0.5">Controls whether the Roomy discovery card is visible on the Explore page.</p>
+              <p className="text-sm font-bold text-theme-primary">Show Roomy in Explore</p>
+              <p className="text-xs text-theme-tertiary mt-0.5">Controls whether the Roomy discovery card is visible on the Explore page.</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -458,14 +458,14 @@ export const AdminPlatformSettings: React.FC = () => {
                 checked={flagsForm.roomyEnabled}
                 onChange={(e) => setFlagsForm(prev => ({ ...prev, roomyEnabled: e.target.checked }))}
               />
-              <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+              <div className="w-11 h-6 bg-theme-surface-active peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-theme-surface after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
             </label>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-xl border border-neutral-100 bg-neutral-50/50">
+          <div className="flex items-center justify-between p-4 rounded-xl border border-theme-divider-light bg-theme-base/50">
             <div>
-              <p className="text-sm font-bold text-neutral-900">Rallies</p>
-              <p className="text-xs text-neutral-500 mt-0.5">Enable or disable the Rallies feature</p>
+              <p className="text-sm font-bold text-theme-primary">Rallies</p>
+              <p className="text-xs text-theme-tertiary mt-0.5">Enable or disable the Rallies feature</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -474,14 +474,14 @@ export const AdminPlatformSettings: React.FC = () => {
                 checked={flagsForm.ralliesEnabled}
                 onChange={(e) => setFlagsForm(prev => ({ ...prev, ralliesEnabled: e.target.checked }))}
               />
-              <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+              <div className="w-11 h-6 bg-theme-surface-active peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-theme-surface after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
             </label>
           </div>
           
-          <div className="flex items-center justify-between p-4 rounded-xl border border-neutral-100 bg-neutral-50/50">
+          <div className="flex items-center justify-between p-4 rounded-xl border border-theme-divider-light bg-theme-base/50">
             <div>
-              <p className="text-sm font-bold text-neutral-900">Cycles</p>
-              <p className="text-xs text-neutral-500 mt-0.5">Enable or disable the Cycles feature</p>
+              <p className="text-sm font-bold text-theme-primary">Cycles</p>
+              <p className="text-xs text-theme-tertiary mt-0.5">Enable or disable the Cycles feature</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -490,7 +490,7 @@ export const AdminPlatformSettings: React.FC = () => {
                 checked={flagsForm.cyclesEnabled}
                 onChange={(e) => setFlagsForm(prev => ({ ...prev, cyclesEnabled: e.target.checked }))}
               />
-              <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+              <div className="w-11 h-6 bg-theme-surface-active peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-theme-surface after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
             </label>
           </div>
         </div>

@@ -103,7 +103,7 @@ export const LocationSetupPage: React.FC = () => {
         
         {/* Why we need location */}
         <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
-          <p className="text-sm text-neutral-600 leading-relaxed">
+          <p className="text-sm text-theme-secondary leading-relaxed">
             Lalao is built around local communities. Providing your location ensures you see relevant updates, events, and people right in your neighborhood.
           </p>
         </div>
@@ -115,14 +115,14 @@ export const LocationSetupPage: React.FC = () => {
           disabled={isDetecting}
           className={`w-full p-4 rounded-xl border-2 flex items-center justify-center gap-3 transition-all cursor-pointer ${
             detectedLocation
-              ? 'border-[#3823A4] bg-[#F8F7FF] text-[#3823A4]'
-              : 'border-neutral-200 bg-white hover:border-[#3823A4]/30 hover:bg-neutral-50 text-neutral-700'
+              ? 'border-[#3823A4] bg-theme-base text-[#3823A4]'
+              : 'border-theme-divider bg-theme-surface hover:border-[#3823A4]/30 hover:bg-theme-base text-theme-secondary'
           }`}
         >
           {isDetecting ? (
             <Loader2 className="w-5 h-5 animate-spin text-[#3823A4]" />
           ) : (
-            <MapPin className={`w-5 h-5 ${detectedLocation ? 'text-[#3823A4]' : 'text-neutral-500'}`} />
+            <MapPin className={`w-5 h-5 ${detectedLocation ? 'text-[#3823A4]' : 'text-theme-tertiary'}`} />
           )}
           <span className="font-bold text-base">
             {isDetecting ? 'Detecting location...' : detectedLocation ? detectedLocation : 'Use my current location'}
@@ -131,16 +131,16 @@ export const LocationSetupPage: React.FC = () => {
 
         {/* Divider */}
         <div className="flex items-center gap-4 py-2">
-          <div className="flex-1 h-px bg-neutral-200" />
-          <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">or</span>
-          <div className="flex-1 h-px bg-neutral-200" />
+          <div className="flex-1 h-px bg-theme-surface-active" />
+          <span className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">or</span>
+          <div className="flex-1 h-px bg-theme-surface-active" />
         </div>
 
         {/* Custom location */}
         <div className="space-y-1.5">
-          <label className="text-xs font-bold text-neutral-500 tracking-wider uppercase">Choose location manually</label>
+          <label className="text-xs font-bold text-theme-tertiary tracking-wider uppercase">Choose location manually</label>
           <div className="relative">
-            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-theme-tertiary" />
             <input
               type="text"
               value={manualLocation}
@@ -149,7 +149,7 @@ export const LocationSetupPage: React.FC = () => {
                 if (detectedLocation) setDetectedLocation(null); 
               }}
               placeholder="e.g. Asaba, Delta State"
-              className="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-neutral-200 bg-white text-base text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#3823A4] focus:ring-4 focus:ring-[#3823A4]/10 transition-all"
+              className="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-theme-divider bg-theme-surface text-base text-theme-primary placeholder-neutral-400 focus:outline-none focus:border-[#3823A4] focus:ring-4 focus:ring-[#3823A4]/10 transition-all"
             />
           </div>
         </div>
@@ -176,7 +176,7 @@ export const LocationSetupPage: React.FC = () => {
           <button
             type="button"
             onClick={handleSkip}
-            className="w-full py-3.5 rounded-xl bg-transparent text-neutral-500 font-bold text-sm flex items-center justify-center hover:bg-neutral-50 hover:text-neutral-700 transition-colors cursor-pointer"
+            className="w-full py-3.5 rounded-xl bg-transparent text-theme-tertiary font-bold text-sm flex items-center justify-center hover:bg-theme-base hover:text-theme-secondary transition-colors cursor-pointer"
           >
             I'll do this later
           </button>

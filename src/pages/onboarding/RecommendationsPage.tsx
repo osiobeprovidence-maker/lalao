@@ -70,11 +70,11 @@ export const RecommendationsPage: React.FC = () => {
         
         {/* Selection count */}
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-neutral-500">
+          <span className="text-sm font-semibold text-theme-tertiary">
             {followingCount} following 
           </span>
           {followingCount > 0 && (
-            <span className="text-xs font-bold text-[#3823A4] bg-[#F8F7FF] px-2.5 py-1 rounded-full border border-indigo-100">
+            <span className="text-xs font-bold text-[#3823A4] bg-theme-base px-2.5 py-1 rounded-full border border-indigo-100">
               ✓ Good to go
             </span>
           )}
@@ -83,21 +83,21 @@ export const RecommendationsPage: React.FC = () => {
         {/* Recommendations List */}
         <div className="space-y-4">
           {recommendations === undefined ? (
-            <div className="text-center py-10 text-neutral-400 text-sm">
+            <div className="text-center py-10 text-theme-tertiary text-sm">
               Loading recommendations...
             </div>
           ) : recommendations.length === 0 ? (
-            <div className="text-center py-10 text-neutral-400 text-sm">
+            <div className="text-center py-10 text-theme-tertiary text-sm">
               No recommendations available right now.
             </div>
           ) : (
             recommendations.filter(r => !dismissedMap[r.id]).map((rec) => (
-              <div key={rec.id} className="group relative flex items-center justify-between p-4 rounded-xl border border-neutral-100 bg-white hover:bg-neutral-50/50 transition-colors">
+              <div key={rec.id} className="group relative flex items-center justify-between p-4 rounded-xl border border-theme-divider-light bg-theme-surface hover:bg-theme-base/50 transition-colors">
                 
                 {/* Dismiss button (appears on hover) */}
                 <button
                   onClick={() => handleDismiss(rec)}
-                  className="absolute -top-2 -right-2 w-6 h-6 bg-white border border-neutral-200 rounded-full flex items-center justify-center text-neutral-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all shadow-sm z-10"
+                  className="absolute -top-2 -right-2 w-6 h-6 bg-theme-surface border border-theme-divider rounded-full flex items-center justify-center text-theme-tertiary hover:text-red-500 hover:border-red-200 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all shadow-sm z-10"
                   title="Not interested"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -106,15 +106,15 @@ export const RecommendationsPage: React.FC = () => {
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <Avatar src={rec.avatar} alt={rec.name} size="md" />
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-neutral-900 truncate text-sm flex items-center gap-1.5">
+                    <h3 className="font-bold text-theme-primary truncate text-sm flex items-center gap-1.5">
                       {rec.name}
                       {(rec.type === 'page' || rec.type === 'community') && (
                          <Zap className="w-3 h-3 text-[#5E43F3] fill-[#5E43F3]" />
                       )}
                     </h3>
-                    <p className="text-xs text-neutral-500 truncate">@{rec.username}</p>
+                    <p className="text-xs text-theme-tertiary truncate">@{rec.username}</p>
                     {rec.description && (
-                      <p className="text-xs text-neutral-600 line-clamp-1 mt-0.5">{rec.description}</p>
+                      <p className="text-xs text-theme-secondary line-clamp-1 mt-0.5">{rec.description}</p>
                     )}
                   </div>
                 </div>
@@ -124,7 +124,7 @@ export const RecommendationsPage: React.FC = () => {
                   onClick={() => handleToggleFollow(rec)}
                   className={`ml-4 px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
                     followingMap[rec.id]
-                      ? 'bg-neutral-100 text-neutral-700 hover:bg-red-50 hover:text-red-600'
+                      ? 'bg-theme-surface-hover text-theme-secondary hover:bg-red-50 hover:text-red-600'
                       : 'bg-[#5E43F3] text-white hover:bg-[#4a34c9] shadow-sm shadow-[#5E43F3]/20'
                   }`}
                 >
@@ -141,7 +141,7 @@ export const RecommendationsPage: React.FC = () => {
             type="button"
             onClick={handleContinue}
             disabled={isLoading}
-            className="w-full py-4 rounded-xl bg-neutral-950 text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-neutral-900 transition-colors active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none cursor-pointer"
+            className="w-full py-4 rounded-xl bg-theme-inverse text-theme-text-inverse font-bold text-sm flex items-center justify-center gap-2 hover:bg-theme-inverse transition-colors active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none cursor-pointer"
           >
             <span>Continue</span>
             <ArrowRight className="w-4 h-4" />
@@ -151,7 +151,7 @@ export const RecommendationsPage: React.FC = () => {
             type="button"
             onClick={handleContinue}
             disabled={isLoading}
-            className="w-full py-4 text-neutral-500 font-bold text-sm hover:text-neutral-950 transition-colors"
+            className="w-full py-4 text-theme-tertiary font-bold text-sm hover:text-theme-primary transition-colors"
           >
             Skip for now
           </button>

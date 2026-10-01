@@ -30,13 +30,13 @@ export const ResetPasswordPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12">
+    <div className="min-h-screen bg-theme-surface flex flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm space-y-8">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-[#5E43F3] flex items-center justify-center">
             <AppIcon className="w-4 h-4" fallbackClassName="text-white fill-white" />
           </div>
-          <span className="lalao-wordmark text-xl text-neutral-900">lalao</span>
+          <span className="lalao-wordmark text-xl text-theme-primary">lalao</span>
         </div>
 
         {!done ? (
@@ -45,8 +45,8 @@ export const ResetPasswordPage: React.FC = () => {
               <div className="w-12 h-12 rounded-2xl bg-[#5E43F3]/10 flex items-center justify-center mb-4">
                 <ShieldCheck className="w-6 h-6 text-[#5E43F3]" />
               </div>
-              <h1 className="text-3xl font-black text-neutral-950 tracking-tight">New password</h1>
-              <p className="text-neutral-500 text-sm">Create a strong password for your Lalao account.</p>
+              <h1 className="text-3xl font-black text-theme-primary tracking-tight">New password</h1>
+              <p className="text-theme-tertiary text-sm">Create a strong password for your Lalao account.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -57,14 +57,14 @@ export const ResetPasswordPage: React.FC = () => {
               )}
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-neutral-700 tracking-wide uppercase">New Password</label>
+                <label className="text-xs font-bold text-theme-secondary tracking-wide uppercase">New Password</label>
                 <div className="relative">
                   <input
                     type={showPw ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)}
                     placeholder="Min. 8 characters"
-                    className="w-full px-4 py-3 rounded-xl border border-neutral-200 bg-neutral-50 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3] transition-all pr-11"
+                    className="w-full px-4 py-3 rounded-xl border border-theme-divider bg-theme-base text-sm text-theme-primary placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3] transition-all pr-11"
                   />
-                  <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer">
+                  <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-tertiary hover:text-theme-secondary cursor-pointer">
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
@@ -72,7 +72,7 @@ export const ResetPasswordPage: React.FC = () => {
                   <div className="space-y-1.5">
                     <div className="flex gap-1">
                       {[1, 2, 3, 4].map((s) => (
-                        <div key={s} className={`flex-1 h-1.5 rounded-full transition-all ${strength >= s ? strengthColors[strength] : 'bg-neutral-100'}`} />
+                        <div key={s} className={`flex-1 h-1.5 rounded-full transition-all ${strength >= s ? strengthColors[strength] : 'bg-theme-surface-hover'}`} />
                       ))}
                     </div>
                     <p className={`text-xs font-semibold ${['', 'text-red-500', 'text-amber-500', 'text-blue-600', 'text-emerald-600'][strength]}`}>
@@ -83,18 +83,18 @@ export const ResetPasswordPage: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-neutral-700 tracking-wide uppercase">Confirm Password</label>
+                <label className="text-xs font-bold text-theme-secondary tracking-wide uppercase">Confirm Password</label>
                 <div className="relative">
                   <input
                     type={showCf ? 'text' : 'password'} value={confirm} onChange={(e) => setConfirm(e.target.value)}
                     placeholder="Repeat password"
-                    className={`w-full px-4 py-3 rounded-xl border bg-neutral-50 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 transition-all pr-11 ${
+                    className={`w-full px-4 py-3 rounded-xl border bg-theme-base text-sm text-theme-primary placeholder-neutral-400 focus:outline-none focus:ring-2 transition-all pr-11 ${
                       confirm && confirm !== password ? 'border-red-300 focus:ring-red-200 focus:border-red-400' :
                       confirm && confirm === password ? 'border-emerald-300 focus:ring-emerald-200 focus:border-emerald-400' :
-                      'border-neutral-200 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3]'
+                      'border-theme-divider focus:ring-[#5E43F3]/30 focus:border-[#5E43F3]'
                     }`}
                   />
-                  <button type="button" onClick={() => setShowCf(!showCf)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer">
+                  <button type="button" onClick={() => setShowCf(!showCf)} className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-tertiary hover:text-theme-secondary cursor-pointer">
                     {showCf ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                   {confirm && confirm === password && (
@@ -122,8 +122,8 @@ export const ResetPasswordPage: React.FC = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <h2 className="text-2xl font-black text-neutral-950">Password updated!</h2>
-              <p className="text-neutral-500 text-sm">Redirecting you to login...</p>
+              <h2 className="text-2xl font-black text-theme-primary">Password updated!</h2>
+              <p className="text-theme-tertiary text-sm">Redirecting you to login...</p>
             </div>
             <div className="w-8 h-8 border-3 border-[#5E43F3] border-t-transparent rounded-full animate-spin mx-auto" />
           </div>

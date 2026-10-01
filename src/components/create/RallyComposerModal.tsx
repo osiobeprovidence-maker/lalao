@@ -53,8 +53,8 @@ export const RallyComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded 
   const categories: Rally['category'][] = ['Sports', 'Help', 'Meetup', 'Initiative', 'Civic', 'General'];
 
   const shellClass = embedded
-    ? 'relative w-full min-h-[calc(100vh-5rem)] bg-[#f6f3ee] flex flex-col overflow-y-auto animate-in fade-in duration-200'
-    : 'absolute inset-0 z-40 bg-white flex flex-col min-h-full overflow-y-auto animate-in fade-in slide-in-from-bottom-4 duration-250';
+    ? 'relative w-full min-h-[calc(100vh-5rem)] bg-theme-base flex flex-col overflow-y-auto animate-in fade-in duration-200'
+    : 'absolute inset-0 z-40 bg-theme-surface flex flex-col min-h-full overflow-y-auto animate-in fade-in slide-in-from-bottom-4 duration-250';
 
   return (
     <div
@@ -63,17 +63,17 @@ export const RallyComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded 
       className={shellClass}
     >
       {/* Sticky Top Header */}
-      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-neutral-100 px-4 py-3 flex items-center justify-between">
+      <div className="sticky top-0 z-20 bg-theme-surface/95 backdrop-blur-md border-b border-theme-divider-light px-4 py-3 flex items-center justify-between">
         <button
           onClick={handleClose}
-          className="text-sm font-semibold text-neutral-600 hover:text-neutral-950 px-2 py-1 -ml-2 rounded-lg hover:bg-neutral-100 cursor-pointer transition-colors"
+          className="text-sm font-semibold text-theme-secondary hover:text-theme-primary px-2 py-1 -ml-2 rounded-lg hover:bg-theme-surface-hover cursor-pointer transition-colors"
         >
           Cancel
         </button>
 
         <div className="flex items-center gap-1.5">
           <Hand className="w-4 h-4 text-[#5E43F3]" />
-          <h3 className="font-bold text-base text-neutral-950">Create Rally</h3>
+          <h3 className="font-bold text-base text-theme-primary">Create Rally</h3>
         </div>
 
         <button
@@ -83,7 +83,7 @@ export const RallyComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded 
           className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
             title.trim() && description.trim()
               ? 'bg-[#5E43F3] text-white hover:bg-[#4E34E0] shadow-md shadow-[#5E43F3]/25 active:scale-95'
-              : 'bg-neutral-100 text-neutral-400 cursor-not-allowed'
+              : 'bg-theme-surface-hover text-theme-tertiary cursor-not-allowed'
           }`}
         >
           Broadcast
@@ -103,7 +103,7 @@ export const RallyComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded 
 
         {/* Category Pills */}
         <div>
-          <label className="text-xs font-bold text-neutral-700 mb-2 block">
+          <label className="text-xs font-bold text-theme-secondary mb-2 block">
             Select Category
           </label>
           <div className="flex flex-wrap gap-2">
@@ -115,7 +115,7 @@ export const RallyComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded 
                 className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                   category === cat
                     ? 'bg-[#5E43F3] text-white shadow-xs'
-                    : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200/80'
+                    : 'bg-theme-surface-hover text-theme-secondary hover:bg-theme-surface-active/80'
                 }`}
               >
                 {cat}
@@ -126,7 +126,7 @@ export const RallyComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded 
 
         {/* Title Input */}
         <div>
-          <label className="text-xs font-bold text-neutral-700 mb-1.5 block">
+          <label className="text-xs font-bold text-theme-secondary mb-1.5 block">
             Rally Request / Action Title
           </label>
           <input
@@ -135,14 +135,14 @@ export const RallyComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded 
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Need 2 people for football tonight"
-            className="w-full px-4 py-3 rounded-xl border border-neutral-200 focus:border-[#5E43F3] focus:ring-2 focus:ring-[#5E43F3]/20 outline-none text-sm font-semibold text-neutral-900"
+            className="w-full px-4 py-3 rounded-xl border border-theme-divider focus:border-[#5E43F3] focus:ring-2 focus:ring-[#5E43F3]/20 outline-none text-sm font-semibold text-theme-primary"
             autoFocus
           />
         </div>
 
         {/* Description */}
         <div>
-          <label className="text-xs font-bold text-neutral-700 mb-1.5 block">
+          <label className="text-xs font-bold text-theme-secondary mb-1.5 block">
             Details & Instructions
           </label>
           <textarea
@@ -151,14 +151,14 @@ export const RallyComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded 
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Looking for two people to join our game at 6pm. Pitch is booked, bibs provided..."
-            className="w-full px-4 py-3 rounded-xl border border-neutral-200 focus:border-[#5E43F3] focus:ring-2 focus:ring-[#5E43F3]/20 outline-none text-sm text-neutral-900 resize-none leading-relaxed"
+            className="w-full px-4 py-3 rounded-xl border border-theme-divider focus:border-[#5E43F3] focus:ring-2 focus:ring-[#5E43F3]/20 outline-none text-sm text-theme-primary resize-none leading-relaxed"
           />
         </div>
 
         {/* Location & Time Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <div>
-            <label className="text-xs font-bold text-neutral-700 mb-1.5 flex items-center gap-1">
+            <label className="text-xs font-bold text-theme-secondary mb-1.5 flex items-center gap-1">
               <MapPin className="w-3.5 h-3.5 text-[#5E43F3]" />
               Location
             </label>
@@ -166,13 +166,13 @@ export const RallyComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded 
               type="text"
               value={rallyLocation}
               onChange={(e) => setRallyLocation(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-xs font-medium text-neutral-800 focus:border-[#5E43F3] outline-none"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-theme-divider text-xs font-medium text-theme-primary focus:border-[#5E43F3] outline-none"
               placeholder="Udu Field / Junction"
             />
           </div>
 
           <div>
-            <label className="text-xs font-bold text-neutral-700 mb-1.5 flex items-center gap-1">
+            <label className="text-xs font-bold text-theme-secondary mb-1.5 flex items-center gap-1">
               <Clock className="w-3.5 h-3.5 text-[#5E43F3]" />
               When / Time
             </label>
@@ -180,14 +180,14 @@ export const RallyComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded 
               type="text"
               value={timeDate}
               onChange={(e) => setTimeDate(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-xs font-medium text-neutral-800 focus:border-[#5E43F3] outline-none"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-theme-divider text-xs font-medium text-theme-primary focus:border-[#5E43F3] outline-none"
               placeholder="Today · 6:00 PM"
             />
           </div>
         </div>
 
         {/* Urgent switch */}
-        <div className="pt-2 flex items-center justify-between p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200/80">
+        <div className="pt-2 flex items-center justify-between p-3.5 rounded-2xl bg-theme-base border border-theme-divider/80">
           <label className="flex items-center gap-2.5 cursor-pointer select-none">
             <input
               type="checkbox"
@@ -195,7 +195,7 @@ export const RallyComposerModal: React.FC<{ embedded?: boolean }> = ({ embedded 
               onChange={(e) => setIsUrgent(e.target.checked)}
               className="rounded text-[#5E43F3] focus:ring-[#5E43F3] w-4 h-4 cursor-pointer"
             />
-            <span className="text-xs font-bold text-neutral-800">Mark as Urgent Request</span>
+            <span className="text-xs font-bold text-theme-primary">Mark as Urgent Request</span>
           </label>
         </div>
       </div>

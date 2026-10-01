@@ -290,24 +290,24 @@ export const UserProfileModal: React.FC = () => {
       <div
         ref={containerRef}
         id="user-profile-screen"
-        className="bg-white w-full sm:max-w-md md:max-w-lg h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 relative z-10 overflow-hidden"
+        className="bg-theme-surface w-full sm:max-w-md md:max-w-lg h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 relative z-10 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="w-full flex-1 flex flex-col bg-white">
+        <div className="w-full flex-1 flex flex-col bg-theme-surface">
         {/* Sticky Top Header Bar */}
-        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-neutral-100 px-4 py-3 flex items-center justify-between shrink-0">
+        <header className="sticky top-0 z-30 bg-theme-surface/95 backdrop-blur-md border-b border-theme-divider-light px-4 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <button
               id="btn-profile-back"
               onClick={() => setActiveUserProfile(null)}
-              className="p-1.5 -ml-1.5 rounded-full text-neutral-800 hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer"
+              className="p-1.5 -ml-1.5 rounded-full text-theme-primary hover:bg-theme-surface-hover active:scale-95 transition-all cursor-pointer"
               title="Back"
               aria-label="Back"
             >
               <ArrowLeft className="w-5 h-5 stroke-[2.2]" />
             </button>
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-sm text-neutral-900 tracking-tight">
+              <span className="font-bold text-sm text-theme-primary tracking-tight">
                 {activeUserProfile.username}
               </span>
               {activeUserProfile.isVerified && (
@@ -325,7 +325,7 @@ export const UserProfileModal: React.FC = () => {
                 if (isSearchOpen) setSearchQuery('');
               }}
               className={`p-2 rounded-full transition-colors cursor-pointer ${
-                isSearchOpen ? 'bg-[#5E43F3]/10 text-[#5E43F3]' : 'text-neutral-700 hover:bg-neutral-100'
+                isSearchOpen ? 'bg-[#5E43F3]/10 text-[#5E43F3]' : 'text-theme-secondary hover:bg-theme-surface-hover'
               }`}
               title="Search profile"
             >
@@ -336,7 +336,7 @@ export const UserProfileModal: React.FC = () => {
             <button
               id="btn-profile-share"
               onClick={handleShareProfile}
-              className="p-2 rounded-full text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+              className="p-2 rounded-full text-theme-secondary hover:bg-theme-surface-hover transition-colors cursor-pointer"
               title="Share profile"
             >
               <Share2 className="w-4 h-4" />
@@ -350,7 +350,7 @@ export const UserProfileModal: React.FC = () => {
                 className={`p-2 rounded-full transition-colors cursor-pointer relative ${
                   isNotificationsEnabled
                     ? 'text-[#5E43F3] bg-[#5E43F3]/10'
-                    : 'text-neutral-700 hover:bg-neutral-100'
+                    : 'text-theme-secondary hover:bg-theme-surface-hover'
                 }`}
                 title={isNotificationsEnabled ? 'Post alerts enabled' : 'Turn on post alerts'}
               >
@@ -369,7 +369,7 @@ export const UserProfileModal: React.FC = () => {
             <button
               id="btn-profile-more"
               onClick={() => setIsMoreMenuOpen(true)}
-              className="p-2 rounded-full text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+              className="p-2 rounded-full text-theme-secondary hover:bg-theme-surface-hover transition-colors cursor-pointer"
               title="More actions"
             >
               <MoreHorizontal className="w-4 h-4" />
@@ -379,21 +379,21 @@ export const UserProfileModal: React.FC = () => {
 
         {/* In-Profile Search Bar Overlay */}
         {isSearchOpen && (
-          <div className="bg-neutral-50 px-4 py-2 border-b border-neutral-200 animate-in slide-in-from-top-2 duration-150">
+          <div className="bg-theme-base px-4 py-2 border-b border-theme-divider animate-in slide-in-from-top-2 duration-150">
             <div className="relative flex items-center">
-              <Search className="w-4 h-4 text-neutral-400 absolute left-3 pointer-events-none" />
+              <Search className="w-4 h-4 text-theme-tertiary absolute left-3 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={`Search @${activeUserProfile.username}'s posts, media & replies...`}
                 autoFocus
-                className="w-full bg-white border border-neutral-200 rounded-full pl-9 pr-8 py-1.5 text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3]"
+                className="w-full bg-theme-surface border border-theme-divider rounded-full pl-9 pr-8 py-1.5 text-xs text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3]"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 p-1 rounded-full text-neutral-400 hover:text-neutral-700"
+                  className="absolute right-2.5 p-1 rounded-full text-theme-tertiary hover:text-theme-secondary"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -405,13 +405,13 @@ export const UserProfileModal: React.FC = () => {
         {/* Scrollable Profile Body */}
         <div className="flex-1 overflow-y-auto no-scrollbar">
           {/* Main User Card (Matching screenshot layout) */}
-          <div className="px-5 pt-4 pb-3 space-y-3 border-b border-neutral-100">
+          <div className="px-5 pt-4 pb-3 space-y-3 border-b border-theme-divider-light">
             {/* Top Identity Row: Name/Stats on Left, Big Avatar on Right */}
             <div className="flex items-start justify-between gap-4">
               {/* Left Column: Name, Username, Stats */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <h1 className="text-[22px] sm:text-2xl font-black text-neutral-950 tracking-tight leading-tight">
+                  <h1 className="text-[22px] sm:text-2xl font-black text-theme-primary tracking-tight leading-tight">
                     {activeUserProfile.name}
                   </h1>
                   {activeUserProfile.isVerified && (
@@ -420,20 +420,20 @@ export const UserProfileModal: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  <span className="text-xs sm:text-[13px] font-medium text-neutral-500">
+                  <span className="text-xs sm:text-[13px] font-medium text-theme-tertiary">
                     @{activeUserProfile.username}
                   </span>
                   {activeUserProfile.badge && <Badge type={activeUserProfile.badge} />}
                 </div>
 
                 {/* Follower Count and Total Likes Count (reactive real-time sum) */}
-                <div className="flex items-center gap-1.5 text-xs text-neutral-500 mt-2 font-medium">
-                  <span className="text-neutral-900 font-bold">
+                <div className="flex items-center gap-1.5 text-xs text-theme-tertiary mt-2 font-medium">
+                  <span className="text-theme-primary font-bold">
                     {formatFollowers(activeUserProfile.followersCount)}
                   </span>
                   <span>followers</span>
                   <span>·</span>
-                  <span className="text-neutral-900 font-bold">
+                  <span className="text-theme-primary font-bold">
                     {formatLikes(totalLikes)}
                   </span>
                   <span>{totalLikes === 1 ? 'Like' : 'Likes'}</span>
@@ -448,7 +448,7 @@ export const UserProfileModal: React.FC = () => {
                     className="p-[3px] rounded-full bg-gradient-to-tr from-[#5E43F3] via-fuchsia-500 to-amber-400 cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-md relative group"
                     title="Tap to watch 24h Cycle Story"
                   >
-                    <div className="bg-white p-[2px] rounded-full">
+                    <div className="bg-theme-surface p-[2px] rounded-full">
                       <Avatar
                         src={activeUserProfile.avatar}
                         alt={activeUserProfile.name}
@@ -485,17 +485,17 @@ export const UserProfileModal: React.FC = () => {
 
             {/* Bio */}
             {activeUserProfile.bio && (
-              <p className="text-[13px] sm:text-sm text-neutral-800 leading-relaxed pt-0.5">
+              <p className="text-[13px] sm:text-sm text-theme-primary leading-relaxed pt-0.5">
                 {activeUserProfile.bio}
               </p>
             )}
 
             {/* Location & Mutual Connections Footprint */}
-            <div className="space-y-1.5 text-xs text-neutral-500 pt-0.5">
+            <div className="space-y-1.5 text-xs text-theme-tertiary pt-0.5">
               {activeUserProfile.location && (() => {
                 const cleanLoc = activeUserProfile.location.replace(/\s*\(Detected\)\s*/i, '').replace(/^GPS Detected$/i, '').trim();
                 return cleanLoc ? (
-                  <div className="flex items-center gap-1.5 text-neutral-600 font-medium">
+                  <div className="flex items-center gap-1.5 text-theme-secondary font-medium">
                     <MapPin className="w-3.5 h-3.5 text-[#5E43F3] shrink-0" />
                     <span>{cleanLoc}</span>
                   </div>
@@ -503,12 +503,12 @@ export const UserProfileModal: React.FC = () => {
               })()}
 
               {activeUserProfile.mutualInfo ? (
-                <div className="flex items-center gap-1.5 text-neutral-500 text-[11px]">
-                  <Users className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                <div className="flex items-center gap-1.5 text-theme-tertiary text-[11px]">
+                  <Users className="w-3.5 h-3.5 text-theme-tertiary shrink-0" />
                   <span>{activeUserProfile.mutualInfo}</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-1.5 text-neutral-400 text-[11px]">
+                <div className="flex items-center gap-1.5 text-theme-tertiary text-[11px]">
                   <Compass className="w-3 h-3 text-[#5E43F3]" />
                   <span>Connected via Lalao West Africa Community</span>
                 </div>
@@ -527,14 +527,14 @@ export const UserProfileModal: React.FC = () => {
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-neutral-950">
+                      <span className="text-xs font-bold text-theme-primary">
                         24h Cycle Active
                       </span>
                       <span className="text-[10px] font-bold text-[#5E43F3] bg-[#5E43F3]/15 px-1.5 py-0.2 rounded-full">
                         {userCycle?.items?.length || 0} updates
                       </span>
                     </div>
-                    <p className="text-[11px] text-neutral-600 truncate max-w-[200px]">
+                    <p className="text-[11px] text-theme-secondary truncate max-w-[200px]">
                       {userCycle?.items?.[0]?.caption ||
                         userCycle?.items?.[0]?.text ||
                         'Tap to watch daily moments'}
@@ -555,14 +555,14 @@ export const UserProfileModal: React.FC = () => {
                   <button
                     id="btn-profile-edit-self"
                     onClick={() => setIsEditProfileOpen(true)}
-                    className="flex-1 py-2 px-4 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2 px-4 rounded-xl bg-theme-inverse hover:bg-theme-inverse text-theme-text-inverse text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     Edit profile
                   </button>
                   <button
                     id="btn-profile-share-self"
                     onClick={handleShareProfile}
-                    className="flex-1 py-2 px-4 rounded-xl border border-neutral-300 hover:bg-neutral-50 text-neutral-900 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2 px-4 rounded-xl border border-theme-divider-strong hover:bg-theme-base text-theme-primary text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     <Share2 className="w-3.5 h-3.5" />
                     Share profile
@@ -576,17 +576,17 @@ export const UserProfileModal: React.FC = () => {
                     onClick={handleFollowToggle}
                     className={`flex-1 py-2 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs ${
                       displayedRelationship === 'friends'
-                        ? 'bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border border-neutral-200'
+                        ? 'bg-theme-surface-hover hover:bg-theme-surface-active text-theme-primary border border-theme-divider'
                         : displayedRelationship === 'follower'
                         ? 'bg-[#5E43F3] hover:bg-[#4E34E0] text-white'
                         : isFollowing
-                        ? 'bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border border-neutral-200'
-                        : 'bg-neutral-950 hover:bg-neutral-800 text-white'
+                        ? 'bg-theme-surface-hover hover:bg-theme-surface-active text-theme-primary border border-theme-divider'
+                        : 'bg-theme-inverse hover:bg-theme-inverse text-theme-text-inverse'
                     }`}
                   >
                     {displayedRelationship === 'friends' ? (
                       <>
-                        <Check className="w-3.5 h-3.5 text-neutral-700" />
+                        <Check className="w-3.5 h-3.5 text-theme-secondary" />
                         <span>Friends</span>
                       </>
                     ) : displayedRelationship === 'follower' ? (
@@ -596,7 +596,7 @@ export const UserProfileModal: React.FC = () => {
                       </>
                     ) : isFollowing ? (
                       <>
-                        <Check className="w-3.5 h-3.5 text-neutral-700" />
+                        <Check className="w-3.5 h-3.5 text-theme-secondary" />
                         <span>Following</span>
                       </>
                     ) : (
@@ -611,10 +611,10 @@ export const UserProfileModal: React.FC = () => {
                   <button
                     id="btn-profile-message"
                     onClick={handleMessage}
-                    className="flex-1 py-2 px-3 rounded-xl border border-neutral-300 hover:bg-neutral-50 text-neutral-900 text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="flex-1 py-2 px-3 rounded-xl border border-theme-divider-strong hover:bg-theme-base text-theme-primary text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                     title="Send direct message"
                   >
-                    <MessageSquare className="w-3.5 h-3.5 text-neutral-700" />
+                    <MessageSquare className="w-3.5 h-3.5 text-theme-secondary" />
                     <span>Message</span>
                   </button>
 
@@ -622,10 +622,10 @@ export const UserProfileModal: React.FC = () => {
                   <button
                     id="btn-profile-mention"
                     onClick={handleMention}
-                    className="py-2 px-3 rounded-xl border border-neutral-300 hover:bg-neutral-50 text-neutral-900 text-xs font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                    className="py-2 px-3 rounded-xl border border-theme-divider-strong hover:bg-theme-base text-theme-primary text-xs font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer"
                     title={`Mention @${activeUserProfile.username} in a post`}
                   >
-                    <AtSign className="w-3.5 h-3.5 text-neutral-700" />
+                    <AtSign className="w-3.5 h-3.5 text-theme-secondary" />
                     <span className="hidden xs:inline">Mention</span>
                   </button>
                 </>
@@ -634,7 +634,7 @@ export const UserProfileModal: React.FC = () => {
           </div>
 
           {/* Navigation Tabs (Posts, Replies, Media, Rallies & Cycles) */}
-          <div className="sticky top-0 z-20 bg-white border-b border-neutral-100 flex items-center px-2">
+          <div className="sticky top-0 z-20 bg-theme-surface border-b border-theme-divider-light flex items-center px-2">
             {(
               [
                 { id: 'posts', label: 'Posts', count: userPosts.length },
@@ -650,7 +650,7 @@ export const UserProfileModal: React.FC = () => {
                   id={`tab-profile-${tab.id}`}
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex-1 py-3 text-center text-xs sm:text-[13px] font-bold transition-all relative cursor-pointer ${
-                    isActive ? 'text-neutral-950' : 'text-neutral-400 hover:text-neutral-700'
+                    isActive ? 'text-theme-primary' : 'text-theme-tertiary hover:text-theme-secondary'
                   }`}
                 >
                   <div className="flex items-center justify-center gap-1">
@@ -659,8 +659,8 @@ export const UserProfileModal: React.FC = () => {
                       <span
                         className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${
                           isActive
-                            ? 'bg-neutral-900 text-white'
-                            : 'bg-neutral-100 text-neutral-500'
+                            ? 'bg-theme-inverse text-theme-text-inverse'
+                            : 'bg-theme-surface-hover text-theme-tertiary'
                         }`}
                       >
                         {tab.count}
@@ -668,7 +668,7 @@ export const UserProfileModal: React.FC = () => {
                     )}
                   </div>
                   {isActive && (
-                    <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-neutral-950 rounded-full" />
+                    <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-theme-inverse rounded-full" />
                   )}
                 </button>
               );
@@ -676,7 +676,7 @@ export const UserProfileModal: React.FC = () => {
           </div>
 
           {/* Tab Content Section */}
-          <div className="pb-16 bg-white min-h-[320px]">
+          <div className="pb-16 bg-theme-surface min-h-[320px]">
             {/* 1. POSTS TAB */}
             {activeTab === 'posts' && (
               <div>
@@ -692,10 +692,10 @@ export const UserProfileModal: React.FC = () => {
                   </div>
                 ) : (
                   <div className="py-12 px-4 text-center">
-                    <p className="text-sm font-semibold text-neutral-800">
+                    <p className="text-sm font-semibold text-theme-primary">
                       {searchQuery ? 'No matching posts found' : 'No posts yet'}
                     </p>
-                    <p className="text-xs text-neutral-400 mt-1">
+                    <p className="text-xs text-theme-tertiary mt-1">
                       {searchQuery
                         ? 'Try searching with different keywords'
                         : isOwnProfile
@@ -715,16 +715,16 @@ export const UserProfileModal: React.FC = () => {
                     {filteredReplies.map((reply) => (
                       <div
                         key={reply.id}
-                        className="p-4 hover:bg-neutral-50/40 transition-colors"
+                        className="p-4 hover:bg-theme-base/40 transition-colors"
                       >
                         {/* Reference to parent post */}
-                        <div className="text-[11px] text-neutral-400 flex items-center gap-1 mb-2 font-medium">
+                        <div className="text-[11px] text-theme-tertiary flex items-center gap-1 mb-2 font-medium">
                           <span>Replied to</span>
-                          <span className="font-bold text-neutral-700">
+                          <span className="font-bold text-theme-secondary">
                             @{reply.post.author.username}
                           </span>
                           <span>&middot;</span>
-                          <span className="text-neutral-400 truncate max-w-[200px]">
+                          <span className="text-theme-tertiary truncate max-w-[200px]">
                             &ldquo;{reply.post.text}&rdquo;
                           </span>
                         </div>
@@ -738,17 +738,17 @@ export const UserProfileModal: React.FC = () => {
                           />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-xs text-neutral-900">
+                              <span className="font-bold text-xs text-theme-primary">
                                 {activeUserProfile.name}
                               </span>
-                              <span className="text-[11px] text-neutral-400">
+                              <span className="text-[11px] text-theme-tertiary">
                                 {reply.createdAt}
                               </span>
                             </div>
-                            <p className="text-xs text-neutral-800 mt-1 leading-relaxed whitespace-pre-line">
+                            <p className="text-xs text-theme-primary mt-1 leading-relaxed whitespace-pre-line">
                               {reply.text}
                             </p>
-                            <div className="flex items-center gap-4 mt-2 text-[11px] text-neutral-400">
+                            <div className="flex items-center gap-4 mt-2 text-[11px] text-theme-tertiary">
                               <button
                                 onClick={() => setActiveCommentsPostId(reply.post.id)}
                                 className="flex items-center gap-1 hover:text-[#5E43F3] transition-colors cursor-pointer"
@@ -768,10 +768,10 @@ export const UserProfileModal: React.FC = () => {
                   </div>
                 ) : (
                   <div className="py-12 px-4 text-center">
-                    <p className="text-sm font-semibold text-neutral-800">
+                    <p className="text-sm font-semibold text-theme-primary">
                       {searchQuery ? 'No matching replies' : 'No replies yet'}
                     </p>
-                    <p className="text-xs text-neutral-400 mt-1">
+                    <p className="text-xs text-theme-tertiary mt-1">
                       Discussions and community comments will appear here.
                     </p>
                   </div>
@@ -793,7 +793,7 @@ export const UserProfileModal: React.FC = () => {
                             alt: item.text,
                           })
                         }
-                        className="aspect-square relative overflow-hidden bg-neutral-100 cursor-pointer group rounded-lg"
+                        className="aspect-square relative overflow-hidden bg-theme-surface-hover cursor-pointer group rounded-lg"
                       >
                         <img
                           src={item.mediaUrl}
@@ -816,8 +816,8 @@ export const UserProfileModal: React.FC = () => {
                   </div>
                 ) : (
                   <div className="py-12 px-4 text-center">
-                    <p className="text-sm font-semibold text-neutral-800">No media yet</p>
-                    <p className="text-xs text-neutral-400 mt-1">
+                    <p className="text-sm font-semibold text-theme-primary">No media yet</p>
+                    <p className="text-xs text-theme-tertiary mt-1">
                       Photos and videos posted by @{activeUserProfile.username} will appear here.
                     </p>
                   </div>
@@ -831,7 +831,7 @@ export const UserProfileModal: React.FC = () => {
                 {/* Active Cycle Status preview if available */}
                 {hasActiveCycle && userCycle && (
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2 flex items-center gap-1.5">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary mb-2 flex items-center gap-1.5">
                       <Flame className="w-3.5 h-3.5 text-[#5E43F3]" />
                       <span>Active 24-Hour Cycle</span>
                     </h3>
@@ -840,7 +840,7 @@ export const UserProfileModal: React.FC = () => {
                         <div
                           key={item.id}
                           onClick={() => openCycleStory(userCycle.id, idx)}
-                          className="aspect-3/4 rounded-2xl overflow-hidden relative cursor-pointer group shadow-xs border border-neutral-100"
+                          className="aspect-3/4 rounded-2xl overflow-hidden relative cursor-pointer group shadow-xs border border-theme-divider-light"
                         >
                           {item.mediaUrl ? (
                             <img
@@ -878,7 +878,7 @@ export const UserProfileModal: React.FC = () => {
 
                 {/* Community Rallies Organized or Joined */}
                 <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2 flex items-center gap-1.5">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary mb-2 flex items-center gap-1.5">
                     <Users className="w-3.5 h-3.5 text-[#5E43F3]" />
                     <span>Community Movements & Rallies</span>
                   </h3>
@@ -887,26 +887,26 @@ export const UserProfileModal: React.FC = () => {
                       {userRallies.map((rally) => (
                         <div
                           key={rally.id}
-                          className="p-3.5 rounded-2xl bg-neutral-50 border border-neutral-100 hover:border-neutral-200 transition-colors"
+                          className="p-3.5 rounded-2xl bg-theme-base border border-theme-divider-light hover:border-theme-divider transition-colors"
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
                               <span className="text-[10px] font-bold text-[#5E43F3] uppercase tracking-wide">
                                 {rally.category} &middot; {rally.timeDate}
                               </span>
-                              <h4 className="text-xs sm:text-sm font-bold text-neutral-900 mt-0.5">
+                              <h4 className="text-xs sm:text-sm font-bold text-theme-primary mt-0.5">
                                 {rally.title}
                               </h4>
-                              <p className="text-xs text-neutral-600 mt-1 line-clamp-2">
+                              <p className="text-xs text-theme-secondary mt-1 line-clamp-2">
                                 {rally.description}
                               </p>
-                              <div className="flex items-center gap-2 text-[11px] text-neutral-500 mt-2">
+                              <div className="flex items-center gap-2 text-[11px] text-theme-tertiary mt-2">
                                 <span className="flex items-center gap-1">
                                   <MapPin className="w-3 h-3 text-[#5E43F3]" />
                                   {rally.location}
                                 </span>
                                 <span>&middot;</span>
-                                <span className="font-semibold text-neutral-800">
+                                <span className="font-semibold text-theme-primary">
                                   {rally.joinedUsersCount} joined
                                 </span>
                               </div>
@@ -927,11 +927,11 @@ export const UserProfileModal: React.FC = () => {
                       ))}
                     </div>
                   ) : (
-                    <div className="py-8 text-center bg-neutral-50 rounded-2xl border border-neutral-100">
-                      <p className="text-xs font-semibold text-neutral-700">
+                    <div className="py-8 text-center bg-theme-base rounded-2xl border border-theme-divider-light">
+                      <p className="text-xs font-semibold text-theme-secondary">
                         No active rallies
                       </p>
-                      <p className="text-[11px] text-neutral-400 mt-0.5">
+                      <p className="text-[11px] text-theme-tertiary mt-0.5">
                         Local meetups, sports rallies, and causes will be listed here.
                       </p>
                     </div>
@@ -949,16 +949,16 @@ export const UserProfileModal: React.FC = () => {
             onClick={() => setIsMoreMenuOpen(false)}
           >
             <div
-              className="w-full max-w-md bg-white rounded-t-3xl p-4 space-y-2 shadow-2xl animate-in slide-in-from-bottom duration-200"
+              className="w-full max-w-md bg-theme-surface rounded-t-3xl p-4 space-y-2 shadow-2xl animate-in slide-in-from-bottom duration-200"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="w-10 h-1 rounded-full bg-neutral-300 mx-auto mb-3" />
+              <div className="w-10 h-1 rounded-full bg-theme-divider-strong mx-auto mb-3" />
 
               <button
                 onClick={handleShareProfile}
-                className="w-full p-3 rounded-2xl hover:bg-neutral-100 flex items-center gap-3 text-xs font-bold text-neutral-900 transition-colors cursor-pointer"
+                className="w-full p-3 rounded-2xl hover:bg-theme-surface-hover flex items-center gap-3 text-xs font-bold text-theme-primary transition-colors cursor-pointer"
               >
-                <Share2 className="w-4 h-4 text-neutral-600" />
+                <Share2 className="w-4 h-4 text-theme-secondary" />
                 <span>Share profile</span>
               </button>
 
@@ -968,9 +968,9 @@ export const UserProfileModal: React.FC = () => {
                   triggerShareToast(`Copied @${activeUserProfile.username} to clipboard`);
                   setIsMoreMenuOpen(false);
                 }}
-                className="w-full p-3 rounded-2xl hover:bg-neutral-100 flex items-center gap-3 text-xs font-bold text-neutral-900 transition-colors cursor-pointer"
+                className="w-full p-3 rounded-2xl hover:bg-theme-surface-hover flex items-center gap-3 text-xs font-bold text-theme-primary transition-colors cursor-pointer"
               >
-                <Copy className="w-4 h-4 text-neutral-600" />
+                <Copy className="w-4 h-4 text-theme-secondary" />
                 <span>Copy Lalao handle</span>
               </button>
 
@@ -978,9 +978,9 @@ export const UserProfileModal: React.FC = () => {
                 <>
                   <button
                     onClick={handleToggleNotifications}
-                    className="w-full p-3 rounded-2xl hover:bg-neutral-100 flex items-center gap-3 text-xs font-bold text-neutral-900 transition-colors cursor-pointer"
+                    className="w-full p-3 rounded-2xl hover:bg-theme-surface-hover flex items-center gap-3 text-xs font-bold text-theme-primary transition-colors cursor-pointer"
                   >
-                    <Bell className="w-4 h-4 text-neutral-600" />
+                    <Bell className="w-4 h-4 text-theme-secondary" />
                     <span>
                       {isNotificationsEnabled
                         ? 'Turn off post notifications'
@@ -990,9 +990,9 @@ export const UserProfileModal: React.FC = () => {
 
                   <button
                     onClick={handleMute}
-                    className="w-full p-3 rounded-2xl hover:bg-neutral-100 flex items-center gap-3 text-xs font-bold text-neutral-900 transition-colors cursor-pointer"
+                    className="w-full p-3 rounded-2xl hover:bg-theme-surface-hover flex items-center gap-3 text-xs font-bold text-theme-primary transition-colors cursor-pointer"
                   >
-                    <VolumeX className="w-4 h-4 text-neutral-600" />
+                    <VolumeX className="w-4 h-4 text-theme-secondary" />
                     <span>{isMuted ? `Unmute @${activeUserProfile.username}` : `Mute @${activeUserProfile.username}`}</span>
                   </button>
 
@@ -1012,7 +1012,7 @@ export const UserProfileModal: React.FC = () => {
               <div className="pt-2">
                 <button
                   onClick={() => setIsMoreMenuOpen(false)}
-                  className="w-full py-2.5 rounded-2xl bg-neutral-100 text-xs font-bold text-neutral-700 hover:bg-neutral-200 transition-colors cursor-pointer"
+                  className="w-full py-2.5 rounded-2xl bg-theme-surface-hover text-xs font-bold text-theme-secondary hover:bg-theme-surface-active transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1029,7 +1029,7 @@ export const UserProfileModal: React.FC = () => {
           >
             <button
               onClick={() => setLightboxMedia(null)}
-              className="absolute top-4 right-4 p-2.5 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+              className="absolute top-4 right-4 p-2.5 rounded-full bg-theme-surface/10 text-white hover:bg-theme-surface/20 transition-colors"
             >
               <X className="w-6 h-6" />
             </button>

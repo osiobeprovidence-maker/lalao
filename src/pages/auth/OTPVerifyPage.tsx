@@ -79,12 +79,12 @@ export const OTPVerifyPage: React.FC = () => {
     : email;
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12">
+    <div className="min-h-screen bg-theme-surface flex flex-col items-center justify-center px-6 py-12">
       {/* Back button */}
       <div className="w-full max-w-sm mb-8">
         <Link
           to="/signup"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-neutral-500 hover:text-neutral-900 transition-colors"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-theme-tertiary hover:text-theme-primary transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back
@@ -107,16 +107,16 @@ export const OTPVerifyPage: React.FC = () => {
 
         {/* Heading */}
         <div className="space-y-2">
-          <h1 className="text-3xl font-black text-neutral-950 tracking-tight">
+          <h1 className="text-3xl font-black text-theme-primary tracking-tight">
             {verified ? 'Verified!' : 'Check your inbox'}
           </h1>
-          <p className="text-neutral-500 text-sm leading-relaxed">
+          <p className="text-theme-tertiary text-sm leading-relaxed">
             {verified
               ? 'Setting up your Lalao profile...'
               : (
                 <>
                   We sent a 6-digit code to{' '}
-                  <span className="font-bold text-neutral-800">{maskedEmail}</span>
+                  <span className="font-bold text-theme-primary">{maskedEmail}</span>
                 </>
               )}
           </p>
@@ -142,7 +142,7 @@ export const OTPVerifyPage: React.FC = () => {
                       ? 'border-red-400 bg-red-50 text-red-700'
                       : digit
                       ? 'border-[#5E43F3] bg-indigo-50/50 text-[#5E43F3]'
-                      : 'border-neutral-200 bg-neutral-50 text-neutral-900 focus:border-[#5E43F3] focus:ring-2 focus:ring-[#5E43F3]/20'
+                      : 'border-theme-divider bg-theme-base text-theme-primary focus:border-[#5E43F3] focus:ring-2 focus:ring-[#5E43F3]/20'
                   }`}
                 />
               ))}
@@ -169,13 +169,13 @@ export const OTPVerifyPage: React.FC = () => {
 
             {/* Resend */}
             <div className="flex items-center justify-center gap-1.5 text-sm">
-              <span className="text-neutral-400">Didn't get it?</span>
+              <span className="text-theme-tertiary">Didn't get it?</span>
               <button
                 type="button"
                 onClick={handleResend}
                 disabled={resendCooldown > 0}
                 className={`font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                  resendCooldown > 0 ? 'text-neutral-300' : 'text-[#5E43F3] hover:text-[#4E34E0]'
+                  resendCooldown > 0 ? 'text-theme-tertiary' : 'text-[#5E43F3] hover:text-[#4E34E0]'
                 }`}
               >
                 <RefreshCw className="w-3.5 h-3.5" />

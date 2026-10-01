@@ -217,13 +217,13 @@ export const MuxVideoPlayer = React.memo<MuxVideoPlayerProps>(({
   // 1. STATE: UPLOADING
   if (mediaStatus === 'uploading') {
     return (
-      <div className={`relative w-full ${aspectClass} rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col items-center justify-center p-6 gap-3 text-center ${className}`}>
+      <div className={`relative w-full ${aspectClass} rounded-2xl bg-theme-inverse border border-theme-divider-inverse flex flex-col items-center justify-center p-6 gap-3 text-center ${className}`}>
         <div className="w-14 h-14 rounded-full bg-[#5E43F3]/15 flex items-center justify-center border border-[#5E43F3]/30 shadow-inner">
           <Loader2 className="w-7 h-7 text-[#5E43F3] animate-spin" />
         </div>
         <div className="space-y-1">
           <p className="text-sm font-bold text-white tracking-wide">Uploading video...</p>
-          <p className="text-xs text-neutral-400">Your video is uploading securely</p>
+          <p className="text-xs text-theme-tertiary">Your video is uploading securely</p>
         </div>
       </div>
     );
@@ -234,7 +234,7 @@ export const MuxVideoPlayer = React.memo<MuxVideoPlayerProps>(({
     const previewPoster = poster || (mediaUrl && (mediaUrl.startsWith('data:image') || mediaUrl.includes('image.mux.com')) ? mediaUrl : undefined);
 
     return (
-      <div className={`relative w-full ${aspectClass} rounded-2xl bg-neutral-900 border border-neutral-800/80 overflow-hidden flex flex-col items-center justify-center p-6 text-center ${className}`}>
+      <div className={`relative w-full ${aspectClass} rounded-2xl bg-theme-inverse border border-theme-divider-inverse/80 overflow-hidden flex flex-col items-center justify-center p-6 text-center ${className}`}>
         {/* Background Poster Blur if present */}
         {previewPoster && (
           <img
@@ -253,11 +253,11 @@ export const MuxVideoPlayer = React.memo<MuxVideoPlayerProps>(({
           </div>
           <div className="space-y-1">
             <p className="text-sm font-bold text-white tracking-wide">Video processing...</p>
-            <p className="text-xs text-neutral-300/80 leading-relaxed">
+            <p className="text-xs text-theme-tertiary/80 leading-relaxed">
               Preparing your video for optimal streaming playback
             </p>
           </div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-[11px] font-semibold text-neutral-300 border border-white/10">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-theme-surface/10 backdrop-blur-md text-[11px] font-semibold text-theme-tertiary border border-white/10">
             <Film className="w-3 h-3 text-[#5E43F3]" />
             <span>HD Transcoding in background</span>
           </div>
@@ -269,13 +269,13 @@ export const MuxVideoPlayer = React.memo<MuxVideoPlayerProps>(({
   // 3. STATE: FAILED
   if (isFailed) {
     return (
-      <div className={`relative w-full ${aspectClass} rounded-2xl bg-neutral-900 border border-rose-900/40 flex flex-col items-center justify-center gap-3 p-6 text-center ${className}`}>
+      <div className={`relative w-full ${aspectClass} rounded-2xl bg-theme-inverse border border-rose-900/40 flex flex-col items-center justify-center gap-3 p-6 text-center ${className}`}>
         <div className="w-12 h-12 rounded-full bg-rose-500/15 flex items-center justify-center text-rose-500 border border-rose-500/30">
           <AlertCircle className="w-6 h-6" />
         </div>
         <div className="space-y-1">
           <p className="text-sm font-bold text-white">Video processing failed</p>
-          <p className="text-xs text-neutral-400">Your post text remains active. Please try reprocessing.</p>
+          <p className="text-xs text-theme-tertiary">Your post text remains active. Please try reprocessing.</p>
         </div>
         {onRetryProcessing && (
           <button
@@ -297,7 +297,7 @@ export const MuxVideoPlayer = React.memo<MuxVideoPlayerProps>(({
     return (
       <div
         ref={containerRef}
-        className={`relative w-full overflow-hidden rounded-[18px] bg-black ${className} cursor-pointer group`}
+        className={`relative w-full overflow-hidden rounded-[18px] bg-theme-inverse ${className} cursor-pointer group`}
         onClick={togglePlayPause}
       >
         {!isNearViewport ? (
@@ -338,9 +338,9 @@ export const MuxVideoPlayer = React.memo<MuxVideoPlayerProps>(({
             handleBarClick(e);
           }}
         >
-          <div className="absolute bottom-0 inset-x-0 h-1 bg-white/30">
+          <div className="absolute bottom-0 inset-x-0 h-1 bg-theme-surface/30">
             <div
-              className="absolute h-full bg-white transition-all duration-100 ease-linear"
+              className="absolute h-full bg-theme-surface transition-all duration-100 ease-linear"
               style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
             />
           </div>
@@ -354,7 +354,7 @@ export const MuxVideoPlayer = React.memo<MuxVideoPlayerProps>(({
     return (
       <div
         ref={containerRef}
-        className={`relative w-full overflow-hidden rounded-[18px] bg-neutral-900 ${className} cursor-pointer group`}
+        className={`relative w-full overflow-hidden rounded-[18px] bg-theme-inverse ${className} cursor-pointer group`}
         onClick={togglePlayPause}
       >
         {!isNearViewport ? (
@@ -395,9 +395,9 @@ export const MuxVideoPlayer = React.memo<MuxVideoPlayerProps>(({
             handleBarClick(e);
           }}
         >
-          <div className="absolute bottom-0 inset-x-0 h-1 bg-white/30">
+          <div className="absolute bottom-0 inset-x-0 h-1 bg-theme-surface/30">
             <div
-              className="absolute h-full bg-white transition-all duration-100 ease-linear"
+              className="absolute h-full bg-theme-surface transition-all duration-100 ease-linear"
               style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
             />
           </div>

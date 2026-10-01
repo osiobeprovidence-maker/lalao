@@ -20,14 +20,14 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   backTo,
 }) => {
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-theme-surface flex flex-col">
       {/* Top bar */}
-      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-neutral-100 px-6 py-4">
+      <div className="sticky top-0 z-10 bg-theme-surface/95 backdrop-blur border-b border-theme-divider-light px-6 py-4">
         <div className="max-w-md mx-auto flex items-center gap-4">
           {/* Back */}
           <div className="w-8">
             {backTo && (
-              <Link to={backTo} className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-all inline-flex">
+              <Link to={backTo} className="p-1.5 rounded-full text-theme-tertiary hover:text-theme-primary hover:bg-theme-surface-hover transition-all inline-flex">
                 <ArrowLeft className="w-4 h-4" />
               </Link>
             )}
@@ -38,13 +38,13 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
             {Array.from({ length: totalSteps }).map((_, i) => (
               <div
                 key={i}
-                className={`flex-1 h-1.5 rounded-full transition-all duration-500 ${i < step ? 'bg-[#5E43F3]' : 'bg-neutral-100'}`}
+                className={`flex-1 h-1.5 rounded-full transition-all duration-500 ${i < step ? 'bg-[#5E43F3]' : 'bg-theme-surface-hover'}`}
               />
             ))}
           </div>
 
           {/* Step count */}
-          <span className="text-xs font-bold text-neutral-400 w-10 text-right">
+          <span className="text-xs font-bold text-theme-tertiary w-10 text-right">
             {step}/{totalSteps}
           </span>
         </div>
@@ -54,8 +54,8 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
       <div className="flex-1 flex flex-col items-center px-6 py-8 overflow-y-auto">
         <div className="w-full max-w-md space-y-6">
           <div className="space-y-1.5">
-            <h1 className="text-3xl font-black text-neutral-950 tracking-tight">{title}</h1>
-            {subtitle && <p className="text-neutral-500 text-sm leading-relaxed">{subtitle}</p>}
+            <h1 className="text-3xl font-black text-theme-primary tracking-tight">{title}</h1>
+            {subtitle && <p className="text-theme-tertiary text-sm leading-relaxed">{subtitle}</p>}
           </div>
 
           {children}

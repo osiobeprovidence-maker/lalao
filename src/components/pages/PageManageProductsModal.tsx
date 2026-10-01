@@ -81,21 +81,21 @@ export const PageManageProductsModal: React.FC<PageManageProductsModalProps> = (
   const products = pageProducts || [];
 
   return (
-    <div className="absolute inset-0 z-50 bg-white overflow-y-auto flex flex-col animate-in fade-in slide-in-from-right-4 duration-250">
+    <div className="absolute inset-0 z-50 bg-theme-surface overflow-y-auto flex flex-col animate-in fade-in slide-in-from-right-4 duration-250">
       {/* Top Sticky Header */}
-      <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-neutral-100 px-4 py-3 sm:px-6 flex items-center justify-between z-20 shrink-0">
+      <div className="sticky top-0 bg-theme-surface/95 backdrop-blur-md border-b border-theme-divider-light px-4 py-3 sm:px-6 flex items-center justify-between z-20 shrink-0">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="p-2 -ml-2 rounded-full hover:bg-neutral-100 text-neutral-800 transition-colors cursor-pointer"
+            className="p-2 -ml-2 rounded-full hover:bg-theme-surface-hover text-theme-primary transition-colors cursor-pointer"
             aria-label="Back"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h3 className="text-base font-black text-neutral-950">Storefront & Products</h3>
-            <p className="text-xs text-neutral-500 font-medium truncate max-w-[180px] sm:max-w-md">
+            <h3 className="text-base font-black text-theme-primary">Storefront & Products</h3>
+            <p className="text-xs text-theme-tertiary font-medium truncate max-w-[180px] sm:max-w-md">
               @{page.username} · Manage catalog, items & pricing
             </p>
           </div>
@@ -114,7 +114,7 @@ export const PageManageProductsModal: React.FC<PageManageProductsModalProps> = (
           <button
             type="button"
             onClick={() => setIsAddingNew(false)}
-            className="px-4 py-2 rounded-xl border border-neutral-200 text-xs font-bold text-neutral-600 hover:bg-neutral-50 transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-xl border border-theme-divider text-xs font-bold text-theme-secondary hover:bg-theme-base transition-colors cursor-pointer"
           >
             View Catalog
           </button>
@@ -126,7 +126,7 @@ export const PageManageProductsModal: React.FC<PageManageProductsModalProps> = (
         {!isAddingNew ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-black uppercase tracking-wider text-neutral-500">
+              <span className="text-xs font-black uppercase tracking-wider text-theme-tertiary">
                 Products in Catalog ({products.length})
               </span>
             </div>
@@ -136,28 +136,28 @@ export const PageManageProductsModal: React.FC<PageManageProductsModalProps> = (
                 {products.map((prod) => (
                   <div
                     key={prod.id}
-                    className="p-3.5 rounded-3xl bg-neutral-50 border border-neutral-200/80 flex items-center gap-3 relative group hover:border-[#5E43F3]/30 transition-all"
+                    className="p-3.5 rounded-3xl bg-theme-base border border-theme-divider/80 flex items-center gap-3 relative group hover:border-[#5E43F3]/30 transition-all"
                   >
                     <img
                       src={prod.image}
                       alt={prod.name}
-                      className="w-16 h-16 rounded-2xl object-cover bg-white ring-1 ring-neutral-200 shrink-0"
+                      className="w-16 h-16 rounded-2xl object-cover bg-theme-surface ring-1 ring-theme-divider shrink-0"
                     />
                     <div className="flex-1 min-w-0 pr-8">
-                      <p className="text-xs font-bold text-neutral-900 truncate">
+                      <p className="text-xs font-bold text-theme-primary truncate">
                         {prod.name}
                       </p>
                       <p className="text-sm font-black text-[#5E43F3] mt-0.5">
                         ₦{prod.price.toLocaleString()}
                       </p>
-                      <span className="text-[11px] text-neutral-400 font-medium">
+                      <span className="text-[11px] text-theme-tertiary font-medium">
                         {prod.category}
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => deletePageProduct(page.id, prod.id)}
-                      className="absolute top-3 right-3 p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                      className="absolute top-3 right-3 p-2 text-theme-tertiary hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
                       title="Remove product"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -166,10 +166,10 @@ export const PageManageProductsModal: React.FC<PageManageProductsModalProps> = (
                 ))}
               </div>
             ) : (
-              <div className="py-20 text-center rounded-3xl border-2 border-dashed border-neutral-200 p-8">
-                <ShoppingBag className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-                <p className="text-sm font-bold text-neutral-800">No products in storefront yet</p>
-                <p className="text-xs text-neutral-500 mt-1 mb-4 max-w-sm mx-auto">
+              <div className="py-20 text-center rounded-3xl border-2 border-dashed border-theme-divider p-8">
+                <ShoppingBag className="w-10 h-10 text-theme-tertiary mx-auto mb-3" />
+                <p className="text-sm font-bold text-theme-primary">No products in storefront yet</p>
+                <p className="text-xs text-theme-tertiary mt-1 mb-4 max-w-sm mx-auto">
                   Add merchandise, apparel, hardware or goods for your visitors to purchase directly from {page.name}.
                 </p>
                 <button
@@ -185,14 +185,14 @@ export const PageManageProductsModal: React.FC<PageManageProductsModalProps> = (
           </div>
         ) : (
           <form onSubmit={handleAddProduct} className="space-y-5 animate-in fade-in">
-            <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
-              <span className="text-sm font-black text-neutral-900">
+            <div className="flex items-center justify-between pb-3 border-b border-theme-divider-light">
+              <span className="text-sm font-black text-theme-primary">
                 New Product Details
               </span>
               <button
                 type="button"
                 onClick={() => setIsAddingNew(false)}
-                className="text-xs text-neutral-500 hover:text-neutral-900 font-bold cursor-pointer"
+                className="text-xs text-theme-tertiary hover:text-theme-primary font-bold cursor-pointer"
               >
                 Back to Catalog
               </button>
@@ -200,12 +200,12 @@ export const PageManageProductsModal: React.FC<PageManageProductsModalProps> = (
 
             {/* Product Image */}
             <div>
-              <label className="text-xs font-bold text-neutral-700 block mb-2">
+              <label className="text-xs font-bold text-theme-secondary block mb-2">
                 Product Image
               </label>
               <div className="flex items-center gap-4">
                 <div 
-                  className="w-20 h-20 rounded-2xl bg-neutral-100 ring-1 ring-neutral-200 overflow-hidden flex items-center justify-center shrink-0 cursor-pointer relative group"
+                  className="w-20 h-20 rounded-2xl bg-theme-surface-hover ring-1 ring-theme-divider overflow-hidden flex items-center justify-center shrink-0 cursor-pointer relative group"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   {imagePreview ? (
@@ -216,14 +216,14 @@ export const PageManageProductsModal: React.FC<PageManageProductsModalProps> = (
                       </div>
                     </>
                   ) : (
-                    <ImageIcon className="w-6 h-6 text-neutral-400" />
+                    <ImageIcon className="w-6 h-6 text-theme-tertiary" />
                   )}
                 </div>
                 <div>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="px-4 py-2 rounded-xl border border-neutral-200 text-xs font-bold text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 cursor-pointer"
+                    className="px-4 py-2 rounded-xl border border-theme-divider text-xs font-bold text-theme-secondary hover:bg-theme-base flex items-center gap-2 cursor-pointer"
                   >
                     <ImageIcon className="w-4 h-4" />
                     <span>Upload Image</span>
@@ -241,7 +241,7 @@ export const PageManageProductsModal: React.FC<PageManageProductsModalProps> = (
                       }
                     }}
                   />
-                  <p className="text-[10px] text-neutral-400 mt-2">
+                  <p className="text-[10px] text-theme-tertiary mt-2">
                     Recommended: Square aspect ratio, minimum 800x800px.
                   </p>
                 </div>
@@ -249,7 +249,7 @@ export const PageManageProductsModal: React.FC<PageManageProductsModalProps> = (
             </div>
 
             <div>
-              <label className="text-xs font-bold text-neutral-700 block mb-1">
+              <label className="text-xs font-bold text-theme-secondary block mb-1">
                 Product Title *
               </label>
               <input
@@ -258,30 +258,30 @@ export const PageManageProductsModal: React.FC<PageManageProductsModalProps> = (
                 onChange={(e) => setName(e.target.value)}
                 required
                 placeholder="e.g. Official Creator Lab Heavyweight Hoodie"
-                className="w-full px-4 py-3 rounded-2xl border border-neutral-200 text-sm font-semibold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                className="w-full px-4 py-3 rounded-2xl border border-theme-divider text-sm font-semibold text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                <label className="text-xs font-bold text-theme-secondary block mb-1">
                   Price (NGN) *
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3.5 top-3 text-xs font-bold text-neutral-400">₦</span>
+                  <span className="absolute left-3.5 top-3 text-xs font-bold text-theme-tertiary">₦</span>
                   <input
                     type="number"
                     value={price}
                     onChange={(e) => setPrice(Number(e.target.value))}
                     required
                     step="500"
-                    className="w-full pl-8 pr-4 py-3 rounded-2xl border border-neutral-200 text-sm font-bold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                    className="w-full pl-8 pr-4 py-3 rounded-2xl border border-theme-divider text-sm font-bold text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                <label className="text-xs font-bold text-theme-secondary block mb-1">
                   Category
                 </label>
                 <input
@@ -289,13 +289,13 @@ export const PageManageProductsModal: React.FC<PageManageProductsModalProps> = (
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   placeholder="Merchandise / Tech / Gear"
-                  className="w-full px-4 py-3 rounded-2xl border border-neutral-200 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                  className="w-full px-4 py-3 rounded-2xl border border-theme-divider text-sm text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-bold text-neutral-700 block mb-1">
+              <label className="text-xs font-bold text-theme-secondary block mb-1">
                 Product Description
               </label>
               <textarea
@@ -303,15 +303,15 @@ export const PageManageProductsModal: React.FC<PageManageProductsModalProps> = (
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
                 placeholder="Materials, sizing specs, delivery notes..."
-                className="w-full px-4 py-3 rounded-2xl border border-neutral-200 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3] resize-none"
+                className="w-full px-4 py-3 rounded-2xl border border-theme-divider text-sm text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3] resize-none"
               />
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-neutral-100">
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-theme-divider-light">
               <button
                 type="button"
                 onClick={() => setIsAddingNew(false)}
-                className="px-4 py-2.5 rounded-xl border border-neutral-200 text-xs font-bold text-neutral-600 hover:bg-neutral-50 cursor-pointer"
+                className="px-4 py-2.5 rounded-xl border border-theme-divider text-xs font-bold text-theme-secondary hover:bg-theme-base cursor-pointer"
               >
                 Cancel
               </button>

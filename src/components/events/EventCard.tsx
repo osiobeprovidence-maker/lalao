@@ -62,7 +62,7 @@ export const EventCard: React.FC<EventCardProps> = ({
       case 'open':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-emerald-500/90 text-white backdrop-blur-md shadow-xs">
-            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-theme-surface animate-pulse" />
             Registration Open
           </span>
         );
@@ -75,14 +75,14 @@ export const EventCard: React.FC<EventCardProps> = ({
         );
       case 'completed':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-neutral-800/80 text-neutral-300 backdrop-blur-md border border-neutral-700">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-theme-inverse/80 text-theme-tertiary backdrop-blur-md border border-theme-divider-strong">
             <CheckCircle2 className="w-3 h-3 text-emerald-400" />
             Completed
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-neutral-800/80 text-neutral-300 backdrop-blur-md border border-neutral-700">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-theme-inverse/80 text-theme-tertiary backdrop-blur-md border border-theme-divider-strong">
             Closed
           </span>
         );
@@ -126,10 +126,10 @@ export const EventCard: React.FC<EventCardProps> = ({
       <article
         id={`card-event-${event.id}`}
         onClick={handleOpenDetail}
-        className={`col-span-1 md:col-span-2 lg:col-span-2 bg-white rounded-3xl border border-neutral-200/90 shadow-xs hover:shadow-xl hover:border-violet-300 transition-all duration-300 overflow-hidden cursor-pointer flex flex-col md:flex-row group relative ${className}`}
+        className={`col-span-1 md:col-span-2 lg:col-span-2 bg-theme-surface rounded-3xl border border-theme-divider/90 shadow-xs hover:shadow-xl hover:border-violet-300 transition-all duration-300 overflow-hidden cursor-pointer flex flex-col md:flex-row group relative ${className}`}
       >
         {/* Visual Hero Bento Cell */}
-        <div className="md:w-5/12 relative aspect-16/9 md:aspect-auto bg-neutral-950 overflow-hidden flex flex-col justify-between p-4.5 shrink-0">
+        <div className="md:w-5/12 relative aspect-16/9 md:aspect-auto bg-theme-inverse overflow-hidden flex flex-col justify-between p-4.5 shrink-0">
           <img
             src={event.coverImage}
             alt={event.title}
@@ -143,12 +143,12 @@ export const EventCard: React.FC<EventCardProps> = ({
             <div className="flex items-center gap-1.5">
               {getTypeBadge()}
               {event.isOnline ? (
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-neutral-900/80 backdrop-blur-md text-white border border-white/20">
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-theme-inverse/80 backdrop-blur-md text-theme-text-inverse border border-white/20">
                   <Globe className="w-2.5 h-2.5 text-blue-400" />
                   Online
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-neutral-900/80 backdrop-blur-md text-white border border-white/20">
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-theme-inverse/80 backdrop-blur-md text-theme-text-inverse border border-white/20">
                   <MapPin className="w-2.5 h-2.5 text-rose-400" />
                   LAN Venue
                 </span>
@@ -163,14 +163,14 @@ export const EventCard: React.FC<EventCardProps> = ({
               <Sparkles className="w-3 h-3" />
               Featured Tournament
             </span>
-            <p className="text-xs text-neutral-300 font-medium line-clamp-2 mt-1">
+            <p className="text-xs text-theme-tertiary font-medium line-clamp-2 mt-1">
               {event.description}
             </p>
           </div>
         </div>
 
         {/* Info & Bento Modules Column */}
-        <div className="md:w-7/12 p-4 sm:p-5 flex flex-col justify-between bg-white space-y-4 flex-1">
+        <div className="md:w-7/12 p-4 sm:p-5 flex flex-col justify-between bg-theme-surface space-y-4 flex-1">
           <div>
             {/* Title & Organization Header */}
             <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -179,18 +179,18 @@ export const EventCard: React.FC<EventCardProps> = ({
                   src={event.organizationAvatar}
                   alt={event.organizationName}
                   referrerPolicy="no-referrer"
-                  className="w-5 h-5 rounded-full object-cover border border-neutral-200"
+                  className="w-5 h-5 rounded-full object-cover border border-theme-divider"
                 />
-                <span className="text-xs font-bold text-neutral-600">
+                <span className="text-xs font-bold text-theme-secondary">
                   {event.organizationName}
                 </span>
               </div>
-              <span className="text-[11px] font-semibold text-neutral-400">
+              <span className="text-[11px] font-semibold text-theme-tertiary">
                 Official Event
               </span>
             </div>
 
-            <h3 className="text-base sm:text-lg font-black tracking-tight text-neutral-950 group-hover:text-[#5E43F3] transition-colors leading-tight">
+            <h3 className="text-base sm:text-lg font-black tracking-tight text-theme-primary group-hover:text-[#5E43F3] transition-colors leading-tight">
               {event.title}
             </h3>
 
@@ -218,12 +218,12 @@ export const EventCard: React.FC<EventCardProps> = ({
                   </p>
                 </div>
               ) : (
-                <div className="bg-neutral-50 border border-neutral-200/70 rounded-2xl p-2.5 flex flex-col justify-between">
-                  <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-neutral-600">
+                <div className="bg-theme-base border border-theme-divider/70 rounded-2xl p-2.5 flex flex-col justify-between">
+                  <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-theme-secondary">
                     <Sparkles className="w-3 h-3 text-amber-500" />
                     <span>Entry</span>
                   </div>
-                  <p className="text-xs sm:text-sm font-black text-neutral-900 mt-1">
+                  <p className="text-xs sm:text-sm font-black text-theme-primary mt-1">
                     Free Entry
                   </p>
                 </div>
@@ -231,17 +231,17 @@ export const EventCard: React.FC<EventCardProps> = ({
 
               {/* Roster / Team Capacity Bento Tile */}
               {event.isTournament && event.teamsCount ? (
-                <div className="bg-neutral-50 border border-neutral-200/70 rounded-2xl p-2.5 flex flex-col justify-between">
-                  <div className="flex items-center justify-between gap-1 text-[10px] font-bold text-neutral-600">
+                <div className="bg-theme-base border border-theme-divider/70 rounded-2xl p-2.5 flex flex-col justify-between">
+                  <div className="flex items-center justify-between gap-1 text-[10px] font-bold text-theme-secondary">
                     <span className="flex items-center gap-1">
-                      <Users className="w-3 h-3 text-neutral-500" />
+                      <Users className="w-3 h-3 text-theme-tertiary" />
                       Squads
                     </span>
-                    <span className="font-extrabold text-neutral-900">
+                    <span className="font-extrabold text-theme-primary">
                       {registeredCount}/{maxTeams}
                     </span>
                   </div>
-                  <div className="w-full bg-neutral-200 h-1.5 rounded-full overflow-hidden mt-2">
+                  <div className="w-full bg-theme-surface-active h-1.5 rounded-full overflow-hidden mt-2">
                     <div
                       className="bg-[#5E43F3] h-full rounded-full transition-all duration-500"
                       style={{ width: `${teamFillPercent}%` }}
@@ -249,26 +249,26 @@ export const EventCard: React.FC<EventCardProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="bg-neutral-50 border border-neutral-200/70 rounded-2xl p-2.5 flex flex-col justify-between">
-                  <div className="flex items-center gap-1 text-[10px] font-bold text-neutral-600">
-                    <MapPin className="w-3 h-3 text-neutral-500" />
+                <div className="bg-theme-base border border-theme-divider/70 rounded-2xl p-2.5 flex flex-col justify-between">
+                  <div className="flex items-center gap-1 text-[10px] font-bold text-theme-secondary">
+                    <MapPin className="w-3 h-3 text-theme-tertiary" />
                     <span>Location</span>
                   </div>
-                  <p className="text-[11px] font-bold text-neutral-900 truncate mt-1">
+                  <p className="text-[11px] font-bold text-theme-primary truncate mt-1">
                     {event.location}
                   </p>
                 </div>
               )}
 
               {/* Schedule Bento Tile */}
-              <div className="col-span-2 bg-neutral-50/80 border border-neutral-200/70 rounded-2xl px-3 py-2 flex items-center justify-between gap-2 text-xs text-neutral-700">
+              <div className="col-span-2 bg-theme-base/80 border border-theme-divider/70 rounded-2xl px-3 py-2 flex items-center justify-between gap-2 text-xs text-theme-secondary">
                 <div className="flex items-center gap-2 truncate">
                   <Calendar className="w-3.5 h-3.5 text-[#5E43F3] shrink-0" />
-                  <span className="font-bold text-neutral-950">{event.date}</span>
-                  <span className="text-neutral-400">·</span>
-                  <span className="text-neutral-600">{event.time}</span>
+                  <span className="font-bold text-theme-primary">{event.date}</span>
+                  <span className="text-theme-tertiary">·</span>
+                  <span className="text-theme-secondary">{event.time}</span>
                 </div>
-                <span className="text-[11px] font-semibold text-neutral-500 shrink-0 truncate max-w-[130px]">
+                <span className="text-[11px] font-semibold text-theme-tertiary shrink-0 truncate max-w-[130px]">
                   {event.location}
                 </span>
               </div>
@@ -276,11 +276,11 @@ export const EventCard: React.FC<EventCardProps> = ({
           </div>
 
           {/* Action Row */}
-          <div className="pt-3 border-t border-neutral-100 flex items-center justify-between gap-2">
+          <div className="pt-3 border-t border-theme-divider-light flex items-center justify-between gap-2">
             <button
               type="button"
               onClick={handleOpenDetail}
-              className="text-xs font-bold text-neutral-600 hover:text-neutral-950 py-2 px-3 rounded-xl hover:bg-neutral-100 transition-colors flex items-center gap-1 cursor-pointer"
+              className="text-xs font-bold text-theme-secondary hover:text-theme-primary py-2 px-3 rounded-xl hover:bg-theme-surface-hover transition-colors flex items-center gap-1 cursor-pointer"
             >
               <span>View Details</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -304,7 +304,7 @@ export const EventCard: React.FC<EventCardProps> = ({
                   type="button"
                   id={`btn-event-get-ticket-${event.id}`}
                   onClick={handleGetTicket}
-                  className="py-2.5 px-5 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-white text-xs font-black transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
+                  className="py-2.5 px-5 rounded-xl bg-theme-inverse hover:bg-theme-inverse text-theme-text-inverse text-xs font-black transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
                 >
                   <Ticket className="w-3.5 h-3.5 text-violet-300" />
                   <span>Get Ticket Pass</span>
@@ -322,11 +322,11 @@ export const EventCard: React.FC<EventCardProps> = ({
     <article
       id={`card-event-${event.id}`}
       onClick={handleOpenDetail}
-      className={`col-span-1 bg-white rounded-3xl border border-neutral-200/90 shadow-xs hover:shadow-xl hover:border-violet-300 transition-all duration-300 overflow-hidden cursor-pointer flex flex-col justify-between group relative ${className}`}
+      className={`col-span-1 bg-theme-surface rounded-3xl border border-theme-divider/90 shadow-xs hover:shadow-xl hover:border-violet-300 transition-all duration-300 overflow-hidden cursor-pointer flex flex-col justify-between group relative ${className}`}
     >
       <div>
         {/* Cover Visual Header */}
-        <div className="relative aspect-16/10 bg-neutral-950 overflow-hidden">
+        <div className="relative aspect-16/10 bg-theme-inverse overflow-hidden">
           <img
             src={event.coverImage}
             alt={event.title}
@@ -345,7 +345,7 @@ export const EventCard: React.FC<EventCardProps> = ({
 
           {/* Floating Pill on image bottom */}
           <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-white z-10">
-            <span className="text-[10px] font-semibold text-neutral-300 flex items-center gap-1 bg-black/40 backdrop-blur-md px-2 py-0.5 rounded-md border border-white/10">
+            <span className="text-[10px] font-semibold text-theme-tertiary flex items-center gap-1 bg-black/40 backdrop-blur-md px-2 py-0.5 rounded-md border border-white/10">
               {event.isOnline ? (
                 <>
                   <Globe className="w-2.5 h-2.5 text-blue-400" />
@@ -374,24 +374,24 @@ export const EventCard: React.FC<EventCardProps> = ({
         {/* Bento Card Body */}
         <div className="p-4 space-y-3">
           <div>
-            <h3 className="text-sm sm:text-base font-black tracking-tight text-neutral-950 group-hover:text-[#5E43F3] transition-colors line-clamp-2 leading-snug">
+            <h3 className="text-sm sm:text-base font-black tracking-tight text-theme-primary group-hover:text-[#5E43F3] transition-colors line-clamp-2 leading-snug">
               {event.title}
             </h3>
-            <p className="text-[11px] text-neutral-500 mt-1 flex items-center gap-1">
+            <p className="text-[11px] text-theme-tertiary mt-1 flex items-center gap-1">
               <span>By {event.organizationName}</span>
             </p>
           </div>
 
           {/* Date & Location Pill */}
-          <div className="bg-neutral-50 border border-neutral-200/70 rounded-xl p-2.5 space-y-1.5 text-xs text-neutral-600">
+          <div className="bg-theme-base border border-theme-divider/70 rounded-xl p-2.5 space-y-1.5 text-xs text-theme-secondary">
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-[#5E43F3] shrink-0" />
-              <span className="font-bold text-neutral-900">{event.date}</span>
-              <span className="text-neutral-400">·</span>
+              <span className="font-bold text-theme-primary">{event.date}</span>
+              <span className="text-theme-tertiary">·</span>
               <span>{event.time}</span>
             </div>
-            <div className="flex items-center gap-1.5 text-[11px] text-neutral-500">
-              <MapPin className="w-3 h-3 text-neutral-400 shrink-0" />
+            <div className="flex items-center gap-1.5 text-[11px] text-theme-tertiary">
+              <MapPin className="w-3 h-3 text-theme-tertiary shrink-0" />
               <span className="truncate">{event.location}</span>
             </div>
           </div>
@@ -403,7 +403,7 @@ export const EventCard: React.FC<EventCardProps> = ({
                 <Users className="w-3.5 h-3.5 text-[#5E43F3]" />
                 <span>Squad Slots</span>
               </div>
-              <span className="text-[11px] font-black text-neutral-900">
+              <span className="text-[11px] font-black text-theme-primary">
                 {registeredCount}/{maxTeams} Teams
               </span>
             </div>
@@ -424,11 +424,11 @@ export const EventCard: React.FC<EventCardProps> = ({
       </div>
 
       {/* Action Footer */}
-      <div className="p-4 pt-2 border-t border-neutral-100 flex items-center justify-between gap-2 mt-auto">
+      <div className="p-4 pt-2 border-t border-theme-divider-light flex items-center justify-between gap-2 mt-auto">
         <button
           type="button"
           onClick={handleOpenDetail}
-          className="text-xs font-bold text-neutral-600 hover:text-neutral-950 py-1.5 px-2 rounded-lg hover:bg-neutral-100 transition-colors flex items-center gap-0.5 cursor-pointer"
+          className="text-xs font-bold text-theme-secondary hover:text-theme-primary py-1.5 px-2 rounded-lg hover:bg-theme-surface-hover transition-colors flex items-center gap-0.5 cursor-pointer"
         >
           <span>Details</span>
           <ChevronRight className="w-3.5 h-3.5" />
@@ -452,7 +452,7 @@ export const EventCard: React.FC<EventCardProps> = ({
               type="button"
               id={`btn-event-get-ticket-${event.id}`}
               onClick={handleGetTicket}
-              className="py-2 px-3.5 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-white text-xs font-black transition-all shadow-xs active:scale-95 cursor-pointer flex items-center gap-1.5"
+              className="py-2 px-3.5 rounded-xl bg-theme-inverse hover:bg-theme-inverse text-theme-text-inverse text-xs font-black transition-all shadow-xs active:scale-95 cursor-pointer flex items-center gap-1.5"
             >
               <Ticket className="w-3 h-3 text-violet-300" />
               <span>Get Ticket</span>

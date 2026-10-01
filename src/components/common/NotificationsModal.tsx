@@ -143,22 +143,22 @@ export const NotificationsModal: React.FC = () => {
   return (
     <div
       id="notifications-screen"
-      className="absolute inset-0 z-40 bg-white flex flex-col min-h-full overflow-hidden animate-in fade-in slide-in-from-right-4 duration-250"
+      className="absolute inset-0 z-40 bg-theme-surface flex flex-col min-h-full overflow-hidden animate-in fade-in slide-in-from-right-4 duration-250"
     >
-      <div className="w-full max-w-xl mx-auto flex-1 flex flex-col bg-white overflow-hidden">
+      <div className="w-full max-w-xl mx-auto flex-1 flex flex-col bg-theme-surface overflow-hidden">
         {/* Instagram Inspo Header with Back Arrow & Bold Title */}
-        <div className="pt-4 pb-3 px-4 bg-white border-b border-neutral-100 flex items-center justify-between shrink-0">
+        <div className="pt-4 pb-3 px-4 bg-theme-surface border-b border-theme-divider-light flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <button
               id="btn-notifications-back"
               type="button"
               onClick={() => setIsNotificationsOpen(false)}
-              className="p-1 -ml-1 text-neutral-950 hover:text-neutral-700 active:scale-95 transition-transform cursor-pointer"
+              className="p-1 -ml-1 text-theme-primary hover:text-theme-secondary active:scale-95 transition-transform cursor-pointer"
               aria-label="Go back"
             >
               <ArrowLeft className="w-6 h-6 stroke-[2.4]" />
             </button>
-            <h1 className="text-2xl font-bold text-neutral-950 tracking-tight">
+            <h1 className="text-2xl font-bold text-theme-primary tracking-tight">
               Notifications
             </h1>
           </div>
@@ -166,7 +166,7 @@ export const NotificationsModal: React.FC = () => {
           <div className="flex items-center gap-1">
             <button
               onClick={markNotificationsAsRead}
-              className="p-2 rounded-full text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+              className="p-2 rounded-full text-theme-tertiary hover:text-theme-primary hover:bg-theme-surface-hover transition-colors cursor-pointer"
               title="Mark all as read"
             >
               <CheckCheck className="w-4 h-4" />
@@ -178,14 +178,14 @@ export const NotificationsModal: React.FC = () => {
         </div>
 
         {/* Filter Chips Bar */}
-        <div className="px-4 py-2 bg-neutral-50/60 border-b border-neutral-100 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+        <div className="px-4 py-2 bg-theme-base/60 border-b border-theme-divider-light flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
           <button
             type="button"
             onClick={() => setActiveFilter('all')}
             className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
               activeFilter === 'all'
-                ? 'bg-neutral-900 text-white'
-                : 'bg-white text-neutral-600 border border-neutral-200/70 hover:bg-neutral-100'
+                ? 'bg-theme-inverse text-theme-text-inverse'
+                : 'bg-theme-surface text-theme-secondary border border-theme-divider/70 hover:bg-theme-surface-hover'
             }`}
           >
             All
@@ -195,8 +195,8 @@ export const NotificationsModal: React.FC = () => {
             onClick={() => setActiveFilter('suggested')}
             className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
               activeFilter === 'suggested'
-                ? 'bg-neutral-900 text-white'
-                : 'bg-white text-neutral-600 border border-neutral-200/70 hover:bg-neutral-100'
+                ? 'bg-theme-inverse text-theme-text-inverse'
+                : 'bg-theme-surface text-theme-secondary border border-theme-divider/70 hover:bg-theme-surface-hover'
             }`}
           >
             Suggested for you
@@ -206,8 +206,8 @@ export const NotificationsModal: React.FC = () => {
             onClick={() => setActiveFilter('activity')}
             className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
               activeFilter === 'activity'
-                ? 'bg-neutral-900 text-white'
-                : 'bg-white text-neutral-600 border border-neutral-200/70 hover:bg-neutral-100'
+                ? 'bg-theme-inverse text-theme-text-inverse'
+                : 'bg-theme-surface text-theme-secondary border border-theme-divider/70 hover:bg-theme-surface-hover'
             }`}
           >
             Recent Activity
@@ -240,22 +240,22 @@ export const NotificationsModal: React.FC = () => {
           {(activeFilter === 'all' || activeFilter === 'suggested') && !isFeaturedDismissed && (
             <div className="pb-2">
               <div className="px-4 pt-4 pb-2">
-                <h2 className="text-lg font-bold text-neutral-950 tracking-tight">
+                <h2 className="text-lg font-bold text-theme-primary tracking-tight">
                   Featured
                 </h2>
               </div>
 
-              <div className="px-4 py-2 hover:bg-neutral-50 transition-colors flex items-start gap-3.5 group">
+              <div className="px-4 py-2 hover:bg-theme-base transition-colors flex items-start gap-3.5 group">
                 {/* Accounts Center / Meta-style Infinity Loop Icon */}
-                <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-900 shrink-0 border border-neutral-200/60 shadow-2xs">
+                <div className="w-12 h-12 rounded-full bg-theme-surface-hover flex items-center justify-center text-theme-primary shrink-0 border border-theme-divider/60 shadow-2xs">
                   <Infinity className="w-6 h-6 stroke-[2.2]" />
                 </div>
 
                 <div className="flex-1 min-w-0 pr-1">
-                  <p className="text-xs text-neutral-900 leading-relaxed font-normal">
+                  <p className="text-xs text-theme-primary leading-relaxed font-normal">
                     We updated your settings after 1 account was added to the same Accounts Center.
                   </p>
-                  <span className="text-[11px] text-neutral-400 font-medium mt-1 block">
+                  <span className="text-[11px] text-theme-tertiary font-medium mt-1 block">
                     2h
                   </span>
                 </div>
@@ -263,7 +263,7 @@ export const NotificationsModal: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsFeaturedDismissed(true)}
-                  className="text-neutral-400 hover:text-neutral-700 p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  className="text-theme-tertiary hover:text-theme-secondary p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                   title="Dismiss"
                 >
                   <X className="w-4 h-4" />
@@ -276,7 +276,7 @@ export const NotificationsModal: React.FC = () => {
           {(activeFilter === 'all' || activeFilter === 'suggested') && suggestions.length > 0 && (
             <div className="py-2">
               <div className="px-4 pt-2 pb-2.5 flex items-center justify-between">
-                <h2 className="text-lg font-bold text-neutral-950 tracking-tight">
+                <h2 className="text-lg font-bold text-theme-primary tracking-tight">
                   Suggested for you
                 </h2>
                 <span className="text-xs font-semibold text-[#0095F6]">
@@ -291,7 +291,7 @@ export const NotificationsModal: React.FC = () => {
                   return (
                     <div
                       key={item.id}
-                      className="px-4 py-2 hover:bg-neutral-50/80 transition-colors flex items-center justify-between gap-2.5"
+                      className="px-4 py-2 hover:bg-theme-base/80 transition-colors flex items-center justify-between gap-2.5"
                     >
                       {/* Left: Avatar with optional ring */}
                       <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -308,7 +308,7 @@ export const NotificationsModal: React.FC = () => {
                         {/* Middle: User info */}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-sm text-neutral-950 truncate">
+                            <span className="font-bold text-sm text-theme-primary truncate">
                               {item.name}
                             </span>
                             {item.isVerified && <VerifiedBadge />}
@@ -326,7 +326,7 @@ export const NotificationsModal: React.FC = () => {
                                 />
                               ))}
                             </div>
-                            <span className="text-[11px] text-neutral-500 truncate font-normal">
+                            <span className="text-[11px] text-theme-tertiary truncate font-normal">
                               {item.mutualCount} mutuals
                             </span>
                           </div>
@@ -340,7 +340,7 @@ export const NotificationsModal: React.FC = () => {
                           onClick={() => handleToggleFollow(item)}
                           className={`text-xs font-semibold px-4 py-1.5 rounded-lg transition-all active:scale-95 cursor-pointer shadow-2xs ${
                             isFollowing
-                              ? 'bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border border-neutral-300'
+                              ? 'bg-theme-surface-hover hover:bg-theme-surface-active text-theme-primary border border-theme-divider-strong'
                               : 'bg-[#0095F6] hover:bg-[#1877F2] text-white'
                           }`}
                         >
@@ -350,7 +350,7 @@ export const NotificationsModal: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handleDismissSuggestion(item.id, item.name)}
-                          className="text-neutral-400 hover:text-neutral-700 p-1 rounded-full transition-colors cursor-pointer"
+                          className="text-theme-tertiary hover:text-theme-secondary p-1 rounded-full transition-colors cursor-pointer"
                           aria-label={`Dismiss suggestion for ${item.name}`}
                         >
                           <X className="w-3.5 h-3.5 stroke-[2.2]" />
@@ -370,7 +370,7 @@ export const NotificationsModal: React.FC = () => {
               {todayNotifs.length > 0 && (
                 <div>
                   <div className="px-4 pt-3 pb-2">
-                    <h2 className="text-sm font-bold text-neutral-900 uppercase tracking-wider text-[11px] text-neutral-500">
+                    <h2 className="text-sm font-bold text-theme-primary uppercase tracking-wider text-[11px] text-theme-tertiary">
                       Today
                     </h2>
                   </div>
@@ -379,8 +379,8 @@ export const NotificationsModal: React.FC = () => {
                     <div
                       key={notif.id}
                       onClick={() => handleNotificationClick(notif)}
-                      className={`px-4 py-3 flex items-start gap-3 transition-colors cursor-pointer hover:bg-neutral-50 ${
-                        !notif.isRead ? 'bg-indigo-50/25' : 'bg-white'
+                      className={`px-4 py-3 flex items-start gap-3 transition-colors cursor-pointer hover:bg-theme-base ${
+                        !notif.isRead ? 'bg-indigo-50/25' : 'bg-theme-surface'
                       }`}
                     >
                       <div className="relative shrink-0">
@@ -389,26 +389,26 @@ export const NotificationsModal: React.FC = () => {
                           alt={notif.actor?.name || 'Notification'}
                           size="md"
                         />
-                        <span className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-white shadow-xs">
+                        <span className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-theme-surface shadow-xs">
                           {getNotifIcon(notif.type)}
                         </span>
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-neutral-800 leading-snug">
-                          <strong className="text-neutral-950 font-bold">
+                        <p className="text-xs text-theme-primary leading-snug">
+                          <strong className="text-theme-primary font-bold">
                             {notif.actor?.name || 'Lalao'}
                           </strong>{' '}
                           {notif.text}
                         </p>
 
                         {notif.targetExcerpt && (
-                          <p className="text-[11px] text-neutral-500 mt-1 line-clamp-1 bg-neutral-100/70 px-2 py-1 rounded-md">
+                          <p className="text-[11px] text-theme-tertiary mt-1 line-clamp-1 bg-theme-surface-hover/70 px-2 py-1 rounded-md">
                             &ldquo;{notif.targetExcerpt}&rdquo;
                           </p>
                         )}
 
-                        <span className="text-[10px] text-neutral-400 mt-1 block">
+                        <span className="text-[10px] text-theme-tertiary mt-1 block">
                           {notif.timestamp}
                         </span>
                       </div>
@@ -429,7 +429,7 @@ export const NotificationsModal: React.FC = () => {
                                   toggleFollowUser(notif.actor.id);
                                 }
                               }}
-                              className="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all cursor-pointer border border-neutral-300 text-neutral-700 hover:bg-neutral-100 flex items-center gap-1 shadow-xs"
+                              className="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all cursor-pointer border border-theme-divider-strong text-theme-secondary hover:bg-theme-surface-hover flex items-center gap-1 shadow-xs"
                             >
                               Friends <Check className="w-2.5 h-2.5" />
                             </button>
@@ -457,8 +457,8 @@ export const NotificationsModal: React.FC = () => {
                               }}
                               className={`px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
                                 notif.actor?.isFollowing
-                                  ? 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
-                                  : 'bg-neutral-950 text-white hover:bg-neutral-800'
+                                  ? 'border border-theme-divider-strong text-theme-secondary hover:bg-theme-surface-hover'
+                                  : 'bg-theme-inverse text-theme-text-inverse hover:bg-theme-inverse'
                               }`}
                             >
                               {notif.actor?.isFollowing ? 'Following' : 'Follow'}
@@ -475,7 +475,7 @@ export const NotificationsModal: React.FC = () => {
               {earlierNotifs.length > 0 && (
                 <div className="mt-2">
                   <div className="px-4 pt-3 pb-2">
-                    <h2 className="text-sm font-bold text-neutral-900 uppercase tracking-wider text-[11px] text-neutral-500">
+                    <h2 className="text-sm font-bold text-theme-primary uppercase tracking-wider text-[11px] text-theme-tertiary">
                       Earlier
                     </h2>
                   </div>
@@ -484,8 +484,8 @@ export const NotificationsModal: React.FC = () => {
                     <div
                       key={notif.id}
                       onClick={() => handleNotificationClick(notif)}
-                      className={`px-4 py-3 flex items-start gap-3 transition-colors cursor-pointer hover:bg-neutral-50 ${
-                        !notif.isRead ? 'bg-indigo-50/25' : 'bg-white'
+                      className={`px-4 py-3 flex items-start gap-3 transition-colors cursor-pointer hover:bg-theme-base ${
+                        !notif.isRead ? 'bg-indigo-50/25' : 'bg-theme-surface'
                       }`}
                     >
                       <div className="relative shrink-0">
@@ -494,26 +494,26 @@ export const NotificationsModal: React.FC = () => {
                           alt={notif.actor?.name || 'Notification'}
                           size="md"
                         />
-                        <span className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-white shadow-xs">
+                        <span className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-theme-surface shadow-xs">
                           {getNotifIcon(notif.type)}
                         </span>
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-neutral-800 leading-snug">
-                          <strong className="text-neutral-950 font-bold">
+                        <p className="text-xs text-theme-primary leading-snug">
+                          <strong className="text-theme-primary font-bold">
                             {notif.actor?.name || 'Lalao'}
                           </strong>{' '}
                           {notif.text}
                         </p>
 
                         {notif.targetExcerpt && (
-                          <p className="text-[11px] text-neutral-500 mt-1 line-clamp-1 bg-neutral-100/70 px-2 py-1 rounded-md">
+                          <p className="text-[11px] text-theme-tertiary mt-1 line-clamp-1 bg-theme-surface-hover/70 px-2 py-1 rounded-md">
                             &ldquo;{notif.targetExcerpt}&rdquo;
                           </p>
                         )}
 
-                        <span className="text-[10px] text-neutral-400 mt-1 block">
+                        <span className="text-[10px] text-theme-tertiary mt-1 block">
                           {notif.timestamp}
                         </span>
                       </div>
@@ -534,7 +534,7 @@ export const NotificationsModal: React.FC = () => {
                                   toggleFollowUser(notif.actor.id);
                                 }
                               }}
-                              className="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all cursor-pointer border border-neutral-300 text-neutral-700 hover:bg-neutral-100 flex items-center gap-1 shadow-xs"
+                              className="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all cursor-pointer border border-theme-divider-strong text-theme-secondary hover:bg-theme-surface-hover flex items-center gap-1 shadow-xs"
                             >
                               Friends <Check className="w-2.5 h-2.5" />
                             </button>
@@ -562,8 +562,8 @@ export const NotificationsModal: React.FC = () => {
                               }}
                               className={`px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
                                 notif.actor?.isFollowing
-                                  ? 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
-                                  : 'bg-neutral-950 text-white hover:bg-neutral-800'
+                                  ? 'border border-theme-divider-strong text-theme-secondary hover:bg-theme-surface-hover'
+                                  : 'bg-theme-inverse text-theme-text-inverse hover:bg-theme-inverse'
                               }`}
                             >
                               {notif.actor?.isFollowing ? 'Following' : 'Follow'}
@@ -577,14 +577,14 @@ export const NotificationsModal: React.FC = () => {
               )}
 
               {notifications.length === 0 && (
-                <div className="p-8 text-center text-neutral-400 space-y-2">
+                <div className="p-8 text-center text-theme-tertiary space-y-2">
                   <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center mx-auto text-rose-500">
                     <Heart className="w-6 h-6 fill-rose-500" />
                   </div>
-                  <p className="text-xs font-semibold text-neutral-700">
+                  <p className="text-xs font-semibold text-theme-secondary">
                     No new activity right now
                   </p>
-                  <p className="text-[11px] text-neutral-400 max-w-xs mx-auto">
+                  <p className="text-[11px] text-theme-tertiary max-w-xs mx-auto">
                     Likes, comments, neighbor rallies, and suggestions will appear here.
                   </p>
                 </div>

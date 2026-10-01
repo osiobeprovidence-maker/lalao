@@ -154,17 +154,17 @@ export const LocationRadiusModal: React.FC = () => {
   return (
     <div
       id="location-radius-screen"
-      className="absolute inset-0 z-40 bg-white flex flex-col min-h-full overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-250"
+      className="absolute inset-0 z-40 bg-theme-surface flex flex-col min-h-full overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-250"
     >
-      <div className="w-full flex-1 flex flex-col bg-white overflow-hidden max-w-xl mx-auto">
+      <div className="w-full flex-1 flex flex-col bg-theme-surface overflow-hidden max-w-xl mx-auto">
         {/* Header with Close & Tab Toggle */}
-        <div className="p-4 border-b border-neutral-100 bg-white shrink-0">
+        <div className="p-4 border-b border-theme-divider-light bg-theme-surface shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <button
                 type="button"
                 onClick={() => setIsLocationModalOpen(false)}
-                className="p-1.5 -ml-1 rounded-full text-neutral-600 hover:text-neutral-950 hover:bg-neutral-100 transition-colors cursor-pointer"
+                className="p-1.5 -ml-1 rounded-full text-theme-secondary hover:text-theme-primary hover:bg-theme-surface-hover transition-colors cursor-pointer"
                 title="Back"
               >
                 <X className="w-5 h-5 stroke-[2.2]" />
@@ -173,8 +173,8 @@ export const LocationRadiusModal: React.FC = () => {
                 <Compass className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-bold text-base text-neutral-950">Location & Discovery</h3>
-                <p className="text-[11px] text-neutral-500">
+                <h3 className="font-bold text-base text-theme-primary">Location & Discovery</h3>
+                <p className="text-[11px] text-theme-tertiary">
                   {location.name} · {location.radiusKm} km active radius
                 </p>
               </div>
@@ -182,14 +182,14 @@ export const LocationRadiusModal: React.FC = () => {
           </div>
 
           {/* Subtabs: Location & Radius vs Privacy Controls */}
-          <div className="mt-3 flex items-center bg-neutral-100 p-1 rounded-xl text-xs font-bold">
+          <div className="mt-3 flex items-center bg-theme-surface-hover p-1 rounded-xl text-xs font-bold">
             <button
               id="tab-modal-location-radius"
               onClick={() => setActiveTab('location')}
               className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
                 activeTab === 'location'
-                  ? 'bg-white text-neutral-950 shadow-xs'
-                  : 'text-neutral-500 hover:text-neutral-900'
+                  ? 'bg-theme-surface text-theme-primary shadow-xs'
+                  : 'text-theme-tertiary hover:text-theme-primary'
               }`}
             >
               <MapPin className="w-3.5 h-3.5 text-[#5E43F3]" />
@@ -200,8 +200,8 @@ export const LocationRadiusModal: React.FC = () => {
               onClick={() => setActiveTab('privacy')}
               className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
                 activeTab === 'privacy'
-                  ? 'bg-white text-neutral-950 shadow-xs'
-                  : 'text-neutral-500 hover:text-neutral-900'
+                  ? 'bg-theme-surface text-theme-primary shadow-xs'
+                  : 'text-theme-tertiary hover:text-theme-primary'
               }`}
             >
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
@@ -211,7 +211,7 @@ export const LocationRadiusModal: React.FC = () => {
         </div>
 
         {/* Scrollable Body */}
-        <div ref={containerRef} className="flex-1 overflow-y-auto p-4 space-y-5 min-h-0 bg-white">
+        <div ref={containerRef} className="flex-1 overflow-y-auto p-4 space-y-5 min-h-0 bg-theme-surface">
           {activeTab === 'location' ? (
             <>
               {/* GPS Auto-Detect Button */}
@@ -219,7 +219,7 @@ export const LocationRadiusModal: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-[#5E43F3]" />
-                    <span className="text-xs font-bold text-neutral-900">
+                    <span className="text-xs font-bold text-theme-primary">
                       Device GPS & Location
                     </span>
                   </div>
@@ -240,7 +240,7 @@ export const LocationRadiusModal: React.FC = () => {
                   </div>
                 </div>
 
-                <p className="text-[11px] text-neutral-600 leading-relaxed">
+                <p className="text-[11px] text-theme-secondary leading-relaxed">
                   Use your device&apos;s GPS to center your discovery feed accurately. Distances to posts and rallies will update dynamically.
                 </p>
 
@@ -250,7 +250,7 @@ export const LocationRadiusModal: React.FC = () => {
                     type="button"
                     onClick={handleGpsDetect}
                     disabled={isDetectingGps}
-                    className="py-2 px-3 rounded-xl bg-white border border-indigo-200 hover:border-[#5E43F3] text-xs font-bold text-[#5E43F3] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs hover:bg-indigo-50/40"
+                    className="py-2 px-3 rounded-xl bg-theme-surface border border-indigo-200 hover:border-[#5E43F3] text-xs font-bold text-[#5E43F3] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs hover:bg-indigo-50/40"
                   >
                     <MapPin className={`w-3.5 h-3.5 ${isDetectingGps ? 'animate-spin' : ''}`} />
                     <span>{isDetectingGps ? 'Detecting coordinates...' : 'Use My Current Location'}</span>
@@ -259,7 +259,7 @@ export const LocationRadiusModal: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsPermissionsModalOpen(true)}
-                    className="py-2 px-3 rounded-xl bg-indigo-100/60 hover:bg-indigo-100 border border-indigo-200/50 text-xs font-semibold text-neutral-700 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    className="py-2 px-3 rounded-xl bg-indigo-100/60 hover:bg-indigo-100 border border-indigo-200/50 text-xs font-semibold text-theme-secondary flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <ShieldCheck className="w-3.5 h-3.5 text-[#5E43F3]" />
                     <span>All Permissions</span>
@@ -275,13 +275,13 @@ export const LocationRadiusModal: React.FC = () => {
               </div>
 
               {/* Discovery Radius Controller */}
-              <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-100 space-y-3">
+              <div className="p-4 rounded-2xl bg-theme-base border border-theme-divider-light space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <Sliders className="w-4 h-4 text-[#5E43F3]" />
-                    <span className="text-xs font-bold text-neutral-900">Discovery Radius</span>
+                    <span className="text-xs font-bold text-theme-primary">Discovery Radius</span>
                   </div>
-                  <span className="text-sm font-black text-[#5E43F3] font-mono bg-white px-2.5 py-0.5 rounded-full border border-indigo-100 shadow-2xs">
+                  <span className="text-sm font-black text-[#5E43F3] font-mono bg-theme-surface px-2.5 py-0.5 rounded-full border border-indigo-100 shadow-2xs">
                     {radius} km
                   </span>
                 </div>
@@ -295,11 +295,11 @@ export const LocationRadiusModal: React.FC = () => {
                   step={1}
                   value={radius}
                   onChange={(e) => setRadius(Number(e.target.value))}
-                  className="w-full h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-[#5E43F3]"
+                  className="w-full h-2 bg-theme-surface-active rounded-lg appearance-none cursor-pointer accent-[#5E43F3]"
                 />
 
                 {/* Scope Description */}
-                <p className="text-xs font-semibold text-neutral-700">
+                <p className="text-xs font-semibold text-theme-secondary">
                   {getRadiusDesc(radius)}
                 </p>
 
@@ -313,7 +313,7 @@ export const LocationRadiusModal: React.FC = () => {
                       className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all cursor-pointer ${
                         radius === p.km
                           ? 'bg-[#5E43F3] text-white font-bold shadow-xs'
-                          : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-100'
+                          : 'bg-theme-surface border border-theme-divider text-theme-secondary hover:bg-theme-surface-hover'
                       }`}
                     >
                       {p.label}
@@ -322,31 +322,31 @@ export const LocationRadiusModal: React.FC = () => {
                 </div>
 
                 {/* Real-time Content Count Preview */}
-                <div className="pt-2 border-t border-neutral-200/60 flex items-center justify-between text-xs text-neutral-600">
+                <div className="pt-2 border-t border-theme-divider/60 flex items-center justify-between text-xs text-theme-secondary">
                   <span className="flex items-center gap-1">
                     <Radio className="w-3.5 h-3.5 text-[#5E43F3] animate-pulse" />
                     <span>In radius right now:</span>
                   </span>
-                  <span className="font-bold text-neutral-900">
+                  <span className="font-bold text-theme-primary">
                     {reachableItems.postsCount} posts · {reachableItems.ralliesCount} rallies · {reachableItems.cyclesCount} cycles
                   </span>
                 </div>
               </div>
 
               {/* Concentric Radar Map Visualizer */}
-              <div className="p-3.5 rounded-2xl bg-neutral-900 text-white space-y-2.5">
+              <div className="p-3.5 rounded-2xl bg-theme-inverse text-theme-text-inverse space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-200">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-theme-tertiary">
                     <Radio className="w-4 h-4 text-[#5E43F3]" />
                     <span>Proximity Radar Preview</span>
                   </div>
-                  <span className="text-[10px] text-neutral-400 font-mono">
+                  <span className="text-[10px] text-theme-tertiary font-mono">
                     Center: {customInput.trim() || selectedName}
                   </span>
                 </div>
 
                 {/* Radar SVG */}
-                <div className="relative h-44 w-full bg-neutral-950/80 rounded-xl overflow-hidden border border-neutral-800 flex items-center justify-center">
+                <div className="relative h-44 w-full bg-theme-inverse/80 rounded-xl overflow-hidden border border-theme-divider-inverse flex items-center justify-center">
                   <svg className="w-full h-full" viewBox="-120 -90 240 180">
                     {/* Concentric Radius Rings */}
                     <circle cx="0" cy="0" r="25" fill="none" stroke="#333" strokeWidth="1" strokeDasharray="3 3" />
@@ -417,7 +417,7 @@ export const LocationRadiusModal: React.FC = () => {
                   </svg>
 
                   {/* Legend Overlay */}
-                  <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] text-neutral-400">
+                  <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] text-theme-tertiary">
                     <span className="flex items-center gap-1">
                       <span className="w-2 h-2 rounded-full bg-[#A78BFA]" />
                       <span>Posts</span>
@@ -432,7 +432,7 @@ export const LocationRadiusModal: React.FC = () => {
               {/* Neighborhood / Area Switcher */}
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-neutral-900">
+                  <label className="text-xs font-bold text-theme-primary">
                     Switch Neighborhood or Town
                   </label>
                   {/* Region Filter Chips */}
@@ -444,8 +444,8 @@ export const LocationRadiusModal: React.FC = () => {
                         onClick={() => setRegionFilter(reg)}
                         className={`px-2 py-0.5 rounded-md cursor-pointer ${
                           regionFilter === reg
-                            ? 'bg-neutral-900 text-white font-bold'
-                            : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                            ? 'bg-theme-inverse text-theme-text-inverse font-bold'
+                            : 'bg-theme-surface-hover text-theme-secondary hover:bg-theme-surface-active'
                         }`}
                       >
                         {reg === 'all' ? 'All' : reg}
@@ -470,12 +470,12 @@ export const LocationRadiusModal: React.FC = () => {
                         className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
                           isSelected
                             ? 'border-[#5E43F3] bg-indigo-50/70 ring-1 ring-[#5E43F3]'
-                            : 'border-neutral-200 hover:bg-neutral-50'
+                            : 'border-theme-divider hover:bg-theme-base'
                         }`}
                       >
                         <div className="min-w-0">
-                          <p className="font-bold text-xs text-neutral-900 truncate">{loc.name}</p>
-                          <p className="text-[10px] text-neutral-500 truncate">{loc.subArea}</p>
+                          <p className="font-bold text-xs text-theme-primary truncate">{loc.name}</p>
+                          <p className="text-[10px] text-theme-tertiary truncate">{loc.subArea}</p>
                         </div>
                         {isSelected && <Check className="w-3.5 h-3.5 text-[#5E43F3] shrink-0" />}
                       </button>
@@ -485,7 +485,7 @@ export const LocationRadiusModal: React.FC = () => {
 
                 {/* Custom Location Field */}
                 <div>
-                  <label className="text-[11px] font-semibold text-neutral-600 mb-1 block">
+                  <label className="text-[11px] font-semibold text-theme-secondary mb-1 block">
                     Or type custom neighborhood or landmark:
                   </label>
                   <input
@@ -493,7 +493,7 @@ export const LocationRadiusModal: React.FC = () => {
                     value={customInput}
                     onChange={(e) => setCustomInput(e.target.value)}
                     placeholder="e.g. PTI Junction, Airport Road Warri, Asaba"
-                    className="w-full px-3.5 py-2 rounded-xl border border-neutral-200 text-xs font-medium text-neutral-900 focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] outline-none"
+                    className="w-full px-3.5 py-2 rounded-xl border border-theme-divider text-xs font-medium text-theme-primary focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] outline-none"
                   />
                 </div>
               </div>
@@ -505,26 +505,26 @@ export const LocationRadiusModal: React.FC = () => {
                 <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                 <div className="text-xs text-emerald-950">
                   <p className="font-bold">Privacy-First Proximity Protection</p>
-                  <p className="mt-0.5 text-neutral-600 leading-relaxed">
+                  <p className="mt-0.5 text-theme-secondary leading-relaxed">
                     Lalao is designed to foster real-world local community without compromising your physical safety.
                   </p>
                 </div>
               </div>
 
               {/* Distance Obfuscation Toggle */}
-              <div className="p-3.5 rounded-2xl border border-neutral-200 bg-white space-y-2">
+              <div className="p-3.5 rounded-2xl border border-theme-divider bg-theme-surface space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {privacySettings.approximateDistance ? (
                       <EyeOff className="w-4 h-4 text-[#5E43F3]" />
                     ) : (
-                      <Eye className="w-4 h-4 text-neutral-500" />
+                      <Eye className="w-4 h-4 text-theme-tertiary" />
                     )}
                     <div>
-                      <p className="font-bold text-xs text-neutral-900">
+                      <p className="font-bold text-xs text-theme-primary">
                         Approximate Distance Display
                       </p>
-                      <p className="text-[11px] text-neutral-500">
+                      <p className="text-[11px] text-theme-tertiary">
                         Recommended to prevent location triangulation
                       </p>
                     </div>
@@ -542,11 +542,11 @@ export const LocationRadiusModal: React.FC = () => {
                       }
                       className="sr-only peer"
                     />
-                    <div className="w-10 h-5 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#5E43F3]"></div>
+                    <div className="w-10 h-5 bg-theme-surface-active peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-theme-surface after:border-theme-divider-strong after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#5E43F3]"></div>
                   </label>
                 </div>
 
-                <div className="p-2.5 bg-neutral-50 rounded-xl text-[11px] text-neutral-600 font-mono">
+                <div className="p-2.5 bg-theme-base rounded-xl text-[11px] text-theme-secondary font-mono">
                   {privacySettings.approximateDistance ? (
                     <span>Preview: "Nearby (&lt; 250m)" or "Within 500m" or "~1.5 km away"</span>
                   ) : (
@@ -556,13 +556,13 @@ export const LocationRadiusModal: React.FC = () => {
               </div>
 
               {/* Ghost Mode Toggle */}
-              <div className="p-3.5 rounded-2xl border border-neutral-200 bg-white space-y-1.5">
+              <div className="p-3.5 rounded-2xl border border-theme-divider bg-theme-surface space-y-1.5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-bold text-xs text-neutral-900">
+                    <p className="font-bold text-xs text-theme-primary">
                       Ghost Mode (Incognito Browsing)
                     </p>
-                    <p className="text-[11px] text-neutral-500">
+                    <p className="text-[11px] text-theme-tertiary">
                       Browse and discover nearby content without appearing in "People Near You"
                     </p>
                   </div>
@@ -579,19 +579,19 @@ export const LocationRadiusModal: React.FC = () => {
                       }
                       className="sr-only peer"
                     />
-                    <div className="w-10 h-5 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#5E43F3]"></div>
+                    <div className="w-10 h-5 bg-theme-surface-active peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-theme-surface after:border-theme-divider-strong after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#5E43F3]"></div>
                   </label>
                 </div>
               </div>
 
               {/* Show Neighborhood Only */}
-              <div className="p-3.5 rounded-2xl border border-neutral-200 bg-white space-y-1.5">
+              <div className="p-3.5 rounded-2xl border border-theme-divider bg-theme-surface space-y-1.5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-bold text-xs text-neutral-900">
+                    <p className="font-bold text-xs text-theme-primary">
                       Show Neighborhood Only on Posts
                     </p>
-                    <p className="text-[11px] text-neutral-500">
+                    <p className="text-[11px] text-theme-tertiary">
                       Tag posts as general "{selectedName}" rather than specific street addresses
                     </p>
                   </div>
@@ -608,19 +608,19 @@ export const LocationRadiusModal: React.FC = () => {
                       }
                       className="sr-only peer"
                     />
-                    <div className="w-10 h-5 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#5E43F3]"></div>
+                    <div className="w-10 h-5 bg-theme-surface-active peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-theme-surface after:border-theme-divider-strong after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#5E43F3]"></div>
                   </label>
                 </div>
               </div>
 
               {/* Default Location Sharing on Posts */}
-              <div className="p-3.5 rounded-2xl border border-neutral-200 bg-white space-y-1.5">
+              <div className="p-3.5 rounded-2xl border border-theme-divider bg-theme-surface space-y-1.5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-bold text-xs text-neutral-900">
+                    <p className="font-bold text-xs text-theme-primary">
                       Auto-Attach Location to New Posts
                     </p>
-                    <p className="text-[11px] text-neutral-500">
+                    <p className="text-[11px] text-theme-tertiary">
                       Include current neighborhood tag when posting to local feeds
                     </p>
                   </div>
@@ -637,14 +637,14 @@ export const LocationRadiusModal: React.FC = () => {
                       }
                       className="sr-only peer"
                     />
-                    <div className="w-10 h-5 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#5E43F3]"></div>
+                    <div className="w-10 h-5 bg-theme-surface-active peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-theme-surface after:border-theme-divider-strong after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#5E43F3]"></div>
                   </label>
                 </div>
               </div>
 
               {/* Storage & Tracking Guarantee */}
-              <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-200/80 text-[11px] text-neutral-600 space-y-1">
-                <p className="font-bold text-neutral-900">Zero Continuous GPS Tracking</p>
+              <div className="p-3 rounded-xl bg-theme-base border border-theme-divider/80 text-[11px] text-theme-secondary space-y-1">
+                <p className="font-bold text-theme-primary">Zero Continuous GPS Tracking</p>
                 <p>
                   Your browser GPS coordinates are evaluated in memory to compute distances to local posts. Lalao never transmits your raw tracking breadcrumbs to third-party ad brokers.
                 </p>
@@ -654,11 +654,11 @@ export const LocationRadiusModal: React.FC = () => {
         </div>
 
         {/* Modal Action Bar */}
-        <div className="p-4 border-t border-neutral-100 bg-white shrink-0 flex items-center gap-3">
+        <div className="p-4 border-t border-theme-divider-light bg-theme-surface shrink-0 flex items-center gap-3">
           <button
             type="button"
             onClick={() => setIsLocationModalOpen(false)}
-            className="flex-1 py-2.5 rounded-full border border-neutral-300 text-xs font-bold text-neutral-700 hover:bg-neutral-50 cursor-pointer"
+            className="flex-1 py-2.5 rounded-full border border-theme-divider-strong text-xs font-bold text-theme-secondary hover:bg-theme-base cursor-pointer"
           >
             Cancel
           </button>

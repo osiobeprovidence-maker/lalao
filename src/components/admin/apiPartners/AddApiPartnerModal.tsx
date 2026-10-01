@@ -71,14 +71,14 @@ export const AddApiPartnerModal: React.FC<{ onClose: () => void }> = ({ onClose 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between p-4 border-b border-neutral-100">
-          <h2 className="font-black text-lg text-neutral-900">
+      <div className="bg-theme-surface w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between p-4 border-b border-theme-divider-light">
+          <h2 className="font-black text-lg text-theme-primary">
             {step === 1 && "Add API Partner"}
             {step === 2 && "Partner Created"}
             {step === 3 && "API Credentials"}
           </h2>
-          <button onClick={onClose} className="p-2 text-neutral-400 hover:bg-neutral-100 rounded-full">
+          <button onClick={onClose} className="p-2 text-theme-tertiary hover:bg-theme-surface-hover rounded-full">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -88,20 +88,20 @@ export const AddApiPartnerModal: React.FC<{ onClose: () => void }> = ({ onClose 
             <form id="add-partner" onSubmit={handleCreate} className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-neutral-600 mb-1">Platform Name</label>
-                  <input required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value, slug: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '-') })} className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]" placeholder="e.g. My Events" />
+                  <label className="block text-xs font-bold text-theme-secondary mb-1">Platform Name</label>
+                  <input required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value, slug: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '-') })} className="w-full border border-theme-divider rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]" placeholder="e.g. My Events" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-neutral-600 mb-1">Partner Slug</label>
-                  <input required value={formData.slug} onChange={e => setFormData({ ...formData, slug: e.target.value })} className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]" />
+                  <label className="block text-xs font-bold text-theme-secondary mb-1">Partner Slug</label>
+                  <input required value={formData.slug} onChange={e => setFormData({ ...formData, slug: e.target.value })} className="w-full border border-theme-divider rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-neutral-600 mb-1">Company / Org</label>
-                  <input value={formData.company} onChange={e => setFormData({ ...formData, company: e.target.value })} className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]" />
+                  <label className="block text-xs font-bold text-theme-secondary mb-1">Company / Org</label>
+                  <input value={formData.company} onChange={e => setFormData({ ...formData, company: e.target.value })} className="w-full border border-theme-divider rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-neutral-600 mb-1">Partner Type</label>
-                  <select value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]">
+                  <label className="block text-xs font-bold text-theme-secondary mb-1">Partner Type</label>
+                  <select value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} className="w-full border border-theme-divider rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]">
                     <option value="event_platform">Event Platform</option>
                     <option value="ticketing_platform">Ticketing Platform</option>
                     <option value="marketplace">Marketplace</option>
@@ -110,37 +110,37 @@ export const AddApiPartnerModal: React.FC<{ onClose: () => void }> = ({ onClose 
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-neutral-600 mb-1">Contact Name</label>
-                  <input required value={formData.contactName} onChange={e => setFormData({ ...formData, contactName: e.target.value })} className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]" />
+                  <label className="block text-xs font-bold text-theme-secondary mb-1">Contact Name</label>
+                  <input required value={formData.contactName} onChange={e => setFormData({ ...formData, contactName: e.target.value })} className="w-full border border-theme-divider rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-neutral-600 mb-1">Contact Email</label>
-                  <input type="email" required value={formData.contactEmail} onChange={e => setFormData({ ...formData, contactEmail: e.target.value })} className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]" />
+                  <label className="block text-xs font-bold text-theme-secondary mb-1">Contact Email</label>
+                  <input type="email" required value={formData.contactEmail} onChange={e => setFormData({ ...formData, contactEmail: e.target.value })} className="w-full border border-theme-divider rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]" />
                 </div>
               </div>
 
-              <div className="pt-6 border-t border-neutral-100">
-                <h3 className="font-bold text-sm text-neutral-900 mb-4">API Plan & Limits</h3>
+              <div className="pt-6 border-t border-theme-divider-light">
+                <h3 className="font-bold text-sm text-theme-primary mb-4">API Plan & Limits</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-neutral-600 mb-1">Plan Name</label>
-                    <input required value={formData.planName} onChange={e => setFormData({ ...formData, planName: e.target.value })} className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]" />
+                    <label className="block text-xs font-bold text-theme-secondary mb-1">Plan Name</label>
+                    <input required value={formData.planName} onChange={e => setFormData({ ...formData, planName: e.target.value })} className="w-full border border-theme-divider rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-neutral-600 mb-1">Monthly Fee (NGN)</label>
-                    <input type="number" required value={formData.monthlyPrice} onChange={e => setFormData({ ...formData, monthlyPrice: parseInt(e.target.value) || 0 })} className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]" />
+                    <label className="block text-xs font-bold text-theme-secondary mb-1">Monthly Fee (NGN)</label>
+                    <input type="number" required value={formData.monthlyPrice} onChange={e => setFormData({ ...formData, monthlyPrice: parseInt(e.target.value) || 0 })} className="w-full border border-theme-divider rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-neutral-600 mb-1">Event Limit / mo</label>
-                    <input type="number" required value={formData.eventLimit} onChange={e => setFormData({ ...formData, eventLimit: parseInt(e.target.value) || 0 })} className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]" />
+                    <label className="block text-xs font-bold text-theme-secondary mb-1">Event Limit / mo</label>
+                    <input type="number" required value={formData.eventLimit} onChange={e => setFormData({ ...formData, eventLimit: parseInt(e.target.value) || 0 })} className="w-full border border-theme-divider rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-neutral-600 mb-1">API Request Limit / mo</label>
-                    <input type="number" required value={formData.requestLimit} onChange={e => setFormData({ ...formData, requestLimit: parseInt(e.target.value) || 0 })} className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]" />
+                    <label className="block text-xs font-bold text-theme-secondary mb-1">API Request Limit / mo</label>
+                    <input type="number" required value={formData.requestLimit} onChange={e => setFormData({ ...formData, requestLimit: parseInt(e.target.value) || 0 })} className="w-full border border-theme-divider rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-neutral-600 mb-1">Rate Limit (req/min)</label>
-                    <input type="number" required value={formData.requestsPerMinute} onChange={e => setFormData({ ...formData, requestsPerMinute: parseInt(e.target.value) || 0 })} className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]" />
+                    <label className="block text-xs font-bold text-theme-secondary mb-1">Rate Limit (req/min)</label>
+                    <input type="number" required value={formData.requestsPerMinute} onChange={e => setFormData({ ...formData, requestsPerMinute: parseInt(e.target.value) || 0 })} className="w-full border border-theme-divider rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#5E43F3]" />
                   </div>
                 </div>
               </div>
@@ -152,13 +152,13 @@ export const AddApiPartnerModal: React.FC<{ onClose: () => void }> = ({ onClose 
               <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Check className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-black text-neutral-900 mb-2">Partner Created Successfully</h3>
-              <p className="text-sm text-neutral-500 mb-8">
+              <h3 className="text-xl font-black text-theme-primary mb-2">Partner Created Successfully</h3>
+              <p className="text-sm text-theme-tertiary mb-8">
                 Generate API credentials so the partner can start integrating.
               </p>
               
               <div className="flex justify-center gap-4">
-                <button disabled={loading} onClick={() => handleGenerate('test')} className="px-6 py-3 bg-neutral-100 text-neutral-900 font-bold rounded-xl hover:bg-neutral-200 transition-colors">
+                <button disabled={loading} onClick={() => handleGenerate('test')} className="px-6 py-3 bg-theme-surface-hover text-theme-primary font-bold rounded-xl hover:bg-theme-surface-active transition-colors">
                   Generate Test Keys
                 </button>
                 <button disabled={loading} onClick={() => handleGenerate('live')} className="px-6 py-3 bg-[#5E43F3] text-white font-bold rounded-xl hover:bg-indigo-600 transition-colors">
@@ -180,13 +180,13 @@ export const AddApiPartnerModal: React.FC<{ onClose: () => void }> = ({ onClose 
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-neutral-600 mb-2 uppercase tracking-wider">API Key</label>
+                  <label className="block text-xs font-bold text-theme-secondary mb-2 uppercase tracking-wider">API Key</label>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 bg-neutral-100 p-4 rounded-xl text-sm font-mono break-all text-neutral-900 border border-neutral-200">
+                    <code className="flex-1 bg-theme-surface-hover p-4 rounded-xl text-sm font-mono break-all text-theme-primary border border-theme-divider">
                       {credentials.rawKey}
                     </code>
-                    <button onClick={handleCopy} className="p-4 bg-neutral-100 hover:bg-neutral-200 rounded-xl border border-neutral-200 transition-colors">
-                      {copied ? <Check className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5 text-neutral-600" />}
+                    <button onClick={handleCopy} className="p-4 bg-theme-surface-hover hover:bg-theme-surface-active rounded-xl border border-theme-divider transition-colors">
+                      {copied ? <Check className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5 text-theme-secondary" />}
                     </button>
                   </div>
                 </div>
@@ -195,17 +195,17 @@ export const AddApiPartnerModal: React.FC<{ onClose: () => void }> = ({ onClose 
           )}
         </div>
 
-        <div className="p-4 border-t border-neutral-100 bg-neutral-50 flex justify-end gap-3">
+        <div className="p-4 border-t border-theme-divider-light bg-theme-base flex justify-end gap-3">
           {step === 1 && (
             <>
-              <button onClick={onClose} className="px-5 py-2.5 font-bold text-sm text-neutral-600 hover:bg-neutral-200 rounded-xl">Cancel</button>
+              <button onClick={onClose} className="px-5 py-2.5 font-bold text-sm text-theme-secondary hover:bg-theme-surface-active rounded-xl">Cancel</button>
               <button disabled={loading} form="add-partner" type="submit" className="px-5 py-2.5 bg-[#5E43F3] text-white font-bold text-sm rounded-xl flex items-center gap-2 disabled:opacity-50">
                 <Save className="w-4 h-4" /> Save Partner
               </button>
             </>
           )}
           {(step === 2 || step === 3) && (
-            <button onClick={onClose} className="px-5 py-2.5 bg-neutral-900 text-white font-bold text-sm rounded-xl">
+            <button onClick={onClose} className="px-5 py-2.5 bg-theme-inverse text-theme-text-inverse font-bold text-sm rounded-xl">
               Done
             </button>
           )}

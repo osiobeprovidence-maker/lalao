@@ -15,13 +15,13 @@ export const Header: React.FC = () => {
     <>
       <header
         id="lalao-header"
-        className="sticky top-0 z-30 border-b border-neutral-200/80 bg-white/95 px-4 py-2.5 backdrop-blur-md transition-all"
+        className="sticky top-0 z-30 border-b border-theme-divider/80 bg-theme-surface/95 px-4 py-2.5 backdrop-blur-md transition-all"
       >
         <div className="relative flex items-center justify-between gap-3">
           <button
             id="btn-mobile-menu-open"
             onClick={() => setIsMobileMenuOpen(true)}
-            className="relative z-10 rounded-full p-2 text-neutral-800 transition hover:bg-neutral-100 active:scale-95"
+            className="relative z-10 rounded-full p-2 text-theme-primary transition hover:bg-theme-surface-hover active:scale-95"
             title="Menu"
             aria-label="Open navigation menu"
           >
@@ -29,7 +29,7 @@ export const Header: React.FC = () => {
           </button>
 
           <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none">
-            <span className="lalao-wordmark text-xl text-neutral-950">lalao</span>
+            <span className="lalao-wordmark text-xl text-theme-primary">lalao</span>
           </div>
 
           <div className="flex items-center gap-1 z-10">
@@ -37,7 +37,7 @@ export const Header: React.FC = () => {
             <button
               id="btn-explore-open"
               onClick={() => setActiveTab('discover')}
-              className="relative rounded-full p-2 text-neutral-800 transition hover:bg-neutral-100 active:scale-95"
+              className="relative rounded-full p-2 text-theme-primary transition hover:bg-theme-surface-hover active:scale-95"
               title="Explore"
               aria-label="Open explore"
             >

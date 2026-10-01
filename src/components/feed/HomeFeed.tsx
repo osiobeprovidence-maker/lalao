@@ -45,24 +45,24 @@ const FeedSkeleton: React.FC = () => {
   return (
     <div className="divide-y divide-neutral-100 pb-8 animate-pulse">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="p-4 sm:p-5 bg-white">
+        <div key={i} className="p-4 sm:p-5 bg-theme-surface">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-neutral-200 shrink-0" />
+            <div className="w-10 h-10 rounded-full bg-theme-surface-active shrink-0" />
             <div className="flex-1 min-w-0 space-y-2">
-              <div className="h-3.5 bg-neutral-200 rounded w-1/3" />
-              <div className="h-2.5 bg-neutral-100 rounded w-1/4" />
+              <div className="h-3.5 bg-theme-surface-active rounded w-1/3" />
+              <div className="h-2.5 bg-theme-surface-hover rounded w-1/4" />
             </div>
-            <div className="w-6 h-6 rounded-full bg-neutral-100 shrink-0" />
+            <div className="w-6 h-6 rounded-full bg-theme-surface-hover shrink-0" />
           </div>
           <div className="space-y-2 mb-3">
-            <div className="h-3.5 bg-neutral-200 rounded w-full" />
-            <div className="h-3.5 bg-neutral-200 rounded w-5/6" />
+            <div className="h-3.5 bg-theme-surface-active rounded w-full" />
+            <div className="h-3.5 bg-theme-surface-active rounded w-5/6" />
           </div>
-          <div className="w-full h-64 bg-neutral-100 rounded-[12px] mb-3" />
+          <div className="w-full h-64 bg-theme-surface-hover rounded-[12px] mb-3" />
           <div className="flex items-center gap-6 mt-3">
-            <div className="w-12 h-6 bg-neutral-100 rounded-full" />
-            <div className="w-12 h-6 bg-neutral-100 rounded-full" />
-            <div className="w-12 h-6 bg-neutral-100 rounded-full" />
+            <div className="w-12 h-6 bg-theme-surface-hover rounded-full" />
+            <div className="w-12 h-6 bg-theme-surface-hover rounded-full" />
+            <div className="w-12 h-6 bg-theme-surface-hover rounded-full" />
           </div>
         </div>
       ))}
@@ -243,7 +243,7 @@ const FeedSkeleton: React.FC = () => {
   return (
     <div
       id="home-feed-container"
-      className="min-h-screen bg-[#f6f3ee] pb-20 relative select-none"
+      className="min-h-screen bg-theme-base pb-20 relative select-none"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -252,7 +252,7 @@ const FeedSkeleton: React.FC = () => {
       onMouseUp={handleMouseUp}
     >
       {/* Sticky Feed Sub-Tabs with manual refresh indicator */}
-      <div className="sticky top-0 z-20 bg-[#f6f3ee]/95 backdrop-blur-md border-b border-neutral-200/80 flex items-center justify-around px-2">
+      <div className="sticky top-0 z-20 bg-theme-base/95 backdrop-blur-md border-b border-theme-divider/80 flex items-center justify-around px-2">
         {tabs.map((tab) => {
           const isActive = feedTab === tab.id;
           return (
@@ -272,7 +272,7 @@ const FeedSkeleton: React.FC = () => {
                 }
               }}
               className={`flex-1 py-2.5 text-center text-sm font-bold transition-all relative cursor-pointer ${
-                isActive ? 'text-neutral-950' : 'text-neutral-400 hover:text-neutral-700'
+                isActive ? 'text-theme-primary' : 'text-theme-tertiary hover:text-theme-secondary'
               }`}
               title={isActive ? 'Tap to refresh feed' : tab.label}
             >
@@ -291,11 +291,11 @@ const FeedSkeleton: React.FC = () => {
           height: `${effectiveOffset}px`,
           opacity: effectiveOffset > 4 ? 1 : 0,
         }}
-        className={`w-full overflow-hidden bg-gradient-to-b from-[#f8f5f1] to-[#f6f3ee] border-b border-neutral-200/80 flex items-center justify-center transition-[height,opacity] ${
+        className={`w-full overflow-hidden bg-gradient-to-b from-[#f8f5f1] to-[#f6f3ee] border-b border-theme-divider/80 flex items-center justify-center transition-[height,opacity] ${
           isPulling ? 'duration-0' : 'duration-300 ease-out'
         }`}
       >
-        <div className="flex items-center gap-2.5 text-xs font-semibold text-neutral-600">
+        <div className="flex items-center gap-2.5 text-xs font-semibold text-theme-secondary">
           {isRefreshing ? (
             <>
               <div className="w-5 h-5 rounded-full bg-[#5E43F3]/10 flex items-center justify-center">
@@ -315,12 +315,12 @@ const FeedSkeleton: React.FC = () => {
                   transform: `rotate(${Math.min(180, (pullDistance / pullThreshold) * 180)}deg)`,
                 }}
                 className={`w-5 h-5 rounded-full flex items-center justify-center transition-transform ${
-                  isReadyToRelease ? 'bg-[#5E43F3] text-white' : 'bg-neutral-200 text-neutral-600'
+                  isReadyToRelease ? 'bg-[#5E43F3] text-white' : 'bg-theme-surface-active text-theme-secondary'
                 }`}
               >
                 <ArrowDown className="w-3 h-3 stroke-[2.5]" />
               </div>
-              <span className={isReadyToRelease ? 'text-[#5E43F3] font-bold' : 'text-neutral-500'}>
+              <span className={isReadyToRelease ? 'text-[#5E43F3] font-bold' : 'text-theme-tertiary'}>
                 {isReadyToRelease ? 'Release to refresh' : 'Pull down to update'}
               </span>
             </>
@@ -333,7 +333,7 @@ const FeedSkeleton: React.FC = () => {
       {feedTab === 'nearby' && (
         <div
           id="nearby-feed-scope-bar"
-          className="bg-[#f6f3ee] border-b border-neutral-200/80 px-3.5 py-2.5 transition-all shadow-none"
+          className="bg-theme-base border-b border-theme-divider/80 px-3.5 py-2.5 transition-all shadow-none"
         >
           <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
             {/* Left Controls: Location Button + Radius Drawer Trigger + Custom Button */}
@@ -343,14 +343,14 @@ const FeedSkeleton: React.FC = () => {
                 type="button"
                 id="btn-nearby-location-trigger"
                 onClick={() => setIsLocationModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-50 hover:bg-indigo-50/70 border border-neutral-200/80 hover:border-indigo-200 active:scale-95 transition-all cursor-pointer group min-w-0"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-theme-base hover:bg-indigo-50/70 border border-theme-divider/80 hover:border-indigo-200 active:scale-95 transition-all cursor-pointer group min-w-0"
                 title={`Change neighborhood (${location.name})`}
               >
                 <span className="relative flex h-2 w-2 shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#5E43F3] opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-[#5E43F3]" />
                 </span>
-                <span className="text-xs font-bold text-neutral-900 truncate max-w-[120px] sm:max-w-[170px]">
+                <span className="text-xs font-bold text-theme-primary truncate max-w-[120px] sm:max-w-[170px]">
                   {location.name}
                 </span>
               </button>
@@ -372,29 +372,29 @@ const FeedSkeleton: React.FC = () => {
                 type="button"
                 id="btn-radius-more-options"
                 onClick={() => setIsLocationModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-50 hover:bg-neutral-100/90 text-neutral-600 hover:text-neutral-900 border border-neutral-200/80 active:scale-95 transition-all cursor-pointer font-semibold text-xs"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-theme-base hover:bg-theme-surface-hover/90 text-theme-secondary hover:text-theme-primary border border-theme-divider/80 active:scale-95 transition-all cursor-pointer font-semibold text-xs"
                 title="Open custom radius & location settings"
               >
-                <SlidersHorizontal className="w-3 h-3 text-neutral-500" />
+                <SlidersHorizontal className="w-3 h-3 text-theme-tertiary" />
                 <span>Custom</span>
               </button>
             </div>
 
             {/* Right: Sort Segmented Control */}
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-[11px] font-semibold text-neutral-400 hidden lg:inline">
+              <span className="text-[11px] font-semibold text-theme-tertiary hidden lg:inline">
                 {filteredPosts.length} {filteredPosts.length === 1 ? 'post' : 'posts'}
               </span>
 
-              <div className="flex items-center bg-neutral-100/90 p-0.5 rounded-full border border-neutral-200/60">
+              <div className="flex items-center bg-theme-surface-hover/90 p-0.5 rounded-full border border-theme-divider/60">
                 <button
                   type="button"
                   id="btn-sort-closest"
                   onClick={() => setNearbySort('closest')}
                   className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
                     nearbySort === 'closest'
-                      ? 'bg-white text-[#5E43F3] shadow-xs'
-                      : 'text-neutral-500 hover:text-neutral-800'
+                      ? 'bg-theme-surface text-[#5E43F3] shadow-xs'
+                      : 'text-theme-tertiary hover:text-theme-primary'
                   }`}
                   title="Sort by nearest distance first"
                 >
@@ -407,8 +407,8 @@ const FeedSkeleton: React.FC = () => {
                   onClick={() => setNearbySort('recent')}
                   className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
                     nearbySort === 'recent'
-                      ? 'bg-white text-neutral-900 shadow-xs'
-                      : 'text-neutral-500 hover:text-neutral-800'
+                      ? 'bg-theme-surface text-theme-primary shadow-xs'
+                      : 'text-theme-tertiary hover:text-theme-primary'
                   }`}
                   title="Sort by newest posts first"
                 >
@@ -431,26 +431,26 @@ const FeedSkeleton: React.FC = () => {
           <div
             id="radius-drawer-modal"
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl space-y-4 animate-in slide-in-from-bottom duration-250 border-t sm:border border-neutral-200"
+            className="w-full max-w-md bg-theme-surface rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl space-y-4 animate-in slide-in-from-bottom duration-250 border-t sm:border border-theme-divider"
           >
             {/* Grab Handle for mobile */}
-            <div className="w-10 h-1 bg-neutral-300 rounded-full mx-auto sm:hidden" />
+            <div className="w-10 h-1 bg-theme-divider-strong rounded-full mx-auto sm:hidden" />
 
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-black text-neutral-950 font-sans">
+                <h3 className="text-base font-black text-theme-primary font-sans">
                   Feed Distance Radius
                 </h3>
-                <p className="text-xs text-neutral-500 mt-0.5">
-                  Showing posts from <strong className="text-neutral-800">{location.name}</strong>
+                <p className="text-xs text-theme-tertiary mt-0.5">
+                  Showing posts from <strong className="text-theme-primary">{location.name}</strong>
                 </p>
               </div>
               <button
                 type="button"
                 id="btn-close-radius-drawer"
                 onClick={() => setIsRadiusDrawerOpen(false)}
-                className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+                className="p-1.5 rounded-full text-theme-tertiary hover:text-theme-secondary hover:bg-theme-surface-hover transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -472,7 +472,7 @@ const FeedSkeleton: React.FC = () => {
                     className={`w-full p-3 rounded-xl transition-all text-left flex items-center justify-between cursor-pointer ${
                       isSelected
                         ? 'bg-indigo-50/80 border-2 border-[#5E43F3]'
-                        : 'bg-neutral-50 hover:bg-neutral-100/90 border-2 border-transparent'
+                        : 'bg-theme-base hover:bg-theme-surface-hover/90 border-2 border-transparent'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -480,13 +480,13 @@ const FeedSkeleton: React.FC = () => {
                         className={`w-12 text-center py-1 rounded-lg text-xs font-black shrink-0 ${
                           isSelected
                             ? 'bg-[#5E43F3] text-white'
-                            : 'bg-neutral-200/70 text-neutral-800'
+                            : 'bg-theme-surface-active/70 text-theme-primary'
                         }`}
                       >
                         {r} km
                       </span>
                       <div className="min-w-0">
-                        <p className={`text-xs font-bold truncate ${isSelected ? 'text-[#5E43F3]' : 'text-neutral-800'}`}>
+                        <p className={`text-xs font-bold truncate ${isSelected ? 'text-[#5E43F3]' : 'text-theme-primary'}`}>
                           {radiusDescriptions[r] || `${r} kilometers away`}
                         </p>
                       </div>
@@ -503,7 +503,7 @@ const FeedSkeleton: React.FC = () => {
             </div>
 
             {/* Custom Option inside Drawer */}
-            <div className="pt-1 border-t border-neutral-100">
+            <div className="pt-1 border-t border-theme-divider-light">
               <button
                 type="button"
                 id="btn-radius-drawer-custom"
@@ -511,9 +511,9 @@ const FeedSkeleton: React.FC = () => {
                   setIsRadiusDrawerOpen(false);
                   setIsLocationModalOpen(true);
                 }}
-                className="w-full py-2.5 px-3 rounded-xl bg-neutral-100 hover:bg-neutral-200/70 text-neutral-800 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                className="w-full py-2.5 px-3 rounded-xl bg-theme-surface-hover hover:bg-theme-surface-active/70 text-theme-primary text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors"
               >
-                <SlidersHorizontal className="w-3.5 h-3.5 text-neutral-600" />
+                <SlidersHorizontal className="w-3.5 h-3.5 text-theme-secondary" />
                 <span>Custom Distance Slider & Location</span>
               </button>
             </div>
@@ -547,19 +547,19 @@ const FeedSkeleton: React.FC = () => {
             /* Empty State */
             <div className="min-h-[62vh] flex items-center justify-center px-6 pb-8 pt-10">
               <div className="flex max-w-sm flex-col items-center text-center gap-2.5">
-                <div className="w-11 h-11 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center">
+                <div className="w-11 h-11 rounded-full bg-theme-surface-hover text-theme-tertiary flex items-center justify-center">
                   <Compass className="w-5 h-5" />
                 </div>
-                <h3 className="font-bold text-neutral-900 text-sm leading-snug">
+                <h3 className="font-bold text-theme-primary text-sm leading-snug">
                   No posts found within {location.radiusKm} km of {location.name}
                 </h3>
-                <p className="text-[11px] text-neutral-500 leading-relaxed">
+                <p className="text-[11px] text-theme-tertiary leading-relaxed">
                   Try expanding your discovery radius to 10 km or 25 km, or share the first update from this neighborhood.
                 </p>
                 <div className="pt-1 flex flex-wrap items-center justify-center gap-2">
                   <button
                     onClick={() => updateRadius(Math.min(50, (location.radiusKm || 5) * 2))}
-                    className="px-3.5 py-2 rounded-full border border-neutral-300 text-[11px] font-semibold text-neutral-700 hover:bg-neutral-100 cursor-pointer"
+                    className="px-3.5 py-2 rounded-full border border-theme-divider-strong text-[11px] font-semibold text-theme-secondary hover:bg-theme-surface-hover cursor-pointer"
                   >
                     Expand Radius ({Math.min(50, (location.radiusKm || 5) * 2)} km)
                   </button>

@@ -172,34 +172,34 @@ const LalaoAppContent: React.FC = () => {
 
   const renderListPage = (title: string, subtitle: string, items: Array<{ id: string; title: string; meta: string; accent?: string }>, emptyText: string) => (
     <div className="mx-auto w-full max-w-[600px] px-4 py-6">
-      <div className="mb-5 flex items-center justify-between gap-3 border-b border-neutral-200/80 pb-3">
+      <div className="mb-5 flex items-center justify-between gap-3 border-b border-theme-divider/80 pb-3">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#5E43F3]">Lalao</p>
-          <h1 className="mt-1 text-2xl font-black tracking-[-0.03em] text-neutral-950">{title}</h1>
+          <h1 className="mt-1 text-2xl font-black tracking-[-0.03em] text-theme-primary">{title}</h1>
         </div>
         <div className="rounded-full bg-[#5E43F3]/10 px-2.5 py-1 text-[10px] font-bold text-[#5E43F3]">
           {items.length}
         </div>
       </div>
 
-      <p className="mb-5 text-sm text-neutral-600">{subtitle}</p>
+      <p className="mb-5 text-sm text-theme-secondary">{subtitle}</p>
 
       {items.length > 0 ? (
         <div className="space-y-3">
           {items.map((item) => (
-            <div key={item.id} className="flex items-center justify-between gap-3 border-b border-neutral-200/80 pb-3 last:border-b-0 last:pb-0">
+            <div key={item.id} className="flex items-center justify-between gap-3 border-b border-theme-divider/80 pb-3 last:border-b-0 last:pb-0">
               <div className="min-w-0">
-                <p className="truncate text-sm font-bold text-neutral-900">{item.title}</p>
-                <p className="mt-1 text-[11px] text-neutral-500">{item.meta}</p>
+                <p className="truncate text-sm font-bold text-theme-primary">{item.title}</p>
+                <p className="mt-1 text-[11px] text-theme-tertiary">{item.meta}</p>
               </div>
-              <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${item.accent ?? 'bg-neutral-900 text-white'}`}>
+              <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${item.accent ?? 'bg-theme-inverse text-theme-text-inverse'}`}>
                 {item.title.split(' ')[0] || 'Lalao'}
               </span>
             </div>
           ))}
         </div>
       ) : (
-        <div className="space-y-3 text-sm text-neutral-600">
+        <div className="space-y-3 text-sm text-theme-secondary">
           <p className="leading-relaxed">{emptyText}</p>
         </div>
       )}
@@ -214,11 +214,11 @@ const LalaoAppContent: React.FC = () => {
   }, [activeTab]);
 
   return (
-    <div className="min-h-screen bg-[#f6f3ee] text-neutral-900 flex justify-center selection:bg-[#5E43F3]/20 selection:text-[#5E43F3]">
-      <div className="w-full max-w-[1480px] min-h-screen lg:grid lg:grid-cols-[220px_minmax(0,1fr)_260px] bg-[#f6f3ee]">
+    <div className="min-h-screen bg-theme-base text-theme-primary flex justify-center selection:bg-[#5E43F3]/20 selection:text-[#5E43F3]">
+      <div className="w-full max-w-[1480px] min-h-screen lg:grid lg:grid-cols-[220px_minmax(0,1fr)_260px] bg-theme-base">
         <DesktopSidebar />
 
-        <div className="relative min-w-0 flex min-h-screen flex-col bg-[#f6f3ee] lg:min-h-screen">
+        <div className="relative min-w-0 flex min-h-screen flex-col bg-theme-base lg:min-h-screen">
           {activeTab === 'home' && (
             <div className="lg:hidden">
               <Header />
@@ -227,12 +227,12 @@ const LalaoAppContent: React.FC = () => {
 
           <main
             ref={mainRef}
-            className="relative flex-1 overflow-y-auto bg-[#f6f3ee] pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0 lg:min-h-0"
+            className="relative flex-1 overflow-y-auto bg-theme-base pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0 lg:min-h-0"
           >
             {!activePageId ? (
               <>
             {activeTab === 'create-post' && (
-              <div key="tab-create-post" className="animate-in fade-in duration-200 min-h-full w-full bg-[#f6f3ee]">
+              <div key="tab-create-post" className="animate-in fade-in duration-200 min-h-full w-full bg-theme-base">
                 <PostComposer embedded />
               </div>
             )}
@@ -330,7 +330,7 @@ const LalaoAppContent: React.FC = () => {
           </div>
         </div>
 
-        <aside className="hidden lg:flex flex-col bg-[#f6f3ee]" aria-label="Secondary content rail" />
+        <aside className="hidden lg:flex flex-col bg-theme-base" aria-label="Secondary content rail" />
       </div>
 
       <SettingsPageView />
@@ -374,7 +374,7 @@ const LalaoAppContent: React.FC = () => {
       {shareToast && (
         <div
           id="lalao-toast-toast"
-          className="fixed bottom-20 lg:bottom-8 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-full bg-neutral-900 text-white text-xs font-semibold shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-200"
+          className="fixed bottom-20 lg:bottom-8 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-full bg-theme-inverse text-theme-text-inverse text-xs font-semibold shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-200"
         >
           <Check className="w-4 h-4 text-[#5E43F3]" />
           <span>{shareToast}</span>

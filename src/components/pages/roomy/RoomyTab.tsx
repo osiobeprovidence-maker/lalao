@@ -70,21 +70,21 @@ export const RoomyTab: React.FC<RoomyTabProps> = ({ page }) => {
   return (
     <div className="space-y-4">
       {/* Action Bar */}
-      <div className="bg-white rounded-2xl p-4 border border-neutral-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-theme-surface rounded-2xl p-4 border border-theme-divider shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex-1 relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-theme-tertiary" />
           <input 
             type="text" 
             placeholder="Search location, university, campus..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-neutral-100 rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#5E43F3]/50 transition-all"
+            className="w-full bg-theme-surface-hover rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#5E43F3]/50 transition-all"
           />
         </div>
         <div className="flex items-center gap-2">
           <button 
             onClick={() => setIsInspectionsOpen(true)}
-            className="px-4 py-2.5 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 font-bold rounded-xl text-sm transition-all whitespace-nowrap cursor-pointer"
+            className="px-4 py-2.5 bg-theme-surface-hover text-theme-secondary hover:bg-theme-surface-active font-bold rounded-xl text-sm transition-all whitespace-nowrap cursor-pointer"
           >
             My Inspections
           </button>
@@ -148,8 +148,8 @@ export const RoomyTab: React.FC<RoomyTabProps> = ({ page }) => {
             onClick={() => setFilterType(f.id as ListingFilter)}
             className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
               filterType === f.id 
-                ? 'bg-neutral-900 text-white shadow-sm' 
-                : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
+                ? 'bg-theme-inverse text-theme-text-inverse shadow-sm' 
+                : 'bg-theme-surface border border-theme-divider text-theme-secondary hover:bg-theme-base'
             }`}
           >
             {f.label}
@@ -164,23 +164,23 @@ export const RoomyTab: React.FC<RoomyTabProps> = ({ page }) => {
             <div 
               key={listing._id} 
               onClick={() => setSelectedListing(listing)}
-              className="bg-white rounded-2xl border border-neutral-200 overflow-hidden hover:shadow-md transition-all cursor-pointer group flex flex-col h-full active:scale-[0.99]"
+              className="bg-theme-surface rounded-2xl border border-theme-divider overflow-hidden hover:shadow-md transition-all cursor-pointer group flex flex-col h-full active:scale-[0.99]"
             >
               {listing.photos && listing.photos.length > 0 ? (
-                <div className="aspect-video w-full bg-neutral-100 relative overflow-hidden">
+                <div className="aspect-video w-full bg-theme-surface-hover relative overflow-hidden">
                   <img 
                     src={listing.photos[0]} 
                     alt="Listing" 
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                  <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-white/95 backdrop-blur-sm px-2.5 py-1.5 rounded-full shadow-sm text-[10px] font-black uppercase tracking-wider">
+                  <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-theme-surface/95 backdrop-blur-sm px-2.5 py-1.5 rounded-full shadow-sm text-[10px] font-black uppercase tracking-wider">
                     {getListingIcon(listing.type)}
                     <span>{getListingLabel(listing.type)}</span>
                   </div>
                 </div>
               ) : (
                 <div className="pt-4 px-4 pb-1">
-                  <div className="inline-flex items-center gap-1.5 bg-neutral-100 border border-neutral-200 px-2.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider text-neutral-700">
+                  <div className="inline-flex items-center gap-1.5 bg-theme-surface-hover border border-theme-divider px-2.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider text-theme-secondary">
                     {getListingIcon(listing.type)}
                     <span>{getListingLabel(listing.type)}</span>
                   </div>
@@ -189,7 +189,7 @@ export const RoomyTab: React.FC<RoomyTabProps> = ({ page }) => {
 
               <div className="p-4 flex-1 flex flex-col">
                 <div className="flex justify-between items-start gap-2 mb-2">
-                  <h3 className="font-bold text-neutral-900 text-sm leading-snug line-clamp-2">
+                  <h3 className="font-bold text-theme-primary text-sm leading-snug line-clamp-2">
                     {listing.title || listing.description.split('\n')[0]}
                   </h3>
                   {listing.price && (
@@ -199,15 +199,15 @@ export const RoomyTab: React.FC<RoomyTabProps> = ({ page }) => {
                   )}
                 </div>
                 
-                <div className="flex items-center gap-1.5 text-xs text-neutral-500 mb-4 font-medium">
+                <div className="flex items-center gap-1.5 text-xs text-theme-tertiary mb-4 font-medium">
                   <MapPin className="w-3.5 h-3.5 shrink-0 text-[#5E43F3]" />
                   <span className="truncate">{listing.location}</span>
                 </div>
 
-                <div className="mt-auto flex items-center justify-between pt-3 border-t border-neutral-100">
+                <div className="mt-auto flex items-center justify-between pt-3 border-t border-theme-divider-light">
                   <div className="flex items-center gap-2">
-                    <img src={listing.owner?.avatarUrl || '/placeholder.png'} className="w-6 h-6 rounded-full object-cover border border-neutral-200 bg-neutral-100" alt="Owner" />
-                    <span className="text-xs font-semibold text-neutral-700 hover:text-[#5E43F3] transition-colors">{listing.owner?.name}</span>
+                    <img src={listing.owner?.avatarUrl || '/placeholder.png'} className="w-6 h-6 rounded-full object-cover border border-theme-divider bg-theme-surface-hover" alt="Owner" />
+                    <span className="text-xs font-semibold text-theme-secondary hover:text-[#5E43F3] transition-colors">{listing.owner?.name}</span>
                   </div>
                 </div>
               </div>
@@ -215,12 +215,12 @@ export const RoomyTab: React.FC<RoomyTabProps> = ({ page }) => {
           ))}
         </div>
       ) : (
-        <div className="py-16 text-center bg-white rounded-3xl border border-neutral-200/60 shadow-sm flex flex-col items-center justify-center">
-          <div className="w-16 h-16 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center mb-4 shadow-sm">
+        <div className="py-16 text-center bg-theme-surface rounded-3xl border border-theme-divider/60 shadow-sm flex flex-col items-center justify-center">
+          <div className="w-16 h-16 rounded-full bg-theme-base border border-theme-divider-light flex items-center justify-center mb-4 shadow-sm">
             <Search className="w-6 h-6 text-[#5E43F3]" />
           </div>
-          <h3 className="font-black text-neutral-900 text-lg">No listings found</h3>
-          <p className="text-sm text-neutral-500 mt-2 max-w-sm mx-auto leading-relaxed">
+          <h3 className="font-black text-theme-primary text-lg">No listings found</h3>
+          <p className="text-sm text-theme-tertiary mt-2 max-w-sm mx-auto leading-relaxed">
             Try adjusting your search filters or be the first to post a listing in this area.
           </p>
           <button

@@ -168,21 +168,21 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
   };
 
   return (
-    <div className="absolute inset-0 z-50 bg-white overflow-y-auto flex flex-col animate-in fade-in slide-in-from-right-4 duration-250">
+    <div className="absolute inset-0 z-50 bg-theme-surface overflow-y-auto flex flex-col animate-in fade-in slide-in-from-right-4 duration-250">
       {/* Top Sticky App Bar */}
-      <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-neutral-100 px-4 py-3 sm:px-6 flex items-center justify-between z-20 shrink-0">
+      <div className="sticky top-0 bg-theme-surface/95 backdrop-blur-md border-b border-theme-divider-light px-4 py-3 sm:px-6 flex items-center justify-between z-20 shrink-0">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="p-2 -ml-2 rounded-full hover:bg-neutral-100 text-neutral-800 transition-colors cursor-pointer"
+            className="p-2 -ml-2 rounded-full hover:bg-theme-surface-hover text-theme-primary transition-colors cursor-pointer"
             aria-label="Back"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h3 className="text-base font-black text-neutral-950">Edit Page Profile</h3>
-            <p className="text-xs text-neutral-500 font-medium truncate max-w-[180px] sm:max-w-md">
+            <h3 className="text-base font-black text-theme-primary">Edit Page Profile</h3>
+            <p className="text-xs text-theme-tertiary font-medium truncate max-w-[180px] sm:max-w-md">
               @{page.username} · Manage branding & contact details
             </p>
           </div>
@@ -206,13 +206,13 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-neutral-100 px-4 sm:px-6 sticky top-[60px] bg-white/95 backdrop-blur-md z-10 shrink-0 flex gap-4">
+      <div className="border-b border-theme-divider-light px-4 sm:px-6 sticky top-[60px] bg-theme-surface/95 backdrop-blur-md z-10 shrink-0 flex gap-4">
         <button
           onClick={() => setActiveTab('profile')}
           className={`py-3 text-sm font-bold border-b-2 transition-colors ${
             activeTab === 'profile'
               ? 'border-[#5E43F3] text-[#5E43F3]'
-              : 'border-transparent text-neutral-500 hover:text-neutral-900'
+              : 'border-transparent text-theme-tertiary hover:text-theme-primary'
           }`}
         >
           Profile Details
@@ -222,7 +222,7 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
           className={`py-3 text-sm font-bold border-b-2 transition-colors ${
             activeTab === 'locations'
               ? 'border-[#5E43F3] text-[#5E43F3]'
-              : 'border-transparent text-neutral-500 hover:text-neutral-900'
+              : 'border-transparent text-theme-tertiary hover:text-theme-primary'
           }`}
         >
           Branches & Locations
@@ -234,13 +234,13 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
         {activeTab === 'profile' ? (
         <form onSubmit={handleSave} className="space-y-6">
           {/* Visual Branding Section: Cover & Avatar with Upload Controls */}
-          <div className="bg-neutral-50/80 p-4 sm:p-5 rounded-2xl border border-neutral-100 space-y-4">
-            <label className="text-xs font-black uppercase tracking-wider text-neutral-500 block">
+          <div className="bg-theme-base/80 p-4 sm:p-5 rounded-2xl border border-theme-divider-light space-y-4">
+            <label className="text-xs font-black uppercase tracking-wider text-theme-tertiary block">
               Visual Branding
             </label>
             
             {/* Cover Image Container */}
-            <div className="relative h-44 sm:h-52 rounded-2xl overflow-hidden bg-neutral-900 border border-neutral-200 group">
+            <div className="relative h-44 sm:h-52 rounded-2xl overflow-hidden bg-theme-inverse border border-theme-divider group">
               <img
                 src={coverImage}
                 alt="Page Cover Preview"
@@ -250,12 +250,12 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowCoverSelector(!showCoverSelector)}
-                  className="px-3.5 py-2 rounded-full bg-white/90 hover:bg-white text-neutral-900 text-xs font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+                  className="px-3.5 py-2 rounded-full bg-theme-surface/90 hover:bg-theme-surface text-theme-primary text-xs font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
                 >
                   <ImageIcon className="w-3.5 h-3.5 text-[#5E43F3]" />
                   <span>Choose Cover</span>
                 </button>
-                <label className="px-3.5 py-2 rounded-full bg-black/70 hover:bg-black text-white text-xs font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
+                <label className="px-3.5 py-2 rounded-full bg-black/70 hover:bg-theme-inverse text-theme-text-inverse text-xs font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
                   <Camera className="w-3.5 h-3.5" />
                   <span>Upload File</span>
                   <input
@@ -270,8 +270,8 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
 
             {/* Cover Presets Dropdown Tray */}
             {showCoverSelector && (
-              <div className="p-3 bg-white rounded-xl border border-neutral-200 animate-in fade-in">
-                <p className="text-[11px] font-bold text-neutral-500 mb-2">Select a preset cover banner:</p>
+              <div className="p-3 bg-theme-surface rounded-xl border border-theme-divider animate-in fade-in">
+                <p className="text-[11px] font-bold text-theme-tertiary mb-2">Select a preset cover banner:</p>
                 <div className="grid grid-cols-3 gap-2">
                   {PRESET_COVERS.map((url, i) => (
                     <button
@@ -304,7 +304,7 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
                 <img
                   src={avatar}
                   alt="Page Avatar Preview"
-                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover ring-4 ring-white shadow-md bg-neutral-100"
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover ring-4 ring-white shadow-md bg-theme-surface-hover"
                 />
                 <button
                   type="button"
@@ -325,8 +325,8 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
                   >
                     Select Avatar Preset
                   </button>
-                  <span className="text-neutral-300">·</span>
-                  <label className="text-xs font-bold text-neutral-600 hover:text-neutral-900 cursor-pointer">
+                  <span className="text-theme-tertiary">·</span>
+                  <label className="text-xs font-bold text-theme-secondary hover:text-theme-primary cursor-pointer">
                     Upload Custom
                     <input
                       type="file"
@@ -336,7 +336,7 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
                     />
                   </label>
                 </div>
-                <p className="text-[11px] text-neutral-400">
+                <p className="text-[11px] text-theme-tertiary">
                   Recommended: 400x400px square logo or photo
                 </p>
               </div>
@@ -344,7 +344,7 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
 
             {/* Avatar Presets */}
             {showAvatarSelector && (
-              <div className="p-3 bg-white rounded-xl border border-neutral-200 animate-in fade-in flex items-center gap-2 overflow-x-auto">
+              <div className="p-3 bg-theme-surface rounded-xl border border-theme-divider animate-in fade-in flex items-center gap-2 overflow-x-auto">
                 {PRESET_AVATARS.map((url, i) => (
                   <button
                     key={i}
@@ -355,7 +355,7 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
                       setShowAvatarSelector(false);
                     }}
                     className={`relative w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${
-                      avatar === url ? 'border-[#5E43F3] ring-2 ring-[#5E43F3]/20' : 'border-neutral-200 opacity-70 hover:opacity-100'
+                      avatar === url ? 'border-[#5E43F3] ring-2 ring-[#5E43F3]/20' : 'border-theme-divider opacity-70 hover:opacity-100'
                     }`}
                   >
                     <img src={url} alt={`Avatar preset ${i}`} className="w-full h-full object-cover" />
@@ -367,12 +367,12 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
 
           {/* Core Info */}
           <div className="space-y-4">
-            <label className="text-xs font-black uppercase tracking-wider text-neutral-500 block">
+            <label className="text-xs font-black uppercase tracking-wider text-theme-tertiary block">
               Basic Details
             </label>
 
             <div>
-              <label className="text-xs font-bold text-neutral-700 block mb-1">
+              <label className="text-xs font-bold text-theme-secondary block mb-1">
                 Page Name *
               </label>
               <input
@@ -381,36 +381,36 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
                 onChange={(e) => setName(e.target.value)}
                 required
                 placeholder="e.g. Delta Creators Lab"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm font-semibold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-theme-divider text-sm font-semibold text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                <label className="text-xs font-bold text-theme-secondary block mb-1">
                   Username Handle *
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3.5 top-2.5 text-sm text-neutral-400 font-semibold">@</span>
+                  <span className="absolute left-3.5 top-2.5 text-sm text-theme-tertiary font-semibold">@</span>
                   <input
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
                     required
                     placeholder="deltacreators"
-                    className="w-full pl-8 pr-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm font-semibold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                    className="w-full pl-8 pr-3.5 py-2.5 rounded-xl border border-theme-divider text-sm font-semibold text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                <label className="text-xs font-bold text-theme-secondary block mb-1">
                   Primary Category
                 </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm font-semibold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3] bg-white"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-theme-divider text-sm font-semibold text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3] bg-theme-surface"
                 >
                   {CATEGORIES.map((cat) => (
                     <option key={cat} value={cat}>
@@ -422,7 +422,7 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
             </div>
 
             <div>
-              <label className="text-xs font-bold text-neutral-700 block mb-1">
+              <label className="text-xs font-bold text-theme-secondary block mb-1">
                 About / Bio Description
               </label>
               <textarea
@@ -430,35 +430,35 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
                 placeholder="Tell your audience who you are, what you do, and what they can discover here..."
-                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-theme-divider text-sm text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
               />
             </div>
 
             <div>
-              <label className="text-xs font-bold text-neutral-700 block mb-1">
+              <label className="text-xs font-bold text-theme-secondary block mb-1">
                 Primary City / Base Location
               </label>
               <div className="relative">
-                <MapPin className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3" />
+                <MapPin className="w-4 h-4 text-theme-tertiary absolute left-3.5 top-3" />
                 <input
                   type="text"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="e.g. Asaba, Delta State"
-                  className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                  className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-theme-divider text-sm text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                <label className="text-xs font-bold text-theme-secondary block mb-1">
                   Discovery Visibility
                 </label>
                 <select
                   value={globalDiscoveryStatus}
                   onChange={(e) => setGlobalDiscoveryStatus(e.target.value as any)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm font-semibold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3] bg-white"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-theme-divider text-sm font-semibold text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3] bg-theme-surface"
                 >
                   <option value="global">Global (Worldwide)</option>
                   <option value="national">National</option>
@@ -468,7 +468,7 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
               </div>
 
               <div>
-                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                <label className="text-xs font-bold text-theme-secondary block mb-1">
                   Service Areas (Comma separated)
                 </label>
                 <input
@@ -476,7 +476,7 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
                   value={serviceAreas}
                   onChange={(e) => setServiceAreas(e.target.value)}
                   placeholder="e.g. Lagos, Abuja, London"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-theme-divider text-sm text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
                 />
               </div>
             </div>
@@ -487,9 +487,9 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
                 id="isOnlineBusiness"
                 checked={isOnlineBusiness}
                 onChange={(e) => setIsOnlineBusiness(e.target.checked)}
-                className="w-4 h-4 rounded border-neutral-300 text-[#5E43F3] focus:ring-[#5E43F3]"
+                className="w-4 h-4 rounded border-theme-divider-strong text-[#5E43F3] focus:ring-[#5E43F3]"
               />
-              <label htmlFor="isOnlineBusiness" className="text-sm font-semibold text-neutral-700">
+              <label htmlFor="isOnlineBusiness" className="text-sm font-semibold text-theme-secondary">
                 This is an online business (operates remotely)
               </label>
             </div>
@@ -497,12 +497,12 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
 
           {/* Contact & Physical Details Section */}
           <div className="space-y-4 pt-2">
-            <label className="text-xs font-black uppercase tracking-wider text-neutral-500 block">
+            <label className="text-xs font-black uppercase tracking-wider text-theme-tertiary block">
               Contact & Business Info
             </label>
 
             <div>
-              <label className="text-xs font-bold text-neutral-700 block mb-1">
+              <label className="text-xs font-bold text-theme-secondary block mb-1">
                 Physical Street Address
               </label>
               <input
@@ -510,39 +510,39 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="e.g. 14 Okpanam Road, GRA Phase 1"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-theme-divider text-sm text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                <label className="text-xs font-bold text-theme-secondary block mb-1">
                   Phone / WhatsApp
                 </label>
                 <div className="relative">
-                  <Phone className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3" />
+                  <Phone className="w-4 h-4 text-theme-tertiary absolute left-3.5 top-3" />
                   <input
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="+234 803 123 4567"
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-theme-divider text-sm text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                <label className="text-xs font-bold text-theme-secondary block mb-1">
                   Inquiry Email
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3" />
+                  <Mail className="w-4 h-4 text-theme-tertiary absolute left-3.5 top-3" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="contact@page.com"
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-theme-divider text-sm text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
                   />
                 </div>
               </div>
@@ -550,33 +550,33 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                <label className="text-xs font-bold text-theme-secondary block mb-1">
                   Website
                 </label>
                 <div className="relative">
-                  <Globe className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3" />
+                  <Globe className="w-4 h-4 text-theme-tertiary absolute left-3.5 top-3" />
                   <input
                     type="text"
                     value={website}
                     onChange={(e) => setWebsite(e.target.value)}
                     placeholder="deltacreators.africa"
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-theme-divider text-sm text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                <label className="text-xs font-bold text-theme-secondary block mb-1">
                   Operating Hours
                 </label>
                 <div className="relative">
-                  <Clock className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3" />
+                  <Clock className="w-4 h-4 text-theme-tertiary absolute left-3.5 top-3" />
                   <input
                     type="text"
                     value={hours}
                     onChange={(e) => setHours(e.target.value)}
                     placeholder="Mon - Fri: 8:00 AM - 8:00 PM"
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-theme-divider text-sm text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
                   />
                 </div>
               </div>
@@ -584,11 +584,11 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
           </div>
 
           {/* Bottom Actions */}
-          <div className="pt-6 border-t border-neutral-100 flex items-center justify-end gap-3">
+          <div className="pt-6 border-t border-theme-divider-light flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 rounded-xl border border-neutral-200 text-xs font-bold text-neutral-700 hover:bg-neutral-50 transition-colors cursor-pointer"
+              className="px-5 py-2.5 rounded-xl border border-theme-divider text-xs font-bold text-theme-secondary hover:bg-theme-base transition-colors cursor-pointer"
             >
               Cancel
             </button>
@@ -670,13 +670,13 @@ const LocationsManager = ({ pageId, locations, addLocation, removeLocation, trig
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="text-sm font-bold text-neutral-900">Business Locations</h4>
-          <p className="text-xs text-neutral-500 mt-0.5">Manage physical branches for your business.</p>
+          <h4 className="text-sm font-bold text-theme-primary">Business Locations</h4>
+          <p className="text-xs text-theme-tertiary mt-0.5">Manage physical branches for your business.</p>
         </div>
         {!isAdding && (
           <button
             onClick={() => setIsAdding(true)}
-            className="px-3.5 py-2 rounded-xl bg-neutral-900 text-white text-xs font-bold hover:bg-neutral-800 transition-colors"
+            className="px-3.5 py-2 rounded-xl bg-theme-inverse text-theme-text-inverse text-xs font-bold hover:bg-theme-inverse transition-colors"
           >
             Add Branch
           </button>
@@ -684,39 +684,39 @@ const LocationsManager = ({ pageId, locations, addLocation, removeLocation, trig
       </div>
 
       {isAdding && (
-        <form onSubmit={handleAdd} className="bg-neutral-50 border border-neutral-200 rounded-2xl p-4 sm:p-5 space-y-4 animate-in fade-in zoom-in-95">
-          <h5 className="text-xs font-black uppercase tracking-wider text-neutral-500">New Branch Details</h5>
+        <form onSubmit={handleAdd} className="bg-theme-base border border-theme-divider rounded-2xl p-4 sm:p-5 space-y-4 animate-in fade-in zoom-in-95">
+          <h5 className="text-xs font-black uppercase tracking-wider text-theme-tertiary">New Branch Details</h5>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-bold text-neutral-700 block mb-1">Branch Name *</label>
-              <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Lagos HQ" required className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:border-[#5E43F3]" />
+              <label className="text-xs font-bold text-theme-secondary block mb-1">Branch Name *</label>
+              <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Lagos HQ" required className="w-full px-3 py-2 rounded-lg border border-theme-divider text-sm focus:outline-none focus:border-[#5E43F3]" />
             </div>
             <div>
-              <label className="text-xs font-bold text-neutral-700 block mb-1">City / Region *</label>
-              <input type="text" value={locationStr} onChange={e => setLocationStr(e.target.value)} placeholder="e.g. Lagos, Nigeria" required className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:border-[#5E43F3]" />
+              <label className="text-xs font-bold text-theme-secondary block mb-1">City / Region *</label>
+              <input type="text" value={locationStr} onChange={e => setLocationStr(e.target.value)} placeholder="e.g. Lagos, Nigeria" required className="w-full px-3 py-2 rounded-lg border border-theme-divider text-sm focus:outline-none focus:border-[#5E43F3]" />
             </div>
             <div className="sm:col-span-2">
-              <label className="text-xs font-bold text-neutral-700 block mb-1">Street Address</label>
-              <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="e.g. 123 Business Way" className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:border-[#5E43F3]" />
+              <label className="text-xs font-bold text-theme-secondary block mb-1">Street Address</label>
+              <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="e.g. 123 Business Way" className="w-full px-3 py-2 rounded-lg border border-theme-divider text-sm focus:outline-none focus:border-[#5E43F3]" />
             </div>
             <div>
-              <label className="text-xs font-bold text-neutral-700 block mb-1">Phone Number</label>
-              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+234..." className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:border-[#5E43F3]" />
+              <label className="text-xs font-bold text-theme-secondary block mb-1">Phone Number</label>
+              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+234..." className="w-full px-3 py-2 rounded-lg border border-theme-divider text-sm focus:outline-none focus:border-[#5E43F3]" />
             </div>
             <div>
-              <label className="text-xs font-bold text-neutral-700 block mb-1">Operating Hours</label>
-              <input type="text" value={hours} onChange={e => setHours(e.target.value)} placeholder="e.g. 9 AM - 5 PM" className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:border-[#5E43F3]" />
+              <label className="text-xs font-bold text-theme-secondary block mb-1">Operating Hours</label>
+              <input type="text" value={hours} onChange={e => setHours(e.target.value)} placeholder="e.g. 9 AM - 5 PM" className="w-full px-3 py-2 rounded-lg border border-theme-divider text-sm focus:outline-none focus:border-[#5E43F3]" />
             </div>
           </div>
 
           <div className="flex items-center gap-2 pt-2">
             <input type="checkbox" id="isPrimaryBranch" checked={isPrimary} onChange={e => setIsPrimary(e.target.checked)} className="w-4 h-4 rounded text-[#5E43F3]" />
-            <label htmlFor="isPrimaryBranch" className="text-sm font-semibold text-neutral-700">This is the primary headquarters</label>
+            <label htmlFor="isPrimaryBranch" className="text-sm font-semibold text-theme-secondary">This is the primary headquarters</label>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 rounded-lg text-xs font-bold text-neutral-600 hover:bg-neutral-200">Cancel</button>
+            <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 rounded-lg text-xs font-bold text-theme-secondary hover:bg-theme-surface-active">Cancel</button>
             <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg bg-[#5E43F3] text-white text-xs font-bold hover:bg-[#4E34E0] disabled:opacity-50">
               {submitting ? 'Saving...' : 'Save Branch'}
             </button>
@@ -725,20 +725,20 @@ const LocationsManager = ({ pageId, locations, addLocation, removeLocation, trig
       )}
 
       {locations.length === 0 && !isAdding ? (
-        <div className="text-center py-12 bg-neutral-50 rounded-2xl border border-neutral-100">
-          <Building2 className="w-8 h-8 text-neutral-300 mx-auto mb-3" />
-          <p className="text-sm text-neutral-500 font-medium">No physical branches added yet.</p>
+        <div className="text-center py-12 bg-theme-base rounded-2xl border border-theme-divider-light">
+          <Building2 className="w-8 h-8 text-theme-tertiary mx-auto mb-3" />
+          <p className="text-sm text-theme-tertiary font-medium">No physical branches added yet.</p>
         </div>
       ) : (
         <div className="grid gap-3">
           {locations.map((loc: any) => (
-            <div key={loc._id} className="bg-white border border-neutral-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div key={loc._id} className="bg-theme-surface border border-theme-divider rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <h6 className="font-bold text-neutral-900">{loc.name}</h6>
+                  <h6 className="font-bold text-theme-primary">{loc.name}</h6>
                   {loc.isPrimary && <span className="px-2 py-0.5 rounded text-[10px] font-black bg-[#5E43F3]/10 text-[#5E43F3] uppercase tracking-wider">Primary HQ</span>}
                 </div>
-                <div className="flex flex-col gap-0.5 text-xs text-neutral-500">
+                <div className="flex flex-col gap-0.5 text-xs text-theme-tertiary">
                   <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {loc.address ? `${loc.address}, ${loc.location}` : loc.location}</span>
                   {loc.hours && <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {loc.hours}</span>}
                   {loc.phone && <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {loc.phone}</span>}

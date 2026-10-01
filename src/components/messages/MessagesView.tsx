@@ -166,7 +166,7 @@ export const MessagesView: React.FC = () => {
 
   if (activeChatId) {
     return (
-      <div className="min-h-screen bg-[#f6f3ee]">
+      <div className="min-h-screen bg-theme-base">
         <ChatModal />
       </div>
     );
@@ -175,7 +175,7 @@ export const MessagesView: React.FC = () => {
   return (
     <div
       id="messages-view-container"
-      className="min-h-screen bg-[#f6f3ee] pb-24 relative select-none"
+      className="min-h-screen bg-theme-base pb-24 relative select-none"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -184,14 +184,14 @@ export const MessagesView: React.FC = () => {
       onMouseUp={handleMouseUp}
     >
       {/* Top Header */}
-      <div className="sticky top-0 z-20 bg-[#f6f3ee]/95 backdrop-blur-md border-b border-neutral-200/80 px-4 py-2.5 space-y-2">
+      <div className="sticky top-0 z-20 bg-theme-base/95 backdrop-blur-md border-b border-theme-divider/80 px-4 py-2.5 space-y-2">
         <div className="flex items-center justify-between">
           <div
             onClick={handleRefresh}
             className="cursor-pointer group flex items-center gap-1.5"
             title="Tap to refresh messages"
           >
-            <h1 className="text-xl font-black tracking-tight text-neutral-950 font-sans group-hover:text-[#5E43F3] transition-colors">
+            <h1 className="text-xl font-black tracking-tight text-theme-primary font-sans group-hover:text-[#5E43F3] transition-colors">
               Messages
             </h1>
           </div>
@@ -199,19 +199,19 @@ export const MessagesView: React.FC = () => {
 
         {/* Search */}
         <div className="relative flex items-center">
-          <Search className="w-4 h-4 text-neutral-400 absolute left-3 pointer-events-none" />
+          <Search className="w-4 h-4 text-theme-tertiary absolute left-3 pointer-events-none" />
           <input
             id="input-messages-search"
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search messages & contacts..."
-            className="w-full pl-9 pr-9 py-2 rounded-full bg-neutral-100 hover:bg-neutral-200/60 focus:bg-white focus:ring-2 focus:ring-[#5E43F3]/20 focus:border-[#5E43F3] border border-transparent text-sm text-neutral-900 placeholder:text-neutral-400 transition-all outline-none"
+            className="w-full pl-9 pr-9 py-2 rounded-full bg-theme-surface-hover hover:bg-theme-surface-active/60 focus:bg-theme-surface focus:ring-2 focus:ring-[#5E43F3]/20 focus:border-[#5E43F3] border border-transparent text-sm text-theme-primary placeholder:text-theme-tertiary transition-all outline-none"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 p-1 rounded-full text-neutral-400 hover:text-neutral-600"
+              className="absolute right-3 p-1 rounded-full text-theme-tertiary hover:text-theme-secondary"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -225,11 +225,11 @@ export const MessagesView: React.FC = () => {
           height: `${effectiveOffset}px`,
           opacity: effectiveOffset > 4 ? 1 : 0,
         }}
-        className={`w-full overflow-hidden bg-gradient-to-b from-[#f8f5f1] to-[#f6f3ee] border-b border-neutral-200/80 flex items-center justify-center transition-[height,opacity] ${
+        className={`w-full overflow-hidden bg-gradient-to-b from-[#f8f5f1] to-[#f6f3ee] border-b border-theme-divider/80 flex items-center justify-center transition-[height,opacity] ${
           isPulling ? 'duration-0' : 'duration-300 ease-out'
         }`}
       >
-        <div className="flex items-center gap-2.5 text-xs font-semibold text-neutral-600">
+        <div className="flex items-center gap-2.5 text-xs font-semibold text-theme-secondary">
           {isRefreshing ? (
             <>
               <div className="w-5 h-5 rounded-full bg-[#5E43F3]/10 flex items-center justify-center">
@@ -249,12 +249,12 @@ export const MessagesView: React.FC = () => {
                   transform: `rotate(${Math.min(180, (pullDistance / pullThreshold) * 180)}deg)`,
                 }}
                 className={`w-5 h-5 rounded-full flex items-center justify-center transition-transform ${
-                  isReadyToRelease ? 'bg-[#5E43F3] text-white' : 'bg-neutral-200 text-neutral-600'
+                  isReadyToRelease ? 'bg-[#5E43F3] text-white' : 'bg-theme-surface-active text-theme-secondary'
                 }`}
               >
                 <ArrowDown className="w-3 h-3 stroke-[2.5]" />
               </div>
-              <span className={isReadyToRelease ? 'text-[#5E43F3] font-bold' : 'text-neutral-500'}>
+              <span className={isReadyToRelease ? 'text-[#5E43F3] font-bold' : 'text-theme-tertiary'}>
                 {isReadyToRelease ? 'Release to refresh' : 'Pull down to update'}
               </span>
             </>
@@ -263,10 +263,10 @@ export const MessagesView: React.FC = () => {
       </div>
 
       {/* Status / Story Cycles Section */}
-      <div className="pt-3 pb-3 border-b border-neutral-100">
+      <div className="pt-3 pb-3 border-b border-theme-divider-light">
         <div className="px-4 flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-700">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-theme-secondary">
               Status
             </h2>
           </div>
@@ -290,10 +290,10 @@ export const MessagesView: React.FC = () => {
                 className={`w-full h-full rounded-full flex items-center justify-center transition-transform group-hover:scale-105 p-[2.5px] ${
                   myHasItems
                     ? 'bg-gradient-to-tr from-[#5E43F3] via-fuchsia-500 to-amber-400'
-                    : 'bg-neutral-200'
+                    : 'bg-theme-surface-active'
                 }`}
               >
-                <div className="w-full h-full bg-white p-[1.5px] rounded-full flex items-center justify-center">
+                <div className="w-full h-full bg-theme-surface p-[1.5px] rounded-full flex items-center justify-center">
                   <Avatar src={currentUser.avatar} alt={currentUser.name} size="md" className="w-full h-full" />
                 </div>
               </div>
@@ -308,7 +308,7 @@ export const MessagesView: React.FC = () => {
                 <Plus className="w-3 h-3 stroke-[3]" />
               </button>
             </div>
-            <span className="text-[11px] font-bold text-neutral-900 mt-1.5 truncate w-full text-center block leading-tight">
+            <span className="text-[11px] font-bold text-theme-primary mt-1.5 truncate w-full text-center block leading-tight">
               {myHasItems ? 'My Status' : 'Add Status'}
             </span>
           </div>
@@ -329,10 +329,10 @@ export const MessagesView: React.FC = () => {
                     className={`w-full h-full rounded-full flex items-center justify-center transition-transform group-hover:scale-105 ${
                       cycle.hasUnseen
                         ? 'p-[2.5px] bg-gradient-to-tr from-[#5E43F3] via-fuchsia-500 to-pink-500 shadow-xs'
-                        : 'p-[2.5px] bg-neutral-300'
+                        : 'p-[2.5px] bg-theme-divider-strong'
                     }`}
                   >
-                    <div className="w-full h-full bg-white p-[1.5px] rounded-full flex items-center justify-center">
+                    <div className="w-full h-full bg-theme-surface p-[1.5px] rounded-full flex items-center justify-center">
                       <Avatar
                         src={user?.avatar || cycle.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400'}
                         alt={user?.name || cycle.name || 'User'}
@@ -345,7 +345,7 @@ export const MessagesView: React.FC = () => {
                     <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#5E43F3] rounded-full border-2 border-white" />
                   )}
                 </div>
-                <span className="text-[11px] font-bold text-neutral-800 mt-1.5 truncate w-full text-center block leading-tight">
+                <span className="text-[11px] font-bold text-theme-primary mt-1.5 truncate w-full text-center block leading-tight">
                   {firstName}
                 </span>
               </div>
@@ -357,7 +357,7 @@ export const MessagesView: React.FC = () => {
       {/* Chats Section */}
       <div className="pt-3">
         <div className="px-4 mb-1">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-600">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-theme-secondary">
             Direct Chats
           </h2>
         </div>
@@ -373,7 +373,7 @@ export const MessagesView: React.FC = () => {
                 key={conv.id}
                 id={`conv-item-${conv.id}`}
                 onClick={() => setActiveChatId(conv.id)}
-                className="p-4 flex items-center justify-between hover:bg-neutral-50/70 transition-colors cursor-pointer"
+                className="p-4 flex items-center justify-between hover:bg-theme-base/70 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <Avatar
@@ -384,7 +384,7 @@ export const MessagesView: React.FC = () => {
                   />
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-sm text-neutral-900 truncate">
+                      <span className="font-bold text-sm text-theme-primary truncate">
                         {conv.participant?.name}
                       </span>
                       {conv.participant?.isVerified && (
@@ -400,19 +400,19 @@ export const MessagesView: React.FC = () => {
                       </div>
                     )}
                     {(conv as any).isPageConvo && (conv as any).amIUserA && (
-                      <div className="text-[10px] font-black tracking-wider text-neutral-500 bg-neutral-100 border border-neutral-200 px-1.5 py-0.5 rounded-sm uppercase mt-1 w-fit mb-0.5">
+                      <div className="text-[10px] font-black tracking-wider text-theme-tertiary bg-theme-surface-hover border border-theme-divider px-1.5 py-0.5 rounded-sm uppercase mt-1 w-fit mb-0.5">
                         Business Chat
                       </div>
                     )}
-                    <div className="flex items-center gap-1 text-xs text-neutral-500 truncate mt-0.5 max-w-[220px]">
+                    <div className="flex items-center gap-1 text-xs text-theme-tertiary truncate mt-0.5 max-w-[220px]">
                       {isLastMine && (
                         <span className="shrink-0" title={lastMsg?.status === 'read' ? 'Read' : lastMsg?.status === 'delivered' ? 'Delivered' : 'Sent'}>
                           {lastMsg?.status === 'read' ? (
                             <CheckCheck className="w-3.5 h-3.5 text-sky-500 stroke-[2.4]" />
                           ) : lastMsg?.status === 'delivered' ? (
-                            <CheckCheck className="w-3.5 h-3.5 text-neutral-400 stroke-[2.2]" />
+                            <CheckCheck className="w-3.5 h-3.5 text-theme-tertiary stroke-[2.2]" />
                           ) : (
-                            <Check className="w-3 h-3 text-neutral-400 stroke-[2.2]" />
+                            <Check className="w-3 h-3 text-theme-tertiary stroke-[2.2]" />
                           )}
                         </span>
                       )}
@@ -423,12 +423,12 @@ export const MessagesView: React.FC = () => {
 
                 <div className="flex items-center gap-2 shrink-0 ml-3">
                   <div className="text-right">
-                    <span className="text-[11px] text-neutral-400 block">{conv.timestamp}</span>
+                    <span className="text-[11px] text-theme-tertiary block">{conv.timestamp}</span>
                     {conv.unreadCount > 0 && (
                       <span className="inline-block mt-1 w-2 h-2 rounded-full bg-[#5E43F3]" />
                     )}
                   </div>
-                  <ChevronRight className="w-4 h-4 text-neutral-300" />
+                  <ChevronRight className="w-4 h-4 text-theme-tertiary" />
                 </div>
               </div>
             );
@@ -439,7 +439,7 @@ export const MessagesView: React.FC = () => {
             <div
               key={contact.id}
               onClick={() => openChatWithUser(contact)}
-              className="p-4 flex items-center justify-between hover:bg-neutral-50/70 transition-colors cursor-pointer"
+              className="p-4 flex items-center justify-between hover:bg-theme-base/70 transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <Avatar
@@ -449,7 +449,7 @@ export const MessagesView: React.FC = () => {
                 />
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-sm text-neutral-900 truncate">
+                    <span className="font-bold text-sm text-theme-primary truncate">
                       {contact.name}
                     </span>
                     {contact.isVerified && (
@@ -459,21 +459,21 @@ export const MessagesView: React.FC = () => {
                     )}
                     {contact.badge && <Badge type={contact.badge} />}
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-neutral-500 truncate mt-0.5 max-w-[220px]">
+                  <div className="flex items-center gap-1 text-xs text-theme-tertiary truncate mt-0.5 max-w-[220px]">
                     <span className="truncate">Start a conversation</span>
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 shrink-0 ml-3">
-                <ChevronRight className="w-4 h-4 text-neutral-300" />
+                <ChevronRight className="w-4 h-4 text-theme-tertiary" />
               </div>
             </div>
           ))}
 
           {unifiedChats.matchedConvs.length === 0 && unifiedChats.matchedContacts.length === 0 && (
-            <div className="p-8 text-center text-neutral-400 space-y-2">
-              <MessageSquare className="w-8 h-8 mx-auto text-neutral-300" />
+            <div className="p-8 text-center text-theme-tertiary space-y-2">
+              <MessageSquare className="w-8 h-8 mx-auto text-theme-tertiary" />
               <p className="text-xs font-semibold">No chats found</p>
             </div>
           )}

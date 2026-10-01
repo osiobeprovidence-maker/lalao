@@ -275,13 +275,13 @@ export const VideoPlayer = React.memo(
     // Loading / error UI
     if (mediaStatus === 'uploading') {
       return (
-        <div className={`relative w-full rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col items-center justify-center p-6 gap-3 text-center ${className}`} style={wrapperStyle}>
+        <div className={`relative w-full rounded-2xl bg-theme-inverse border border-theme-divider-inverse flex flex-col items-center justify-center p-6 gap-3 text-center ${className}`} style={wrapperStyle}>
           <div className="w-14 h-14 rounded-full bg-[#5E43F3]/15 flex items-center justify-center border border-[#5E43F3]/30 shadow-inner">
             <Loader2 className="w-7 h-7 text-[#5E43F3] animate-spin" />
           </div>
           <div className="space-y-1">
             <p className="text-sm font-bold text-white tracking-wide">Uploading video...</p>
-            <p className="text-xs text-neutral-400">Your video is uploading securely</p>
+            <p className="text-xs text-theme-tertiary">Your video is uploading securely</p>
           </div>
         </div>
       );
@@ -289,7 +289,7 @@ export const VideoPlayer = React.memo(
     if (isProcessing && !isFailed) {
       const previewPoster = poster || (mediaUrl && (mediaUrl.startsWith('data:image') || mediaUrl.includes('image.mux.com')) ? mediaUrl : undefined);
       return (
-        <div className={`relative w-full rounded-2xl bg-neutral-900 border border-neutral-800/80 overflow-hidden flex flex-col items-center justify-center p-6 text-center ${className}`} style={wrapperStyle}>
+        <div className={`relative w-full rounded-2xl bg-theme-inverse border border-theme-divider-inverse/80 overflow-hidden flex flex-col items-center justify-center p-6 text-center ${className}`} style={wrapperStyle}>
           {previewPoster && (
             <img
               src={previewPoster}
@@ -305,9 +305,9 @@ export const VideoPlayer = React.memo(
             </div>
             <div className="space-y-1">
               <p className="text-sm font-bold text-white tracking-wide">Video processing...</p>
-              <p className="text-xs text-neutral-300/80 leading-relaxed">Preparing your video for optimal streaming playback</p>
+              <p className="text-xs text-theme-tertiary/80 leading-relaxed">Preparing your video for optimal streaming playback</p>
             </div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-[11px] font-semibold text-neutral-300 border border-white/10">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-theme-surface/10 backdrop-blur-md text-[11px] font-semibold text-theme-tertiary border border-white/10">
               <Film className="w-3 h-3 text-[#5E43F3]" />
               <span>HD Transcoding in background</span>
             </div>
@@ -317,13 +317,13 @@ export const VideoPlayer = React.memo(
     }
     if (isFailed) {
       return (
-        <div className={`relative w-full rounded-2xl bg-neutral-900 border border-rose-900/40 flex flex-col items-center justify-center gap-3 p-6 text-center ${className}`} style={wrapperStyle}>
+        <div className={`relative w-full rounded-2xl bg-theme-inverse border border-rose-900/40 flex flex-col items-center justify-center gap-3 p-6 text-center ${className}`} style={wrapperStyle}>
           <div className="w-12 h-12 rounded-full bg-rose-500/15 flex items-center justify-center text-rose-500 border border-rose-500/30">
             <AlertCircle className="w-6 h-6" />
           </div>
           <div className="space-y-1">
             <p className="text-sm font-bold text-white">Video processing failed</p>
-            <p className="text-xs text-neutral-400">Your post text remains active. Please try reprocessing.</p>
+            <p className="text-xs text-theme-tertiary">Your post text remains active. Please try reprocessing.</p>
           </div>
           {onRetryProcessing && (
             <button
@@ -404,7 +404,7 @@ export const VideoPlayer = React.memo(
 
         {/* Video Error State */}
         {hasError && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-900/90 backdrop-blur-sm z-30 gap-2">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-theme-inverse/90 backdrop-blur-sm z-30 gap-2">
             <div className="w-10 h-10 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-500">
               <AlertCircle className="w-5 h-5" />
             </div>
@@ -416,7 +416,7 @@ export const VideoPlayer = React.memo(
                 setIsLoading(true);
                 if (playerRef.current?.load) playerRef.current.load();
               }}
-              className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-colors"
+              className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-theme-surface/10 hover:bg-theme-surface/20 text-xs font-bold text-white transition-colors"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               Retry
@@ -442,9 +442,9 @@ export const VideoPlayer = React.memo(
               handleBarClick(e);
             }}
           >
-            <div className="absolute bottom-0 inset-x-0 h-1 bg-white/30">
+            <div className="absolute bottom-0 inset-x-0 h-1 bg-theme-surface/30">
               <div
-                className="absolute h-full bg-white transition-all duration-100 ease-linear"
+                className="absolute h-full bg-theme-surface transition-all duration-100 ease-linear"
                 style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
               />
             </div>

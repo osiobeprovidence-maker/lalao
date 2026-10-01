@@ -136,26 +136,26 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
   };
 
   return (
-    <div className="absolute inset-0 z-50 bg-white overflow-y-auto flex flex-col animate-in fade-in slide-in-from-right-4 duration-250">
+    <div className="absolute inset-0 z-50 bg-theme-surface overflow-y-auto flex flex-col animate-in fade-in slide-in-from-right-4 duration-250">
       {/* Top Sticky Header */}
-      <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-neutral-100 px-4 py-3 sm:px-6 flex items-center justify-between z-20 shrink-0">
+      <div className="sticky top-0 bg-theme-surface/95 backdrop-blur-md border-b border-theme-divider-light px-4 py-3 sm:px-6 flex items-center justify-between z-20 shrink-0">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="p-2 -ml-2 rounded-full hover:bg-neutral-100 text-neutral-800 transition-colors cursor-pointer"
+            className="p-2 -ml-2 rounded-full hover:bg-theme-surface-hover text-theme-primary transition-colors cursor-pointer"
             aria-label="Back"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-black text-neutral-950">Monetization & Payouts</h3>
+              <h3 className="text-base font-black text-theme-primary">Monetization & Payouts</h3>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700">
                 ACTIVE
               </span>
             </div>
-            <p className="text-xs text-neutral-500 font-medium truncate max-w-[180px] sm:max-w-md">
+            <p className="text-xs text-theme-tertiary font-medium truncate max-w-[180px] sm:max-w-md">
               @{page.username} · Earnings, channels & bank settings
             </p>
           </div>
@@ -175,7 +175,7 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
       </div>
 
       {/* Navigation Tabs */}
-      <div className="sticky top-[57px] bg-white border-b border-neutral-100 px-4 sm:px-6 flex items-center gap-2 z-10 shrink-0">
+      <div className="sticky top-[57px] bg-theme-surface border-b border-theme-divider-light px-4 sm:px-6 flex items-center gap-2 z-10 shrink-0">
         <div className="w-full max-w-2xl mx-auto flex items-center">
           <button
             type="button"
@@ -183,7 +183,7 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
             className={`py-3 px-3 text-xs font-bold transition-all relative cursor-pointer ${
               activeTab === 'overview'
                 ? 'text-[#5E43F3]'
-                : 'text-neutral-500 hover:text-neutral-800'
+                : 'text-theme-tertiary hover:text-theme-primary'
             }`}
           >
             <span>Overview & Earnings</span>
@@ -198,7 +198,7 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
             className={`py-3 px-3 text-xs font-bold transition-all relative cursor-pointer ${
               activeTab === 'features'
                 ? 'text-[#5E43F3]'
-                : 'text-neutral-500 hover:text-neutral-800'
+                : 'text-theme-tertiary hover:text-theme-primary'
             }`}
           >
             <span>Monetization Channels</span>
@@ -213,7 +213,7 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
             className={`py-3 px-3 text-xs font-bold transition-all relative cursor-pointer ${
               activeTab === 'payouts'
                 ? 'text-[#5E43F3]'
-                : 'text-neutral-500 hover:text-neutral-800'
+                : 'text-theme-tertiary hover:text-theme-primary'
             }`}
           >
             <span>Payout Settings</span>
@@ -231,8 +231,8 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
           <div className="space-y-6">
             {/* Financial Balance Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="p-4 sm:p-5 rounded-2xl bg-neutral-900 text-white shadow-sm flex flex-col justify-between">
-                <div className="flex items-center justify-between text-neutral-400 text-xs">
+              <div className="p-4 sm:p-5 rounded-2xl bg-theme-inverse text-theme-text-inverse shadow-sm flex flex-col justify-between">
+                <div className="flex items-center justify-between text-theme-tertiary text-xs">
                   <span>Available Balance</span>
                   <Wallet className="w-4 h-4 text-emerald-400" />
                 </div>
@@ -254,16 +254,16 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
                 </button>
               </div>
 
-              <div className="p-4 sm:p-5 rounded-2xl bg-neutral-50 border border-neutral-100 flex flex-col justify-between">
-                <div className="flex items-center justify-between text-neutral-500 text-xs">
+              <div className="p-4 sm:p-5 rounded-2xl bg-theme-base border border-theme-divider-light flex flex-col justify-between">
+                <div className="flex items-center justify-between text-theme-tertiary text-xs">
                   <span>Total Gross Earnings</span>
                   <TrendingUp className="w-4 h-4 text-[#5E43F3]" />
                 </div>
                 <div className="mt-3">
-                  <p className="text-2xl sm:text-3xl font-black text-neutral-900">
+                  <p className="text-2xl sm:text-3xl font-black text-theme-primary">
                     ₦{mon.totalEarnings.toLocaleString()}
                   </p>
-                  <p className="text-[10px] text-neutral-400 mt-0.5">
+                  <p className="text-[10px] text-theme-tertiary mt-0.5">
                     Lifetime revenue generated
                   </p>
                 </div>
@@ -272,20 +272,20 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
                 </div>
               </div>
 
-              <div className="p-4 sm:p-5 rounded-2xl bg-neutral-50 border border-neutral-100 flex flex-col justify-between">
-                <div className="flex items-center justify-between text-neutral-500 text-xs">
+              <div className="p-4 sm:p-5 rounded-2xl bg-theme-base border border-theme-divider-light flex flex-col justify-between">
+                <div className="flex items-center justify-between text-theme-tertiary text-xs">
                   <span>Pending Payout</span>
                   <Coins className="w-4 h-4 text-amber-500" />
                 </div>
                 <div className="mt-3">
-                  <p className="text-2xl sm:text-3xl font-black text-neutral-900">
+                  <p className="text-2xl sm:text-3xl font-black text-theme-primary">
                     ₦{mon.pendingPayout.toLocaleString()}
                   </p>
                   <p className="text-[10px] text-amber-600 font-bold mt-0.5">
                     Processing to {mon.payoutBank?.bankName || 'Bank'}
                   </p>
                 </div>
-                <div className="mt-4 text-[11px] text-neutral-500">
+                <div className="mt-4 text-[11px] text-theme-tertiary">
                   Auto clears weekly
                 </div>
               </div>
@@ -314,13 +314,13 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
 
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
-                    <span className="absolute left-3 top-2.5 text-xs font-bold text-neutral-500">₦</span>
+                    <span className="absolute left-3 top-2.5 text-xs font-bold text-theme-tertiary">₦</span>
                     <input
                       type="number"
                       value={withdrawAmount}
                       onChange={(e) => setWithdrawAmount(e.target.value)}
                       max={mon.availableBalance}
-                      className="w-full pl-7 pr-3 py-2 rounded-xl bg-white border border-emerald-300 text-sm font-bold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full pl-7 pr-3 py-2 rounded-xl bg-theme-surface border border-emerald-300 text-sm font-bold text-theme-primary focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                   <button
@@ -343,75 +343,75 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
 
             {/* Revenue Streams Breakdown */}
             <div>
-              <h4 className="text-xs font-black uppercase tracking-wider text-neutral-500 mb-3">
+              <h4 className="text-xs font-black uppercase tracking-wider text-theme-tertiary mb-3">
                 Revenue Breakdown by Stream
               </h4>
               <div className="space-y-2.5">
-                <div className="p-4 rounded-xl bg-neutral-50 border border-neutral-100 flex items-center justify-between">
+                <div className="p-4 rounded-xl bg-theme-base border border-theme-divider-light flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-lg bg-violet-100 text-[#5E43F3] flex items-center justify-center">
                       <Ticket className="w-5 h-5" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-neutral-900">Event Tickets & Passes</p>
-                      <p className="text-[11px] text-neutral-500">37 tickets sold across 2 events</p>
+                      <p className="text-xs font-bold text-theme-primary">Event Tickets & Passes</p>
+                      <p className="text-[11px] text-theme-tertiary">37 tickets sold across 2 events</p>
                     </div>
                   </div>
-                  <span className="text-sm font-black text-neutral-950">₦125,000</span>
+                  <span className="text-sm font-black text-theme-primary">₦125,000</span>
                 </div>
 
-                <div className="p-4 rounded-xl bg-neutral-50 border border-neutral-100 flex items-center justify-between">
+                <div className="p-4 rounded-xl bg-theme-base border border-theme-divider-light flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
                       <Users className="w-5 h-5" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-neutral-900">Community Memberships</p>
-                      <p className="text-[11px] text-neutral-500">12 recurring monthly subscribers</p>
+                      <p className="text-xs font-bold text-theme-primary">Community Memberships</p>
+                      <p className="text-[11px] text-theme-tertiary">12 recurring monthly subscribers</p>
                     </div>
                   </div>
-                  <span className="text-sm font-black text-neutral-950">₦42,000</span>
+                  <span className="text-sm font-black text-theme-primary">₦42,000</span>
                 </div>
 
-                <div className="p-4 rounded-xl bg-neutral-50 border border-neutral-100 flex items-center justify-between">
+                <div className="p-4 rounded-xl bg-theme-base border border-theme-divider-light flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-lg bg-pink-100 text-pink-600 flex items-center justify-center">
                       <Heart className="w-5 h-5" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-neutral-900">Supporter Tips & Contributions</p>
-                      <p className="text-[11px] text-neutral-500">Community love and direct tips</p>
+                      <p className="text-xs font-bold text-theme-primary">Supporter Tips & Contributions</p>
+                      <p className="text-[11px] text-theme-tertiary">Community love and direct tips</p>
                     </div>
                   </div>
-                  <span className="text-sm font-black text-neutral-950">₦18,000</span>
+                  <span className="text-sm font-black text-theme-primary">₦18,000</span>
                 </div>
               </div>
             </div>
 
             {/* Recent Transaction Activity */}
             <div>
-              <h4 className="text-xs font-black uppercase tracking-wider text-neutral-500 mb-3">
+              <h4 className="text-xs font-black uppercase tracking-wider text-theme-tertiary mb-3">
                 Recent Activity
               </h4>
-              <div className="divide-y divide-neutral-100 border border-neutral-100 rounded-2xl overflow-hidden bg-white">
+              <div className="divide-y divide-neutral-100 border border-theme-divider-light rounded-2xl overflow-hidden bg-theme-surface">
                 <div className="p-3.5 flex items-center justify-between text-xs">
                   <div>
-                    <p className="font-bold text-neutral-900">Creator Meetup Pass (Tier 1)</p>
-                    <p className="text-[10px] text-neutral-400">Purchased by @chidi_design · 2h ago</p>
+                    <p className="font-bold text-theme-primary">Creator Meetup Pass (Tier 1)</p>
+                    <p className="text-[10px] text-theme-tertiary">Purchased by @chidi_design · 2h ago</p>
                   </div>
                   <span className="font-black text-emerald-600">+₦3,500</span>
                 </div>
                 <div className="p-3.5 flex items-center justify-between text-xs">
                   <div>
-                    <p className="font-bold text-neutral-900">Monthly Page Membership</p>
-                    <p className="text-[10px] text-neutral-400">Subscription from @amina_k · Yesterday</p>
+                    <p className="font-bold text-theme-primary">Monthly Page Membership</p>
+                    <p className="text-[10px] text-theme-tertiary">Subscription from @amina_k · Yesterday</p>
                   </div>
                   <span className="font-black text-emerald-600">+₦3,500</span>
                 </div>
                 <div className="p-3.5 flex items-center justify-between text-xs">
                   <div>
-                    <p className="font-bold text-neutral-900">Supporter Tip</p>
-                    <p className="text-[10px] text-neutral-400">Received from @tunde_vibe · 3 days ago</p>
+                    <p className="font-bold text-theme-primary">Supporter Tip</p>
+                    <p className="text-[10px] text-theme-tertiary">Received from @tunde_vibe · 3 days ago</p>
                   </div>
                   <span className="font-black text-emerald-600">+₦5,000</span>
                 </div>
@@ -423,23 +423,23 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
         {/* TAB 2: MONETIZATION CHANNELS */}
         {activeTab === 'features' && (
           <div className="space-y-4">
-            <p className="text-xs text-neutral-500 leading-relaxed">
+            <p className="text-xs text-theme-tertiary leading-relaxed">
               Activate or configure the monetization channels appropriate for{' '}
-              <strong className="text-neutral-900">{page.name}</strong> (
+              <strong className="text-theme-primary">{page.name}</strong> (
               {page.type.toUpperCase()}).
             </p>
 
             {/* 1. Sell Products (Primary for Business) */}
             {(isBusiness || page.badge === 'BIZ') && (
-              <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/80 space-y-3">
+              <div className="p-4 rounded-2xl bg-theme-base border border-theme-divider/80 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-violet-100 text-[#5E43F3] flex items-center justify-center">
                       <ShoppingBag className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-neutral-900">Storefront & Physical Products</h4>
-                      <p className="text-xs text-neutral-500">Sell merchandise and catalog items directly on Page</p>
+                      <h4 className="text-sm font-bold text-theme-primary">Storefront & Physical Products</h4>
+                      <p className="text-xs text-theme-tertiary">Sell merchandise and catalog items directly on Page</p>
                     </div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -449,11 +449,11 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
                       onChange={(e) => setSellProducts(e.target.checked)}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E43F3]" />
+                    <div className="w-11 h-6 bg-theme-surface-active peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-theme-surface after:border-theme-divider-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E43F3]" />
                   </label>
                 </div>
                 {sellProducts && onOpenManageProducts && (
-                  <div className="pt-2 border-t border-neutral-200 flex justify-end">
+                  <div className="pt-2 border-t border-theme-divider flex justify-end">
                     <button
                       type="button"
                       onClick={() => {
@@ -471,15 +471,15 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
             )}
 
             {/* 2. Event Tickets & Paid Attendance (For All) */}
-            <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/80 space-y-3">
+            <div className="p-4 rounded-2xl bg-theme-base border border-theme-divider/80 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
                     <Ticket className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-neutral-900">Event Tickets & QR Check-in Passes</h4>
-                    <p className="text-xs text-neutral-500">Sell paid attendance tickets for meetups, tournaments & showcases</p>
+                    <h4 className="text-sm font-bold text-theme-primary">Event Tickets & QR Check-in Passes</h4>
+                    <p className="text-xs text-theme-tertiary">Sell paid attendance tickets for meetups, tournaments & showcases</p>
                   </div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
@@ -489,11 +489,11 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
                     onChange={(e) => setSellTickets(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E43F3]" />
+                  <div className="w-11 h-6 bg-theme-surface-active peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-theme-surface after:border-theme-divider-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E43F3]" />
                 </label>
               </div>
               {sellTickets && onOpenCreateEvent && (
-                <div className="pt-2 border-t border-neutral-200 flex justify-end">
+                <div className="pt-2 border-t border-theme-divider flex justify-end">
                   <button
                     type="button"
                     onClick={() => {
@@ -511,15 +511,15 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
 
             {/* 3. Page Memberships & Subscriptions (For Community / Org / Club) */}
             {(isCommunityOrClub || isOrg) && (
-              <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/80 space-y-3">
+              <div className="p-4 rounded-2xl bg-theme-base border border-theme-divider/80 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
                       <Users className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-neutral-900">Page Memberships / Subscriptions</h4>
-                      <p className="text-xs text-neutral-500">Provide exclusive member badges, private chatrooms and priority passes</p>
+                      <h4 className="text-sm font-bold text-theme-primary">Page Memberships / Subscriptions</h4>
+                      <p className="text-xs text-theme-tertiary">Provide exclusive member badges, private chatrooms and priority passes</p>
                     </div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -529,23 +529,23 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
                       onChange={(e) => setMemberships(e.target.checked)}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E43F3]" />
+                    <div className="w-11 h-6 bg-theme-surface-active peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-theme-surface after:border-theme-divider-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E43F3]" />
                   </label>
                 </div>
 
                 {memberships && (
-                  <div className="pt-2 border-t border-neutral-200 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-neutral-700">Monthly Subscription Fee</span>
+                  <div className="pt-2 border-t border-theme-divider flex items-center justify-between">
+                    <span className="text-xs font-semibold text-theme-secondary">Monthly Subscription Fee</span>
                     <div className="flex items-center gap-1.5 w-36">
-                      <span className="text-xs font-bold text-neutral-500">₦</span>
+                      <span className="text-xs font-bold text-theme-tertiary">₦</span>
                       <input
                         type="number"
                         value={membershipFee}
                         onChange={(e) => setMembershipFee(Number(e.target.value))}
                         step="500"
-                        className="w-full px-2 py-1 rounded-lg border border-neutral-300 text-xs font-bold text-neutral-900 bg-white"
+                        className="w-full px-2 py-1 rounded-lg border border-theme-divider-strong text-xs font-bold text-theme-primary bg-theme-surface"
                       />
-                      <span className="text-[10px] text-neutral-400">/mo</span>
+                      <span className="text-[10px] text-theme-tertiary">/mo</span>
                     </div>
                   </div>
                 )}
@@ -554,15 +554,15 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
 
             {/* 4. Community Support & Tips */}
             {(isCommunityOrClub || isOrg) && (
-              <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/80 space-y-3">
+              <div className="p-4 rounded-2xl bg-theme-base border border-theme-divider/80 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center">
                       <Heart className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-neutral-900">Community Support & Tips</h4>
-                      <p className="text-xs text-neutral-500">Allow followers to send one-time tips or micro-contributions</p>
+                      <h4 className="text-sm font-bold text-theme-primary">Community Support & Tips</h4>
+                      <p className="text-xs text-theme-tertiary">Allow followers to send one-time tips or micro-contributions</p>
                     </div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -572,22 +572,22 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
                       onChange={(e) => setCommunitySupport(e.target.checked)}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E43F3]" />
+                    <div className="w-11 h-6 bg-theme-surface-active peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-theme-surface after:border-theme-divider-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E43F3]" />
                   </label>
                 </div>
               </div>
             )}
 
             {/* 5. Promote Posts */}
-            <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/80 space-y-3">
+            <div className="p-4 rounded-2xl bg-theme-base border border-theme-divider/80 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
                     <TrendingUp className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-neutral-900">Post Promotions & Local Ads</h4>
-                    <p className="text-xs text-neutral-500">Boost page announcements to nearby audiences in Delta State</p>
+                    <h4 className="text-sm font-bold text-theme-primary">Post Promotions & Local Ads</h4>
+                    <p className="text-xs text-theme-tertiary">Boost page announcements to nearby audiences in Delta State</p>
                   </div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
@@ -597,7 +597,7 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
                     onChange={(e) => setPromotedPosts(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E43F3]" />
+                  <div className="w-11 h-6 bg-theme-surface-active peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-theme-surface after:border-theme-divider-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E43F3]" />
                 </label>
               </div>
             </div>
@@ -607,22 +607,22 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
         {/* TAB 3: PAYOUT SETTINGS */}
         {activeTab === 'payouts' && (
           <div className="space-y-5">
-            <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-100 flex items-start gap-3">
+            <div className="bg-theme-base rounded-2xl p-4 border border-theme-divider-light flex items-start gap-3">
               <Lock className="w-5 h-5 text-[#5E43F3] shrink-0 mt-0.5" />
-              <div className="text-xs text-neutral-600 leading-relaxed">
+              <div className="text-xs text-theme-secondary leading-relaxed">
                 Payouts are settled directly to Nigerian Commercial & Fintech Banks in Nigerian Naira (NGN). Verification is instant via automated NUBAN lookup.
               </div>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                <label className="text-xs font-bold text-theme-secondary block mb-1">
                   Select Receiving Bank
                 </label>
                 <select
                   value={bankName}
                   onChange={(e) => setBankName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm font-semibold text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-theme-divider text-sm font-semibold text-theme-primary bg-theme-surface focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
                 >
                   {NIGERIAN_BANKS.map((b) => (
                     <option key={b} value={b}>
@@ -633,7 +633,7 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
               </div>
 
               <div>
-                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                <label className="text-xs font-bold text-theme-secondary block mb-1">
                   10-Digit NUBAN Account Number
                 </label>
                 <input
@@ -642,12 +642,12 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
                   value={accountNumber}
                   onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ''))}
                   placeholder="0234819022"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm font-semibold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-theme-divider text-sm font-semibold text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                <label className="text-xs font-bold text-theme-secondary block mb-1">
                   Account Beneficiary Name
                 </label>
                 <div className="relative">
@@ -656,7 +656,7 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
                     value={accountName}
                     onChange={(e) => setAccountName(e.target.value)}
                     placeholder="DELTA CREATORS LAB / PROVIDENCE"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm font-semibold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-theme-divider text-sm font-semibold text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
                   />
                   <span className="absolute right-3 top-3 text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
                     VERIFIED
@@ -665,7 +665,7 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
               </div>
 
               <div>
-                <label className="text-xs font-bold text-neutral-700 block mb-1">
+                <label className="text-xs font-bold text-theme-secondary block mb-1">
                   Automatic Settlement Schedule
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -681,7 +681,7 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
                       className={`p-3 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
                         payoutSchedule === sch.id
                           ? 'border-[#5E43F3] bg-violet-50 text-[#5E43F3]'
-                          : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'
+                          : 'border-theme-divider text-theme-secondary hover:bg-theme-base'
                       }`}
                     >
                       {sch.label}
@@ -694,11 +694,11 @@ export const PageMonetizationModal: React.FC<PageMonetizationModalProps> = ({
         )}
 
         {/* Bottom Save Bar */}
-        <div className="pt-6 border-t border-neutral-100 flex items-center justify-end gap-3 mt-6">
+        <div className="pt-6 border-t border-theme-divider-light flex items-center justify-end gap-3 mt-6">
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl border border-neutral-200 text-xs font-bold text-neutral-700 hover:bg-neutral-50 transition-colors cursor-pointer"
+            className="px-5 py-2.5 rounded-xl border border-theme-divider text-xs font-bold text-theme-secondary hover:bg-theme-base transition-colors cursor-pointer"
           >
             Cancel
           </button>

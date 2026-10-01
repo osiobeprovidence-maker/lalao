@@ -79,7 +79,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     paid: { bg: 'bg-emerald-50 border-emerald-200 text-emerald-700', text: 'text-emerald-700', label: 'PAID' },
     pending: { bg: 'bg-amber-50 border-amber-200 text-amber-700', text: 'text-amber-700', label: 'PAYMENT PENDING' },
     failed: { bg: 'bg-rose-50 border-rose-200 text-rose-700', text: 'text-rose-700', label: 'PAYMENT FAILED' },
-    refunded: { bg: 'bg-neutral-100 border-neutral-300 text-neutral-700', text: 'text-neutral-700', label: 'REFUNDED' },
+    refunded: { bg: 'bg-theme-surface-hover border-theme-divider-strong text-theme-secondary', text: 'text-theme-secondary', label: 'REFUNDED' },
   };
 
   const currentPaymentBadge =
@@ -93,12 +93,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     processing: { label: 'Processing', color: 'text-amber-600 bg-amber-50 border-amber-200' },
     confirmed: { label: 'Confirmed', color: 'text-blue-600 bg-blue-50 border-blue-200' },
     cancelled: { label: 'Cancelled', color: 'text-rose-600 bg-rose-50 border-rose-200' },
-    refunded: { label: 'Refunded', color: 'text-neutral-600 bg-neutral-100 border-neutral-200' },
+    refunded: { label: 'Refunded', color: 'text-theme-secondary bg-theme-surface-hover border-theme-divider' },
   };
 
   const currentStatus = orderStatusLabels[order.orderStatus] || {
     label: order.orderStatus,
-    color: 'text-neutral-700 bg-neutral-100 border-neutral-200',
+    color: 'text-theme-secondary bg-theme-surface-hover border-theme-divider',
   };
 
   const handleCopyOrderId = () => {
@@ -149,27 +149,27 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     >
       <div
         id="order-detail-container"
-        className="bg-white w-full sm:max-w-md md:max-w-lg h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 relative z-10 overflow-hidden"
+        className="bg-theme-surface w-full sm:max-w-md md:max-w-lg h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 relative z-10 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <header className="px-4 py-3.5 border-b border-neutral-100 flex items-center justify-between bg-white sticky top-0 z-20">
+        <header className="px-4 py-3.5 border-b border-theme-divider-light flex items-center justify-between bg-theme-surface sticky top-0 z-20">
           <div className="flex items-center gap-2 min-w-0">
             <button
               id="btn-back-order-detail"
               type="button"
               onClick={handleBack}
-              className="p-2 rounded-full text-neutral-800 hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer -ml-1.5 shrink-0"
+              className="p-2 rounded-full text-theme-primary hover:bg-theme-surface-hover active:scale-95 transition-all cursor-pointer -ml-1.5 shrink-0"
               title="Back"
               aria-label="Back"
             >
               <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
             </button>
             <div className="min-w-0">
-              <h2 className="text-sm font-bold text-neutral-900 truncate">
+              <h2 className="text-sm font-bold text-theme-primary truncate">
                 Order Details
               </h2>
-              <p className="text-[11px] text-neutral-400 font-mono truncate">
+              <p className="text-[11px] text-theme-tertiary font-mono truncate">
                 #{order.id} · {order.dateFormatted}
               </p>
             </div>
@@ -179,7 +179,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             <button
               type="button"
               onClick={handleCopyOrderId}
-              className="p-2 rounded-full text-neutral-700 hover:bg-neutral-100 active:scale-95 transition-colors cursor-pointer"
+              className="p-2 rounded-full text-theme-secondary hover:bg-theme-surface-hover active:scale-95 transition-colors cursor-pointer"
               title="Copy Order ID"
               aria-label="Copy Order ID"
             >
@@ -188,7 +188,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             <button
               type="button"
               onClick={handleShareReceipt}
-              className="p-2 rounded-full text-neutral-700 hover:bg-neutral-100 active:scale-95 transition-colors cursor-pointer"
+              className="p-2 rounded-full text-theme-secondary hover:bg-theme-surface-hover active:scale-95 transition-colors cursor-pointer"
               title="Share Receipt"
               aria-label="Share Receipt"
             >
@@ -202,7 +202,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
           {/* Shop Card */}
           <div
             id="order-shop-card"
-            className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/80 flex items-center justify-between gap-3"
+            className="p-4 rounded-2xl bg-theme-base border border-theme-divider/80 flex items-center justify-between gap-3"
           >
             <div className="flex items-center gap-3 min-w-0">
               <Avatar
@@ -212,12 +212,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               />
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <h3 className="text-sm font-bold text-neutral-900 truncate">
+                  <h3 className="text-sm font-bold text-theme-primary truncate">
                     {order.storeName}
                   </h3>
                   <Badge type={order.storeBadge || 'BIZ'} size="sm" />
                 </div>
-                <p className="text-xs text-neutral-500 truncate">
+                <p className="text-xs text-theme-tertiary truncate">
                   {order.storeLocation || matchedStore?.location || 'Delta State'}
                 </p>
               </div>
@@ -227,7 +227,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               <button
                 type="button"
                 onClick={handleContactStore}
-                className="px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-100 active:scale-95 border border-neutral-200 text-neutral-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-all"
+                className="px-3 py-1.5 rounded-xl bg-theme-surface hover:bg-theme-surface-hover active:scale-95 border border-theme-divider text-theme-primary text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-all"
                 title="Message Shop"
               >
                 <MessageSquare className="w-3.5 h-3.5 text-[#5E43F3]" />
@@ -240,7 +240,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     handleBack();
                     setActivePageId(matchedStore.id);
                   }}
-                  className="p-1.5 rounded-xl bg-white hover:bg-neutral-100 active:scale-95 border border-neutral-200 text-neutral-700 cursor-pointer shadow-xs transition-all"
+                  className="p-1.5 rounded-xl bg-theme-surface hover:bg-theme-surface-hover active:scale-95 border border-theme-divider text-theme-secondary cursor-pointer shadow-xs transition-all"
                   title="Visit Shop Page"
                 >
                   <Store className="w-4 h-4" />
@@ -291,10 +291,10 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
           {/* Purchased Items List */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">
                 Items Purchased ({order.items?.length || 0})
               </h4>
-              <span className="text-xs text-neutral-500 font-medium">
+              <span className="text-xs text-theme-tertiary font-medium">
                 {order.items?.reduce((acc, it) => acc + (it.quantity || 0), 0) || 0} total units
               </span>
             </div>
@@ -303,9 +303,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               {(order.items || []).map((item, index) => (
                 <div
                   key={item.id || index}
-                  className="p-3 rounded-2xl border border-neutral-100 bg-white flex items-center gap-3 shadow-xs hover:border-neutral-200 transition-all"
+                  className="p-3 rounded-2xl border border-theme-divider-light bg-theme-surface flex items-center gap-3 shadow-xs hover:border-theme-divider transition-all"
                 >
-                  <div className="w-16 h-16 rounded-xl bg-neutral-100 overflow-hidden shrink-0 border border-neutral-100">
+                  <div className="w-16 h-16 rounded-xl bg-theme-surface-hover overflow-hidden shrink-0 border border-theme-divider-light">
                     <img
                       src={item.product.image}
                       alt={item.product.name}
@@ -319,12 +319,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <h5 className="text-xs sm:text-sm font-bold text-neutral-900 line-clamp-1">
+                    <h5 className="text-xs sm:text-sm font-bold text-theme-primary line-clamp-1">
                       {item.product.name}
                     </h5>
 
                     {item.options && Object.keys(item.options).length > 0 && (
-                      <p className="text-[11px] text-neutral-500 mt-0.5 truncate">
+                      <p className="text-[11px] text-theme-tertiary mt-0.5 truncate">
                         {Object.entries(item.options)
                           .map(([key, val]) => `${key}: ${val}`)
                           .join(' · ')}
@@ -332,10 +332,10 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     )}
 
                     <div className="flex items-center justify-between mt-1 text-xs">
-                      <span className="text-neutral-500 font-medium">
-                        Qty: <strong className="text-neutral-800">{item.quantity}</strong>
+                      <span className="text-theme-tertiary font-medium">
+                        Qty: <strong className="text-theme-primary">{item.quantity}</strong>
                       </span>
-                      <span className="font-bold text-neutral-900">
+                      <span className="font-bold text-theme-primary">
                         {currencySymbol}
                         {item.totalPrice.toLocaleString()}
                       </span>
@@ -347,23 +347,23 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
           </div>
 
           {/* Payment Summary */}
-          <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/80 space-y-2.5">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+          <div className="p-4 rounded-2xl bg-theme-base border border-theme-divider/80 space-y-2.5">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">
               Payment Summary
             </h4>
 
             <div className="space-y-1.5 text-xs">
-              <div className="flex items-center justify-between text-neutral-600">
+              <div className="flex items-center justify-between text-theme-secondary">
                 <span>Subtotal</span>
-                <span className="font-medium text-neutral-900">
+                <span className="font-medium text-theme-primary">
                   {currencySymbol}
                   {order.subtotal.toLocaleString()}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between text-neutral-600">
+              <div className="flex items-center justify-between text-theme-secondary">
                 <span>Delivery Fee</span>
-                <span className="font-medium text-neutral-900">
+                <span className="font-medium text-theme-primary">
                   {order.deliveryFee > 0
                     ? `${currencySymbol}${order.deliveryFee.toLocaleString()}`
                     : 'FREE'}
@@ -380,9 +380,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 </div>
               )}
 
-              <div className="pt-2 border-t border-neutral-200 flex items-baseline justify-between">
-                <span className="text-sm font-bold text-neutral-900">Total Paid</span>
-                <span className="text-lg font-black text-neutral-950">
+              <div className="pt-2 border-t border-theme-divider flex items-baseline justify-between">
+                <span className="text-sm font-bold text-theme-primary">Total Paid</span>
+                <span className="text-lg font-black text-theme-primary">
                   {currencySymbol}
                   {order.totalAmount.toLocaleString()}
                 </span>
@@ -391,36 +391,36 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
           </div>
 
           {/* Delivery & Contact Information */}
-          <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/80 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+          <div className="p-4 rounded-2xl bg-theme-base border border-theme-divider/80 space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">
               Fulfillment & Contact
             </h4>
 
             <div className="space-y-2 text-xs">
               <div className="flex items-start gap-2.5">
-                <MapPin className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
+                <MapPin className="w-4 h-4 text-theme-tertiary shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-bold text-neutral-900 block">
+                  <span className="font-bold text-theme-primary block">
                     {order.deliveryType === 'delivery' ? 'Delivery Address' : 'Pickup Location'}
                   </span>
-                  <p className="text-neutral-600 mt-0.5 leading-relaxed">
+                  <p className="text-theme-secondary mt-0.5 leading-relaxed">
                     {order.deliveryAddress || 'Delta State, Nigeria'}
                   </p>
                 </div>
               </div>
 
               {order.customerPhone && (
-                <div className="flex items-center gap-2.5 pt-1 border-t border-neutral-200/60">
-                  <Phone className="w-4 h-4 text-neutral-400 shrink-0" />
-                  <span className="text-neutral-700">
-                    Recipient Phone: <strong className="text-neutral-900">{order.customerPhone}</strong>
+                <div className="flex items-center gap-2.5 pt-1 border-t border-theme-divider/60">
+                  <Phone className="w-4 h-4 text-theme-tertiary shrink-0" />
+                  <span className="text-theme-secondary">
+                    Recipient Phone: <strong className="text-theme-primary">{order.customerPhone}</strong>
                   </span>
                 </div>
               )}
 
               {order.notes && (
-                <div className="pt-1 border-t border-neutral-200/60 text-neutral-600">
-                  <span className="font-semibold text-neutral-800">Delivery Notes: </span>
+                <div className="pt-1 border-t border-theme-divider/60 text-theme-secondary">
+                  <span className="font-semibold text-theme-primary">Delivery Notes: </span>
                   {order.notes}
                 </div>
               )}
@@ -438,7 +438,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <footer className="p-4 border-t border-neutral-100 bg-white sticky bottom-0 z-20 space-y-2">
+        <footer className="p-4 border-t border-theme-divider-light bg-theme-surface sticky bottom-0 z-20 space-y-2">
           <button
             type="button"
             onClick={handleContactStore}
@@ -451,7 +451,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
           <button
             type="button"
             onClick={handleBack}
-            className="w-full py-2.5 px-4 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold text-xs cursor-pointer transition-colors"
+            className="w-full py-2.5 px-4 rounded-xl bg-theme-surface-hover hover:bg-theme-surface-active text-theme-secondary font-bold text-xs cursor-pointer transition-colors"
           >
             Close
           </button>

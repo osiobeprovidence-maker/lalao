@@ -71,15 +71,15 @@ export const PronounsPage: React.FC = () => {
                   onClick={() => setSelected(option.id)}
                   className={`w-full p-4 rounded-xl border-2 flex items-center justify-between transition-all cursor-pointer ${
                     isSelected 
-                      ? 'border-[#3823A4] bg-[#F8F7FF]' 
-                      : 'border-neutral-200 bg-white hover:border-neutral-300'
+                      ? 'border-[#3823A4] bg-theme-base' 
+                      : 'border-theme-divider bg-theme-surface hover:border-theme-divider-strong'
                   }`}
                 >
-                  <span className={`font-bold text-base ${isSelected ? 'text-[#3823A4]' : 'text-neutral-700'}`}>
+                  <span className={`font-bold text-base ${isSelected ? 'text-[#3823A4]' : 'text-theme-secondary'}`}>
                     {option.label}
                   </span>
                   <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                    isSelected ? 'border-[#3823A4] bg-[#3823A4]' : 'border-neutral-300'
+                    isSelected ? 'border-[#3823A4] bg-[#3823A4]' : 'border-theme-divider-strong'
                   }`}>
                     {isSelected && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
                   </div>
@@ -92,7 +92,7 @@ export const PronounsPage: React.FC = () => {
                       value={customPronoun}
                       onChange={(e) => setCustomPronoun(e.target.value)}
                       placeholder="e.g. Ze / Zir"
-                      className="w-full px-4 py-3.5 rounded-xl border-2 border-neutral-200 bg-white text-base text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#3823A4] focus:ring-4 focus:ring-[#3823A4]/10 transition-all"
+                      className="w-full px-4 py-3.5 rounded-xl border-2 border-theme-divider bg-theme-surface text-base text-theme-primary placeholder-neutral-400 focus:outline-none focus:border-[#3823A4] focus:ring-4 focus:ring-[#3823A4]/10 transition-all"
                       autoFocus
                     />
                   </div>

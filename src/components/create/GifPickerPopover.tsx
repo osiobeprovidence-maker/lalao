@@ -256,27 +256,27 @@ export const GifPickerPopover: React.FC<GifPickerPopoverProps> = ({
   return (
     <div
       ref={popoverRef}
-      className="absolute bottom-full left-0 mb-2 z-50 w-[330px] sm:w-[380px] max-w-[90vw] rounded-2xl border border-neutral-200 bg-white p-3 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+      className="absolute bottom-full left-0 mb-2 z-50 w-[330px] sm:w-[380px] max-w-[90vw] rounded-2xl border border-theme-divider bg-theme-surface p-3 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
       role="dialog"
       aria-label="GIF Picker"
     >
       {/* Header */}
-      <div className="flex items-center gap-2 pb-2.5 border-b border-neutral-100">
+      <div className="flex items-center gap-2 pb-2.5 border-b border-theme-divider-light">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" />
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-theme-tertiary" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search GIFs..."
-            className="w-full rounded-xl bg-neutral-100 py-1.5 pl-8 pr-7 text-xs text-neutral-800 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#5E43F3]"
+            className="w-full rounded-xl bg-theme-surface-hover py-1.5 pl-8 pr-7 text-xs text-theme-primary placeholder:text-theme-tertiary focus:bg-theme-surface focus:outline-none focus:ring-1 focus:ring-[#5E43F3]"
             autoFocus
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-theme-tertiary hover:text-theme-secondary"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -285,7 +285,7 @@ export const GifPickerPopover: React.FC<GifPickerPopoverProps> = ({
         <button
           type="button"
           onClick={onClose}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-700"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-theme-tertiary transition hover:bg-theme-surface-hover hover:text-theme-secondary"
           aria-label="Close GIF picker"
         >
           <X className="h-4 w-4" />
@@ -294,7 +294,7 @@ export const GifPickerPopover: React.FC<GifPickerPopoverProps> = ({
 
       {/* Category selector tabs (shown when not searching) */}
       {!searchQuery && (
-        <div className="flex items-center gap-1.5 overflow-x-auto border-b border-neutral-100 py-2 scrollbar-none">
+        <div className="flex items-center gap-1.5 overflow-x-auto border-b border-theme-divider-light py-2 scrollbar-none">
           {GIF_CATEGORIES.map((cat) => {
             const isActive = activeCategory === cat.id;
             return (
@@ -305,7 +305,7 @@ export const GifPickerPopover: React.FC<GifPickerPopoverProps> = ({
                 className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
                   isActive
                     ? 'bg-[#5E43F3] text-white'
-                    : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                    : 'bg-theme-surface-hover text-theme-secondary hover:bg-theme-surface-active'
                 }`}
               >
                 {cat.label}
@@ -318,7 +318,7 @@ export const GifPickerPopover: React.FC<GifPickerPopoverProps> = ({
       {/* GIF Grid */}
       <div className="mt-2.5 max-h-[260px] overflow-y-auto pr-1">
         {isLoading ? (
-          <div className="flex h-32 items-center justify-center text-neutral-400">
+          <div className="flex h-32 items-center justify-center text-theme-tertiary">
             <Loader2 className="h-5 w-5 animate-spin text-[#5E43F3]" />
           </div>
         ) : displayedGifs.length > 0 ? (
@@ -328,7 +328,7 @@ export const GifPickerPopover: React.FC<GifPickerPopoverProps> = ({
                 key={gif.id}
                 type="button"
                 onClick={() => onSelectGif(gif.url)}
-                className="group relative aspect-video overflow-hidden rounded-xl border border-neutral-100 bg-neutral-100 transition hover:opacity-90 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                className="group relative aspect-video overflow-hidden rounded-xl border border-theme-divider-light bg-theme-surface-hover transition hover:opacity-90 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
               >
                 <img
                   src={gif.url}
@@ -343,7 +343,7 @@ export const GifPickerPopover: React.FC<GifPickerPopoverProps> = ({
             ))}
           </div>
         ) : (
-          <div className="py-8 text-center text-xs text-neutral-400">
+          <div className="py-8 text-center text-xs text-theme-tertiary">
             No GIFs found. Try searching for another term!
           </div>
         )}

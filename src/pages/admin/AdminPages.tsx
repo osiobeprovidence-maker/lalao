@@ -64,13 +64,13 @@ export const AdminPages: React.FC = () => {
     <div className="space-y-6 relative">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-neutral-900">Pages & Businesses</h1>
-          <p className="text-sm text-neutral-500 mt-1">All Lalao pages across the platform</p>
+          <h1 className="text-2xl font-black text-theme-primary">Pages & Businesses</h1>
+          <p className="text-sm text-theme-tertiary mt-1">All Lalao pages across the platform</p>
         </div>
         <button
           onClick={handleBootstrap}
           disabled={bootstrapping}
-          className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-xl text-sm font-bold hover:bg-neutral-800 disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 bg-theme-inverse text-theme-text-inverse rounded-xl text-sm font-bold hover:bg-theme-inverse disabled:opacity-50"
         >
           <Play className="w-4 h-4" />
           {bootstrapping ? 'Running...' : 'Bootstrap System Pages'}
@@ -79,18 +79,18 @@ export const AdminPages: React.FC = () => {
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-tertiary" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name or username..."
-            className="w-full pl-9 pr-4 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-[#5200FF] shadow-sm"
+            className="w-full pl-9 pr-4 py-2 rounded-xl bg-theme-surface border border-theme-divider text-theme-primary text-sm placeholder:text-theme-tertiary focus:outline-none focus:border-[#5200FF] shadow-sm"
           />
         </div>
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 text-sm focus:outline-none focus:border-[#5200FF] cursor-pointer shadow-sm"
+          className="px-3 py-2 rounded-xl bg-theme-surface border border-theme-divider text-theme-primary text-sm focus:outline-none focus:border-[#5200FF] cursor-pointer shadow-sm"
         >
           <option value="">All types</option>
           <option value="business">Business</option>
@@ -104,31 +104,31 @@ export const AdminPages: React.FC = () => {
       {/* Mobile Cards */}
       <div className="md:hidden space-y-3">
         {pages === undefined ? (
-          <div className="text-center py-8 text-neutral-500 bg-white rounded-2xl border border-neutral-200 shadow-sm text-sm">
+          <div className="text-center py-8 text-theme-tertiary bg-theme-surface rounded-2xl border border-theme-divider shadow-sm text-sm">
             Loading pages...
           </div>
         ) : pages.length === 0 ? (
-          <div className="text-center py-8 text-neutral-500 bg-white rounded-2xl border border-neutral-200 shadow-sm text-sm">
+          <div className="text-center py-8 text-theme-tertiary bg-theme-surface rounded-2xl border border-theme-divider shadow-sm text-sm">
             No pages found
           </div>
         ) : (
           pages.map((p: any) => (
-            <div key={p._id} className="bg-white border border-neutral-200 rounded-2xl p-4 shadow-sm">
+            <div key={p._id} className="bg-theme-surface border border-theme-divider rounded-2xl p-4 shadow-sm">
               <div className="flex items-start justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-neutral-200 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-theme-surface-active flex items-center justify-center shrink-0">
                     {p.avatar ? (
                       <img src={p.avatar} alt={p.name} className="w-full h-full rounded-lg object-cover" />
                     ) : (
-                      <Building2 className="w-4 h-4 text-neutral-500" />
+                      <Building2 className="w-4 h-4 text-theme-tertiary" />
                     )}
                   </div>
                   <div>
-                    <p className="font-semibold text-neutral-900 line-clamp-1">{p.name}</p>
-                    <p className="text-[11px] text-neutral-500">@{p.username}</p>
+                    <p className="font-semibold text-theme-primary line-clamp-1">{p.name}</p>
+                    <p className="text-[11px] text-theme-tertiary">@{p.username}</p>
                   </div>
                 </div>
-                <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase shrink-0 ${TYPE_COLORS[p.type] ?? 'bg-neutral-100 text-neutral-600 border-neutral-200'}`}>
+                <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase shrink-0 ${TYPE_COLORS[p.type] ?? 'bg-theme-surface-hover text-theme-secondary border-theme-divider'}`}>
                   {p.type}
                 </span>
               </div>
@@ -136,13 +136,13 @@ export const AdminPages: React.FC = () => {
               <div className="flex flex-col gap-1.5 mb-3 text-xs">
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-neutral-500">Owner: </span>
-                    <span className="font-medium text-neutral-900">{p.ownerName}</span>
-                    {p.ownerEmail && <span className="text-neutral-400 ml-1">({p.ownerEmail})</span>}
+                    <span className="text-theme-tertiary">Owner: </span>
+                    <span className="font-medium text-theme-primary">{p.ownerName}</span>
+                    {p.ownerEmail && <span className="text-theme-tertiary ml-1">({p.ownerEmail})</span>}
                   </div>
                   <button 
                     onClick={() => { setSelectedPage(p); setAssignModalOpen(true); }}
-                    className="p-1 text-neutral-400 hover:text-neutral-900 bg-neutral-50 hover:bg-neutral-100 rounded"
+                    className="p-1 text-theme-tertiary hover:text-theme-primary bg-theme-base hover:bg-theme-surface-hover rounded"
                     title="Re-assign owner"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
@@ -150,17 +150,17 @@ export const AdminPages: React.FC = () => {
                 </div>
               </div>
               
-              <div className="flex items-center justify-between gap-2 pt-3 border-t border-neutral-100">
+              <div className="flex items-center justify-between gap-2 pt-3 border-t border-theme-divider-light">
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1 text-neutral-600">
+                  <div className="flex items-center gap-1 text-theme-secondary">
                     <Users className="w-3.5 h-3.5" />
                     <span className="text-xs font-semibold">{p.followersCount ?? 0}</span>
                   </div>
-                  <div className="text-[11px] text-neutral-500">
-                    Subs: <span className="font-semibold text-neutral-900">{p.subscriptionCount}</span>
+                  <div className="text-[11px] text-theme-tertiary">
+                    Subs: <span className="font-semibold text-theme-primary">{p.subscriptionCount}</span>
                   </div>
                 </div>
-                <span className="text-neutral-400 text-[10px] font-medium">
+                <span className="text-theme-tertiary text-[10px] font-medium">
                   {new Date(p.createdAt).toLocaleDateString()}
                 </span>
               </div>
@@ -170,19 +170,19 @@ export const AdminPages: React.FC = () => {
       </div>
 
       {/* Desktop Table */}
-      <div className="hidden md:block rounded-2xl border border-neutral-200 bg-white overflow-hidden shadow-sm">
+      <div className="hidden md:block rounded-2xl border border-theme-divider bg-theme-surface overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-neutral-200 bg-neutral-50/50">
-                <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider text-neutral-500">Page</th>
-                <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider text-neutral-500">Type</th>
-                <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider text-neutral-500">Partner</th>
-                <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider text-neutral-500">Owner</th>
-                <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider text-neutral-500">Followers</th>
-                <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider text-neutral-500">Subs</th>
-                <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider text-neutral-500">Created</th>
-                <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wider text-neutral-500">Actions</th>
+              <tr className="border-b border-theme-divider bg-theme-base/50">
+                <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider text-theme-tertiary">Page</th>
+                <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider text-theme-tertiary">Type</th>
+                <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider text-theme-tertiary">Partner</th>
+                <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider text-theme-tertiary">Owner</th>
+                <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider text-theme-tertiary">Followers</th>
+                <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider text-theme-tertiary">Subs</th>
+                <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider text-theme-tertiary">Created</th>
+                <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wider text-theme-tertiary">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
@@ -190,34 +190,34 @@ export const AdminPages: React.FC = () => {
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr key={i}>
                     <td colSpan={6} className="px-4 py-3">
-                      <div className="h-6 rounded bg-neutral-100 animate-pulse" />
+                      <div className="h-6 rounded bg-theme-surface-hover animate-pulse" />
                     </td>
                   </tr>
                 ))
               ) : pages.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-neutral-500 text-sm">No pages found</td>
+                  <td colSpan={7} className="px-4 py-8 text-center text-theme-tertiary text-sm">No pages found</td>
                 </tr>
               ) : (
                 pages.map((p: any) => (
-                  <tr key={p._id} className="hover:bg-neutral-50 transition-colors">
+                  <tr key={p._id} className="hover:bg-theme-base transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-neutral-200 flex items-center justify-center shrink-0">
+                        <div className="w-8 h-8 rounded-lg bg-theme-surface-active flex items-center justify-center shrink-0">
                           {p.avatar ? (
                             <img src={p.avatar} alt={p.name} className="w-full h-full rounded-lg object-cover" />
                           ) : (
-                            <Building2 className="w-4 h-4 text-neutral-500" />
+                            <Building2 className="w-4 h-4 text-theme-tertiary" />
                           )}
                         </div>
                         <div>
-                          <p className="font-semibold text-neutral-900">{p.name}</p>
-                          <p className="text-[11px] text-neutral-500">@{p.username}</p>
+                          <p className="font-semibold text-theme-primary">{p.name}</p>
+                          <p className="text-[11px] text-theme-tertiary">@{p.username}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${TYPE_COLORS[p.type] ?? 'bg-neutral-100 text-neutral-600 border-neutral-200'}`}>
+                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${TYPE_COLORS[p.type] ?? 'bg-theme-surface-hover text-theme-secondary border-theme-divider'}`}>
                         {p.type}
                       </span>
                     </td>
@@ -225,29 +225,29 @@ export const AdminPages: React.FC = () => {
                       {p.partnerType === 'COMMERCE_PARTNER' ? (
                         <span className="text-xs font-bold text-indigo-600">Commerce</span>
                       ) : p.partnerType ? (
-                        <span className="text-xs font-medium text-neutral-600">{p.partnerType}</span>
+                        <span className="text-xs font-medium text-theme-secondary">{p.partnerType}</span>
                       ) : (
-                        <span className="text-xs text-neutral-400">—</span>
+                        <span className="text-xs text-theme-tertiary">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <p className="text-neutral-900 text-sm">{p.ownerName}</p>
-                      {p.ownerEmail && <p className="text-[11px] text-neutral-500">{p.ownerEmail}</p>}
+                      <p className="text-theme-primary text-sm">{p.ownerName}</p>
+                      {p.ownerEmail && <p className="text-[11px] text-theme-tertiary">{p.ownerEmail}</p>}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 text-neutral-600">
+                      <div className="flex items-center gap-1 text-theme-secondary">
                         <Users className="w-3.5 h-3.5" />
                         {p.followersCount ?? 0}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-neutral-600">{p.subscriptionCount}</td>
-                    <td className="px-4 py-3 text-neutral-500 text-[11px]">
+                    <td className="px-4 py-3 text-theme-secondary">{p.subscriptionCount}</td>
+                    <td className="px-4 py-3 text-theme-tertiary text-[11px]">
                       {new Date(p.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button 
                         onClick={() => { setSelectedPage(p); setAssignModalOpen(true); }}
-                        className="p-1.5 text-neutral-400 hover:text-[#5E43F3] bg-neutral-50 hover:bg-indigo-50 rounded-lg transition-colors"
+                        className="p-1.5 text-theme-tertiary hover:text-[#5E43F3] bg-theme-base hover:bg-indigo-50 rounded-lg transition-colors"
                         title="Re-assign owner"
                       >
                         <Edit2 className="w-4 h-4" />
@@ -264,50 +264,50 @@ export const AdminPages: React.FC = () => {
       {/* Assign Owner Modal */}
       {assignModalOpen && selectedPage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl animate-in zoom-in-95">
-            <h3 className="text-xl font-black text-neutral-900 mb-1">Assign Owner</h3>
-            <p className="text-sm text-neutral-500 mb-6">
-              Assigning ownership for page <span className="font-bold text-neutral-900">{selectedPage.name}</span>
+          <div className="bg-theme-surface rounded-2xl w-full max-w-md p-6 shadow-xl animate-in zoom-in-95">
+            <h3 className="text-xl font-black text-theme-primary mb-1">Assign Owner</h3>
+            <p className="text-sm text-theme-tertiary mb-6">
+              Assigning ownership for page <span className="font-bold text-theme-primary">{selectedPage.name}</span>
             </p>
 
             <form onSubmit={handleAssignOwner} className="space-y-4">
               <div>
-                <label className="block text-sm font-bold text-neutral-700 mb-1.5">
+                <label className="block text-sm font-bold text-theme-secondary mb-1.5">
                   Search Users
                 </label>
                 <div className="relative mb-3">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-tertiary" />
                   <input
                     type="text"
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:border-[#5E43F3]"
+                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-theme-divider text-sm focus:outline-none focus:border-[#5E43F3]"
                     placeholder="Search by name or @username..."
                   />
                 </div>
                 
-                <div className="max-h-48 overflow-y-auto space-y-1 border border-neutral-100 rounded-xl p-1 bg-neutral-50/50">
+                <div className="max-h-48 overflow-y-auto space-y-1 border border-theme-divider-light rounded-xl p-1 bg-theme-base/50">
                   {searchResults.length === 0 ? (
-                    <div className="p-3 text-center text-xs text-neutral-500">No users found</div>
+                    <div className="p-3 text-center text-xs text-theme-tertiary">No users found</div>
                   ) : (
                     searchResults.map((u: any) => (
                       <div 
                         key={u._id}
                         onClick={() => setTargetEmail(u.email)}
-                        className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${targetEmail === u.email ? 'bg-indigo-50 border border-indigo-100' : 'hover:bg-white hover:shadow-sm border border-transparent'}`}
+                        className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${targetEmail === u.email ? 'bg-indigo-50 border border-indigo-100' : 'hover:bg-theme-surface hover:shadow-sm border border-transparent'}`}
                       >
-                        <div className="w-8 h-8 rounded-full bg-neutral-200 overflow-hidden shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-theme-surface-active overflow-hidden shrink-0">
                           {u.avatarUrl ? (
                             <img src={u.avatarUrl} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-neutral-500 text-xs font-bold bg-neutral-200">
+                            <div className="w-full h-full flex items-center justify-center text-theme-tertiary text-xs font-bold bg-theme-surface-active">
                               {u.name?.charAt(0) ?? '?'}
                             </div>
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-neutral-900 truncate">{u.name}</p>
-                          <p className="text-xs text-neutral-500 truncate">@{u.username} • {u.email}</p>
+                          <p className="text-sm font-bold text-theme-primary truncate">{u.name}</p>
+                          <p className="text-xs text-theme-tertiary truncate">@{u.username} • {u.email}</p>
                         </div>
                         {targetEmail === u.email && (
                           <div className="w-2 h-2 rounded-full bg-[#5E43F3]"></div>
@@ -322,7 +322,7 @@ export const AdminPages: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setAssignModalOpen(false)}
-                  className="flex-1 px-4 py-2 rounded-xl text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 transition-colors"
+                  className="flex-1 px-4 py-2 rounded-xl text-sm font-bold text-theme-secondary bg-theme-surface-hover hover:bg-theme-surface-active transition-colors"
                 >
                   Cancel
                 </button>

@@ -62,17 +62,17 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-white">
+    <div className="min-h-screen flex bg-theme-surface">
       {/* Left Panel — Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-[#5E43F3] flex-col justify-between p-12">
         {/* Animated orbs */}
-        <div className="absolute top-[-80px] left-[-80px] w-[400px] h-[400px] rounded-full bg-white/5 blur-3xl" />
+        <div className="absolute top-[-80px] left-[-80px] w-[400px] h-[400px] rounded-full bg-theme-surface/5 blur-3xl" />
         <div className="absolute bottom-[-60px] right-[-60px] w-[300px] h-[300px] rounded-full bg-[#3B28C2]/60 blur-2xl" />
-        <div className="absolute top-1/2 left-1/3 w-[200px] h-[200px] rounded-full bg-white/4 blur-2xl" />
+        <div className="absolute top-1/2 left-1/3 w-[200px] h-[200px] rounded-full bg-theme-surface/4 blur-2xl" />
 
         {/* Logo */}
         <div className="relative z-10 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center border border-white/20">
+          <div className="w-10 h-10 rounded-2xl bg-theme-surface/15 backdrop-blur flex items-center justify-center border border-white/20">
             <AppIcon className="w-5 h-5" fallbackClassName="text-white fill-white" />
           </div>
           <span className="lalao-wordmark text-white text-2xl">lalao</span>
@@ -118,20 +118,20 @@ export const LoginPage: React.FC = () => {
       </div>
 
       {/* Right Panel — Form */}
-      <div className="flex-1 flex flex-col justify-center items-center px-6 py-12 sm:px-12 bg-white">
+      <div className="flex-1 flex flex-col justify-center items-center px-6 py-12 sm:px-12 bg-theme-surface">
         {/* Mobile logo */}
         <div className="lg:hidden flex items-center gap-2.5 mb-10">
           <div className="w-9 h-9 rounded-xl bg-[#5E43F3] flex items-center justify-center">
             <AppIcon className="w-4 h-4" fallbackClassName="text-white fill-white" />
           </div>
-          <span className="lalao-wordmark text-xl text-neutral-900">lalao</span>
+          <span className="lalao-wordmark text-xl text-theme-primary">lalao</span>
         </div>
 
         <div className="w-full max-w-sm space-y-8">
           {/* Heading */}
           <div className="space-y-1.5">
-            <h2 className="text-3xl font-black text-neutral-950 tracking-tight">Welcome back</h2>
-            <p className="text-neutral-500 text-sm">Sign in to your Lalao account</p>
+            <h2 className="text-3xl font-black text-theme-primary tracking-tight">Welcome back</h2>
+            <p className="text-theme-tertiary text-sm">Sign in to your Lalao account</p>
           </div>
 
           {/* Form */}
@@ -143,7 +143,7 @@ export const LoginPage: React.FC = () => {
             )}
 
             <div className="space-y-1.5">
-              <label htmlFor="identifier" className="text-xs font-bold text-neutral-700 tracking-wide uppercase">
+              <label htmlFor="identifier" className="text-xs font-bold text-theme-secondary tracking-wide uppercase">
                 Email or Phone
               </label>
               <input
@@ -152,13 +152,13 @@ export const LoginPage: React.FC = () => {
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 placeholder="you@example.com or 080..."
-                className="w-full px-4 py-3 rounded-xl border border-neutral-200 bg-neutral-50 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3] transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-theme-divider bg-theme-base text-sm text-theme-primary placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3] transition-all"
               />
             </div>
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label htmlFor="password" className="text-xs font-bold text-neutral-700 tracking-wide uppercase">
+                <label htmlFor="password" className="text-xs font-bold text-theme-secondary tracking-wide uppercase">
                   Password
                 </label>
                 <Link
@@ -175,12 +175,12 @@ export const LoginPage: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-4 py-3 rounded-xl border border-neutral-200 bg-neutral-50 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3] transition-all pr-11"
+                  className="w-full px-4 py-3 rounded-xl border border-theme-divider bg-theme-base text-sm text-theme-primary placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#5E43F3]/30 focus:border-[#5E43F3] transition-all pr-11"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-tertiary hover:text-theme-secondary transition-colors cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -208,9 +208,9 @@ export const LoginPage: React.FC = () => {
 
           {/* Divider */}
           <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-neutral-100" />
-            <span className="text-xs text-neutral-400 font-medium">or</span>
-            <div className="flex-1 h-px bg-neutral-100" />
+            <div className="flex-1 h-px bg-theme-surface-hover" />
+            <span className="text-xs text-theme-tertiary font-medium">or</span>
+            <div className="flex-1 h-px bg-theme-surface-hover" />
           </div>
 
           {/* Social auth placeholders */}
@@ -248,12 +248,12 @@ export const LoginPage: React.FC = () => {
                   setError(err.message || 'Google sign-in failed.');
                 }
               }}
-              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-sm font-semibold text-neutral-800 transition-all cursor-pointer active:scale-[0.98]"
+              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-theme-divider bg-theme-surface hover:bg-theme-base text-sm font-semibold text-theme-primary transition-all cursor-pointer active:scale-[0.98]"
             >
               <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-4 h-4" />
               <span>Google</span>
             </button>
-            <button type="button" className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-sm font-semibold text-neutral-800 transition-all cursor-pointer active:scale-[0.98]">
+            <button type="button" className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-theme-divider bg-theme-surface hover:bg-theme-base text-sm font-semibold text-theme-primary transition-all cursor-pointer active:scale-[0.98]">
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.167 6.839 9.49.5.09.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.605-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.091-.646.35-1.087.636-1.337-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
               </svg>
@@ -262,7 +262,7 @@ export const LoginPage: React.FC = () => {
           </div>
 
           {/* Sign up link */}
-          <p className="text-center text-sm text-neutral-500">
+          <p className="text-center text-sm text-theme-tertiary">
             Don't have an account?{' '}
             <Link to="/signup" className="font-bold text-[#5E43F3] hover:text-[#4E34E0] transition-colors">
               Create account

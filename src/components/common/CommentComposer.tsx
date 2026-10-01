@@ -128,24 +128,24 @@ export const CommentComposer: React.FC<CommentComposerProps> = ({
     <div className="flex flex-col w-full">
       {replyingTo && (
         <div className="flex items-center justify-between mb-2 shrink-0 px-1">
-          <div className="flex items-center gap-1.5 text-xs text-neutral-500 font-medium">
+          <div className="flex items-center gap-1.5 text-xs text-theme-tertiary font-medium">
             <CornerDownRight className="h-3.5 w-3.5" />
-            <span>Replying to <strong className="text-neutral-700">@{replyingTo.username}</strong></span>
+            <span>Replying to <strong className="text-theme-secondary">@{replyingTo.username}</strong></span>
           </div>
-          <button type="button" onClick={onCancelReply} className="rounded-full p-1 text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-700">
+          <button type="button" onClick={onCancelReply} className="rounded-full p-1 text-theme-tertiary transition hover:bg-theme-surface-hover hover:text-theme-secondary">
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
       )}
 
       {mediaPreviewUrl && (
-        <div className="mb-2 p-2 flex items-center gap-2 bg-neutral-50 rounded-lg border border-neutral-100">
+        <div className="mb-2 p-2 flex items-center gap-2 bg-theme-base rounded-lg border border-theme-divider-light">
           {mediaFile?.type.startsWith('audio/') ? (
             <audio src={mediaPreviewUrl} controls className="h-8 max-w-[200px]" />
           ) : (
             <div className="relative">
               <img src={mediaPreviewUrl} alt="preview" className="h-12 w-12 object-cover rounded-md" />
-              <button type="button" onClick={() => { setMediaFile(null); setMediaPreviewUrl(null); }} className="absolute -top-1.5 -right-1.5 bg-neutral-800 text-white rounded-full p-0.5">
+              <button type="button" onClick={() => { setMediaFile(null); setMediaPreviewUrl(null); }} className="absolute -top-1.5 -right-1.5 bg-theme-inverse text-theme-text-inverse rounded-full p-0.5">
                 <X className="h-3 w-3" />
               </button>
             </div>
@@ -156,7 +156,7 @@ export const CommentComposer: React.FC<CommentComposerProps> = ({
       <form onSubmit={handleSend} className="flex shrink-0 flex-col w-full">
         <div className="flex items-center gap-2 w-full">
           <Avatar src={currentUser.avatar} alt={currentUser.name} size="xs" />
-          <div className="flex flex-1 items-center rounded-full bg-neutral-100/70 px-3.5 py-1.5 border border-neutral-200 focus-within:border-[#5E43F3] focus-within:bg-white transition-all">
+          <div className="flex flex-1 items-center rounded-full bg-theme-surface-hover/70 px-3.5 py-1.5 border border-theme-divider focus-within:border-[#5E43F3] focus-within:bg-theme-surface transition-all">
             <input
               ref={inputRef}
               type="text"
@@ -164,9 +164,9 @@ export const CommentComposer: React.FC<CommentComposerProps> = ({
               onChange={(e) => setCommentText(e.target.value)}
               placeholder={isRecording ? "Recording..." : "Write a reply..."}
               disabled={isRecording || isUploading}
-              className="w-full bg-transparent text-xs outline-none placeholder:text-neutral-400 disabled:opacity-50"
+              className="w-full bg-transparent text-xs outline-none placeholder:text-theme-tertiary disabled:opacity-50"
             />
-            <div className="flex items-center gap-1.5 text-neutral-400">
+            <div className="flex items-center gap-1.5 text-theme-tertiary">
               <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
               <button type="button" onClick={() => fileInputRef.current?.click()} className="p-1 hover:text-[#5E43F3] transition"><ImageIcon className="h-4 w-4" /></button>
               {isRecording ? (
@@ -179,7 +179,7 @@ export const CommentComposer: React.FC<CommentComposerProps> = ({
           <button
             type="submit"
             disabled={(!commentText.trim() && !mediaFile) || isRecording || isUploading}
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition ${(!commentText.trim() && !mediaFile) || isRecording || isUploading ? 'bg-neutral-100 text-neutral-400' : 'bg-[#5E43F3] text-white shadow-sm hover:bg-[#4E34E0] active:scale-95'}`}
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition ${(!commentText.trim() && !mediaFile) || isRecording || isUploading ? 'bg-theme-surface-hover text-theme-tertiary' : 'bg-[#5E43F3] text-white shadow-sm hover:bg-[#4E34E0] active:scale-95'}`}
           >
             <Send className="h-3.5 w-3.5" />
           </button>

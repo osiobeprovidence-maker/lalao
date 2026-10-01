@@ -61,9 +61,9 @@ export const SignUpPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-white">
+    <div className="min-h-screen flex bg-theme-surface">
       {/* Left Panel: Brand & Benefits */}
-      <div className="hidden lg:flex lg:w-[45%] xl:w-1/2 bg-[#F8F7FF] flex-col p-12 xl:p-16 justify-between border-r border-indigo-50">
+      <div className="hidden lg:flex lg:w-[45%] xl:w-1/2 bg-theme-base flex-col p-12 xl:p-16 justify-between border-r border-indigo-50">
         
         <div>
           {/* Logo */}
@@ -71,13 +71,13 @@ export const SignUpPage: React.FC = () => {
             <div className="w-10 h-10 rounded-xl bg-[#3823A4] flex items-center justify-center">
               <AppIcon className="w-5 h-5" fallbackClassName="text-white fill-white" />
             </div>
-            <span className="lalao-wordmark text-2xl text-neutral-900">lalao</span>
+            <span className="lalao-wordmark text-2xl text-theme-primary">lalao</span>
           </div>
 
-          <h1 className="text-4xl xl:text-5xl font-black text-neutral-950 tracking-tight leading-tight mb-4">
+          <h1 className="text-4xl xl:text-5xl font-black text-theme-primary tracking-tight leading-tight mb-4">
             Join your community.
           </h1>
-          <p className="text-lg text-neutral-600 mb-12 max-w-md">
+          <p className="text-lg text-theme-secondary mb-12 max-w-md">
             Create your account and discover people, places, events and opportunities around you.
           </p>
 
@@ -86,24 +86,24 @@ export const SignUpPage: React.FC = () => {
               <div className="w-10 h-10 rounded-full bg-indigo-100/80 flex items-center justify-center shrink-0">
                 <MapPin className="w-5 h-5 text-[#3823A4]" />
               </div>
-              <span className="text-neutral-700 font-medium">Discover what's happening around you</span>
+              <span className="text-theme-secondary font-medium">Discover what's happening around you</span>
             </div>
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-full bg-indigo-100/80 flex items-center justify-center shrink-0">
                 <Users className="w-5 h-5 text-[#3823A4]" />
               </div>
-              <span className="text-neutral-700 font-medium">Connect with your community</span>
+              <span className="text-theme-secondary font-medium">Connect with your community</span>
             </div>
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-full bg-indigo-100/80 flex items-center justify-center shrink-0">
                 <Calendar className="w-5 h-5 text-[#3823A4]" />
               </div>
-              <span className="text-neutral-700 font-medium">Find local events, businesses and activities</span>
+              <span className="text-theme-secondary font-medium">Find local events, businesses and activities</span>
             </div>
           </div>
         </div>
 
-        <p className="text-sm text-neutral-400">© 2026 Lalao Inc.</p>
+        <p className="text-sm text-theme-tertiary">© 2026 Lalao Inc.</p>
       </div>
 
       {/* Right Panel: Registration Form */}
@@ -114,13 +114,13 @@ export const SignUpPage: React.FC = () => {
           <div className="w-10 h-10 rounded-xl bg-[#3823A4] flex items-center justify-center">
             <AppIcon className="w-5 h-5" fallbackClassName="text-white fill-white" />
           </div>
-          <span className="lalao-wordmark text-2xl text-neutral-900">lalao</span>
+          <span className="lalao-wordmark text-2xl text-theme-primary">lalao</span>
         </div>
 
         <div className="w-full max-w-sm">
           <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-            <h2 className="text-3xl font-black text-neutral-950 tracking-tight mb-2">Create your account</h2>
-            <p className="text-neutral-500 text-sm mb-8">Join Lalao and start connecting with your community.</p>
+            <h2 className="text-3xl font-black text-theme-primary tracking-tight mb-2">Create your account</h2>
+            <p className="text-theme-tertiary text-sm mb-8">Join Lalao and start connecting with your community.</p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
@@ -130,25 +130,25 @@ export const SignUpPage: React.FC = () => {
               )}
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-neutral-500 tracking-wider uppercase">Email</label>
+                <label className="text-xs font-bold text-theme-tertiary tracking-wider uppercase">Email</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email"
-                  className="w-full px-4 py-3.5 rounded-xl border-2 border-neutral-200 bg-white text-base text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#3823A4] focus:ring-4 focus:ring-[#3823A4]/10 transition-all"
+                  className="w-full px-4 py-3.5 rounded-xl border-2 border-theme-divider bg-theme-surface text-base text-theme-primary placeholder-neutral-400 focus:outline-none focus:border-[#3823A4] focus:ring-4 focus:ring-[#3823A4]/10 transition-all"
                   autoFocus
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-neutral-500 tracking-wider uppercase">Password</label>
+                <label className="text-xs font-bold text-theme-tertiary tracking-wider uppercase">Password</label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Create a password"
-                  className="w-full px-4 py-3.5 rounded-xl border-2 border-neutral-200 bg-white text-base text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#3823A4] focus:ring-4 focus:ring-[#3823A4]/10 transition-all"
+                  className="w-full px-4 py-3.5 rounded-xl border-2 border-theme-divider bg-theme-surface text-base text-theme-primary placeholder-neutral-400 focus:outline-none focus:border-[#3823A4] focus:ring-4 focus:ring-[#3823A4]/10 transition-all"
                 />
               </div>
 
@@ -167,9 +167,9 @@ export const SignUpPage: React.FC = () => {
             </form>
 
             <div className="flex items-center gap-4 my-8">
-              <div className="flex-1 h-px bg-neutral-200" />
-              <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">or</span>
-              <div className="flex-1 h-px bg-neutral-200" />
+              <div className="flex-1 h-px bg-theme-surface-active" />
+              <span className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">or</span>
+              <div className="flex-1 h-px bg-theme-surface-active" />
             </div>
 
             <button
@@ -205,13 +205,13 @@ export const SignUpPage: React.FC = () => {
                   setError(err.message || 'Google sign-up failed.');
                 }
               }}
-              className="w-full py-3.5 rounded-xl border-2 border-neutral-200 bg-white text-neutral-700 font-bold text-base flex items-center justify-center gap-3 hover:bg-neutral-50 active:scale-[0.98] transition-all cursor-pointer"
+              className="w-full py-3.5 rounded-xl border-2 border-theme-divider bg-theme-surface text-theme-secondary font-bold text-base flex items-center justify-center gap-3 hover:bg-theme-base active:scale-[0.98] transition-all cursor-pointer"
             >
               <Chrome className="w-5 h-5" />
               <span>Continue with Google</span>
             </button>
 
-            <p className="text-center text-sm font-semibold text-neutral-500 mt-8">
+            <p className="text-center text-sm font-semibold text-theme-tertiary mt-8">
               Already have an account?{' '}
               <Link to="/login" className="text-[#3823A4] hover:text-[#25167A] transition-colors">Sign in</Link>
             </p>

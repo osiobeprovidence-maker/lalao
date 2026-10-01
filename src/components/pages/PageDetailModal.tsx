@@ -179,12 +179,12 @@ export const PageDetailModal: React.FC = () => {
     
   if (!page) {
     return (
-      <div className="flex w-full h-full min-h-[50vh] flex-col items-center justify-center bg-[#f6f3ee]">
-        <h2 className="text-xl font-bold text-neutral-900 mb-2">Page Not Found</h2>
-        <p className="text-neutral-500 mb-6">This page may have been deleted or doesn't exist.</p>
+      <div className="flex w-full h-full min-h-[50vh] flex-col items-center justify-center bg-theme-base">
+        <h2 className="text-xl font-bold text-theme-primary mb-2">Page Not Found</h2>
+        <p className="text-theme-tertiary mb-6">This page may have been deleted or doesn't exist.</p>
         <button
           onClick={() => navigate('/app')}
-          className="px-6 py-2.5 bg-neutral-900 text-white rounded-full font-bold hover:bg-black transition-colors"
+          className="px-6 py-2.5 bg-theme-inverse text-theme-text-inverse rounded-full font-bold hover:bg-theme-inverse transition-colors"
         >
           Go Back
         </button>
@@ -358,9 +358,9 @@ export const PageDetailModal: React.FC = () => {
       id="page-detail-screen"
       className="w-full bg-transparent animate-in fade-in duration-200"
     >
-      <div className="w-full min-h-full flex flex-col bg-[#f6f3ee] pb-24">
+      <div className="w-full min-h-full flex flex-col bg-theme-base pb-24">
         {/* Cover Photo Area with Back Button & Action Controls */}
-        <div className={`relative h-44 sm:h-56 w-full shrink-0 ${page.coverImage ? 'bg-neutral-900' : 'bg-gradient-to-tr from-[#5E43F3]/10 to-[#f6f3ee]'}`}>
+        <div className={`relative h-44 sm:h-56 w-full shrink-0 ${page.coverImage ? 'bg-theme-inverse' : 'bg-gradient-to-tr from-[#5E43F3]/10 to-[#f6f3ee]'}`}>
           {page.coverImage && (
             <>
               <img
@@ -460,14 +460,14 @@ export const PageDetailModal: React.FC = () => {
               src={page?.avatar}
               alt={page?.name || 'Page'}
               size="xl"
-              className="ring-4 ring-[#f6f3ee] shadow-md bg-white"
+              className="ring-4 ring-[#f6f3ee] shadow-md bg-theme-surface"
             />
           </div>
 
           {/* Title & Metadata */}
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-black text-neutral-950 tracking-tight">{page.name}</h2>
+              <h2 className="text-xl font-black text-theme-primary tracking-tight">{page.name}</h2>
               <Badge type={page.badge} />
 
               {/* Manager Perspective Indicator */}
@@ -477,13 +477,13 @@ export const PageDetailModal: React.FC = () => {
                 </span>
               )}
             </div>
-            <p className="text-xs text-neutral-400 mt-0.5 font-medium">
+            <p className="text-xs text-theme-tertiary mt-0.5 font-medium">
               @{page.username}
             </p>
 
             {/* Category Label Row */}
             <div className="flex items-center gap-2 mt-2.5 flex-wrap">
-              <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase bg-neutral-900 text-white shadow-xs">
+              <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase bg-theme-inverse text-theme-text-inverse shadow-xs">
                 {page.id === 'page_honorofkings' || page.category === 'ESPORTS / GAMING'
                   ? 'ESPORTS'
                   : page.type === 'business' || page.badge === 'BIZ'
@@ -491,7 +491,7 @@ export const PageDetailModal: React.FC = () => {
                   : page.category || page.type.toUpperCase()}
               </span>
               {page.location && (
-                <div className="flex items-center gap-1 text-xs text-neutral-500 font-medium">
+                <div className="flex items-center gap-1 text-xs text-theme-tertiary font-medium">
                   <MapPin className="w-3.5 h-3.5" />
                   <span>{page.location}</span>
                 </div>
@@ -524,7 +524,7 @@ export const PageDetailModal: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(true)}
-                  className="px-4 py-2 rounded-full bg-neutral-900 text-white hover:bg-black text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  className="px-4 py-2 rounded-full bg-theme-inverse text-theme-text-inverse hover:bg-theme-inverse text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
                   <span>Edit Page</span>
@@ -570,9 +570,9 @@ export const PageDetailModal: React.FC = () => {
                   }}
                   className={`px-6 py-2 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1.5 min-w-[120px] ${
                     isFollowLoading 
-                      ? 'opacity-70 cursor-not-allowed bg-neutral-200 text-neutral-500'
+                      ? 'opacity-70 cursor-not-allowed bg-theme-surface-active text-theme-tertiary'
                       : page.isFollowing
-                        ? 'border border-neutral-300 text-neutral-800 hover:bg-neutral-100 bg-white cursor-pointer'
+                        ? 'border border-theme-divider-strong text-theme-primary hover:bg-theme-surface-hover bg-theme-surface cursor-pointer'
                         : 'bg-[#5E43F3] text-white hover:bg-[#4E34E0] shadow-sm shadow-[#5E43F3]/25 cursor-pointer'
                   }`}
                 >
@@ -597,7 +597,7 @@ export const PageDetailModal: React.FC = () => {
                       startPageConversation(page.id);
                       setActivePageId(null);
                     }}
-                    className="p-2 rounded-full border border-neutral-200 text-neutral-700 hover:bg-neutral-100 bg-white transition-colors cursor-pointer"
+                    className="p-2 rounded-full border border-theme-divider text-theme-secondary hover:bg-theme-surface-hover bg-theme-surface transition-colors cursor-pointer"
                     title="Direct inquiry"
                   >
                     <MessageSquare className="w-4 h-4 text-[#5E43F3]" />
@@ -609,7 +609,7 @@ export const PageDetailModal: React.FC = () => {
             <button
               type="button"
               onClick={() => triggerShareToast('Page link copied to clipboard')}
-              className="p-2 rounded-full border border-neutral-200 text-neutral-700 hover:bg-neutral-100 bg-white transition-colors cursor-pointer"
+              className="p-2 rounded-full border border-theme-divider text-theme-secondary hover:bg-theme-surface-hover bg-theme-surface transition-colors cursor-pointer"
               title="Share page"
             >
               <Share2 className="w-4 h-4" />
@@ -621,10 +621,10 @@ export const PageDetailModal: React.FC = () => {
                 type="button"
                 id="btn-page-header-more"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className={`p-2 rounded-full border border-neutral-200 transition-all cursor-pointer shadow-sm ${
+                className={`p-2 rounded-full border border-theme-divider transition-all cursor-pointer shadow-sm ${
                   isMenuOpen
-                    ? 'bg-neutral-100 text-neutral-950'
-                    : 'bg-white text-neutral-700 hover:bg-neutral-100'
+                    ? 'bg-theme-surface-hover text-theme-primary'
+                    : 'bg-theme-surface text-theme-secondary hover:bg-theme-surface-hover'
                 }`}
                 title="More actions"
                 aria-label="More actions"
@@ -633,15 +633,15 @@ export const PageDetailModal: React.FC = () => {
               </button>
 
               {isMenuOpen && (
-                <div className="absolute left-0 sm:left-auto sm:right-0 top-12 w-56 bg-white rounded-2xl shadow-2xl border border-neutral-100 py-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="absolute left-0 sm:left-auto sm:right-0 top-12 w-56 bg-theme-surface rounded-2xl shadow-2xl border border-theme-divider-light py-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                   {isManager ? (
                     /* MANAGER ACTIONS MENU */
                     <div className="divide-y divide-neutral-100">
-                      <div className="px-3.5 py-2 bg-neutral-50/70">
+                      <div className="px-3.5 py-2 bg-theme-base/70">
                         <p className="text-[10px] font-black uppercase tracking-wider text-[#5E43F3]">
                           Page Manager Tools
                         </p>
-                        <p className="text-[11px] text-neutral-500 font-medium truncate">
+                        <p className="text-[11px] text-theme-tertiary font-medium truncate">
                           Managing @{page.username}
                         </p>
                       </div>
@@ -653,7 +653,7 @@ export const PageDetailModal: React.FC = () => {
                             setIsMenuOpen(false);
                             setIsEditModalOpen(true);
                           }}
-                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
+                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-theme-primary hover:bg-theme-base flex items-center gap-2.5 cursor-pointer"
                         >
                           <Edit3 className="w-4 h-4 text-[#5E43F3]" />
                           <span>Edit Page</span>
@@ -665,7 +665,7 @@ export const PageDetailModal: React.FC = () => {
                             setIsMenuOpen(false);
                             setIsEditModalOpen(true);
                           }}
-                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
+                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-theme-primary hover:bg-theme-base flex items-center gap-2.5 cursor-pointer"
                         >
                           <Sparkles className="w-4 h-4 text-[#5E43F3]" />
                           <span>Customize Page</span>
@@ -677,7 +677,7 @@ export const PageDetailModal: React.FC = () => {
                             setIsMenuOpen(false);
                             setIsSettingsOpen(true);
                           }}
-                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
+                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-theme-primary hover:bg-theme-base flex items-center gap-2.5 cursor-pointer"
                         >
                           <Settings className="w-4 h-4 text-[#5E43F3]" />
                           <span>Page Settings</span>
@@ -689,7 +689,7 @@ export const PageDetailModal: React.FC = () => {
                             setIsMenuOpen(false);
                             setIsToolsModalOpen(true);
                           }}
-                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
+                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-theme-primary hover:bg-theme-base flex items-center gap-2.5 cursor-pointer"
                         >
                           <Briefcase className="w-4 h-4 text-[#5E43F3]" />
                           <span>Manage Page</span>
@@ -719,9 +719,9 @@ export const PageDetailModal: React.FC = () => {
                           setIsMenuOpen(false);
                           triggerShareToast('Page link copied to clipboard!');
                         }}
-                        className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
+                        className="w-full px-3.5 py-2 text-left text-xs font-semibold text-theme-primary hover:bg-theme-base flex items-center gap-2.5 cursor-pointer"
                       >
-                        <Copy className="w-4 h-4 text-neutral-500" />
+                        <Copy className="w-4 h-4 text-theme-tertiary" />
                         <span>Copy Page Link</span>
                       </button>
 
@@ -731,9 +731,9 @@ export const PageDetailModal: React.FC = () => {
                           setIsMenuOpen(false);
                           triggerShareToast('Page notifications muted');
                         }}
-                        className="w-full px-3.5 py-2 text-left text-xs font-semibold text-neutral-800 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer"
+                        className="w-full px-3.5 py-2 text-left text-xs font-semibold text-theme-primary hover:bg-theme-base flex items-center gap-2.5 cursor-pointer"
                       >
-                        <BellOff className="w-4 h-4 text-neutral-500" />
+                        <BellOff className="w-4 h-4 text-theme-tertiary" />
                         <span>Mute Updates</span>
                       </button>
 
@@ -756,13 +756,13 @@ export const PageDetailModal: React.FC = () => {
           </div>
 
           {/* Description */}
-          <p className="text-xs sm:text-sm text-neutral-700 mt-4 leading-relaxed">
+          <p className="text-xs sm:text-sm text-theme-secondary mt-4 leading-relaxed">
             {page.description}
           </p>
 
           {/* Location & Follower Count */}
-          <div className="flex items-center gap-3 text-xs text-neutral-500 mt-3 pt-2.5 border-t border-neutral-100">
-            <span className="font-semibold text-neutral-800">
+          <div className="flex items-center gap-3 text-xs text-theme-tertiary mt-3 pt-2.5 border-t border-theme-divider-light">
+            <span className="font-semibold text-theme-primary">
               {page.id === 'page_honorofkings'
                 ? '125K'
                 : page.followersCount.toLocaleString()}{' '}
@@ -783,7 +783,7 @@ export const PageDetailModal: React.FC = () => {
         {/* Sub-Tabs: Posts | Shop (if BIZ) | Events | Media | About */}
         <div
           id="page-subtabs-bar"
-          className="sticky top-0 bg-[#f6f3ee]/95 backdrop-blur-md border-b border-neutral-200/80 flex items-center justify-around px-2 z-10 mb-6"
+          className="sticky top-0 bg-theme-base/95 backdrop-blur-md border-b border-theme-divider/80 flex items-center justify-around px-2 z-10 mb-6"
         >
           {tabs.map((tab) => (
             <button
@@ -791,7 +791,7 @@ export const PageDetailModal: React.FC = () => {
               id={`btn-page-tab-${tab.id}`}
               onClick={() => setActiveTab(tab.id)}
               className={`flex-1 py-3 text-center text-xs font-bold transition-all relative flex items-center justify-center gap-1.5 cursor-pointer ${
-                activeTab === tab.id ? 'text-neutral-950' : 'text-neutral-400 hover:text-neutral-700'
+                activeTab === tab.id ? 'text-theme-primary' : 'text-theme-tertiary hover:text-theme-secondary'
               }`}
             >
               {tab.id === 'shop' && <ShoppingBag className="w-3.5 h-3.5 text-[#5E43F3]" />}
@@ -821,10 +821,10 @@ export const PageDetailModal: React.FC = () => {
             <div>
               {/* If manager, show quick composer banner */}
               {isManager && (
-                <div className="p-3.5 bg-neutral-50 border-b border-neutral-100 flex items-center justify-between gap-3">
+                <div className="p-3.5 bg-theme-base border-b border-theme-divider-light flex items-center justify-between gap-3">
                   <div
                     onClick={() => setIsPostComposerOpen(true)}
-                    className="flex-1 bg-white border border-neutral-200 rounded-xl px-3.5 py-2 text-xs text-neutral-400 hover:text-neutral-600 hover:border-neutral-300 transition-all cursor-pointer"
+                    className="flex-1 bg-theme-surface border border-theme-divider rounded-xl px-3.5 py-2 text-xs text-theme-tertiary hover:text-theme-secondary hover:border-theme-divider-strong transition-all cursor-pointer"
                   >
                     Post an announcement or update as {page.name}...
                   </div>
@@ -844,7 +844,7 @@ export const PageDetailModal: React.FC = () => {
                   pagePosts.map((post) => <PostItem key={post.id} post={post} />)
                 ) : (
                   <div className="p-10 text-center space-y-3">
-                    <p className="text-xs text-neutral-400">
+                    <p className="text-xs text-theme-tertiary">
                       No posts from this page yet.
                     </p>
                     {isManager && (
@@ -877,13 +877,13 @@ export const PageDetailModal: React.FC = () => {
                 <div className="flex flex-col gap-3 mb-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="relative flex-1 min-w-[200px]">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-tertiary" />
                       <input 
                         placeholder="Search products or categories..."
-                        className="w-full pl-9 pr-4 py-2 bg-white border border-neutral-200 rounded-xl text-xs focus:outline-none focus:border-[#5E43F3]"
+                        className="w-full pl-9 pr-4 py-2 bg-theme-surface border border-theme-divider rounded-xl text-xs focus:outline-none focus:border-[#5E43F3]"
                       />
                     </div>
-                    <select className="px-3 py-2 bg-white border border-neutral-200 rounded-xl text-xs focus:outline-none">
+                    <select className="px-3 py-2 bg-theme-surface border border-theme-divider rounded-xl text-xs focus:outline-none">
                       <option>Sort: A–Z</option>
                       <option>Sort: Z–A</option>
                       <option>Price: Low to High</option>
@@ -891,13 +891,13 @@ export const PageDetailModal: React.FC = () => {
                     </select>
                   </div>
                   <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-                    <button onClick={() => setIsCartOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-900 text-white rounded-lg text-xs font-bold hover:bg-black whitespace-nowrap shrink-0">
+                    <button onClick={() => setIsCartOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-inverse text-theme-text-inverse rounded-lg text-xs font-bold hover:bg-theme-inverse whitespace-nowrap shrink-0">
                       <ShoppingBag className="w-3.5 h-3.5" /> Cart {cartCount > 0 && `(${cartCount})`}
                     </button>
-                    <button onClick={() => setIsShoppingHistoryOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-neutral-200 text-neutral-800 rounded-lg text-xs font-bold hover:bg-neutral-50 whitespace-nowrap shrink-0">
+                    <button onClick={() => setIsShoppingHistoryOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-surface border border-theme-divider text-theme-primary rounded-lg text-xs font-bold hover:bg-theme-base whitespace-nowrap shrink-0">
                       <History className="w-3.5 h-3.5" /> Order History
                     </button>
-                    <button onClick={() => setActiveTab('auctions')} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-neutral-200 text-neutral-800 rounded-lg text-xs font-bold hover:bg-neutral-50 whitespace-nowrap shrink-0">
+                    <button onClick={() => setActiveTab('auctions')} className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-surface border border-theme-divider text-theme-primary rounded-lg text-xs font-bold hover:bg-theme-base whitespace-nowrap shrink-0">
                       <Trophy className="w-3.5 h-3.5" /> Auctions
                     </button>
                   </div>
@@ -905,16 +905,16 @@ export const PageDetailModal: React.FC = () => {
               )}
 
               {/* Storefront Overview Card */}
-              <div className="bg-neutral-50 rounded-2xl p-3.5 border border-neutral-100 flex items-center justify-between gap-3">
+              <div className="bg-theme-base rounded-2xl p-3.5 border border-theme-divider-light flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-[#5E43F3]/10 text-[#5E43F3] flex items-center justify-center shrink-0">
                     <ShoppingBag className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-neutral-900">
+                    <h4 className="text-xs font-bold text-theme-primary">
                       {page.name} Storefront
                     </h4>
-                    <p className="text-[11px] text-neutral-500">
+                    <p className="text-[11px] text-theme-tertiary">
                       Official shop catalog · Local pickup & delivery in {page.location}
                     </p>
                   </div>
@@ -944,8 +944,8 @@ export const PageDetailModal: React.FC = () => {
                       onClick={() => setSelectedCategory(cat)}
                       className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                         selectedCategory === cat
-                          ? 'bg-neutral-950 text-white'
-                          : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70'
+                          ? 'bg-theme-inverse text-theme-text-inverse'
+                          : 'bg-theme-surface-hover text-theme-secondary hover:bg-theme-surface-active/70'
                       }`}
                     >
                       {cat}
@@ -962,9 +962,9 @@ export const PageDetailModal: React.FC = () => {
                       key={prod.id}
                       id={`product-card-${prod.id}`}
                       onClick={() => setSelectedProduct(prod)}
-                      className="group bg-white rounded-2xl border border-neutral-100 overflow-hidden hover:shadow-md transition-all flex flex-col cursor-pointer active:scale-[0.99]"
+                      className="group bg-theme-surface rounded-2xl border border-theme-divider-light overflow-hidden hover:shadow-md transition-all flex flex-col cursor-pointer active:scale-[0.99]"
                     >
-                      <div className="relative aspect-square w-full bg-neutral-100 overflow-hidden">
+                      <div className="relative aspect-square w-full bg-theme-surface-hover overflow-hidden">
                         <img
                           src={prod.image}
                           alt={prod.name}
@@ -976,7 +976,7 @@ export const PageDetailModal: React.FC = () => {
                             className={`px-2 py-0.5 rounded-full text-[10px] font-bold shadow-xs ${
                               prod.inStock !== false
                                 ? 'bg-emerald-600 text-white'
-                                : 'bg-neutral-800/80 text-white backdrop-blur-xs'
+                                : 'bg-theme-inverse/80 text-theme-text-inverse backdrop-blur-xs'
                             }`}
                           >
                             {prod.inStock !== false ? 'In Stock' : 'Sold Out'}
@@ -987,11 +987,11 @@ export const PageDetailModal: React.FC = () => {
                       <div className="p-2.5 flex-1 flex flex-col justify-between space-y-1.5">
                         <div>
                           {prod.category && (
-                            <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider block">
+                            <span className="text-[10px] font-semibold text-theme-tertiary uppercase tracking-wider block">
                               {prod.category}
                             </span>
                           )}
-                          <h5 className="text-xs font-bold text-neutral-900 line-clamp-2 leading-snug">
+                          <h5 className="text-xs font-bold text-theme-primary line-clamp-2 leading-snug">
                             {prod.name}
                           </h5>
 
@@ -1000,7 +1000,7 @@ export const PageDetailModal: React.FC = () => {
                               <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                               <span>{prod.rating.toFixed(1)}</span>
                               {prod.reviewsCount !== undefined && (
-                                <span className="text-neutral-400 font-normal">
+                                <span className="text-theme-tertiary font-normal">
                                   ({prod.reviewsCount})
                                 </span>
                               )}
@@ -1008,8 +1008,8 @@ export const PageDetailModal: React.FC = () => {
                           )}
                         </div>
 
-                        <div className="flex items-center justify-between pt-1 border-t border-neutral-50">
-                          <span className="text-xs sm:text-sm font-black text-neutral-950">
+                        <div className="flex items-center justify-between pt-1 border-t border-theme-divider-light">
+                          <span className="text-xs sm:text-sm font-black text-theme-primary">
                             {prod.currency === 'NGN' ? 'NGN ' : prod.currency || '₦'}
                             {prod.price.toLocaleString()}
                           </span>
@@ -1019,7 +1019,7 @@ export const PageDetailModal: React.FC = () => {
                               e.stopPropagation();
                               setSelectedProduct(prod);
                             }}
-                            className="p-1.5 rounded-full bg-neutral-100 text-neutral-700 hover:bg-[#5E43F3] hover:text-white transition-colors cursor-pointer"
+                            className="p-1.5 rounded-full bg-theme-surface-hover text-theme-secondary hover:bg-[#5E43F3] hover:text-white transition-colors cursor-pointer"
                             title="View product details"
                           >
                             <ShoppingBag className="w-3.5 h-3.5" />
@@ -1031,13 +1031,13 @@ export const PageDetailModal: React.FC = () => {
                 </div>
               ) : products.length === 0 ? (
                 <div className="p-8 text-center flex flex-col items-center justify-center space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center">
-                    <ShoppingBag className="w-5 h-5 text-neutral-400" />
+                  <div className="w-12 h-12 rounded-full bg-theme-surface-hover flex items-center justify-center">
+                    <ShoppingBag className="w-5 h-5 text-theme-tertiary" />
                   </div>
                   {isManager ? (
                     <>
-                      <h4 className="text-sm font-bold text-neutral-900">Your shop is empty</h4>
-                      <p className="text-xs text-neutral-500 max-w-[200px]">Add your first product to start selling from your Page.</p>
+                      <h4 className="text-sm font-bold text-theme-primary">Your shop is empty</h4>
+                      <p className="text-xs text-theme-tertiary max-w-[200px]">Add your first product to start selling from your Page.</p>
                       <button 
                         onClick={() => setIsManageProductsOpen(true)}
                         className="mt-2 px-4 py-2 bg-[#5E43F3] text-white text-xs font-bold rounded-xl"
@@ -1047,13 +1047,13 @@ export const PageDetailModal: React.FC = () => {
                     </>
                   ) : (
                     <>
-                      <h4 className="text-sm font-bold text-neutral-900">No products yet</h4>
-                      <p className="text-xs text-neutral-500 max-w-[200px]">This Page hasn't listed any products yet.</p>
+                      <h4 className="text-sm font-bold text-theme-primary">No products yet</h4>
+                      <p className="text-xs text-theme-tertiary max-w-[200px]">This Page hasn't listed any products yet.</p>
                     </>
                   )}
                 </div>
               ) : (
-                <div className="p-8 text-center text-neutral-400 text-xs">
+                <div className="p-8 text-center text-theme-tertiary text-xs">
                   No products in this category yet.
                 </div>
               )}
@@ -1063,32 +1063,32 @@ export const PageDetailModal: React.FC = () => {
           {/* TAB: AUCTIONS */}
           {activeTab === 'auctions' && (
             <div id="page-auctions-section" className="p-3 sm:p-4 space-y-4">
-              <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-100 mb-4">
+              <div className="bg-theme-base rounded-2xl p-4 border border-theme-divider-light mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
                     <Trophy className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-black text-neutral-900">Live Auctions</h3>
-                    <p className="text-[11px] text-neutral-500 max-w-sm">
+                    <h3 className="text-sm font-black text-theme-primary">Live Auctions</h3>
+                    <p className="text-[11px] text-theme-tertiary max-w-sm">
                       Bid on exclusive items from {page.name}.
                     </p>
                   </div>
                 </div>
               </div>
               
-              <div className="flex items-center gap-2 mb-4 border-b border-neutral-100 pb-2">
-                <button className="px-3 py-1.5 bg-neutral-900 text-white rounded-lg text-xs font-bold">Active</button>
-                <button className="px-3 py-1.5 text-neutral-500 hover:bg-neutral-100 rounded-lg text-xs font-bold">Upcoming</button>
-                <button className="px-3 py-1.5 text-neutral-500 hover:bg-neutral-100 rounded-lg text-xs font-bold">Ended</button>
+              <div className="flex items-center gap-2 mb-4 border-b border-theme-divider-light pb-2">
+                <button className="px-3 py-1.5 bg-theme-inverse text-theme-text-inverse rounded-lg text-xs font-bold">Active</button>
+                <button className="px-3 py-1.5 text-theme-tertiary hover:bg-theme-surface-hover rounded-lg text-xs font-bold">Upcoming</button>
+                <button className="px-3 py-1.5 text-theme-tertiary hover:bg-theme-surface-hover rounded-lg text-xs font-bold">Ended</button>
               </div>
 
-              <div className="p-8 text-center flex flex-col items-center justify-center space-y-3 bg-white rounded-2xl border border-neutral-100">
-                <div className="w-12 h-12 rounded-full bg-neutral-50 flex items-center justify-center">
-                  <Trophy className="w-5 h-5 text-neutral-400" />
+              <div className="p-8 text-center flex flex-col items-center justify-center space-y-3 bg-theme-surface rounded-2xl border border-theme-divider-light">
+                <div className="w-12 h-12 rounded-full bg-theme-base flex items-center justify-center">
+                  <Trophy className="w-5 h-5 text-theme-tertiary" />
                 </div>
-                <h4 className="text-sm font-bold text-neutral-900">No active auctions</h4>
-                <p className="text-xs text-neutral-500 max-w-[200px]">Check back later for new items to bid on.</p>
+                <h4 className="text-sm font-bold text-theme-primary">No active auctions</h4>
+                <p className="text-xs text-theme-tertiary max-w-[200px]">Check back later for new items to bid on.</p>
               </div>
             </div>
           )}
@@ -1096,14 +1096,14 @@ export const PageDetailModal: React.FC = () => {
           {/* TAB: SUBSCRIPTIONS */}
           {activeTab === 'subscriptions' && (
             <div id="page-subscriptions-section" className="p-3 sm:p-4 space-y-4">
-              <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-100 mb-4">
+              <div className="bg-theme-base rounded-2xl p-4 border border-theme-divider-light mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-[#5E43F3]/10 flex items-center justify-center text-[#5E43F3]">
                     <Crown className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-black text-neutral-900">Premium Memberships</h3>
-                    <p className="text-[11px] text-neutral-500 max-w-sm">
+                    <h3 className="text-sm font-black text-theme-primary">Premium Memberships</h3>
+                    <p className="text-[11px] text-theme-tertiary max-w-sm">
                       Support {page.name} and get exclusive perks, private content, and VIP slots.
                     </p>
                   </div>
@@ -1113,28 +1113,28 @@ export const PageDetailModal: React.FC = () => {
               {pageSubscriptionPlans && pageSubscriptionPlans.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {pageSubscriptionPlans.map((plan: any) => (
-                    <div key={plan._id} className="border border-neutral-200 rounded-2xl p-4 flex flex-col justify-between hover:shadow-md transition-all">
+                    <div key={plan._id} className="border border-theme-divider rounded-2xl p-4 flex flex-col justify-between hover:shadow-md transition-all">
                       <div>
                         <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-bold text-neutral-900 text-sm">{plan.name}</h4>
+                          <h4 className="font-bold text-theme-primary text-sm">{plan.name}</h4>
                           <span className="bg-[#5E43F3]/10 text-[#5E43F3] text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
                             LALAO POINTS
                           </span>
                         </div>
-                        <p className="text-xs text-neutral-500 mb-4 line-clamp-2">{plan.description}</p>
+                        <p className="text-xs text-theme-tertiary mb-4 line-clamp-2">{plan.description}</p>
                         
                         <div className="flex items-center gap-2 mb-4">
-                          <div className="bg-neutral-100 rounded-lg px-2 py-1 flex items-center gap-1.5 text-[11px] font-semibold text-neutral-700">
+                          <div className="bg-theme-surface-hover rounded-lg px-2 py-1 flex items-center gap-1.5 text-[11px] font-semibold text-theme-secondary">
                             <Users className="w-3.5 h-3.5" />
                             <span>{plan.availableSlots} / {plan.totalSlots} Slots</span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between pt-3 border-t border-neutral-100">
+                      <div className="flex items-center justify-between pt-3 border-t border-theme-divider-light">
                         <div>
                           <span className="text-sm font-black text-[#5E43F3]">{plan.defaultSlotPrice?.toLocaleString() || 0} pts</span>
-                          <span className="text-[10px] text-neutral-400 font-medium ml-1">/ mo</span>
+                          <span className="text-[10px] text-theme-tertiary font-medium ml-1">/ mo</span>
                         </div>
                         <button
                           onClick={() => {
@@ -1151,13 +1151,13 @@ export const PageDetailModal: React.FC = () => {
                 </div>
               ) : (
                 <div className="p-10 text-center flex flex-col items-center justify-center space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center">
-                    <Crown className="w-5 h-5 text-neutral-400" />
+                  <div className="w-12 h-12 rounded-full bg-theme-surface-hover flex items-center justify-center">
+                    <Crown className="w-5 h-5 text-theme-tertiary" />
                   </div>
                   {isManager ? (
                     <>
-                      <h4 className="text-sm font-bold text-neutral-900">No Memberships Yet</h4>
-                      <p className="text-xs text-neutral-500 max-w-[200px]">Create your first premium tier in the Business Tools.</p>
+                      <h4 className="text-sm font-bold text-theme-primary">No Memberships Yet</h4>
+                      <p className="text-xs text-theme-tertiary max-w-[200px]">Create your first premium tier in the Business Tools.</p>
                       <button 
                         onClick={() => setIsToolsModalOpen(true)}
                         className="mt-2 px-4 py-2 bg-[#5E43F3] text-white text-xs font-bold rounded-xl"
@@ -1167,8 +1167,8 @@ export const PageDetailModal: React.FC = () => {
                     </>
                   ) : (
                     <>
-                      <h4 className="text-sm font-bold text-neutral-900">No Premium Memberships</h4>
-                      <p className="text-xs text-neutral-500 max-w-[200px]">This Page hasn't launched any premium slots yet.</p>
+                      <h4 className="text-sm font-bold text-theme-primary">No Premium Memberships</h4>
+                      <p className="text-xs text-theme-tertiary max-w-[200px]">This Page hasn't launched any premium slots yet.</p>
                     </>
                   )}
                 </div>
@@ -1180,10 +1180,10 @@ export const PageDetailModal: React.FC = () => {
           {activeTab === 'events' && (
             <div id="page-events-section" className="p-3 sm:p-4 space-y-4">
               {/* Feature Banner */}
-              <div className="bg-gradient-to-br from-neutral-900 via-neutral-900 to-[#5E43F3]/30 rounded-2xl p-4 text-white border border-neutral-800 shadow-sm relative overflow-hidden">
+              <div className="bg-gradient-to-br from-neutral-900 via-neutral-900 to-[#5E43F3]/30 rounded-2xl p-4 text-white border border-theme-divider-inverse shadow-sm relative overflow-hidden">
                 <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 text-amber-300 text-[10px] font-black uppercase tracking-wider mb-2">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-theme-surface/10 text-amber-300 text-[10px] font-black uppercase tracking-wider mb-2">
                       <Trophy className="w-3 h-3" />
                       <span>
                         {page.type === 'club'
@@ -1196,7 +1196,7 @@ export const PageDetailModal: React.FC = () => {
                     <h3 className="text-base font-black tracking-tight text-white">
                       {page.name} Events & Showcases
                     </h3>
-                    <p className="text-xs text-neutral-300 mt-1 max-w-md">
+                    <p className="text-xs text-theme-tertiary mt-1 max-w-md">
                       Participate in meetups, tournaments, purchase ticket passes, and verify attendance via QR check-in.
                     </p>
                   </div>
@@ -1218,7 +1218,7 @@ export const PageDetailModal: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setIsMyTicketsOpen(true)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white text-neutral-900 text-xs font-black hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer shadow-md"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-theme-surface text-theme-primary text-xs font-black hover:bg-theme-surface-hover active:scale-95 transition-all cursor-pointer shadow-md"
                       >
                         <Ticket className="w-3.5 h-3.5 text-[#5E43F3]" />
                         <span>My Passes ({activeTicketsCount})</span>
@@ -1244,8 +1244,8 @@ export const PageDetailModal: React.FC = () => {
                     onClick={() => setEventFilter(filter.id)}
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                       eventFilter === filter.id
-                        ? 'bg-neutral-950 text-white shadow-sm'
-                        : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70'
+                        ? 'bg-theme-inverse text-theme-text-inverse shadow-sm'
+                        : 'bg-theme-surface-hover text-theme-secondary hover:bg-theme-surface-active/70'
                     }`}
                   >
                     {filter.label}
@@ -1273,10 +1273,10 @@ export const PageDetailModal: React.FC = () => {
 
                 if (filtered.length === 0) {
                   return (
-                    <div className="p-8 text-center bg-neutral-50 rounded-2xl border border-neutral-100 text-neutral-500 text-xs space-y-2">
-                      <Calendar className="w-8 h-8 text-neutral-300 mx-auto" />
-                      <p className="font-bold text-neutral-700">No events found</p>
-                      <p className="text-[11px] text-neutral-400">
+                    <div className="p-8 text-center bg-theme-base rounded-2xl border border-theme-divider-light text-theme-tertiary text-xs space-y-2">
+                      <Calendar className="w-8 h-8 text-theme-tertiary mx-auto" />
+                      <p className="font-bold text-theme-secondary">No events found</p>
+                      <p className="text-[11px] text-theme-tertiary">
                         No events match the selected category.
                       </p>
                       {isManager && (
@@ -1305,8 +1305,8 @@ export const PageDetailModal: React.FC = () => {
                           <EventCard event={event} featured={isFeatured} />
                           {/* Manager Quick Controls for this Event */}
                           {isManager && (
-                            <div className="p-2 bg-neutral-50 rounded-xl border border-neutral-200 flex items-center justify-between text-xs">
-                              <span className="text-[11px] font-bold text-neutral-500">
+                            <div className="p-2 bg-theme-base rounded-xl border border-theme-divider flex items-center justify-between text-xs">
+                              <span className="text-[11px] font-bold text-theme-tertiary">
                                 Event Manager:
                               </span>
                               <div className="flex items-center gap-2">
@@ -1324,14 +1324,14 @@ export const PageDetailModal: React.FC = () => {
                                     setEventToEdit(event);
                                     setIsEventModalOpen(true);
                                   }}
-                                  className="px-2.5 py-1 rounded-lg bg-neutral-200 hover:bg-neutral-300 text-neutral-800 text-[11px] font-bold cursor-pointer"
+                                  className="px-2.5 py-1 rounded-lg bg-theme-surface-active hover:bg-theme-divider-strong text-theme-primary text-[11px] font-bold cursor-pointer"
                                 >
                                   Edit
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => deletePageEvent(event.id)}
-                                  className="p-1 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 cursor-pointer"
+                                  className="p-1 rounded-lg text-theme-tertiary hover:text-red-600 hover:bg-red-50 cursor-pointer"
                                   title="Cancel / delete event"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
@@ -1354,7 +1354,7 @@ export const PageDetailModal: React.FC = () => {
               {page.id === 'page_honorofkings' && (
                 <div>
                   <div className="flex items-center justify-between mb-2.5">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-neutral-500">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-theme-tertiary">
                       Official Highlights & Gallery
                     </h4>
                     <span className="text-[11px] font-semibold text-[#5E43F3]">
@@ -1366,7 +1366,7 @@ export const PageDetailModal: React.FC = () => {
                     {HOK_MEDIA_GALLERY.map((item) => (
                       <div
                         key={item.id}
-                        className="group relative aspect-4/3 rounded-xl overflow-hidden bg-neutral-900 shadow-sm border border-neutral-100"
+                        className="group relative aspect-4/3 rounded-xl overflow-hidden bg-theme-inverse shadow-sm border border-theme-divider-light"
                       >
                         <img
                           src={item.url}
@@ -1391,14 +1391,14 @@ export const PageDetailModal: React.FC = () => {
 
               {pageMediaPosts.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-black uppercase tracking-wider text-neutral-500 mb-2.5">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-theme-tertiary mb-2.5">
                     Feed Posts Media
                   </h4>
                   <div className="grid grid-cols-2 gap-2">
                     {pageMediaPosts.map((post) => (
                       <div
                         key={post.id}
-                        className="relative aspect-square rounded-xl overflow-hidden bg-neutral-100 border border-neutral-100"
+                        className="relative aspect-square rounded-xl overflow-hidden bg-theme-surface-hover border border-theme-divider-light"
                       >
                         <img
                           src={post.mediaUrl}
@@ -1413,7 +1413,7 @@ export const PageDetailModal: React.FC = () => {
               )}
 
               {page.id !== 'page_honorofkings' && pageMediaPosts.length === 0 && (
-                <div className="p-8 text-center text-neutral-400 text-xs">
+                <div className="p-8 text-center text-theme-tertiary text-xs">
                   No media uploaded yet.
                 </div>
               )}
@@ -1423,13 +1423,13 @@ export const PageDetailModal: React.FC = () => {
           {/* TAB: LOCATIONS */}
           {activeTab === 'locations' && (
             <div className="p-3 sm:p-4 space-y-3">
-              <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-100 flex items-center justify-between">
+              <div className="bg-theme-base rounded-2xl p-4 border border-theme-divider-light flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-black text-neutral-900 flex items-center gap-2">
+                  <h4 className="text-sm font-black text-theme-primary flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-[#5E43F3]" />
                     Physical Branches
                   </h4>
-                  <p className="text-xs text-neutral-500 mt-0.5">
+                  <p className="text-xs text-theme-tertiary mt-0.5">
                     Find {page.name} in multiple locations.
                   </p>
                 </div>
@@ -1437,10 +1437,10 @@ export const PageDetailModal: React.FC = () => {
 
               <div className="grid gap-3">
                 {pageLocations.map((loc: any) => (
-                  <div key={loc._id} className="bg-white border border-neutral-200 rounded-xl p-4 hover:border-neutral-300 transition-colors shadow-xs">
+                  <div key={loc._id} className="bg-theme-surface border border-theme-divider rounded-xl p-4 hover:border-theme-divider-strong transition-colors shadow-xs">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <h6 className="font-bold text-neutral-900">{loc.name}</h6>
+                        <h6 className="font-bold text-theme-primary">{loc.name}</h6>
                         {loc.isPrimary && (
                           <span className="px-2 py-0.5 rounded text-[9px] font-black bg-[#5E43F3]/10 text-[#5E43F3] uppercase tracking-wider">
                             Headquarters
@@ -1449,21 +1449,21 @@ export const PageDetailModal: React.FC = () => {
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-neutral-600">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-theme-secondary">
                       <div className="space-y-2">
                         <div className="flex items-start gap-2">
-                          <MapPin className="w-3.5 h-3.5 text-neutral-400 mt-0.5 shrink-0" />
+                          <MapPin className="w-3.5 h-3.5 text-theme-tertiary mt-0.5 shrink-0" />
                           <span>{loc.address ? `${loc.address}, ${loc.location}` : loc.location}</span>
                         </div>
                         {loc.hours && (
                           <div className="flex items-center gap-2">
-                            <Clock className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                            <Clock className="w-3.5 h-3.5 text-theme-tertiary shrink-0" />
                             <span>{loc.hours}</span>
                           </div>
                         )}
                         {loc.phone && (
                           <div className="flex items-center gap-2">
-                            <Phone className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                            <Phone className="w-3.5 h-3.5 text-theme-tertiary shrink-0" />
                             <span>{loc.phone}</span>
                           </div>
                         )}
@@ -1483,28 +1483,28 @@ export const PageDetailModal: React.FC = () => {
                 <div className="space-y-6">
                   <div className="bg-gradient-to-br from-[#5E43F3]/10 to-[#4E34E0]/5 rounded-2xl p-5 border border-[#5E43F3]/20">
                     <h4 className="font-black text-[#5E43F3] text-lg mb-2">Welcome to Roomy</h4>
-                    <p className="text-neutral-700 leading-relaxed text-sm">
+                    <p className="text-theme-secondary leading-relaxed text-sm">
                       Roomy is a community-driven marketplace built right into Lalao. It is designed to help you find rooms, roommates, and accommodation options around you. 
                       Our mission is to make housing search transparent, safe, and entirely free for the community.
                     </p>
                   </div>
                   
-                  <div className="bg-white rounded-2xl p-5 border border-neutral-100 shadow-sm">
-                    <h4 className="font-extrabold text-neutral-900 text-sm mb-3 flex items-center gap-2">
+                  <div className="bg-theme-surface rounded-2xl p-5 border border-theme-divider-light shadow-sm">
+                    <h4 className="font-extrabold text-theme-primary text-sm mb-3 flex items-center gap-2">
                       <Shield className="w-4 h-4 text-emerald-500" />
                       Community Rules
                     </h4>
-                    <ul className="space-y-2.5 text-neutral-600">
+                    <ul className="space-y-2.5 text-theme-secondary">
                       <li className="flex gap-2"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /> <strong>Free forever:</strong> We don't charge listing fees or commissions.</li>
                       <li className="flex gap-2"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /> <strong>Honesty:</strong> Ensure all photos and descriptions accurately represent the listing.</li>
                       <li className="flex gap-2"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /> <strong>Safety first:</strong> Always meet in public places for inspections and verify identities before making payments.</li>
                     </ul>
                   </div>
 
-                  <div className="bg-neutral-950 rounded-2xl p-5 text-white flex flex-col items-center text-center">
+                  <div className="bg-theme-inverse rounded-2xl p-5 text-theme-text-inverse flex flex-col items-center text-center">
                     <Heart className="w-8 h-8 text-rose-500 mb-3" />
                     <h4 className="font-black text-white text-base mb-2">Support Roomy</h4>
-                    <p className="text-neutral-400 text-xs leading-relaxed mb-4 max-w-xs">
+                    <p className="text-theme-tertiary text-xs leading-relaxed mb-4 max-w-xs">
                       Roomy is maintained by the community and is completely free to use. If you found your perfect room or roommate through us, consider leaving a small donation to help keep the servers running.
                     </p>
                     <button 
@@ -1519,9 +1519,9 @@ export const PageDetailModal: React.FC = () => {
                 // Standard Organization About Tab
                 <>
                   {/* Organization Description */}
-                  <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-100">
+                  <div className="bg-theme-base rounded-2xl p-4 border border-theme-divider-light">
                     <div className="flex items-center justify-between mb-1.5">
-                      <h4 className="font-extrabold text-neutral-900 text-sm flex items-center gap-2">
+                      <h4 className="font-extrabold text-theme-primary text-sm flex items-center gap-2">
                         <Shield className="w-4 h-4 text-[#5E43F3]" />
                         About the Organization
                       </h4>
@@ -1536,70 +1536,70 @@ export const PageDetailModal: React.FC = () => {
                         </button>
                       )}
                     </div>
-                    <p className="text-neutral-700 leading-relaxed text-xs sm:text-[13px]">
+                    <p className="text-theme-secondary leading-relaxed text-xs sm:text-[13px]">
                       {page.description}
                     </p>
                   </div>
 
                   {/* Statistics */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100 text-center">
-                      <p className="text-base sm:text-lg font-black text-neutral-900">
+                    <div className="bg-theme-base rounded-xl p-3 border border-theme-divider-light text-center">
+                      <p className="text-base sm:text-lg font-black text-theme-primary">
                         {page.followersCount || 1}
                       </p>
-                      <p className="text-[10px] uppercase font-bold text-neutral-400 mt-0.5">Followers</p>
+                      <p className="text-[10px] uppercase font-bold text-theme-tertiary mt-0.5">Followers</p>
                     </div>
-                    <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100 text-center">
+                    <div className="bg-theme-base rounded-xl p-3 border border-theme-divider-light text-center">
                       <p className="text-base sm:text-lg font-black text-[#5E43F3]">
                         {(events || []).filter((e) => e?.pageId === page.id || page.id === 'page_honorofkings').length}
                       </p>
-                      <p className="text-[10px] uppercase font-bold text-neutral-400 mt-0.5">Events</p>
+                      <p className="text-[10px] uppercase font-bold text-theme-tertiary mt-0.5">Events</p>
                     </div>
                     {page.aboutInfo?.founded && (
-                      <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100 text-center">
+                      <div className="bg-theme-base rounded-xl p-3 border border-theme-divider-light text-center">
                         <p className="text-base sm:text-lg font-black text-amber-600">
                           {page.aboutInfo.founded}
                         </p>
-                        <p className="text-[10px] uppercase font-bold text-neutral-400 mt-0.5">Est. Year</p>
+                        <p className="text-[10px] uppercase font-bold text-theme-tertiary mt-0.5">Est. Year</p>
                       </div>
                     )}
-                    <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100 text-center">
+                    <div className="bg-theme-base rounded-xl p-3 border border-theme-divider-light text-center">
                       <p className="text-base sm:text-lg font-black text-emerald-600">
                         Verified
                       </p>
-                      <p className="text-[10px] uppercase font-bold text-neutral-400 mt-0.5">Status</p>
+                      <p className="text-[10px] uppercase font-bold text-theme-tertiary mt-0.5">Status</p>
                     </div>
                   </div>
 
                   {/* Location & Details */}
-                  <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-100 space-y-3">
-                    <h4 className="font-extrabold text-neutral-900 text-sm flex items-center gap-2">
+                  <div className="bg-theme-base rounded-2xl p-4 border border-theme-divider-light space-y-3">
+                    <h4 className="font-extrabold text-theme-primary text-sm flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-[#5E43F3]" />
                       Location & Operating Hours
                     </h4>
                     {page.aboutInfo?.address && (
                       <div>
-                        <p className="font-bold text-neutral-900 text-xs">Physical Address / Venue</p>
-                        <p className="text-neutral-600 mt-0.5">{page.aboutInfo.address}</p>
+                        <p className="font-bold text-theme-primary text-xs">Physical Address / Venue</p>
+                        <p className="text-theme-secondary mt-0.5">{page.aboutInfo.address}</p>
                       </div>
                     )}
                     {page.aboutInfo?.hours && (
                       <div>
-                        <p className="font-bold text-neutral-900 text-xs">Operating Hours</p>
-                        <p className="text-neutral-600 mt-0.5">{page.aboutInfo.hours}</p>
+                        <p className="font-bold text-theme-primary text-xs">Operating Hours</p>
+                        <p className="text-theme-secondary mt-0.5">{page.aboutInfo.hours}</p>
                       </div>
                     )}
                   </div>
 
                   {/* Contact & Social Links */}
-                  <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-100 space-y-2.5">
-                    <h4 className="font-extrabold text-neutral-900 text-sm flex items-center gap-2">
+                  <div className="bg-theme-base rounded-2xl p-4 border border-theme-divider-light space-y-2.5">
+                    <h4 className="font-extrabold text-theme-primary text-sm flex items-center gap-2">
                       <Globe className="w-4 h-4 text-[#5E43F3]" />
                       Official Contact & Channels
                     </h4>
                     {page.aboutInfo?.website && (
                       <div className="flex items-center justify-between">
-                        <span className="text-neutral-500">Website</span>
+                        <span className="text-theme-tertiary">Website</span>
                         <a
                           href={`https://${page.aboutInfo.website}`}
                           target="_blank"
@@ -1613,19 +1613,19 @@ export const PageDetailModal: React.FC = () => {
                     )}
                     {page.aboutInfo?.email && (
                       <div className="flex items-center justify-between">
-                        <span className="text-neutral-500">Email</span>
-                        <span className="text-neutral-900 font-bold">{page.aboutInfo.email}</span>
+                        <span className="text-theme-tertiary">Email</span>
+                        <span className="text-theme-primary font-bold">{page.aboutInfo.email}</span>
                       </div>
                     )}
                     {page.aboutInfo?.phone && (
                       <div className="flex items-center justify-between">
-                        <span className="text-neutral-500">Phone Desk</span>
-                        <span className="text-neutral-900 font-bold">{page.aboutInfo.phone}</span>
+                        <span className="text-theme-tertiary">Phone Desk</span>
+                        <span className="text-theme-primary font-bold">{page.aboutInfo.phone}</span>
                       </div>
                     )}
                     <div className="flex items-center justify-between">
-                      <span className="text-neutral-500">Lao Line Handle</span>
-                      <span className="text-neutral-900 font-bold">@{page.username}</span>
+                      <span className="text-theme-tertiary">Lao Line Handle</span>
+                      <span className="text-theme-primary font-bold">@{page.username}</span>
                     </div>
                   </div>
                 </>
@@ -1638,12 +1638,12 @@ export const PageDetailModal: React.FC = () => {
       {/* MODALS */}
       {isDeleteConfirmOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl scale-in-95 duration-200">
+          <div className="bg-theme-surface rounded-3xl w-full max-w-md p-6 shadow-2xl scale-in-95 duration-200">
             <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4 text-red-600">
               <Trash2 className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-black text-neutral-900 mb-2">Delete this Page?</h3>
-            <p className="text-sm text-neutral-600 mb-6">
+            <h3 className="text-lg font-black text-theme-primary mb-2">Delete this Page?</h3>
+            <p className="text-sm text-theme-secondary mb-6">
               This action is permanent and cannot be undone. Are you sure you want to permanently delete <strong>{page.name}</strong> and all associated data, posts, and settings?
             </p>
             <div className="flex items-center justify-end gap-3">
@@ -1651,7 +1651,7 @@ export const PageDetailModal: React.FC = () => {
                 type="button"
                 disabled={isDeleting}
                 onClick={() => setIsDeleteConfirmOpen(false)}
-                className="px-5 py-2.5 rounded-xl font-bold text-neutral-700 hover:bg-neutral-100 transition-colors"
+                className="px-5 py-2.5 rounded-xl font-bold text-theme-secondary hover:bg-theme-surface-hover transition-colors"
               >
                 Cancel
               </button>
@@ -1748,12 +1748,12 @@ export const PageDetailModal: React.FC = () => {
 
       {isPostComposerOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-3xl shadow-2xl relative">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-theme-surface rounded-3xl shadow-2xl relative">
             <button
               onClick={() => setIsPostComposerOpen(false)}
-              className="absolute right-4 top-4 p-2 rounded-full hover:bg-neutral-100 z-10"
+              className="absolute right-4 top-4 p-2 rounded-full hover:bg-theme-surface-hover z-10"
             >
-              <X className="w-5 h-5 text-neutral-500" />
+              <X className="w-5 h-5 text-theme-tertiary" />
             </button>
             <div className="pt-8 pb-4">
               <PostComposer

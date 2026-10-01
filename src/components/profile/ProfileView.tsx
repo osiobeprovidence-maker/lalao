@@ -118,10 +118,10 @@ export const ProfileView: React.FC = () => {
   };
 
   return (
-    <div id="profile-view-container" className="min-h-screen bg-[#f6f3ee] pb-24">
+    <div id="profile-view-container" className="min-h-screen bg-theme-base pb-24">
       {/* Top Header */}
-      <div className="sticky top-0 z-20 bg-[#f6f3ee]/95 backdrop-blur-md border-b border-neutral-200/80 px-4 py-2.5 flex items-center justify-between">
-        <h1 className="text-xl font-black tracking-tight text-neutral-950 font-sans">
+      <div className="sticky top-0 z-20 bg-theme-base/95 backdrop-blur-md border-b border-theme-divider/80 px-4 py-2.5 flex items-center justify-between">
+        <h1 className="text-xl font-black tracking-tight text-theme-primary font-sans">
           Profile
         </h1>
         <div className="flex items-center gap-1">
@@ -133,7 +133,7 @@ export const ProfileView: React.FC = () => {
               setIsNotificationsOpen(false);
               setActiveTab('notifications');
             }}
-            className="relative p-2 rounded-full text-neutral-800 hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer"
+            className="relative p-2 rounded-full text-theme-primary hover:bg-theme-surface-hover active:scale-95 transition-all cursor-pointer"
             title="Notifications & Activity"
           >
             <Heart className="w-5 h-5 stroke-[1.8]" />
@@ -147,14 +147,14 @@ export const ProfileView: React.FC = () => {
 
           <button
             onClick={() => triggerShareToast('Profile link copied to clipboard')}
-            className="p-2 rounded-full text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+            className="p-2 rounded-full text-theme-secondary hover:text-theme-primary hover:bg-theme-surface-hover transition-colors cursor-pointer"
             title="Share profile"
           >
             <Share2 className="w-4 h-4" />
           </button>
           <button
             onClick={() => setIsEditProfileOpen(true)}
-            className="p-2 rounded-full text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+            className="p-2 rounded-full text-theme-secondary hover:text-theme-primary hover:bg-theme-surface-hover transition-colors cursor-pointer"
             title="Settings / Edit profile"
           >
             <Settings className="w-4 h-4" />
@@ -167,28 +167,28 @@ export const ProfileView: React.FC = () => {
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0 space-y-1.5">
             <div>
-              <h2 className="text-xl font-bold text-neutral-950 leading-tight">
+              <h2 className="text-xl font-bold text-theme-primary leading-tight">
                 {currentUser.name}
               </h2>
-              <p className="text-xs text-neutral-500 font-medium">
+              <p className="text-xs text-theme-tertiary font-medium">
                 @{currentUser.username}
               </p>
             </div>
 
             {/* Bio */}
-            <p className="text-xs text-neutral-800 leading-relaxed">
+            <p className="text-xs text-theme-primary leading-relaxed">
               {currentUser.bio || 'No bio yet. Add a few details to introduce yourself.'}
             </p>
 
             {/* Location & Metadata */}
-            <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500 pt-0.5">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-theme-tertiary pt-0.5">
               <div className="flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 text-[#5E43F3]" />
                 <span>{currentUser.location || 'Location not added yet'}</span>
               </div>
               <span>·</span>
               <div className="flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-neutral-400" />
+                <Calendar className="w-3.5 h-3.5 text-theme-tertiary" />
                 <span>Profile ready</span>
               </div>
             </div>
@@ -202,9 +202,9 @@ export const ProfileView: React.FC = () => {
                   setConnectionTab('followers');
                   setIsConnectionsOpen(true);
                 }}
-                className="text-neutral-500 hover:text-neutral-950 transition-colors cursor-pointer"
+                className="text-theme-tertiary hover:text-theme-primary transition-colors cursor-pointer"
               >
-                <strong className="text-neutral-900 font-bold">{currentUser.followersCount}</strong>{' '}
+                <strong className="text-theme-primary font-bold">{currentUser.followersCount}</strong>{' '}
                 followers
               </button>
               <button
@@ -214,13 +214,13 @@ export const ProfileView: React.FC = () => {
                   setConnectionTab('following');
                   setIsConnectionsOpen(true);
                 }}
-                className="text-neutral-500 hover:text-neutral-950 transition-colors cursor-pointer"
+                className="text-theme-tertiary hover:text-theme-primary transition-colors cursor-pointer"
               >
-                <strong className="text-neutral-900 font-bold">{currentUser.followingCount}</strong>{' '}
+                <strong className="text-theme-primary font-bold">{currentUser.followingCount}</strong>{' '}
                 following
               </button>
-              <span className="text-neutral-500">
-                <strong className="text-neutral-900 font-bold">{formatLikes(myTotalLikes)}</strong>{' '}
+              <span className="text-theme-tertiary">
+                <strong className="text-theme-primary font-bold">{formatLikes(myTotalLikes)}</strong>{' '}
                 {myTotalLikes === 1 ? 'Like' : 'Likes'}
               </span>
             </div>
@@ -240,10 +240,10 @@ export const ProfileView: React.FC = () => {
                 className={`p-[2.5px] rounded-full transition-all duration-300 ${
                   myHasItems
                     ? 'bg-gradient-to-tr from-[#5E43F3] via-fuchsia-500 to-amber-400 group-hover:scale-105 shadow-md shadow-[#5E43F3]/20'
-                    : 'border-2 border-dashed border-neutral-300 group-hover:border-[#5E43F3]'
+                    : 'border-2 border-dashed border-theme-divider-strong group-hover:border-[#5E43F3]'
                 }`}
               >
-                <div className="bg-white p-[2px] rounded-full">
+                <div className="bg-theme-surface p-[2px] rounded-full">
                   <Avatar
                     src={currentUser.avatar}
                     alt={currentUser.name}
@@ -255,7 +255,7 @@ export const ProfileView: React.FC = () => {
 
               <div
                 className={`absolute bottom-0 right-0 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-black shadow-md ${
-                  myHasItems ? 'bg-[#5E43F3]' : 'bg-neutral-900'
+                  myHasItems ? 'bg-[#5E43F3]' : 'bg-theme-inverse'
                 }`}
               >
                 {myHasItems ? <Clock className="w-3 h-3" /> : <Plus className="w-3 h-3 stroke-[3]" />}
@@ -269,14 +269,14 @@ export const ProfileView: React.FC = () => {
           <button
             id="btn-edit-profile"
             onClick={() => setIsEditProfileOpen(true)}
-            className="w-full py-2 px-4 rounded-xl border border-neutral-300 hover:bg-neutral-50 text-xs font-bold text-neutral-900 transition-colors cursor-pointer"
+            className="w-full py-2 px-4 rounded-xl border border-theme-divider-strong hover:bg-theme-base text-xs font-bold text-theme-primary transition-colors cursor-pointer"
           >
             Edit Profile
           </button>
           <button
             id="btn-share-profile"
             onClick={() => triggerShareToast('Profile link copied!')}
-            className="w-full py-2 px-4 rounded-xl border border-neutral-300 hover:bg-neutral-50 text-xs font-bold text-neutral-900 transition-colors cursor-pointer"
+            className="w-full py-2 px-4 rounded-xl border border-theme-divider-strong hover:bg-theme-base text-xs font-bold text-theme-primary transition-colors cursor-pointer"
           >
             Share Profile
           </button>
@@ -285,7 +285,7 @@ export const ProfileView: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-neutral-100 flex items-center justify-around px-2 mt-2">
+      <div className="border-b border-theme-divider-light flex items-center justify-around px-2 mt-2">
         {tabs.map((tab) => {
           const isActive = profileTab === tab.id;
           return (
@@ -293,12 +293,12 @@ export const ProfileView: React.FC = () => {
               key={tab.id}
               onClick={() => setProfileTab(tab.id)}
               className={`flex-1 py-3 text-center text-xs font-bold transition-all relative cursor-pointer ${
-                isActive ? 'text-neutral-950' : 'text-neutral-400 hover:text-neutral-600'
+                isActive ? 'text-theme-primary' : 'text-theme-tertiary hover:text-theme-secondary'
               }`}
             >
               <span>{tab.label}</span>
               {isActive && (
-                <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-neutral-950 rounded-full" />
+                <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-theme-inverse rounded-full" />
               )}
             </button>
           );
@@ -315,7 +315,7 @@ export const ProfileView: React.FC = () => {
           ) : userPosts.length > 0 ? (
             userPosts.map((post: any) => <PostItem key={post.id} post={post} />)
           ) : (
-            <div className="p-8 text-center text-neutral-400 text-xs">
+            <div className="p-8 text-center text-theme-tertiary text-xs">
               You haven&apos;t posted yet. Tap the center + button to share with your local community.
             </div>
           )
@@ -323,11 +323,11 @@ export const ProfileView: React.FC = () => {
 
         {profileTab === 'replies' && (
           <div className="p-4 space-y-3">
-            <div className="p-3.5 rounded-2xl bg-neutral-50 border border-neutral-100 text-xs space-y-1">
-              <p className="font-bold text-neutral-800">
+            <div className="p-3.5 rounded-2xl bg-theme-base border border-theme-divider-light text-xs space-y-1">
+              <p className="font-bold text-theme-primary">
                 Replied to @subteenwear in Udu Express Junction:
               </p>
-              <p className="text-neutral-600 italic">
+              <p className="text-theme-secondary italic">
                 &ldquo;The cut on the sage green version is top tier! Coming by after work.&rdquo;
               </p>
             </div>
@@ -338,7 +338,7 @@ export const ProfileView: React.FC = () => {
           userMediaPosts.length > 0 ? (
             <div className="grid grid-cols-2 gap-2 p-3">
               {userMediaPosts.map((p) => (
-                <div key={p.id} className="relative aspect-square rounded-xl overflow-hidden bg-neutral-100">
+                <div key={p.id} className="relative aspect-square rounded-xl overflow-hidden bg-theme-surface-hover">
                   <img
                     src={p.mediaUrl}
                     alt="User media"
@@ -349,7 +349,7 @@ export const ProfileView: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="p-8 text-center text-neutral-400 text-xs">
+            <div className="p-8 text-center text-theme-tertiary text-xs">
               No photos or videos shared yet.
             </div>
           )
@@ -359,7 +359,7 @@ export const ProfileView: React.FC = () => {
           userReposts.length > 0 ? (
             userReposts.map((post) => <PostItem key={post.id} post={post} />)
           ) : (
-            <div className="p-8 text-center text-neutral-400 text-xs">
+            <div className="p-8 text-center text-theme-tertiary text-xs">
               No reposts yet.
             </div>
           )
@@ -374,24 +374,24 @@ export const ProfileView: React.FC = () => {
         >
           <div
             id="community-page-screen"
-            className="bg-white w-full sm:max-w-md md:max-w-lg h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 relative z-10 overflow-hidden"
+            className="bg-theme-surface w-full sm:max-w-md md:max-w-lg h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 relative z-10 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-neutral-100 px-4 py-3 flex items-center justify-between shrink-0">
+            <div className="sticky top-0 z-20 bg-theme-surface/95 backdrop-blur-md border-b border-theme-divider-light px-4 py-3 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
               <button
                 id="btn-back-community-page"
                 type="button"
                 onClick={() => setIsConnectionsOpen(false)}
-                className="p-1.5 -ml-1 rounded-full text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100 transition-colors cursor-pointer"
+                className="p-1.5 -ml-1 rounded-full text-theme-secondary hover:text-theme-primary hover:bg-theme-surface-hover transition-colors cursor-pointer"
                 title="Go back"
                 aria-label="Back"
               >
                 <ChevronRight className="w-5 h-5 rotate-180" />
               </button>
               <div>
-                <h1 className="font-bold text-base text-neutral-950">Community</h1>
-                <p className="text-[11px] text-neutral-500">Your communities, profiles and connections</p>
+                <h1 className="font-bold text-base text-theme-primary">Community</h1>
+                <p className="text-[11px] text-theme-tertiary">Your communities, profiles and connections</p>
               </div>
             </div>
 
@@ -399,7 +399,7 @@ export const ProfileView: React.FC = () => {
               id="btn-close-community-page"
               type="button"
               onClick={() => setIsConnectionsOpen(false)}
-              className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+              className="p-1.5 rounded-full text-theme-tertiary hover:text-theme-secondary hover:bg-theme-surface-hover transition-colors cursor-pointer"
               aria-label="Close"
             >
               <X className="w-5 h-5" />
@@ -408,13 +408,13 @@ export const ProfileView: React.FC = () => {
 
           <div className="flex-1 max-w-xl mx-auto w-full p-4 sm:p-6 space-y-5 pb-24 overflow-y-auto">
             {/* Tabs */}
-            <div className="flex border-b border-neutral-100">
+            <div className="flex border-b border-theme-divider-light">
               <button
                 onClick={() => { setConnectionTab('followers'); setSearchQuery(''); }}
                 className={`py-2.5 px-3 text-xs font-bold transition-all relative cursor-pointer ${
                   connectionTab === 'followers'
                     ? 'text-[#5E43F3]'
-                    : 'text-neutral-500 hover:text-neutral-900'
+                    : 'text-theme-tertiary hover:text-theme-primary'
                 }`}
               >
                 Followers ({myFollowers.length})
@@ -428,7 +428,7 @@ export const ProfileView: React.FC = () => {
                 className={`py-2.5 px-3 text-xs font-bold transition-all relative cursor-pointer ${
                   connectionTab === 'following'
                     ? 'text-[#5E43F3]'
-                    : 'text-neutral-500 hover:text-neutral-900'
+                    : 'text-theme-tertiary hover:text-theme-primary'
                 }`}
               >
                 Following ({totalFollowingCount})
@@ -439,18 +439,18 @@ export const ProfileView: React.FC = () => {
             </div>
 
             {/* Search */}
-            <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
+            <div className="rounded-2xl border border-theme-divider bg-theme-base p-3">
               <div className="flex items-center gap-2">
-                <Search className="w-4 h-4 text-neutral-400" />
+                <Search className="w-4 h-4 text-theme-tertiary" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={searchPlaceholder}
-                  className="w-full bg-transparent text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
+                  className="w-full bg-transparent text-xs text-theme-primary placeholder:text-theme-tertiary focus:outline-none"
                 />
                 {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="text-neutral-400 hover:text-neutral-600 cursor-pointer">
+                  <button onClick={() => setSearchQuery('')} className="text-theme-tertiary hover:text-theme-secondary cursor-pointer">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
@@ -473,9 +473,9 @@ export const ProfileView: React.FC = () => {
 
                   if (filtered.length === 0) {
                     return (
-                      <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-8 text-center text-xs text-neutral-500">
-                        <Users className="w-8 h-8 mx-auto text-neutral-300 mb-3" />
-                        <p className="font-bold text-neutral-700">
+                      <div className="rounded-2xl border border-dashed border-theme-divider bg-theme-base p-8 text-center text-xs text-theme-tertiary">
+                        <Users className="w-8 h-8 mx-auto text-theme-tertiary mb-3" />
+                        <p className="font-bold text-theme-secondary">
                           {sq ? 'No followers matching your search.' : "You don't have any followers yet."}
                         </p>
                       </div>
@@ -485,7 +485,7 @@ export const ProfileView: React.FC = () => {
                   return filtered.map((user: any) => (
                     <div
                       key={user.id}
-                      className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white p-3 transition-colors hover:bg-neutral-50"
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-theme-divider bg-theme-surface p-3 transition-colors hover:bg-theme-base"
                     >
                       <button
                         type="button"
@@ -496,9 +496,9 @@ export const ProfileView: React.FC = () => {
                           <Avatar src={user.avatar} alt={user.name} size="md" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <span className="truncate text-xs sm:text-sm font-bold text-neutral-950 block">{user.name}</span>
-                          <span className="block truncate text-[11px] text-neutral-400">@{user.username}{user.location ? ` · ${user.location}` : ''}</span>
-                          {user.bio && <p className="mt-0.5 line-clamp-1 text-[11px] text-neutral-600">{user.bio}</p>}
+                          <span className="truncate text-xs sm:text-sm font-bold text-theme-primary block">{user.name}</span>
+                          <span className="block truncate text-[11px] text-theme-tertiary">@{user.username}{user.location ? ` · ${user.location}` : ''}</span>
+                          {user.bio && <p className="mt-0.5 line-clamp-1 text-[11px] text-theme-secondary">{user.bio}</p>}
                         </div>
                       </button>
                       <button
@@ -506,7 +506,7 @@ export const ProfileView: React.FC = () => {
                         onClick={() => toggleFollowUser(user.id)}
                         className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all cursor-pointer shrink-0 ${
                           user.isFollowing
-                            ? 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                            ? 'bg-theme-surface-hover text-theme-secondary hover:bg-theme-surface-active'
                             : 'bg-[#5E43F3] text-white hover:bg-[#4E34E0]'
                         }`}
                       >
@@ -522,10 +522,10 @@ export const ProfileView: React.FC = () => {
             {connectionTab === 'following' && (
               <div className="space-y-4">
                 {totalFollowingCount === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-8 text-center text-xs text-neutral-500">
-                    <Users className="w-8 h-8 mx-auto text-neutral-300 mb-3" />
-                    <p className="font-bold text-neutral-700">You&apos;re not following anyone yet.</p>
-                    <p className="mt-1 text-neutral-500">Follow people, Pages, or communities to build your Lalao circle.</p>
+                  <div className="rounded-2xl border border-dashed border-theme-divider bg-theme-base p-8 text-center text-xs text-theme-tertiary">
+                    <Users className="w-8 h-8 mx-auto text-theme-tertiary mb-3" />
+                    <p className="font-bold text-theme-secondary">You&apos;re not following anyone yet.</p>
+                    <p className="mt-1 text-theme-tertiary">Follow people, Pages, or communities to build your Lalao circle.</p>
                     <button
                       type="button"
                       onClick={() => setActiveTab('discover')}
@@ -537,7 +537,7 @@ export const ProfileView: React.FC = () => {
                 ) : (
                   <>
                     {/* Breakdown */}
-                    <div className="flex items-center gap-3 text-[11px] text-neutral-500 font-medium">
+                    <div className="flex items-center gap-3 text-[11px] text-theme-tertiary font-medium">
                       <span>{totalFollowingCount} total</span>
                       <span>·</span>
                       <span>People {followingData.peopleCt}</span>
@@ -548,7 +548,7 @@ export const ProfileView: React.FC = () => {
                     {/* People section */}
                     {followingData.people.length > 0 && (
                       <div className="space-y-2">
-                        <h4 className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">People</h4>
+                        <h4 className="text-[11px] font-bold text-theme-tertiary uppercase tracking-wider">People</h4>
                         {(() => {
                           const sq = searchQuery.toLowerCase();
                           const filtered = sq
@@ -560,7 +560,7 @@ export const ProfileView: React.FC = () => {
                           return filtered.map((user: any) => (
                             <div
                               key={user.id}
-                              className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white p-3 transition-colors hover:bg-neutral-50"
+                              className="flex items-center justify-between gap-3 rounded-2xl border border-theme-divider bg-theme-surface p-3 transition-colors hover:bg-theme-base"
                             >
                               <button
                                 type="button"
@@ -569,14 +569,14 @@ export const ProfileView: React.FC = () => {
                               >
                                 <Avatar src={user.avatar} alt={user.name} size="md" />
                                 <div className="min-w-0 flex-1">
-                                  <span className="truncate text-xs sm:text-sm font-bold text-neutral-950 block">{user.name}</span>
-                                  <span className="block truncate text-[11px] text-neutral-400">@{user.username}</span>
+                                  <span className="truncate text-xs sm:text-sm font-bold text-theme-primary block">{user.name}</span>
+                                  <span className="block truncate text-[11px] text-theme-tertiary">@{user.username}</span>
                                 </div>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => toggleFollowUser(user.id)}
-                                className="rounded-full px-3 py-1.5 text-xs font-bold bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-all cursor-pointer shrink-0"
+                                className="rounded-full px-3 py-1.5 text-xs font-bold bg-theme-surface-hover text-theme-secondary hover:bg-theme-surface-active transition-all cursor-pointer shrink-0"
                               >
                                 Following
                               </button>
@@ -589,7 +589,7 @@ export const ProfileView: React.FC = () => {
                     {/* Pages section */}
                     {followingData.pages.length > 0 && (
                       <div className="space-y-2">
-                        <h4 className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Pages</h4>
+                        <h4 className="text-[11px] font-bold text-theme-tertiary uppercase tracking-wider">Pages</h4>
                         {(() => {
                           const sq = searchQuery.toLowerCase();
                           const filtered = sq
@@ -601,21 +601,21 @@ export const ProfileView: React.FC = () => {
                           return filtered.map((page: any) => (
                             <div
                               key={page.id}
-                              className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white p-3 transition-colors hover:bg-neutral-50"
+                              className="flex items-center justify-between gap-3 rounded-2xl border border-theme-divider bg-theme-surface p-3 transition-colors hover:bg-theme-base"
                             >
                               <div className="flex min-w-0 flex-1 items-center gap-3">
                                 <Avatar src={page.avatar} alt={page.name} size="md" />
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="truncate text-xs sm:text-sm font-bold text-neutral-950">{page.name}</span>
+                                    <span className="truncate text-xs sm:text-sm font-bold text-theme-primary">{page.name}</span>
                                     {page.badge && <Badge type={page.badge} />}
                                   </div>
-                                  <span className="block truncate text-[11px] text-neutral-400">@{page.username}{page.location ? ` · ${page.location}` : ''}</span>
-                                  <span className="text-[10px] text-neutral-400">{page.followersCount} followers</span>
+                                  <span className="block truncate text-[11px] text-theme-tertiary">@{page.username}{page.location ? ` · ${page.location}` : ''}</span>
+                                  <span className="text-[10px] text-theme-tertiary">{page.followersCount} followers</span>
                                 </div>
                               </div>
                               <div className="flex items-center gap-1 shrink-0">
-                                <span className="rounded-full px-3 py-1.5 text-xs font-bold bg-neutral-100 text-neutral-700">
+                                <span className="rounded-full px-3 py-1.5 text-xs font-bold bg-theme-surface-hover text-theme-secondary">
                                   Following
                                 </span>
                               </div>

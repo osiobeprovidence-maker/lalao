@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { ConvexProviderWithAuth, ConvexReactClient } from 'convex/react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DynamicBranding } from './components/common/DynamicBranding';
+import { ThemeProvider } from './context/ThemeContext';
 import App from './App.tsx';
 import './index.css';
 
@@ -14,9 +15,11 @@ createRoot(document.getElementById('root')!).render(
     <AuthProvider>
       <ConvexProviderWithAuth client={convex} useAuth={useAuth}>
         <DynamicBranding />
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <ThemeProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </ThemeProvider>
       </ConvexProviderWithAuth>
     </AuthProvider>
   </StrictMode>,

@@ -77,7 +77,7 @@ export const Popover: React.FC<PopoverProps> = ({ trigger, content, isOpen, onCl
         createPortal(
           <div 
             ref={popoverRef}
-            className="fixed z-[99999] bg-white rounded-xl shadow-xl border border-neutral-200 overflow-hidden"
+            className="fixed z-[99999] bg-theme-surface rounded-xl shadow-xl border border-theme-divider overflow-hidden"
             style={{
               width,
               left: Math.min(coords.left, window.innerWidth - width - 10), // Prevent bleeding off right edge

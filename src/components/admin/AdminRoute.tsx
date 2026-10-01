@@ -18,10 +18,10 @@ export const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   // Loading
   if (role === undefined) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-950">
+      <div className="min-h-screen flex items-center justify-center bg-theme-inverse">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 rounded-full border-4 border-[#5E43F3]/30 border-t-[#5E43F3] animate-spin" />
-          <p className="text-xs text-neutral-500">Verifying access…</p>
+          <p className="text-xs text-theme-tertiary">Verifying access…</p>
         </div>
       </div>
     );

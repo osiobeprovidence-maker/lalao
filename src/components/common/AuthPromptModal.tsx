@@ -15,12 +15,12 @@ export const AuthPromptModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-[360px] overflow-hidden rounded-[32px] bg-white shadow-2xl animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-[360px] overflow-hidden rounded-[32px] bg-theme-surface shadow-2xl animate-in zoom-in-95 duration-200">
         <div className="relative px-6 py-8 text-center">
           <button
             type="button"
             onClick={closeAuthPrompt}
-            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-neutral-500 transition hover:bg-neutral-200 hover:text-neutral-900 cursor-pointer"
+            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-theme-surface-hover text-theme-tertiary transition hover:bg-theme-surface-active hover:text-theme-primary cursor-pointer"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -40,10 +40,10 @@ export const AuthPromptModal: React.FC = () => {
             </div>
           )}
 
-          <h2 className="mb-2 text-xl font-bold tracking-tight text-neutral-900">
+          <h2 className="mb-2 text-xl font-bold tracking-tight text-theme-primary">
             {authPromptMessage || 'Sign in to continue'}
           </h2>
-          <p className="mb-8 text-[15px] leading-relaxed text-neutral-500">
+          <p className="mb-8 text-[15px] leading-relaxed text-theme-tertiary">
             Join the community to interact with posts, pages, and other users.
           </p>
 
@@ -64,7 +64,7 @@ export const AuthPromptModal: React.FC = () => {
                 closeAuthPrompt();
                 navigate('/login');
               }}
-              className="flex w-full items-center justify-center rounded-full bg-neutral-100 px-6 py-3.5 text-[15px] font-bold text-neutral-900 transition hover:bg-neutral-200 cursor-pointer"
+              className="flex w-full items-center justify-center rounded-full bg-theme-surface-hover px-6 py-3.5 text-[15px] font-bold text-theme-primary transition hover:bg-theme-surface-active cursor-pointer"
             >
               Log in
             </button>

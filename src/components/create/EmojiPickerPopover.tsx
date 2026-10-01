@@ -295,27 +295,27 @@ export const EmojiPickerPopover: React.FC<EmojiPickerPopoverProps> = ({
   return (
     <div
       ref={popoverRef}
-      className="absolute bottom-full left-0 mb-2 z-50 w-[320px] sm:w-[350px] max-w-[90vw] rounded-2xl border border-neutral-200 bg-white p-3 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+      className="absolute bottom-full left-0 mb-2 z-50 w-[320px] sm:w-[350px] max-w-[90vw] rounded-2xl border border-theme-divider bg-theme-surface p-3 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
       role="dialog"
       aria-label="Emoji Picker"
     >
       {/* Header with Search and Close */}
-      <div className="flex items-center gap-2 pb-2.5 border-b border-neutral-100">
+      <div className="flex items-center gap-2 pb-2.5 border-b border-theme-divider-light">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" />
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-theme-tertiary" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search emojis..."
-            className="w-full rounded-xl bg-neutral-100 py-1.5 pl-8 pr-7 text-xs text-neutral-800 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#5E43F3]"
+            className="w-full rounded-xl bg-theme-surface-hover py-1.5 pl-8 pr-7 text-xs text-theme-primary placeholder:text-theme-tertiary focus:bg-theme-surface focus:outline-none focus:ring-1 focus:ring-[#5E43F3]"
             autoFocus
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-theme-tertiary hover:text-theme-secondary"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -324,7 +324,7 @@ export const EmojiPickerPopover: React.FC<EmojiPickerPopoverProps> = ({
         <button
           type="button"
           onClick={onClose}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-700"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-theme-tertiary transition hover:bg-theme-surface-hover hover:text-theme-secondary"
           aria-label="Close emoji picker"
         >
           <X className="h-4 w-4" />
@@ -333,7 +333,7 @@ export const EmojiPickerPopover: React.FC<EmojiPickerPopoverProps> = ({
 
       {/* Category selector tabs (shown when not searching) */}
       {!query && (
-        <div className="flex items-center justify-between border-b border-neutral-100 py-1.5">
+        <div className="flex items-center justify-between border-b border-theme-divider-light py-1.5">
           {EMOJI_CATEGORIES.map((category) => {
             const Icon = category.icon;
             const isActive = activeCategory === category.id;
@@ -345,7 +345,7 @@ export const EmojiPickerPopover: React.FC<EmojiPickerPopoverProps> = ({
                 className={`flex h-7 w-7 items-center justify-center rounded-lg transition ${
                   isActive
                     ? 'bg-[#5E43F3]/10 text-[#5E43F3]'
-                    : 'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600'
+                    : 'text-theme-tertiary hover:bg-theme-surface-hover hover:text-theme-secondary'
                 }`}
                 title={category.name}
                 aria-label={category.name}
@@ -367,7 +367,7 @@ export const EmojiPickerPopover: React.FC<EmojiPickerPopoverProps> = ({
                   key={`${item.emoji}-${idx}`}
                   type="button"
                   onClick={() => onSelectEmoji(item.emoji)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-lg hover:bg-neutral-100 transition active:scale-95"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-lg hover:bg-theme-surface-hover transition active:scale-95"
                   title={item.keywords}
                 >
                   {item.emoji}
@@ -375,13 +375,13 @@ export const EmojiPickerPopover: React.FC<EmojiPickerPopoverProps> = ({
               ))}
             </div>
           ) : (
-            <div className="py-6 text-center text-xs text-neutral-400">
+            <div className="py-6 text-center text-xs text-theme-tertiary">
               No emojis found for "{searchQuery}"
             </div>
           )
         ) : (
           <div>
-            <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+            <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-theme-tertiary">
               {EMOJI_CATEGORIES.find((c) => c.id === activeCategory)?.name}
             </p>
             <div className="grid grid-cols-7 sm:grid-cols-8 gap-1">
@@ -390,7 +390,7 @@ export const EmojiPickerPopover: React.FC<EmojiPickerPopoverProps> = ({
                   key={item.emoji}
                   type="button"
                   onClick={() => onSelectEmoji(item.emoji)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-lg hover:bg-neutral-100 transition active:scale-95"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-lg hover:bg-theme-surface-hover transition active:scale-95"
                   title={item.keywords}
                 >
                   {item.emoji}

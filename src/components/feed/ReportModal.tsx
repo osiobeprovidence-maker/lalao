@@ -65,19 +65,19 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div 
-        className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-theme-inverse/40 backdrop-blur-sm"
         onClick={onClose}
       />
       
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between p-4 border-b border-neutral-100">
-          <div className="flex items-center gap-2 text-neutral-900">
+      <div className="relative w-full max-w-md bg-theme-surface rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between p-4 border-b border-theme-divider-light">
+          <div className="flex items-center gap-2 text-theme-primary">
             <AlertTriangle className="w-5 h-5 text-rose-500" />
             <h2 className="font-bold text-lg">Report Content</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-neutral-100 text-neutral-500 transition-colors"
+            className="p-2 rounded-full hover:bg-theme-surface-hover text-theme-tertiary transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -85,14 +85,14 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-neutral-900 mb-2">
+            <label className="block text-sm font-semibold text-theme-primary mb-2">
               Why are you reporting this?
             </label>
             <div className="max-h-[240px] overflow-y-auto space-y-1.5 pr-2 custom-scrollbar">
               {REPORT_REASONS.map((reason) => (
                 <label 
                   key={reason}
-                  className="flex items-center gap-3 p-3 rounded-xl border border-neutral-100 hover:bg-neutral-50 cursor-pointer transition-colors"
+                  className="flex items-center gap-3 p-3 rounded-xl border border-theme-divider-light hover:bg-theme-base cursor-pointer transition-colors"
                 >
                   <input
                     type="radio"
@@ -100,23 +100,23 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                     value={reason}
                     checked={selectedReason === reason}
                     onChange={(e) => setSelectedReason(e.target.value)}
-                    className="w-4 h-4 text-[#5200FF] focus:ring-[#5200FF] border-neutral-300"
+                    className="w-4 h-4 text-[#5200FF] focus:ring-[#5200FF] border-theme-divider-strong"
                   />
-                  <span className="text-sm text-neutral-700">{reason}</span>
+                  <span className="text-sm text-theme-secondary">{reason}</span>
                 </label>
               ))}
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-neutral-900 mb-2">
+            <label className="block text-sm font-semibold text-theme-primary mb-2">
               Additional Details (Optional)
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Provide any additional context to help us review..."
-              className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 focus:outline-none focus:border-[#5200FF] focus:bg-white transition-colors resize-none"
+              className="w-full p-3 bg-theme-base border border-theme-divider rounded-xl text-sm text-theme-primary focus:outline-none focus:border-[#5200FF] focus:bg-theme-surface transition-colors resize-none"
               rows={3}
             />
           </div>

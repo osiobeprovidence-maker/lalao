@@ -60,10 +60,10 @@ export const SubscriptionCheckoutModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl relative">
+      <div className="bg-theme-surface rounded-2xl w-full max-w-md overflow-hidden shadow-2xl relative">
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 p-2 rounded-full bg-neutral-100 text-neutral-500 hover:bg-neutral-200 transition-colors z-10"
+          className="absolute top-4 right-4 p-2 rounded-full bg-theme-surface-hover text-theme-tertiary hover:bg-theme-surface-active transition-colors z-10"
         >
           <X className="w-4 h-4" />
         </button>
@@ -73,8 +73,8 @@ export const SubscriptionCheckoutModal: React.FC = () => {
             <div className="w-16 h-16 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-2">
               <Check className="w-8 h-8 stroke-[3]" />
             </div>
-            <h2 className="text-xl font-black text-neutral-900">Subscription Active!</h2>
-            <p className="text-sm text-neutral-500">
+            <h2 className="text-xl font-black text-theme-primary">Subscription Active!</h2>
+            <p className="text-sm text-theme-tertiary">
               You have successfully claimed a slot for {plan.name}. Your wallet has been charged ₦{price.toLocaleString()}.
             </p>
             <button
@@ -98,46 +98,46 @@ export const SubscriptionCheckoutModal: React.FC = () => {
                   Subscription Slot
                 </span>
               </div>
-              <h2 className="text-2xl font-black text-neutral-900 mb-1">{plan.name}</h2>
-              <p className="text-sm text-neutral-600">{plan.description}</p>
+              <h2 className="text-2xl font-black text-theme-primary mb-1">{plan.name}</h2>
+              <p className="text-sm text-theme-secondary">{plan.description}</p>
             </div>
 
             {/* Content */}
             <div className="p-6">
               <div className="flex justify-between items-end mb-6">
                 <div>
-                  <p className="text-xs font-bold text-neutral-500 uppercase tracking-wide mb-1">Price Per Cycle</p>
+                  <p className="text-xs font-bold text-theme-tertiary uppercase tracking-wide mb-1">Price Per Cycle</p>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-black text-neutral-900">
+                    <span className="text-3xl font-black text-theme-primary">
                       ₦{price.toLocaleString()}
                     </span>
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs font-bold text-neutral-500 bg-neutral-100 px-2 py-1 rounded-md uppercase">
+                  <span className="text-xs font-bold text-theme-tertiary bg-theme-surface-hover px-2 py-1 rounded-md uppercase">
                     / {plan.billingCycle}
                   </span>
                 </div>
               </div>
 
               {/* Wallet Balance Check */}
-              <div className={`p-4 rounded-xl border mb-6 flex justify-between items-center ${hasEnoughFunds ? 'bg-neutral-50 border-neutral-200' : 'bg-red-50 border-red-200'}`}>
+              <div className={`p-4 rounded-xl border mb-6 flex justify-between items-center ${hasEnoughFunds ? 'bg-theme-base border-theme-divider' : 'bg-red-50 border-red-200'}`}>
                 <div>
-                  <p className="text-xs font-bold text-neutral-500 mb-1">Your Wallet Balance</p>
-                  <p className={`text-sm font-black ${hasEnoughFunds ? 'text-neutral-900' : 'text-red-600'}`}>₦{userBalance.toLocaleString()}</p>
+                  <p className="text-xs font-bold text-theme-tertiary mb-1">Your Wallet Balance</p>
+                  <p className={`text-sm font-black ${hasEnoughFunds ? 'text-theme-primary' : 'text-red-600'}`}>₦{userBalance.toLocaleString()}</p>
                 </div>
                 {!hasEnoughFunds && (
-                  <button className="text-xs font-bold bg-neutral-900 text-white px-3 py-1.5 rounded-lg">
+                  <button className="text-xs font-bold bg-theme-inverse text-theme-text-inverse px-3 py-1.5 rounded-lg">
                     Top Up
                   </button>
                 )}
               </div>
 
-              <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-100 mb-6">
-                <h4 className="text-xs font-bold text-neutral-900 uppercase tracking-wider mb-3">What's Included</h4>
+              <div className="bg-theme-base rounded-xl p-4 border border-theme-divider-light mb-6">
+                <h4 className="text-xs font-bold text-theme-primary uppercase tracking-wider mb-3">What's Included</h4>
                 <div className="space-y-2.5">
                   {plan.benefits?.map((benefit: string, idx: number) => (
-                    <div key={idx} className="flex items-start gap-2 text-sm text-neutral-700">
+                    <div key={idx} className="flex items-start gap-2 text-sm text-theme-secondary">
                       <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                       <span>{benefit}</span>
                     </div>

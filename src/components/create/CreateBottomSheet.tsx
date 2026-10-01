@@ -61,22 +61,22 @@ export const CreateBottomSheet: React.FC = () => {
   const renderCreateOptions = () => {
     if (isDesktop) {
       return (
-        <div className="w-full max-w-[760px] bg-[#f6f3ee]">
-          <div className="sticky top-0 z-10 rounded-t-3xl border-b border-neutral-200/80 bg-[#f6f3ee]/95 px-4 py-3 backdrop-blur-md">
+        <div className="w-full max-w-[760px] bg-theme-base">
+          <div className="sticky top-0 z-10 rounded-t-3xl border-b border-theme-divider/80 bg-theme-base/95 px-4 py-3 backdrop-blur-md">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setIsCreateSheetOpen(false)}
-                  className="p-1.5 -ml-1 rounded-full text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100 transition-colors cursor-pointer"
+                  className="p-1.5 -ml-1 rounded-full text-theme-secondary hover:text-theme-primary hover:bg-theme-surface-hover transition-colors cursor-pointer"
                   title="Go back"
                   aria-label="Go back"
                 >
                   <ArrowLeft className="w-5 h-5 stroke-[2.2]" />
                 </button>
                 <div>
-                  <h2 className="text-base font-bold tracking-tight text-neutral-950">Create</h2>
-                  <p className="text-[11px] text-neutral-500">What do you want to do?</p>
+                  <h2 className="text-base font-bold tracking-tight text-theme-primary">Create</h2>
+                  <p className="text-[11px] text-theme-tertiary">What do you want to do?</p>
                 </div>
               </div>
 
@@ -84,7 +84,7 @@ export const CreateBottomSheet: React.FC = () => {
                 id="btn-close-create-sheet"
                 type="button"
                 onClick={() => setIsCreateSheetOpen(false)}
-                className="p-2 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+                className="p-2 rounded-full text-theme-tertiary hover:text-theme-secondary hover:bg-theme-surface-hover transition-colors cursor-pointer"
                 aria-label="Close create workspace"
               >
                 <X className="w-5 h-5" />
@@ -97,7 +97,7 @@ export const CreateBottomSheet: React.FC = () => {
               id="btn-create-option-post"
               type="button"
               onClick={() => handleSelect('post')}
-              className="w-full rounded-2xl border border-neutral-200 bg-white p-4 text-left transition-all hover:border-[#5E43F3]/30 hover:bg-[#f6f3ee] active:scale-[0.99] cursor-pointer"
+              className="w-full rounded-2xl border border-theme-divider bg-theme-surface p-4 text-left transition-all hover:border-[#5E43F3]/30 hover:bg-theme-base active:scale-[0.99] cursor-pointer"
             >
               <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#5E43F3]/10 text-[#5E43F3] shadow-xs">
@@ -105,10 +105,10 @@ export const CreateBottomSheet: React.FC = () => {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-base font-bold text-neutral-900">Normal Post</span>
-                    <ChevronRight className="h-4 w-4 text-neutral-400" />
+                    <span className="text-base font-bold text-theme-primary">Normal Post</span>
+                    <ChevronRight className="h-4 w-4 text-theme-tertiary" />
                   </div>
-                  <p className="mt-1 text-xs leading-relaxed text-neutral-600">
+                  <p className="mt-1 text-xs leading-relaxed text-theme-secondary">
                     Share a photo, video or thought with your community.
                   </p>
                 </div>
@@ -128,14 +128,14 @@ export const CreateBottomSheet: React.FC = () => {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-base font-bold text-neutral-900">Rally</span>
+                      <span className="text-base font-bold text-theme-primary">Rally</span>
                       <span className="rounded bg-[#5E43F3] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white">
                         Action
                       </span>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-neutral-400" />
+                    <ChevronRight className="h-4 w-4 text-theme-tertiary" />
                   </div>
-                  <p className="mt-1 text-xs font-normal leading-relaxed text-neutral-700">
+                  <p className="mt-1 text-xs font-normal leading-relaxed text-theme-secondary">
                     Reach out to people near you — ask for something, offer help, or invite people to join you.
                   </p>
                 </div>
@@ -155,14 +155,14 @@ export const CreateBottomSheet: React.FC = () => {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-base font-bold text-neutral-900">Cycle Status</span>
+                      <span className="text-base font-bold text-theme-primary">Cycle Status</span>
                       <span className="rounded bg-gradient-to-r from-[#5E43F3] to-pink-500 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white">
                         24 Hours
                       </span>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-neutral-400" />
+                    <ChevronRight className="h-4 w-4 text-theme-tertiary" />
                   </div>
-                  <p className="mt-1 text-xs font-normal leading-relaxed text-neutral-700">
+                  <p className="mt-1 text-xs font-normal leading-relaxed text-theme-secondary">
                     Share a 24-hour photo, video, audio note, or text status to your local cycle.
                   </p>
                 </div>
@@ -173,7 +173,7 @@ export const CreateBottomSheet: React.FC = () => {
               id="btn-create-option-page"
               type="button"
               onClick={() => handleSelect('page')}
-              className="w-full rounded-2xl border border-neutral-200 bg-white p-4 text-left transition-all hover:border-emerald-200 hover:bg-emerald-50/40 active:scale-[0.99] cursor-pointer"
+              className="w-full rounded-2xl border border-theme-divider bg-theme-surface p-4 text-left transition-all hover:border-emerald-200 hover:bg-emerald-50/40 active:scale-[0.99] cursor-pointer"
             >
               <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 shadow-xs">
@@ -181,10 +181,10 @@ export const CreateBottomSheet: React.FC = () => {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-base font-bold text-neutral-900">Page</span>
-                    <ChevronRight className="h-4 w-4 text-neutral-400" />
+                    <span className="text-base font-bold text-theme-primary">Page</span>
+                    <ChevronRight className="h-4 w-4 text-theme-tertiary" />
                   </div>
-                  <p className="mt-1 text-xs leading-relaxed text-neutral-600">
+                  <p className="mt-1 text-xs leading-relaxed text-theme-secondary">
                     Build a distinct identity for your football club, brand, organization or community.
                   </p>
                 </div>
@@ -204,22 +204,22 @@ export const CreateBottomSheet: React.FC = () => {
         <div
           id="create-bottom-sheet-modal"
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-5 animate-in slide-in-from-bottom duration-300 border-t sm:border border-neutral-200"
+          className="w-full max-w-lg bg-theme-surface rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-5 animate-in slide-in-from-bottom duration-300 border-t sm:border border-theme-divider"
         >
-          <div className="w-10 h-1 bg-neutral-300 rounded-full mx-auto sm:hidden" />
+          <div className="w-10 h-1 bg-theme-divider-strong rounded-full mx-auto sm:hidden" />
 
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-black tracking-tight text-neutral-950 font-sans">
+              <h2 className="text-xl font-black tracking-tight text-theme-primary font-sans">
                 Create
               </h2>
-              <p className="text-xs text-neutral-500 mt-0.5">What do you want to do?</p>
+              <p className="text-xs text-theme-tertiary mt-0.5">What do you want to do?</p>
             </div>
             <button
               id="btn-close-create-sheet"
               type="button"
               onClick={handleClose}
-              className="p-2 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+              className="p-2 rounded-full text-theme-tertiary hover:text-theme-secondary hover:bg-theme-surface-hover transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -235,17 +235,17 @@ export const CreateBottomSheet: React.FC = () => {
               id="btn-create-option-post"
               type="button"
               onClick={() => handleSelect('post')}
-              className="w-full p-4 rounded-2xl bg-neutral-50 hover:bg-neutral-100/90 active:scale-[0.99] border border-neutral-100 transition-all text-left flex items-start gap-4 group cursor-pointer"
+              className="w-full p-4 rounded-2xl bg-theme-base hover:bg-theme-surface-hover/90 active:scale-[0.99] border border-theme-divider-light transition-all text-left flex items-start gap-4 group cursor-pointer"
             >
               <div className="w-12 h-12 rounded-2xl bg-[#5E43F3]/10 text-[#5E43F3] flex items-center justify-center shrink-0 group-hover:bg-[#5E43F3] group-hover:text-white transition-colors shadow-xs">
                 <PenLine className="w-6 h-6 stroke-[2.2]" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-base text-neutral-900">Normal Post</span>
-                  <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-0.5 transition-transform" />
+                  <span className="font-bold text-base text-theme-primary">Normal Post</span>
+                  <ChevronRight className="w-4 h-4 text-theme-tertiary group-hover:translate-x-0.5 transition-transform" />
                 </div>
-                <p className="text-xs text-neutral-600 mt-1 leading-relaxed">
+                <p className="text-xs text-theme-secondary mt-1 leading-relaxed">
                   Share a photo, video or thought with your community.
                 </p>
               </div>
@@ -263,14 +263,14 @@ export const CreateBottomSheet: React.FC = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-base text-neutral-900">Rally</span>
+                    <span className="font-bold text-base text-theme-primary">Rally</span>
                     <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider bg-[#5E43F3] text-white rounded">
                       Action
                     </span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-0.5 transition-transform" />
+                  <ChevronRight className="w-4 h-4 text-theme-tertiary group-hover:translate-x-0.5 transition-transform" />
                 </div>
-                <p className="text-xs text-neutral-700 mt-1 leading-relaxed font-normal">
+                <p className="text-xs text-theme-secondary mt-1 leading-relaxed font-normal">
                   Reach out to people near you — ask for something, offer help, or invite people to join you.
                 </p>
               </div>
@@ -288,14 +288,14 @@ export const CreateBottomSheet: React.FC = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-base text-neutral-900">Cycle Status</span>
+                    <span className="font-bold text-base text-theme-primary">Cycle Status</span>
                     <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider bg-gradient-to-r from-[#5E43F3] to-pink-500 text-white rounded">
                       24h Story
                     </span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-0.5 transition-transform" />
+                  <ChevronRight className="w-4 h-4 text-theme-tertiary group-hover:translate-x-0.5 transition-transform" />
                 </div>
-                <p className="text-xs text-neutral-700 mt-1 leading-relaxed font-normal">
+                <p className="text-xs text-theme-secondary mt-1 leading-relaxed font-normal">
                   Share a 24-hour photo, video, audio note, or text status to your local cycle.
                 </p>
               </div>
@@ -305,17 +305,17 @@ export const CreateBottomSheet: React.FC = () => {
               id="btn-create-option-page"
               type="button"
               onClick={() => handleSelect('page')}
-              className="w-full p-4 rounded-2xl bg-neutral-50 hover:bg-neutral-100/90 active:scale-[0.99] border border-neutral-100 transition-all text-left flex items-start gap-4 group cursor-pointer"
+              className="w-full p-4 rounded-2xl bg-theme-base hover:bg-theme-surface-hover/90 active:scale-[0.99] border border-theme-divider-light transition-all text-left flex items-start gap-4 group cursor-pointer"
             >
               <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors shadow-xs">
                 <Building2 className="w-6 h-6 stroke-[2]" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-base text-neutral-900">Page</span>
-                  <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-0.5 transition-transform" />
+                  <span className="font-bold text-base text-theme-primary">Page</span>
+                  <ChevronRight className="w-4 h-4 text-theme-tertiary group-hover:translate-x-0.5 transition-transform" />
                 </div>
-                <p className="text-xs text-neutral-600 mt-1 leading-relaxed">
+                <p className="text-xs text-theme-secondary mt-1 leading-relaxed">
                   Build a distinct identity for your football club, brand, organization or community.
                 </p>
               </div>

@@ -48,20 +48,20 @@ export const CartDrawer: React.FC = () => {
       >
         <div
           id="cart-drawer-container"
-          className="bg-white w-full sm:max-w-md h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 relative z-10"
+          className="bg-theme-surface w-full sm:max-w-md h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 relative z-10"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <header className="px-5 py-4 border-b border-neutral-100 flex items-center justify-between bg-white">
+          <header className="px-5 py-4 border-b border-theme-divider-light flex items-center justify-between bg-theme-surface">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-full bg-[#5E43F3]/10 flex items-center justify-center text-[#5E43F3]">
                 <ShoppingBag className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-neutral-900 leading-tight">
+                <h2 className="text-base font-bold text-theme-primary leading-tight">
                   Shopping Cart
                 </h2>
-                <p className="text-xs text-neutral-400">
+                <p className="text-xs text-theme-tertiary">
                   {cartCount} {cartCount === 1 ? 'item' : 'items'}
                 </p>
               </div>
@@ -75,7 +75,7 @@ export const CartDrawer: React.FC = () => {
                   setIsCartOpen(false);
                   setIsShoppingHistoryOpen(true);
                 }}
-                className="p-1.5 rounded-full text-neutral-500 hover:text-[#5E43F3] hover:bg-neutral-100 transition-colors cursor-pointer"
+                className="p-1.5 rounded-full text-theme-tertiary hover:text-[#5E43F3] hover:bg-theme-surface-hover transition-colors cursor-pointer"
                 title="Shopping History"
                 aria-label="Shopping history"
               >
@@ -85,7 +85,7 @@ export const CartDrawer: React.FC = () => {
                 <button
                   type="button"
                   onClick={clearCart}
-                  className="text-xs text-neutral-400 hover:text-rose-500 font-medium px-2 py-1 rounded-md transition-colors cursor-pointer"
+                  className="text-xs text-theme-tertiary hover:text-rose-500 font-medium px-2 py-1 rounded-md transition-colors cursor-pointer"
                   title="Clear all items"
                 >
                   Clear
@@ -95,7 +95,7 @@ export const CartDrawer: React.FC = () => {
                 id="btn-close-cart-drawer"
                 type="button"
                 onClick={() => setIsCartOpen(false)}
-                className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+                className="p-1.5 rounded-full text-theme-tertiary hover:text-theme-secondary hover:bg-theme-surface-hover transition-colors cursor-pointer"
                 aria-label="Close cart"
               >
                 <X className="w-5 h-5" />
@@ -106,11 +106,11 @@ export const CartDrawer: React.FC = () => {
           {/* Cart Items List */}
           {cart.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-              <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 mb-4">
+              <div className="w-16 h-16 rounded-full bg-theme-surface-hover flex items-center justify-center text-theme-tertiary mb-4">
                 <PackageX className="w-8 h-8 stroke-[1.5]" />
               </div>
-              <h3 className="text-base font-bold text-neutral-800">Your cart is empty</h3>
-              <p className="text-xs text-neutral-500 max-w-xs mt-1">
+              <h3 className="text-base font-bold text-theme-primary">Your cart is empty</h3>
+              <p className="text-xs text-theme-tertiary max-w-xs mt-1">
                 Explore local products and merchandise from verified creators and stores in Delta State.
               </p>
               <div className="flex flex-col sm:flex-row items-center gap-2 mt-5">
@@ -127,7 +127,7 @@ export const CartDrawer: React.FC = () => {
                     setIsCartOpen(false);
                     setIsShoppingHistoryOpen(true);
                   }}
-                  className="py-2.5 px-4 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="py-2.5 px-4 rounded-xl bg-theme-surface-hover hover:bg-theme-surface-active text-theme-secondary text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
                 >
                   <History className="w-4 h-4" />
                   <span>Shopping History</span>
@@ -142,7 +142,7 @@ export const CartDrawer: React.FC = () => {
                     src={item.product.image}
                     alt={item.product.name}
                     referrerPolicy="no-referrer"
-                    className="w-16 h-16 rounded-xl object-cover bg-neutral-100 shrink-0 border border-neutral-200"
+                    className="w-16 h-16 rounded-xl object-cover bg-theme-surface-hover shrink-0 border border-theme-divider"
                     onError={(e) => {
                       (e.target as HTMLElement).style.display = 'none';
                     }}
@@ -150,13 +150,13 @@ export const CartDrawer: React.FC = () => {
                   <div className="flex-1 min-w-0 flex flex-col justify-between">
                     <div>
                       <div className="flex items-start justify-between gap-1">
-                        <h4 className="text-xs font-bold text-neutral-900 line-clamp-1">
+                        <h4 className="text-xs font-bold text-theme-primary line-clamp-1">
                           {item.product.name}
                         </h4>
                         <button
                           type="button"
                           onClick={() => removeFromCart(item.id)}
-                          className="text-neutral-400 hover:text-rose-500 p-0.5 cursor-pointer transition-colors"
+                          className="text-theme-tertiary hover:text-rose-500 p-0.5 cursor-pointer transition-colors"
                           title="Remove item"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -164,7 +164,7 @@ export const CartDrawer: React.FC = () => {
                       </div>
 
                       {item.storeName && (
-                        <p className="text-[10px] text-neutral-400 truncate">
+                        <p className="text-[10px] text-theme-tertiary truncate">
                           {item.storeName}
                         </p>
                       )}
@@ -174,7 +174,7 @@ export const CartDrawer: React.FC = () => {
                           {Object.entries(item.selectedOptions).map(([key, val]) => (
                             <span
                               key={key}
-                              className="text-[9px] font-semibold bg-neutral-100 text-neutral-700 px-1.5 py-0.5 rounded"
+                              className="text-[9px] font-semibold bg-theme-surface-hover text-theme-secondary px-1.5 py-0.5 rounded"
                             >
                               {key}: {val}
                             </span>
@@ -184,28 +184,28 @@ export const CartDrawer: React.FC = () => {
                     </div>
 
                     <div className="flex items-center justify-between pt-2">
-                      <span className="text-xs font-black text-neutral-950">
+                      <span className="text-xs font-black text-theme-primary">
                         {currencySymbol}
                         {(item.product.price * item.quantity).toLocaleString()}
                       </span>
 
                       {/* Quantity Stepper */}
-                      <div className="flex items-center border border-neutral-200 rounded-lg bg-neutral-50 overflow-hidden">
+                      <div className="flex items-center border border-theme-divider rounded-lg bg-theme-base overflow-hidden">
                         <button
                           type="button"
                           onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
-                          className="w-6 h-6 flex items-center justify-center text-neutral-600 hover:bg-neutral-200 cursor-pointer active:scale-95"
+                          className="w-6 h-6 flex items-center justify-center text-theme-secondary hover:bg-theme-surface-active cursor-pointer active:scale-95"
                           title="Decrease quantity"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="w-7 text-center text-xs font-bold text-neutral-900 select-none">
+                        <span className="w-7 text-center text-xs font-bold text-theme-primary select-none">
                           {item.quantity}
                         </span>
                         <button
                           type="button"
                           onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
-                          className="w-6 h-6 flex items-center justify-center text-neutral-600 hover:bg-neutral-200 cursor-pointer active:scale-95"
+                          className="w-6 h-6 flex items-center justify-center text-theme-secondary hover:bg-theme-surface-active cursor-pointer active:scale-95"
                           title="Increase quantity"
                         >
                           <Plus className="w-3 h-3" />
@@ -220,16 +220,16 @@ export const CartDrawer: React.FC = () => {
 
           {/* Cart Footer */}
           {cart.length > 0 && (
-            <footer className="p-4 border-t border-neutral-100 bg-neutral-50/70 space-y-3">
-              <div className="flex items-center justify-between text-xs text-neutral-600">
+            <footer className="p-4 border-t border-theme-divider-light bg-theme-base/70 space-y-3">
+              <div className="flex items-center justify-between text-xs text-theme-secondary">
                 <span>Subtotal ({cartCount} items)</span>
-                <span className="text-base font-black text-neutral-900">
+                <span className="text-base font-black text-theme-primary">
                   {currencySymbol}
                   {subtotal.toLocaleString()}
                 </span>
               </div>
 
-              <div className="flex items-center gap-1.5 text-[11px] text-neutral-500">
+              <div className="flex items-center gap-1.5 text-[11px] text-theme-tertiary">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                 <span>Verified stores with buyer escrow security</span>
               </div>

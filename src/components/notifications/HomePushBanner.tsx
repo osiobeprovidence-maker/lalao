@@ -72,10 +72,10 @@ export const HomePushBanner: React.FC = () => {
             <Bell className="w-4.5 h-4.5" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-[13px] font-bold text-neutral-950 tracking-tight">
+            <h3 className="text-[13px] font-bold text-theme-primary tracking-tight">
               Stay up to date
             </h3>
-            <p className="text-[11px] text-neutral-600 mt-0.5 leading-relaxed">
+            <p className="text-[11px] text-theme-secondary mt-0.5 leading-relaxed">
               Get notifications for messages, follows, comments, subscriptions, and important Lalao updates.
             </p>
             <div className="mt-3 flex items-center gap-2">
@@ -102,7 +102,7 @@ export const HomePushBanner: React.FC = () => {
         <button
           type="button"
           onClick={dismissPrompt}
-          className="p-1 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-200/50 transition-colors shrink-0 cursor-pointer"
+          className="p-1 rounded-full text-theme-tertiary hover:text-theme-secondary hover:bg-theme-surface-active/50 transition-colors shrink-0 cursor-pointer"
           title="Dismiss notification prompt"
           aria-label="Dismiss notification prompt"
         >

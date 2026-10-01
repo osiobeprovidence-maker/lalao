@@ -42,12 +42,12 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ defaultT
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between p-4 border-b border-neutral-100">
-          <h3 className="font-black text-lg text-neutral-900">Post a Listing</h3>
+      <div className="bg-theme-surface w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between p-4 border-b border-theme-divider-light">
+          <h3 className="font-black text-lg text-theme-primary">Post a Listing</h3>
           <button 
             onClick={onClose}
-            className="p-2 rounded-full bg-neutral-100 text-neutral-500 hover:bg-neutral-200 cursor-pointer"
+            className="p-2 rounded-full bg-theme-surface-hover text-theme-tertiary hover:bg-theme-surface-active cursor-pointer"
           >
             <X className="w-5 h-5 stroke-[2.5]" />
           </button>
@@ -57,7 +57,7 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ defaultT
           <form id="create-listing-form" onSubmit={handleSubmit} className="space-y-5">
             {/* Type Selector */}
             <div>
-              <label className="block text-xs font-bold text-neutral-700 mb-2 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-theme-secondary mb-2 uppercase tracking-wider">
                 What are you posting?
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -73,7 +73,7 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ defaultT
                     className={`py-3 px-2 rounded-xl text-[11px] sm:text-xs font-bold border transition-all cursor-pointer ${
                       type === opt.id 
                         ? 'border-[#5E43F3] bg-[#5E43F3]/5 text-[#5E43F3]' 
-                        : 'border-neutral-200 bg-neutral-50 text-neutral-500 hover:bg-neutral-100'
+                        : 'border-theme-divider bg-theme-base text-theme-tertiary hover:bg-theme-surface-hover'
                     }`}
                   >
                     {opt.label}
@@ -84,7 +84,7 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ defaultT
 
             {type === 'room_offered' && (
               <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1.5 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-theme-secondary mb-1.5 uppercase tracking-wider">
                   Listing Title
                 </label>
                 <input 
@@ -92,13 +92,13 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ defaultT
                   value={title}
                   onChange={e => setTitle(e.target.value)}
                   placeholder="e.g. Spacious En-suite Room in Ugbowo"
-                  className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#5E43F3]"
+                  className="w-full bg-theme-base border border-theme-divider rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#5E43F3]"
                 />
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-bold text-neutral-700 mb-1.5 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-theme-secondary mb-1.5 uppercase tracking-wider">
                 Location *
               </label>
               <input 
@@ -107,28 +107,28 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ defaultT
                 value={location}
                 onChange={e => setLocation(e.target.value)}
                 placeholder="e.g. BDPA, Ugbowo"
-                className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#5E43F3]"
+                className="w-full bg-theme-base border border-theme-divider rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#5E43F3]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-neutral-700 mb-1.5 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-theme-secondary mb-1.5 uppercase tracking-wider">
                 Price (Monthly)
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 font-bold">₦</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-theme-tertiary font-bold">₦</span>
                 <input 
                   type="number" 
                   value={price}
                   onChange={e => setPrice(e.target.value)}
                   placeholder="e.g. 50000"
-                  className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-9 pr-4 py-3 text-sm focus:outline-none focus:border-[#5E43F3]"
+                  className="w-full bg-theme-base border border-theme-divider rounded-xl pl-9 pr-4 py-3 text-sm focus:outline-none focus:border-[#5E43F3]"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-neutral-700 mb-1.5 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-theme-secondary mb-1.5 uppercase tracking-wider">
                 Description *
               </label>
               <textarea 
@@ -137,17 +137,17 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ defaultT
                 onChange={e => setDescription(e.target.value)}
                 placeholder="Describe the room, amenities, rules, or what you are looking for..."
                 rows={5}
-                className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#5E43F3] resize-none"
+                className="w-full bg-theme-base border border-theme-divider rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#5E43F3] resize-none"
               />
             </div>
 
             {/* Placeholder for photos - complex upload logic goes here normally */}
             {type === 'room_offered' && (
               <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1.5 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-theme-secondary mb-1.5 uppercase tracking-wider">
                   Photos
                 </label>
-                <button type="button" className="w-full py-8 border-2 border-dashed border-neutral-200 rounded-xl flex flex-col items-center justify-center gap-2 text-neutral-400 hover:bg-neutral-50 hover:border-[#5E43F3]/50 transition-all cursor-not-allowed">
+                <button type="button" className="w-full py-8 border-2 border-dashed border-theme-divider rounded-xl flex flex-col items-center justify-center gap-2 text-theme-tertiary hover:bg-theme-base hover:border-[#5E43F3]/50 transition-all cursor-not-allowed">
                   <ImageIcon className="w-6 h-6" />
                   <span className="text-xs font-semibold">Photo uploads coming soon</span>
                 </button>
@@ -156,7 +156,7 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ defaultT
           </form>
         </div>
 
-        <div className="p-4 border-t border-neutral-100 bg-neutral-50">
+        <div className="p-4 border-t border-theme-divider-light bg-theme-base">
           <button
             type="submit"
             form="create-listing-form"

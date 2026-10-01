@@ -399,14 +399,14 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
     if (audienceStep === 'communities') {
       return (
         <div className="p-2 w-64">
-          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-neutral-100">
-            <button onClick={() => setAudienceStep('main')} className="p-1 hover:bg-neutral-100 rounded-full"><ChevronDown className="w-4 h-4 rotate-90" /></button>
+          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-theme-divider-light">
+            <button onClick={() => setAudienceStep('main')} className="p-1 hover:bg-theme-surface-hover rounded-full"><ChevronDown className="w-4 h-4 rotate-90" /></button>
             <span className="font-semibold text-sm">Select Community</span>
           </div>
-          {followedCommunities === undefined ? <div className="p-4 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-neutral-400" /></div> :
-           followedCommunities.length === 0 ? <div className="p-4 text-center text-xs text-neutral-500">No communities joined.</div> :
+          {followedCommunities === undefined ? <div className="p-4 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-theme-tertiary" /></div> :
+           followedCommunities.length === 0 ? <div className="p-4 text-center text-xs text-theme-tertiary">No communities joined.</div> :
            followedCommunities.map((c: any) => (
-             <button key={c._id} onClick={() => { setAudience('community'); setSelectedPageRefId(c._id); setShowAudienceDropdown(false); setAudienceStep('main'); }} className="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-100 rounded-lg flex items-center gap-2">
+             <button key={c._id} onClick={() => { setAudience('community'); setSelectedPageRefId(c._id); setShowAudienceDropdown(false); setAudienceStep('main'); }} className="w-full text-left px-3 py-2 text-sm text-theme-primary hover:bg-theme-surface-hover rounded-lg flex items-center gap-2">
                <Avatar src={c.avatar || ''} alt={c.name} size="sm" />
                <span className="font-semibold truncate">{c.name}</span>
              </button>
@@ -420,13 +420,13 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
       const myOwnedPages = pages?.filter((p: any) => p.type !== 'community') || [];
       return (
         <div className="p-2 w-64">
-          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-neutral-100">
-            <button onClick={() => setAudienceStep('main')} className="p-1 hover:bg-neutral-100 rounded-full"><ChevronDown className="w-4 h-4 rotate-90" /></button>
+          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-theme-divider-light">
+            <button onClick={() => setAudienceStep('main')} className="p-1 hover:bg-theme-surface-hover rounded-full"><ChevronDown className="w-4 h-4 rotate-90" /></button>
             <span className="font-semibold text-sm">Post as Page</span>
           </div>
-          {myOwnedPages.length === 0 ? <div className="p-4 text-center text-xs text-neutral-500">No eligible Pages.</div> :
+          {myOwnedPages.length === 0 ? <div className="p-4 text-center text-xs text-theme-tertiary">No eligible Pages.</div> :
            myOwnedPages.map((p: any) => (
-             <button key={p._id} onClick={() => { setAudience('page'); setSelectedPageRefId(p._id); setShowAudienceDropdown(false); setAudienceStep('main'); }} className="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-100 rounded-lg flex items-center gap-2">
+             <button key={p._id} onClick={() => { setAudience('page'); setSelectedPageRefId(p._id); setShowAudienceDropdown(false); setAudienceStep('main'); }} className="w-full text-left px-3 py-2 text-sm text-theme-primary hover:bg-theme-surface-hover rounded-lg flex items-center gap-2">
                <Avatar src={p.avatar || ''} alt={p.name} size="sm" />
                <span className="font-semibold truncate">{p.name}</span>
              </button>
@@ -439,15 +439,15 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
     if (audienceStep === 'topics') {
       return (
         <div className="p-2 w-64">
-          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-neutral-100">
-            <button onClick={() => setAudienceStep('main')} className="p-1 hover:bg-neutral-100 rounded-full"><ChevronDown className="w-4 h-4 rotate-90" /></button>
+          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-theme-divider-light">
+            <button onClick={() => setAudienceStep('main')} className="p-1 hover:bg-theme-surface-hover rounded-full"><ChevronDown className="w-4 h-4 rotate-90" /></button>
             <span className="font-semibold text-sm">Select Topic</span>
           </div>
-          {topicsData === undefined ? <div className="p-4 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-neutral-400" /></div> :
-           topicsData.length === 0 ? <div className="p-4 text-center text-xs text-neutral-500">No topics available.</div> :
+          {topicsData === undefined ? <div className="p-4 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-theme-tertiary" /></div> :
+           topicsData.length === 0 ? <div className="p-4 text-center text-xs text-theme-tertiary">No topics available.</div> :
            topicsData.map((t: any) => (
-             <button key={t.slug} onClick={() => { setAudience('interest'); setSelectedTopicSlugs([t.slug]); setShowAudienceDropdown(false); setAudienceStep('main'); }} className="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-100 rounded-lg flex items-center gap-2">
-               <Hash className="w-4 h-4 text-neutral-500" />
+             <button key={t.slug} onClick={() => { setAudience('interest'); setSelectedTopicSlugs([t.slug]); setShowAudienceDropdown(false); setAudienceStep('main'); }} className="w-full text-left px-3 py-2 text-sm text-theme-primary hover:bg-theme-surface-hover rounded-lg flex items-center gap-2">
+               <Hash className="w-4 h-4 text-theme-tertiary" />
                <span className="font-semibold truncate">{t.displayName}</span>
              </button>
            ))
@@ -461,22 +461,22 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
     
     return (
       <div className="p-2 w-64">
-        <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider px-2 py-1 mb-1">Choose Audience</div>
-        <button onClick={() => { setAudience('everyone'); setSelectedPageRefId(null); setSelectedTopicSlugs([]); setShowAudienceDropdown(false); }} className={`w-full text-left px-3 py-2 text-sm hover:bg-neutral-100 rounded-lg flex items-center gap-2 ${audience === 'everyone' ? 'bg-[#5E43F3]/5 text-[#5E43F3]' : 'text-neutral-800'}`}>
+        <div className="text-[11px] font-bold text-theme-tertiary uppercase tracking-wider px-2 py-1 mb-1">Choose Audience</div>
+        <button onClick={() => { setAudience('everyone'); setSelectedPageRefId(null); setSelectedTopicSlugs([]); setShowAudienceDropdown(false); }} className={`w-full text-left px-3 py-2 text-sm hover:bg-theme-surface-hover rounded-lg flex items-center gap-2 ${audience === 'everyone' ? 'bg-[#5E43F3]/5 text-[#5E43F3]' : 'text-theme-primary'}`}>
           <Globe className="w-4 h-4" />
           <div>
             <div className="font-semibold">Everyone</div>
             <div className="text-[10px] opacity-70">Public algorithmic feed</div>
           </div>
         </button>
-        <button onClick={() => { setAudience('nearby'); setSelectedPageRefId(null); setSelectedTopicSlugs([]); setShowAudienceDropdown(false); }} className={`w-full text-left px-3 py-2 text-sm hover:bg-neutral-100 rounded-lg flex items-center gap-2 ${audience === 'nearby' ? 'bg-[#5E43F3]/5 text-[#5E43F3]' : 'text-neutral-800'}`}>
+        <button onClick={() => { setAudience('nearby'); setSelectedPageRefId(null); setSelectedTopicSlugs([]); setShowAudienceDropdown(false); }} className={`w-full text-left px-3 py-2 text-sm hover:bg-theme-surface-hover rounded-lg flex items-center gap-2 ${audience === 'nearby' ? 'bg-[#5E43F3]/5 text-[#5E43F3]' : 'text-theme-primary'}`}>
           <MapPin className="w-4 h-4" />
           <div>
             <div className="font-semibold">Nearby</div>
             <div className="text-[10px] opacity-70">Local feed for your selected area</div>
           </div>
         </button>
-        <button onClick={() => setAudienceStep('communities')} className={`w-full text-left px-3 py-2 text-sm hover:bg-neutral-100 rounded-lg flex items-center gap-2 ${audience === 'community' ? 'bg-[#5E43F3]/5 text-[#5E43F3]' : 'text-neutral-800'}`}>
+        <button onClick={() => setAudienceStep('communities')} className={`w-full text-left px-3 py-2 text-sm hover:bg-theme-surface-hover rounded-lg flex items-center gap-2 ${audience === 'community' ? 'bg-[#5E43F3]/5 text-[#5E43F3]' : 'text-theme-primary'}`}>
           <Users className="w-4 h-4" />
           <div className="flex-1">
             <div className="font-semibold">Communities</div>
@@ -484,7 +484,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
           </div>
           <ChevronDown className="w-4 h-4 -rotate-90 opacity-50" />
         </button>
-        <button onClick={() => setAudienceStep('topics')} className={`w-full text-left px-3 py-2 text-sm hover:bg-neutral-100 rounded-lg flex items-center gap-2 ${audience === 'interest' ? 'bg-[#5E43F3]/5 text-[#5E43F3]' : 'text-neutral-800'}`}>
+        <button onClick={() => setAudienceStep('topics')} className={`w-full text-left px-3 py-2 text-sm hover:bg-theme-surface-hover rounded-lg flex items-center gap-2 ${audience === 'interest' ? 'bg-[#5E43F3]/5 text-[#5E43F3]' : 'text-theme-primary'}`}>
           <Hash className="w-4 h-4" />
           <div className="flex-1">
             <div className="font-semibold">Interests & Topics</div>
@@ -493,7 +493,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
           <ChevronDown className="w-4 h-4 -rotate-90 opacity-50" />
         </button>
         {hasPages && (
-          <button onClick={() => setAudienceStep('pages')} className={`w-full text-left px-3 py-2 text-sm hover:bg-neutral-100 rounded-lg flex items-center gap-2 ${audience === 'page' ? 'bg-[#5E43F3]/5 text-[#5E43F3]' : 'text-neutral-800'}`}>
+          <button onClick={() => setAudienceStep('pages')} className={`w-full text-left px-3 py-2 text-sm hover:bg-theme-surface-hover rounded-lg flex items-center gap-2 ${audience === 'page' ? 'bg-[#5E43F3]/5 text-[#5E43F3]' : 'text-theme-primary'}`}>
             <Briefcase className="w-4 h-4" />
             <div className="flex-1">
               <div className="font-semibold">Post as Page</div>
@@ -521,10 +521,10 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
 
   return (
     <div className="mx-auto w-full max-w-[600px] px-3 py-4 sm:px-5 sm:py-6">
-      <div className="overflow-hidden rounded-[24px] border border-neutral-200 bg-white shadow-sm flex flex-col relative">
+      <div className="overflow-hidden rounded-[24px] border border-theme-divider bg-theme-surface shadow-sm flex flex-col relative">
         
         {/* TOP BAR: Avatar, Audience, Drafts, Close */}
-        <div className="flex items-center justify-between gap-3 border-b border-neutral-100 px-4 py-3">
+        <div className="flex items-center justify-between gap-3 border-b border-theme-divider-light px-4 py-3">
           <div className="flex items-center gap-2">
             <Avatar src={currentUser.avatar} alt={currentUser.name} size="sm" />
             <Popover
@@ -534,7 +534,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
               trigger={
                 <button 
                   onClick={() => setShowAudienceDropdown(!showAudienceDropdown)}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-neutral-200 text-sm font-semibold text-[#5E43F3] hover:bg-[#5E43F3]/5 transition max-w-[200px]"
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-theme-divider text-sm font-semibold text-[#5E43F3] hover:bg-[#5E43F3]/5 transition max-w-[200px]"
                 >
                   <span className="truncate">{getAudienceLabel()}</span>
                   <ChevronDown className="w-3.5 h-3.5 shrink-0" />
@@ -554,7 +554,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
             <button
               type="button"
               onClick={handleClose}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-900"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-theme-tertiary transition hover:bg-theme-surface-hover hover:text-theme-primary"
               aria-label="Close composer"
             >
               <X className="h-4 w-4" />
@@ -570,15 +570,15 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
             onChange={(e) => setText(e.target.value)}
             rows={4}
             placeholder="What’s on your mind?"
-            className="w-full resize-none bg-transparent text-[16px] leading-relaxed text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
+            className="w-full resize-none bg-transparent text-[16px] leading-relaxed text-theme-primary placeholder:text-theme-tertiary focus:outline-none"
             autoFocus
           />
 
           {showPoll && (
-            <div className="mt-2 rounded-xl border border-neutral-200 p-3 space-y-2 relative">
+            <div className="mt-2 rounded-xl border border-theme-divider p-3 space-y-2 relative">
               <button 
                 onClick={() => { setShowPoll(false); setPollQuestion(''); setPollOptions([]); }}
-                className="absolute top-2 right-2 p-1 text-neutral-400 hover:text-neutral-600 rounded-full hover:bg-neutral-100 transition"
+                className="absolute top-2 right-2 p-1 text-theme-tertiary hover:text-theme-secondary rounded-full hover:bg-theme-surface-hover transition"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -586,7 +586,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
                 value={pollQuestion}
                 onChange={e => setPollQuestion(e.target.value)}
                 placeholder="Ask a question..."
-                className="w-full text-sm font-semibold p-2 rounded-md border border-neutral-200 focus:outline-none focus:border-[#5E43F3]"
+                className="w-full text-sm font-semibold p-2 rounded-md border border-theme-divider focus:outline-none focus:border-[#5E43F3]"
               />
               {pollOptions.map((opt, i) => (
                 <div key={i} className="flex gap-2">
@@ -598,7 +598,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
                       setPollOptions(newOpts);
                     }}
                     placeholder={`Option ${i + 1}`}
-                    className="flex-1 text-sm p-2 rounded-md border border-neutral-200 focus:outline-none focus:border-[#5E43F3]"
+                    className="flex-1 text-sm p-2 rounded-md border border-theme-divider focus:outline-none focus:border-[#5E43F3]"
                   />
                   {pollOptions.length > 2 && (
                     <button onClick={() => setPollOptions(pollOptions.filter((_, idx) => idx !== i))} className="text-red-500 p-2"><X className="w-4 h-4" /></button>
@@ -645,35 +645,35 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
 
           {/* RALLY UI */}
           {showRallyTypeSelector && !rallyType && (
-            <div className="mt-3 p-3 rounded-xl border border-neutral-200 bg-neutral-50 relative">
+            <div className="mt-3 p-3 rounded-xl border border-theme-divider bg-theme-base relative">
               <button 
                 onClick={() => setShowRallyTypeSelector(false)}
-                className="absolute top-2 right-2 p-1 text-neutral-400 hover:text-neutral-600 rounded-full hover:bg-neutral-100 transition"
+                className="absolute top-2 right-2 p-1 text-theme-tertiary hover:text-theme-secondary rounded-full hover:bg-theme-surface-hover transition"
               >
                 <X className="w-4 h-4" />
               </button>
-              <h3 className="text-sm font-bold text-neutral-900 mb-3 flex items-center gap-1.5"><Hand className="w-4 h-4 text-[#5E43F3]" /> Select Rally Type</h3>
+              <h3 className="text-sm font-bold text-theme-primary mb-3 flex items-center gap-1.5"><Hand className="w-4 h-4 text-[#5E43F3]" /> Select Rally Type</h3>
               <div className="grid grid-cols-3 gap-2">
                 <button 
                   onClick={() => setRallyType('ASK')}
-                  className="flex flex-col items-center justify-center p-3 rounded-lg border border-neutral-200 bg-white hover:border-[#5E43F3] hover:bg-[#5E43F3]/5 transition"
+                  className="flex flex-col items-center justify-center p-3 rounded-lg border border-theme-divider bg-theme-surface hover:border-[#5E43F3] hover:bg-[#5E43F3]/5 transition"
                 >
-                  <span className="font-black text-[13px] text-neutral-900 mb-0.5">ASK</span>
-                  <span className="text-[10px] text-neutral-500 font-medium">I need something</span>
+                  <span className="font-black text-[13px] text-theme-primary mb-0.5">ASK</span>
+                  <span className="text-[10px] text-theme-tertiary font-medium">I need something</span>
                 </button>
                 <button 
                   onClick={() => setRallyType('HELP')}
-                  className="flex flex-col items-center justify-center p-3 rounded-lg border border-neutral-200 bg-white hover:border-[#5E43F3] hover:bg-[#5E43F3]/5 transition"
+                  className="flex flex-col items-center justify-center p-3 rounded-lg border border-theme-divider bg-theme-surface hover:border-[#5E43F3] hover:bg-[#5E43F3]/5 transition"
                 >
-                  <span className="font-black text-[13px] text-neutral-900 mb-0.5">HELP</span>
-                  <span className="text-[10px] text-neutral-500 font-medium">I can help</span>
+                  <span className="font-black text-[13px] text-theme-primary mb-0.5">HELP</span>
+                  <span className="text-[10px] text-theme-tertiary font-medium">I can help</span>
                 </button>
                 <button 
                   onClick={() => setRallyType('JOIN')}
-                  className="flex flex-col items-center justify-center p-3 rounded-lg border border-neutral-200 bg-white hover:border-[#5E43F3] hover:bg-[#5E43F3]/5 transition"
+                  className="flex flex-col items-center justify-center p-3 rounded-lg border border-theme-divider bg-theme-surface hover:border-[#5E43F3] hover:bg-[#5E43F3]/5 transition"
                 >
-                  <span className="font-black text-[13px] text-neutral-900 mb-0.5">JOIN</span>
-                  <span className="text-[10px] text-neutral-500 font-medium">Join me</span>
+                  <span className="font-black text-[13px] text-theme-primary mb-0.5">JOIN</span>
+                  <span className="text-[10px] text-theme-tertiary font-medium">Join me</span>
                 </button>
               </div>
             </div>
@@ -697,7 +697,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
                 value={rallyTitle}
                 onChange={e => setRallyTitle(e.target.value)}
                 placeholder="Rally Title (e.g., Need a plumber, Free tutoring)"
-                className="w-full text-sm font-semibold p-2 rounded-md border border-white/50 bg-white focus:outline-none focus:border-[#5E43F3]"
+                className="w-full text-sm font-semibold p-2 rounded-md border border-white/50 bg-theme-surface focus:outline-none focus:border-[#5E43F3]"
               />
 
               <div className="grid grid-cols-2 gap-2">
@@ -705,13 +705,13 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
                   type="date"
                   value={rallyEventDate}
                   onChange={e => setRallyEventDate(e.target.value)}
-                  className="w-full text-sm p-2 rounded-md border border-white/50 bg-white focus:outline-none focus:border-[#5E43F3]"
+                  className="w-full text-sm p-2 rounded-md border border-white/50 bg-theme-surface focus:outline-none focus:border-[#5E43F3]"
                 />
                 <input 
                   type="time"
                   value={rallyEventTime}
                   onChange={e => setRallyEventTime(e.target.value)}
-                  className="w-full text-sm p-2 rounded-md border border-white/50 bg-white focus:outline-none focus:border-[#5E43F3]"
+                  className="w-full text-sm p-2 rounded-md border border-white/50 bg-theme-surface focus:outline-none focus:border-[#5E43F3]"
                 />
               </div>
 
@@ -722,12 +722,12 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
                   value={rallyPeopleNeeded}
                   onChange={e => setRallyPeopleNeeded(e.target.value ? parseInt(e.target.value) : '')}
                   min={1}
-                  className="w-full text-sm p-2 rounded-md border border-white/50 bg-white focus:outline-none focus:border-[#5E43F3]"
+                  className="w-full text-sm p-2 rounded-md border border-white/50 bg-theme-surface focus:outline-none focus:border-[#5E43F3]"
                 />
                 <select 
                   value={rallyCompensationType}
                   onChange={e => setRallyCompensationType(e.target.value as any)}
-                  className="w-full text-sm p-2 rounded-md border border-white/50 bg-white focus:outline-none focus:border-[#5E43F3]"
+                  className="w-full text-sm p-2 rounded-md border border-white/50 bg-theme-surface focus:outline-none focus:border-[#5E43F3]"
                 >
                   <option value="">Compensation...</option>
                   <option value="free">Free</option>
@@ -742,14 +742,14 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
                   value={rallyCompensationAmount}
                   onChange={e => setRallyCompensationAmount(e.target.value)}
                   placeholder="Amount / Details (e.g., ₦5000)"
-                  className="w-full text-sm p-2 rounded-md border border-white/50 bg-white focus:outline-none focus:border-[#5E43F3]"
+                  className="w-full text-sm p-2 rounded-md border border-white/50 bg-theme-surface focus:outline-none focus:border-[#5E43F3]"
                 />
               )}
             </div>
           )}
 
           {gifUrl && !mediaUrl && (
-            <div className="relative mt-3 overflow-hidden rounded-[16px] border border-neutral-200 bg-neutral-100">
+            <div className="relative mt-3 overflow-hidden rounded-[16px] border border-theme-divider bg-theme-surface-hover">
               <img src={gifUrl} alt="Post GIF attachment" className="max-h-[360px] w-full object-cover" />
               <button
                 type="button"
@@ -763,7 +763,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
           )}
 
           {mediaUrl && (
-            <div className="relative mt-3 overflow-hidden rounded-[16px] border border-neutral-200 bg-neutral-100">
+            <div className="relative mt-3 overflow-hidden rounded-[16px] border border-theme-divider bg-theme-surface-hover">
               {mediaType === 'video' ? (
                 <video src={mediaUrl} controls className="max-h-[360px] w-full object-cover" />
               ) : (
@@ -786,22 +786,22 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
         </div>
 
         {/* WHO CAN REPLY */}
-        <div className="px-4 py-2 border-t border-neutral-100 flex items-center relative">
+        <div className="px-4 py-2 border-t border-theme-divider-light flex items-center relative">
           <div className="relative">
             <button 
               onClick={() => setShowReplyDropdown(!showReplyDropdown)}
-              className="flex items-center gap-1 text-[12px] font-semibold text-neutral-500 hover:text-neutral-800 transition"
+              className="flex items-center gap-1 text-[12px] font-semibold text-theme-tertiary hover:text-theme-primary transition"
             >
               Who can reply: <span className="text-[#5E43F3]">{getReplyLabel()}</span> <ChevronDown className="w-3 h-3" />
             </button>
             {showReplyDropdown && (
-              <div className="absolute bottom-full left-0 mb-1 w-48 rounded-xl border border-neutral-200 bg-white shadow-lg p-2 z-[60]">
-                <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider px-2 py-1 mb-1">Reply permissions</div>
+              <div className="absolute bottom-full left-0 mb-1 w-48 rounded-xl border border-theme-divider bg-theme-surface shadow-lg p-2 z-[60]">
+                <div className="text-[11px] font-bold text-theme-tertiary uppercase tracking-wider px-2 py-1 mb-1">Reply permissions</div>
                 {['everyone', 'followers', 'following', 'friends', 'closeFriends', 'sameInterests', 'mentioned'].map(opt => (
                   <button 
                     key={opt}
                     onClick={() => { setReplyPermission(opt); setShowReplyDropdown(false); }} 
-                    className="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-100 rounded-lg capitalize"
+                    className="w-full text-left px-3 py-2 text-sm text-theme-primary hover:bg-theme-surface-hover rounded-lg capitalize"
                   >
                     {opt.replace(/([A-Z])/g, ' $1').trim()}
                   </button>
@@ -812,7 +812,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
         </div>
 
         {/* TOOLBAR */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-neutral-100 bg-white px-4 py-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-theme-divider-light bg-theme-surface px-4 py-3">
           <div className="flex flex-wrap items-center gap-1">
             <button
               type="button"
@@ -939,10 +939,10 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
 
       {showDraftsModal && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-neutral-100 pb-3 mb-3">
-              <h3 className="font-bold text-neutral-900">Your Drafts</h3>
-              <button onClick={() => setShowDraftsModal(false)} className="text-neutral-500 hover:text-neutral-900"><X className="h-5 w-5" /></button>
+          <div className="w-full max-w-sm rounded-2xl bg-theme-surface p-4 shadow-xl">
+            <div className="flex items-center justify-between border-b border-theme-divider-light pb-3 mb-3">
+              <h3 className="font-bold text-theme-primary">Your Drafts</h3>
+              <button onClick={() => setShowDraftsModal(false)} className="text-theme-tertiary hover:text-theme-primary"><X className="h-5 w-5" /></button>
             </div>
             {hasDrafts ? (
               <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -960,15 +960,15 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
                       }
                       setShowDraftsModal(false);
                     }}
-                    className="w-full text-left p-3 rounded-xl border border-neutral-200 hover:bg-neutral-50"
+                    className="w-full text-left p-3 rounded-xl border border-theme-divider hover:bg-theme-base"
                   >
-                    <div className="text-sm text-neutral-800 line-clamp-2">{draft.text || 'Empty text'}</div>
-                    <div className="text-xs text-neutral-400 mt-1">{new Date(draft.updatedAt).toLocaleDateString()}</div>
+                    <div className="text-sm text-theme-primary line-clamp-2">{draft.text || 'Empty text'}</div>
+                    <div className="text-xs text-theme-tertiary mt-1">{new Date(draft.updatedAt).toLocaleDateString()}</div>
                   </button>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-6 text-sm text-neutral-500">No drafts yet.</div>
+              <div className="text-center py-6 text-sm text-theme-tertiary">No drafts yet.</div>
             )}
           </div>
         </div>
@@ -980,9 +980,9 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
 export function PostComposer(props: PostComposerProps) {
   return (
     <ErrorBoundary fallback={
-      <div className="bg-white rounded-2xl p-6 border border-neutral-200 shadow-sm text-center">
-        <h3 className="font-bold text-neutral-800 mb-2">Composer Unavailable</h3>
-        <p className="text-sm text-neutral-500 mb-4">We're having trouble connecting to the server.</p>
+      <div className="bg-theme-surface rounded-2xl p-6 border border-theme-divider shadow-sm text-center">
+        <h3 className="font-bold text-theme-primary mb-2">Composer Unavailable</h3>
+        <p className="text-sm text-theme-tertiary mb-4">We're having trouble connecting to the server.</p>
         <button onClick={() => window.location.reload()} className="px-4 py-2 bg-[#5E43F3] text-white rounded-full font-medium text-sm">
           Refresh Page
         </button>

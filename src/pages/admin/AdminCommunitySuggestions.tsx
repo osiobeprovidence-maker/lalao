@@ -85,8 +85,8 @@ export const AdminCommunitySuggestions: React.FC = () => {
             <Lightbulb className="w-5 h-5 text-indigo-600" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-neutral-900">Community Suggestions</h2>
-            <p className="text-sm text-neutral-500">
+            <h2 className="text-lg font-bold text-theme-primary">Community Suggestions</h2>
+            <p className="text-sm text-theme-tertiary">
               Review community suggestions from users
             </p>
           </div>
@@ -102,7 +102,7 @@ export const AdminCommunitySuggestions: React.FC = () => {
             className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors cursor-pointer ${
               statusFilter === tab.id
                 ? 'bg-indigo-600 text-white'
-                : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                : 'bg-theme-surface-hover text-theme-secondary hover:bg-theme-surface-active'
             }`}
           >
             {tab.label} ({tab.count})
@@ -112,10 +112,10 @@ export const AdminCommunitySuggestions: React.FC = () => {
 
       {/* List */}
       {suggestions.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-neutral-200 p-12 text-center">
-          <Lightbulb className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-          <p className="text-sm font-bold text-neutral-700">No suggestions found</p>
-          <p className="text-xs text-neutral-500 mt-1">
+        <div className="bg-theme-surface rounded-2xl border border-theme-divider p-12 text-center">
+          <Lightbulb className="w-10 h-10 text-theme-tertiary mx-auto mb-3" />
+          <p className="text-sm font-bold text-theme-secondary">No suggestions found</p>
+          <p className="text-xs text-theme-tertiary mt-1">
             {statusFilter === 'all'
               ? 'No community suggestions have been submitted yet.'
               : `No suggestions with "${statusLabels[statusFilter]}" status.`}
@@ -129,17 +129,17 @@ export const AdminCommunitySuggestions: React.FC = () => {
             return (
               <div
                 key={s._id}
-                className="bg-white rounded-2xl border border-neutral-200 overflow-hidden transition-shadow hover:shadow-sm"
+                className="bg-theme-surface rounded-2xl border border-theme-divider overflow-hidden transition-shadow hover:shadow-sm"
               >
                 {/* Summary Row */}
                 <button
                   onClick={() => setExpandedId(isExpanded ? null : s._id)}
-                  className="w-full flex items-center justify-between p-4 text-left cursor-pointer hover:bg-neutral-50 transition-colors"
+                  className="w-full flex items-center justify-between p-4 text-left cursor-pointer hover:bg-theme-base transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-neutral-900 truncate">
+                        <span className="font-bold text-sm text-theme-primary truncate">
                           {s.communityName}
                         </span>
                         <span
@@ -148,7 +148,7 @@ export const AdminCommunitySuggestions: React.FC = () => {
                           {statusLabels[s.status]}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 mt-0.5 text-xs text-neutral-500">
+                      <div className="flex items-center gap-2 mt-0.5 text-xs text-theme-tertiary">
                         <span>
                           by {s.suggester ? `@${s.suggester.username}` : 'Unknown'}
                         </span>
@@ -164,21 +164,21 @@ export const AdminCommunitySuggestions: React.FC = () => {
                     </div>
                   </div>
                   {isExpanded ? (
-                    <ChevronUp className="w-4 h-4 text-neutral-400 shrink-0" />
+                    <ChevronUp className="w-4 h-4 text-theme-tertiary shrink-0" />
                   ) : (
-                    <ChevronDown className="w-4 h-4 text-neutral-400 shrink-0" />
+                    <ChevronDown className="w-4 h-4 text-theme-tertiary shrink-0" />
                   )}
                 </button>
 
                 {/* Expanded Detail */}
                 {isExpanded && (
-                  <div className="px-4 pb-4 border-t border-neutral-100 pt-4 space-y-4">
+                  <div className="px-4 pb-4 border-t border-theme-divider-light pt-4 space-y-4">
                     {/* Description */}
                     <div>
-                      <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1">
+                      <h4 className="text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1">
                         Description
                       </h4>
-                      <p className="text-sm text-neutral-700 leading-relaxed">
+                      <p className="text-sm text-theme-secondary leading-relaxed">
                         {s.description}
                       </p>
                     </div>
@@ -186,14 +186,14 @@ export const AdminCommunitySuggestions: React.FC = () => {
                     {/* Meta fields */}
                     <div className="grid grid-cols-2 gap-3">
                       {s.location && (
-                        <div className="flex items-center gap-2 text-xs text-neutral-600">
-                          <MapPin className="w-3.5 h-3.5 text-neutral-400" />
+                        <div className="flex items-center gap-2 text-xs text-theme-secondary">
+                          <MapPin className="w-3.5 h-3.5 text-theme-tertiary" />
                           {s.location}
                         </div>
                       )}
                       {s.website && (
-                        <div className="flex items-center gap-2 text-xs text-neutral-600">
-                          <Globe className="w-3.5 h-3.5 text-neutral-400" />
+                        <div className="flex items-center gap-2 text-xs text-theme-secondary">
+                          <Globe className="w-3.5 h-3.5 text-theme-tertiary" />
                           <a
                             href={s.website}
                             target="_blank"
@@ -205,41 +205,41 @@ export const AdminCommunitySuggestions: React.FC = () => {
                         </div>
                       )}
                       {s.category && (
-                        <div className="text-xs text-neutral-600">
-                          <span className="text-neutral-400">Category:</span> {s.category}
+                        <div className="text-xs text-theme-secondary">
+                          <span className="text-theme-tertiary">Category:</span> {s.category}
                         </div>
                       )}
                     </div>
 
                     {s.reason && (
                       <div>
-                        <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1">
+                        <h4 className="text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1">
                           Reason
                         </h4>
-                        <p className="text-sm text-neutral-700">{s.reason}</p>
+                        <p className="text-sm text-theme-secondary">{s.reason}</p>
                       </div>
                     )}
 
                     {s.additionalInfo && (
                       <div>
-                        <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1">
+                        <h4 className="text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1">
                           Additional Info
                         </h4>
-                        <p className="text-sm text-neutral-700">{s.additionalInfo}</p>
+                        <p className="text-sm text-theme-secondary">{s.additionalInfo}</p>
                       </div>
                     )}
 
                     {/* Suggester */}
                     {s.suggester && (
-                      <div className="flex items-center gap-2 p-2.5 bg-neutral-50 rounded-xl">
+                      <div className="flex items-center gap-2 p-2.5 bg-theme-base rounded-xl">
                         <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-600">
                           {s.suggester.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <span className="text-xs font-bold text-neutral-900">
+                          <span className="text-xs font-bold text-theme-primary">
                             {s.suggester.name}
                           </span>
-                          <span className="text-[11px] text-neutral-400 ml-1.5">
+                          <span className="text-[11px] text-theme-tertiary ml-1.5">
                             @{s.suggester.username}
                           </span>
                         </div>
@@ -248,7 +248,7 @@ export const AdminCommunitySuggestions: React.FC = () => {
 
                     {/* Review info */}
                     {s.reviewedAt && (
-                      <div className="text-xs text-neutral-400">
+                      <div className="text-xs text-theme-tertiary">
                         <Clock className="w-3 h-3 inline mr-1" />
                         Reviewed {formatDate(s.reviewedAt)}
                       </div>
@@ -256,7 +256,7 @@ export const AdminCommunitySuggestions: React.FC = () => {
 
                     {/* Admin Notes */}
                     <div>
-                      <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                      <h4 className="text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1.5 flex items-center gap-1">
                         <MessageSquare className="w-3 h-3" />
                         Admin Notes
                       </h4>
@@ -270,7 +270,7 @@ export const AdminCommunitySuggestions: React.FC = () => {
                         }
                         placeholder="Add internal notes about this suggestion..."
                         rows={2}
-                        className="w-full px-3 py-2 border border-neutral-200 rounded-xl text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 resize-none"
+                        className="w-full px-3 py-2 border border-theme-divider rounded-xl text-xs text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 resize-none"
                       />
                     </div>
 

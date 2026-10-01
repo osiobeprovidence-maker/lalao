@@ -64,26 +64,26 @@ export const CommentThread = ({
         onClick={() => setActiveUserProfile(comment.author)}
       />
       <div className="min-w-0 flex-1">
-        <div className={`rounded-2xl ${depth === 0 ? 'bg-neutral-50 px-3 py-2.5' : 'bg-white border border-neutral-100 px-2.5 py-2'}`}>
+        <div className={`rounded-2xl ${depth === 0 ? 'bg-theme-base px-3 py-2.5' : 'bg-theme-surface border border-theme-divider-light px-2.5 py-2'}`}>
           <div className="flex flex-wrap items-center gap-1.5">
             <span
               onClick={() => setActiveUserProfile(comment.author)}
-              className="cursor-pointer text-[11px] font-bold text-neutral-900 hover:underline"
+              className="cursor-pointer text-[11px] font-bold text-theme-primary hover:underline"
             >
               {comment.author.username}
             </span>
             {isVerified && <CheckCircle className="h-3.5 w-3.5 text-[#5E43F3] fill-[#5E43F3]/20" />}
-            {isPostAuthor && <span className="rounded bg-neutral-200 px-1.5 py-0.2 text-[9px] font-medium text-neutral-600">Author</span>}
-            <span className="text-[10px] text-neutral-400">{comment.createdAt}</span>
+            {isPostAuthor && <span className="rounded bg-theme-surface-active px-1.5 py-0.2 text-[9px] font-medium text-theme-secondary">Author</span>}
+            <span className="text-[10px] text-theme-tertiary">{comment.createdAt}</span>
           </div>
-          {comment.text && <p className="mt-1 whitespace-pre-line text-[11px] leading-relaxed text-neutral-800">{comment.text}</p>}
+          {comment.text && <p className="mt-1 whitespace-pre-line text-[11px] leading-relaxed text-theme-primary">{comment.text}</p>}
           {renderMedia()}
 
           <div className="mt-2 flex items-center gap-3">
             {!comment.isDeleted && (
               <>
-                <button onClick={() => onReply(comment.id, comment.author.username)} className="text-[10px] font-semibold text-neutral-500 hover:text-neutral-700">Reply</button>
-                <button onClick={() => onLike(postId, comment.id)} className="inline-flex items-center gap-1 text-[10px] font-medium text-neutral-500 hover:text-rose-500">
+                <button onClick={() => onReply(comment.id, comment.author.username)} className="text-[10px] font-semibold text-theme-tertiary hover:text-theme-secondary">Reply</button>
+                <button onClick={() => onLike(postId, comment.id)} className="inline-flex items-center gap-1 text-[10px] font-medium text-theme-tertiary hover:text-rose-500">
                   <Heart className={`h-3 w-3 ${comment.isLiked ? 'fill-rose-500 text-rose-500' : ''}`} />
                   {comment.likesCount > 0 ? comment.likesCount : 'Like'}
                 </button>
@@ -92,11 +92,11 @@ export const CommentThread = ({
             
             {isAuthor && !comment.isDeleted && (
               <div className="relative ml-auto">
-                <button onClick={() => setShowMenu(!showMenu)} className="p-1 text-neutral-400 hover:text-neutral-700 rounded-full">
+                <button onClick={() => setShowMenu(!showMenu)} className="p-1 text-theme-tertiary hover:text-theme-secondary rounded-full">
                   <MoreHorizontal className="h-3 w-3" />
                 </button>
                 {showMenu && (
-                  <div className="absolute right-0 top-full mt-1 w-32 rounded-xl bg-white p-1 shadow-lg border border-neutral-100 z-10">
+                  <div className="absolute right-0 top-full mt-1 w-32 rounded-xl bg-theme-surface p-1 shadow-lg border border-theme-divider-light z-10">
                     <button 
                       onClick={() => {
                         if (confirm("Delete this reply?")) {
@@ -116,7 +116,7 @@ export const CommentThread = ({
         </div>
 
         {comment.replies && comment.replies.length > 0 && (
-          <div className={`mt-2 ${depth < 3 ? 'ml-2 border-l-2 border-neutral-100 pl-3' : ''}`}>
+          <div className={`mt-2 ${depth < 3 ? 'ml-2 border-l-2 border-theme-divider-light pl-3' : ''}`}>
             {comment.replies.map((reply: any) => (
               <CommentThread
                 key={reply.id}
@@ -187,7 +187,7 @@ export const CommentsModal: React.FC = () => {
   };
 
   const mediaContent = post.mediaUrl || (post as any).muxPlaybackId ? (
-    <div className="relative flex h-full min-h-[220px] w-full items-center justify-center overflow-hidden bg-neutral-100 md:min-h-0">
+    <div className="relative flex h-full min-h-[220px] w-full items-center justify-center overflow-hidden bg-theme-surface-hover md:min-h-0">
       {post.mediaType === 'video' ? (
         <VideoPlayer
           muxPlaybackId={(post as any).muxPlaybackId}
@@ -202,7 +202,7 @@ export const CommentsModal: React.FC = () => {
           src={post.mediaUrl}
           alt="Post attachment"
           referrerPolicy="no-referrer"
-          className="h-full w-full object-contain bg-neutral-100"
+          className="h-full w-full object-contain bg-theme-surface-hover"
           loading="lazy"
         />
       )}
@@ -211,41 +211,41 @@ export const CommentsModal: React.FC = () => {
 
   return (
     <div id="comments-screen" className="fixed inset-0 z-40 bg-black/25 backdrop-blur-[2px] p-0 md:p-6">
-      <div className={`flex h-full w-full flex-col overflow-hidden border border-neutral-200/80 bg-white shadow-2xl md:h-[85vh] ${post.mediaUrl ? 'md:max-w-[1200px]' : 'md:max-w-[760px]'} md:rounded-[28px] md:mx-auto md:my-auto`}>
+      <div className={`flex h-full w-full flex-col overflow-hidden border border-theme-divider/80 bg-theme-surface shadow-2xl md:h-[85vh] ${post.mediaUrl ? 'md:max-w-[1200px]' : 'md:max-w-[760px]'} md:rounded-[28px] md:mx-auto md:my-auto`}>
         <div className="flex h-full flex-col md:flex-row">
           {mediaContent && (
-            <div className="relative flex min-h-[220px] w-full items-center justify-center overflow-hidden bg-neutral-100 md:w-[54%] md:min-h-0">
+            <div className="relative flex min-h-[220px] w-full items-center justify-center overflow-hidden bg-theme-surface-hover md:w-[54%] md:min-h-0">
               {mediaContent}
             </div>
           )}
 
-          <div className={`flex min-h-0 flex-1 flex-col bg-white ${mediaContent ? 'md:max-w-[460px]' : 'w-full'}`}>
-            <div className="flex items-center justify-between border-b border-neutral-100 bg-white px-4 py-3 shrink-0">
+          <div className={`flex min-h-0 flex-1 flex-col bg-theme-surface ${mediaContent ? 'md:max-w-[460px]' : 'w-full'}`}>
+            <div className="flex items-center justify-between border-b border-theme-divider-light bg-theme-surface px-4 py-3 shrink-0">
               <div className="flex items-center gap-2">
-                <button onClick={() => setActiveCommentsPostId(null)} className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-700 hover:bg-neutral-100">
+                <button onClick={() => setActiveCommentsPostId(null)} className="flex h-8 w-8 items-center justify-center rounded-full text-theme-secondary hover:bg-theme-surface-hover">
                   <X className="h-4 w-4 stroke-[2.2]" />
                 </button>
                 <div>
-                  <h3 className="text-base font-bold text-neutral-900">{post.mediaUrl ? 'Comments' : 'Conversation'}</h3>
-                  <p className="text-[11px] font-medium text-neutral-400">{post.commentsCount} {post.commentsCount === 1 ? 'reply' : 'replies'}</p>
+                  <h3 className="text-base font-bold text-theme-primary">{post.mediaUrl ? 'Comments' : 'Conversation'}</h3>
+                  <p className="text-[11px] font-medium text-theme-tertiary">{post.commentsCount} {post.commentsCount === 1 ? 'reply' : 'replies'}</p>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-start gap-2.5 border-b border-neutral-100 bg-neutral-50/80 px-4 py-2.5 shrink-0">
+            <div className="flex items-start gap-2.5 border-b border-theme-divider-light bg-theme-base/80 px-4 py-2.5 shrink-0">
               <Avatar src={post.author.avatar} alt={post.author.name} size="xs" />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-xs font-semibold text-neutral-900">{post.author.username}</span>
-                  <span className="text-[10px] text-neutral-400">· {post.createdAt}</span>
+                  <span className="text-xs font-semibold text-theme-primary">{post.author.username}</span>
+                  <span className="text-[10px] text-theme-tertiary">· {post.createdAt}</span>
                 </div>
-                <p className="mt-0.5 line-clamp-2 text-xs text-neutral-600 leading-normal">{post.text}</p>
+                <p className="mt-0.5 line-clamp-2 text-xs text-theme-secondary leading-normal">{post.text}</p>
               </div>
             </div>
 
-            <div ref={commentsListRef} className="flex-1 overflow-y-auto bg-white px-4 py-3 space-y-4 min-h-0">
+            <div ref={commentsListRef} className="flex-1 overflow-y-auto bg-theme-surface px-4 py-3 space-y-4 min-h-0">
               {!comments ? (
-                <div className="flex items-center justify-center py-8"><span className="text-sm text-neutral-400">Loading replies...</span></div>
+                <div className="flex items-center justify-center py-8"><span className="text-sm text-theme-tertiary">Loading replies...</span></div>
               ) : comments.length > 0 ? (
                 <div className="space-y-4">
                   {comments.map((comment: any) => (
@@ -263,15 +263,15 @@ export const CommentsModal: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <div className="py-12 text-center text-neutral-400">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-neutral-50"><Smile className="h-6 w-6" /></div>
-                  <p className="mt-2 text-sm font-semibold text-neutral-700">No replies yet</p>
+                <div className="py-12 text-center text-theme-tertiary">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-theme-base"><Smile className="h-6 w-6" /></div>
+                  <p className="mt-2 text-sm font-semibold text-theme-secondary">No replies yet</p>
                   <p className="text-xs">Be the first to join the conversation.</p>
                 </div>
               )}
             </div>
 
-            <div className="border-t border-neutral-100 p-3 bg-white w-full rounded-b-[28px] shrink-0">
+            <div className="border-t border-theme-divider-light p-3 bg-theme-surface w-full rounded-b-[28px] shrink-0">
               <CommentComposer
                 postId={post.id}
                 replyingTo={replyingTo}

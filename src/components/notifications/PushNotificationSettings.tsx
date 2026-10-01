@@ -39,14 +39,14 @@ export const PushNotificationSettings: React.FC = () => {
     return (
       <div
         id="push-settings-unsupported"
-        className="mx-4 mt-3 rounded-2xl border border-neutral-200 bg-neutral-100/70 px-4 py-3 flex items-center gap-3"
+        className="mx-4 mt-3 rounded-2xl border border-theme-divider bg-theme-surface-hover/70 px-4 py-3 flex items-center gap-3"
       >
-        <div className="w-9 h-9 rounded-full bg-neutral-200 text-neutral-600 flex items-center justify-center shrink-0">
+        <div className="w-9 h-9 rounded-full bg-theme-surface-active text-theme-secondary flex items-center justify-center shrink-0">
           <BellOff className="w-4.5 h-4.5" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[12px] font-bold text-neutral-800">Push notifications unavailable</p>
-          <p className="text-[11px] text-neutral-600 mt-0.5">
+          <p className="text-[12px] font-bold text-theme-primary">Push notifications unavailable</p>
+          <p className="text-[11px] text-theme-secondary mt-0.5">
             Web Push is not supported by your current browser or device environment.
           </p>
         </div>
@@ -113,11 +113,11 @@ export const PushNotificationSettings: React.FC = () => {
           <Bell className="w-4 h-4" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[12px] font-bold text-neutral-900 flex items-center gap-1.5">
+          <p className="text-[12px] font-bold text-theme-primary flex items-center gap-1.5">
             Stay in the loop
             <Zap className="w-3 h-3 text-amber-500 fill-amber-500" />
           </p>
-          <p className="text-[11px] text-neutral-600 mt-0.5">
+          <p className="text-[11px] text-theme-secondary mt-0.5">
             Get instant alerts for likes, replies, follows &amp; local activity.
           </p>
         </div>
