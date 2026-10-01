@@ -337,6 +337,42 @@ export const updateUserProfile = mutation({
   },
 });
 
+export const updateUserPhone = mutation({
+  args: {
+    phoneNumber: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const cleanedPhone = args.phoneNumber; // Keep original formatting for display if they typed it, or validate it.
+    
+    // Validate uniqueness across phone and phoneNumber fields
+    const usersWithPhone = await ctx.db
+      .query("users")
+      .filter((q) => 
+        q.or(
+          q.eq(q.field("phone"), cleanedPhone),
+          q.eq(q.field("phoneNumber"), cleanedPhone)
+        )
+      )
+      .collect();
+
+    if (usersWithPhone.some(u => u._id !== userId)) {
+      throw new Error("This phone number is already associated with another account.");
+    }
+
+    await ctx.db.patch(userId, {
+      phone: cleanedPhone,
+      phoneNumber: cleanedPhone, // sync both
+      phoneVerified: true,
+      updatedAt: Date.now(),
+    });
+    
+    return true;
+  },
+});
+
 /**
  * updateName
  * Onboarding step 1 — save name + username.

@@ -161,10 +161,10 @@ export const DiscoverView: React.FC = () => {
           }
         }
 
-        // No usable location data — exclude
-        return null;
+        // No usable location data — return with Infinity distance so they show up in global mode at the end
+        return { ...user, distanceMeters: Infinity };
       })
-      .filter((user): user is any => user !== null && user.distanceMeters <= maxRadiusMeters)
+      .filter((user): user is any => user !== null)
       .sort((a, b) => a.distanceMeters - b.distanceMeters);
   }, [users, location, currentUser?.id, maxRadiusMeters]);
 
@@ -209,16 +209,16 @@ export const DiscoverView: React.FC = () => {
 
   const nearbyPosts = useMemo(() => {
     return (posts || [])
-      .filter((post) => post.distanceMeters <= maxRadiusMeters)
+      .filter((post) => locationMode === 'global' || post.distanceMeters <= maxRadiusMeters)
       .sort((a, b) => a.distanceMeters - b.distanceMeters)
       .slice(0, 2);
-  }, [posts, maxRadiusMeters]);
+  }, [posts, locationMode, maxRadiusMeters]);
 
   const videoPosts = useMemo(() => {
     return (posts || []).filter(
-      (post) => post.mediaType === 'video' && post.distanceMeters <= maxRadiusMeters
+      (post) => post.mediaType === 'video' && (locationMode === 'global' || post.distanceMeters <= maxRadiusMeters)
     );
-  }, [posts, maxRadiusMeters]);
+  }, [posts, locationMode, maxRadiusMeters]);
 
   const isSearching = debouncedQuery.length > 0;
 

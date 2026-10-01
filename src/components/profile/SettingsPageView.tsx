@@ -24,6 +24,7 @@ import { api } from '../../../convex/_generated/api';
 import { useNavigate } from 'react-router-dom';
 import { uploadImageToCloudinary } from '../../lib/cloudinary';
 import { useTheme } from '../../context/ThemeContext';
+import { ChangePhoneModal } from './ChangePhoneModal';
 
 export const SettingsPageView: React.FC = () => {
   const {
@@ -67,6 +68,8 @@ export const SettingsPageView: React.FC = () => {
   const createAdminSession = useMutation(api.admin.createAdminSession);
   const [isCreatingAdminSession, setIsCreatingAdminSession] = useState(false);
   const { theme, setTheme } = useTheme();
+  
+  const [isChangePhoneOpen, setIsChangePhoneOpen] = useState(false);
 
   useEffect(() => {
     setName(currentUser.name);
@@ -673,6 +676,33 @@ export const SettingsPageView: React.FC = () => {
           </div>
         </div>
 
+        {/* 4.5 Security & Authentication */}
+        <div className="space-y-3">
+          <div className="border-b border-theme-divider-light pb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">
+              Security & Authentication
+            </h3>
+          </div>
+
+          <div className="rounded-2xl border border-theme-divider bg-theme-base p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-theme-primary">Phone Number</span>
+                <p className="text-[11px] text-theme-tertiary">
+                  {currentUser.phone || currentUser.phoneNumber || 'No phone number added'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsChangePhoneOpen(true)}
+                className="text-[11px] font-bold text-[#5E43F3] cursor-pointer"
+              >
+                {currentUser.phone || currentUser.phoneNumber ? 'Edit' : 'Add'}
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* 5. KYC / Verification */}
         <div className="space-y-3">
           <div className="border-b border-theme-divider-light pb-2">
@@ -898,6 +928,24 @@ export const SettingsPageView: React.FC = () => {
           </button>
         </div>
         </div>
+
+        {/* Modals */}
+        {isChangePhoneOpen && (
+          <ChangePhoneModal 
+            currentPhone={currentUser.phone || currentUser.phoneNumber || undefined}
+            onClose={() => setIsChangePhoneOpen(false)}
+            onSuccess={(newPhone) => {
+              // Optimistically update current user phone in context
+              setCurrentUser(prev => ({
+                ...prev,
+                phone: newPhone,
+                phoneNumber: newPhone,
+                phoneVerified: true
+              }));
+              triggerShareToast('Phone number successfully updated');
+            }}
+          />
+        )}
       </div>
     </div>
   );
