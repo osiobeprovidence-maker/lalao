@@ -5,28 +5,45 @@ import { OnboardingLayout } from './OnboardingLayout';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Avatar } from '../../components/common/Avatar';
-
+import { useLalao } from '../../context/LalaoContext';
 export const RecommendationsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { toggleFollowUser, toggleFollowPage } = useLalao();
   const recommendations = useQuery(api.recommendations.getOnboardingRecommendations, { limit: 15 });
   const completeOnboarding = useMutation(api.users.completeOnboardingStep);
-  const toggleFollowUser = useMutation(api.social.toggleFollow);
-  const toggleFollowPage = useMutation(api.pages.followPage);
   const dismissRec = useMutation(api.recommendations.dismissRecommendation);
   
   const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
   const [dismissedMap, setDismissedMap] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(false);
 
+  // Sync server state to local optimistic map when data loads
+  React.useEffect(() => {
+    if (recommendations) {
+      setFollowingMap(prev => {
+        const next = { ...prev };
+        let changed = false;
+        recommendations.forEach(rec => {
+          if (rec.isFollowing !== undefined && prev[rec.id] === undefined) {
+            next[rec.id] = rec.isFollowing;
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    }
+  }, [recommendations]);
+
   const handleToggleFollow = async (rec: any) => {
-    const isCurrentlyFollowing = followingMap[rec.id];
+    const isCurrentlyFollowing = followingMap[rec.id] || false;
+    // Optimistic UI update
     setFollowingMap(prev => ({ ...prev, [rec.id]: !isCurrentlyFollowing }));
 
     try {
       if (rec.type === 'user') {
-        await toggleFollowUser({ targetId: rec.id as any });
+        await toggleFollowUser(rec.id);
       } else if (rec.type === 'page' || rec.type === 'community') {
-        await toggleFollowPage({ pageId: rec.id as any });
+        await toggleFollowPage(rec.id);
       }
     } catch (err) {
       // Revert on error

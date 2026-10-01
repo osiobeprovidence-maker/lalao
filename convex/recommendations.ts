@@ -130,7 +130,6 @@ export const getOnboardingRecommendations = query({
       if (rec.targetType === "user") {
         const targetUserId = ctx.db.normalizeId("users", rec.targetId);
         if (!targetUserId) continue;
-        if (followedUserIds.has(targetUserId)) continue;
         if (targetUserId === user._id) continue; // Don't recommend self
 
         const targetUser = await ctx.db.get(targetUserId);
@@ -145,11 +144,12 @@ export const getOnboardingRecommendations = query({
           description: targetUser.bio || "",
           followersCount: targetUser.followersCount || 0,
           category: rec.category,
+          isFollowing: followedUserIds.has(targetUserId),
         });
       } else if (rec.targetType === "page" || rec.targetType === "community") {
         const targetPageId = ctx.db.normalizeId("pages", rec.targetId);
         if (!targetPageId) continue;
-        if (followedPageIds.has(targetPageId)) continue;
+        if (targetPageId === user._id) continue; // Safe check
 
         const targetPage = await ctx.db.get(targetPageId);
         if (!targetPage) continue;
@@ -163,6 +163,7 @@ export const getOnboardingRecommendations = query({
           description: targetPage.description || targetPage.category || "",
           followersCount: targetPage.followersCount || 0,
           category: rec.category,
+          isFollowing: followedPageIds.has(targetPageId),
         });
       }
     }
@@ -173,7 +174,6 @@ export const getOnboardingRecommendations = query({
         if (results.length >= limit) break;
         if (targetUser._id === user._id) continue;
         if (targetUser.suspended) continue;
-        if (followedUserIds.has(targetUser._id)) continue;
         if (dismissedIds.has(targetUser._id)) continue;
         if (results.some(r => r.id === targetUser._id)) continue;
         
@@ -186,6 +186,7 @@ export const getOnboardingRecommendations = query({
           description: targetUser.bio || "",
           followersCount: targetUser.followersCount || 0,
           category: "new",
+          isFollowing: followedUserIds.has(targetUser._id),
         });
       }
     }
