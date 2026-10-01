@@ -128,10 +128,12 @@ export const getOnboardingRecommendations = query({
       if (dismissedIds.has(rec.targetId)) continue;
 
       if (rec.targetType === "user") {
-        if (followedUserIds.has(rec.targetId as Id<"users">)) continue;
-        if (rec.targetId === user._id) continue; // Don't recommend self
+        const targetUserId = ctx.db.normalizeId("users", rec.targetId);
+        if (!targetUserId) continue;
+        if (followedUserIds.has(targetUserId)) continue;
+        if (targetUserId === user._id) continue; // Don't recommend self
 
-        const targetUser = await ctx.db.get(rec.targetId as Id<"users">);
+        const targetUser = await ctx.db.get(targetUserId);
         if (!targetUser || targetUser.suspended) continue;
 
         results.push({
@@ -145,9 +147,11 @@ export const getOnboardingRecommendations = query({
           category: rec.category,
         });
       } else if (rec.targetType === "page" || rec.targetType === "community") {
-        if (followedPageIds.has(rec.targetId as Id<"pages">)) continue;
+        const targetPageId = ctx.db.normalizeId("pages", rec.targetId);
+        if (!targetPageId) continue;
+        if (followedPageIds.has(targetPageId)) continue;
 
-        const targetPage = await ctx.db.get(rec.targetId as Id<"pages">);
+        const targetPage = await ctx.db.get(targetPageId);
         if (!targetPage) continue;
 
         results.push({
@@ -232,16 +236,22 @@ export const getAllRecommendations = query({
       let name = "Unknown";
       let handle = "";
       if (rec.targetType === "user") {
-        const user = await ctx.db.get(rec.targetId as Id<"users">);
-        if (user) {
-          name = user.name || "Unknown";
-          handle = user.username || "";
+        const targetUserId = ctx.db.normalizeId("users", rec.targetId);
+        if (targetUserId) {
+          const user = await ctx.db.get(targetUserId);
+          if (user) {
+            name = user.name || "Unknown";
+            handle = user.username || "";
+          }
         }
       } else {
-        const page = await ctx.db.get(rec.targetId as Id<"pages">);
-        if (page) {
-          name = page.name;
-          handle = page.username;
+        const targetPageId = ctx.db.normalizeId("pages", rec.targetId);
+        if (targetPageId) {
+          const page = await ctx.db.get(targetPageId);
+          if (page) {
+            name = page.name;
+            handle = page.username;
+          }
         }
       }
       return { ...rec, targetName: name, targetHandle: handle };
