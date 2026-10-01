@@ -63,7 +63,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
 
       <aside
         id="mobile-navigation-drawer"
-        className="relative z-10 flex h-full w-[85vw] max-w-[360px] flex-col overflow-y-auto border-r border-theme-divider bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.08),_transparent_42%),linear-gradient(180deg,#ffffff_0%,#f9f7ff_100%)] shadow-2xl transition-transform duration-300 ease-out animate-in slide-in-from-left"
+        className="relative z-10 flex h-full w-[85vw] max-w-[360px] flex-col overflow-y-auto border-r border-theme-divider bg-theme-surface shadow-2xl transition-transform duration-300 ease-out animate-in slide-in-from-left"
       >
         <div className="sticky top-0 z-20 border-b border-theme-divider/80 bg-theme-surface/90 px-4 pb-4 pt-4 backdrop-blur-sm">
           <div className="flex items-center justify-between">

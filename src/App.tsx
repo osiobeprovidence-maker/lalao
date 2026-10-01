@@ -229,55 +229,56 @@ const LalaoAppContent: React.FC = () => {
             ref={mainRef}
             className="relative flex-1 overflow-y-auto bg-theme-base pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0 lg:min-h-0"
           >
-            {!activePageId ? (
-              <>
+            <div className="mx-auto w-full max-w-[600px] min-h-full">
+              {!activePageId ? (
+                <>
             {activeTab === 'create-post' && (
               <div key="tab-create-post" className="animate-in fade-in duration-200 min-h-full w-full bg-theme-base">
                 <PostComposer embedded />
               </div>
             )}
             {activeTab === 'home' && (
-              <div key="tab-home" className="animate-in fade-in duration-200 mx-auto w-full max-w-[600px] bg-transparent min-h-full">
+              <div key="tab-home" className="animate-in fade-in duration-200 min-h-full w-full bg-transparent">
                 <HomeFeed />
               </div>
             )}
             {activeTab === 'discover' && (
-              <div key="tab-discover" className="animate-in fade-in duration-200 max-w-3xl mx-auto w-full bg-transparent">
+              <div key="tab-discover" className="animate-in fade-in duration-200 w-full bg-transparent">
                 <DiscoverView />
               </div>
             )}
             {activeTab === 'create-page' && (
-              <div key="tab-create-page" className="animate-in fade-in duration-200 max-w-2xl mx-auto w-full bg-transparent pb-24">
+              <div key="tab-create-page" className="animate-in fade-in duration-200 w-full bg-transparent pb-24">
                 <CreatePageView />
               </div>
             )}
             {activeTab === 'my-pages' && (
-              <div key="tab-my-pages" className="animate-in fade-in duration-200 max-w-2xl mx-auto w-full bg-transparent pb-24">
+              <div key="tab-my-pages" className="animate-in fade-in duration-200 w-full bg-transparent pb-24">
                 <MyPagesView />
               </div>
             )}
             {activeTab === 'messages' && (
-              <div key="tab-messages" className="animate-in fade-in duration-200 max-w-3xl mx-auto w-full bg-transparent">
+              <div key="tab-messages" className="animate-in fade-in duration-200 w-full bg-transparent">
                 <MessagesView />
               </div>
             )}
             {activeTab === 'notifications' && (
-              <div key="tab-notifications" className="animate-in fade-in duration-200 max-w-3xl mx-auto w-full bg-transparent">
+              <div key="tab-notifications" className="animate-in fade-in duration-200 w-full bg-transparent">
                 <NotificationsView />
               </div>
             )}
             {activeTab === 'events' && (
-              <div key="tab-events" className="animate-in fade-in duration-200 max-w-3xl mx-auto w-full bg-transparent min-h-full">
+              <div key="tab-events" className="animate-in fade-in duration-200 min-h-full w-full bg-transparent">
                 <EventsView />
               </div>
             )}
             {activeTab === 'profile' && (
-              <div key="tab-profile" className="animate-in fade-in duration-200 max-w-3xl mx-auto w-full bg-transparent">
+              <div key="tab-profile" className="animate-in fade-in duration-200 w-full bg-transparent">
                 <ProfileView />
               </div>
             )}
             {activeTab === 'following' && (
-              <div key="tab-following" className="animate-in fade-in duration-200 mx-auto w-full max-w-[600px] bg-transparent min-h-full">
+              <div key="tab-following" className="animate-in fade-in duration-200 min-h-full w-full bg-transparent">
                 {/* @ts-ignore */}
                 <HomeFeed 
                   hideTabs 
@@ -317,12 +318,13 @@ const LalaoAppContent: React.FC = () => {
                 )}
               </div>
             )}
-              </>
-            ) : (
-              <div key="tab-page-detail" className="animate-in fade-in duration-200 max-w-3xl mx-auto w-full bg-transparent min-h-full">
-                <PageDetailModal />
-              </div>
-            )}
+                </>
+              ) : (
+                <div key="tab-page-detail" className="animate-in fade-in duration-200 min-h-full w-full bg-transparent">
+                  <PageDetailModal />
+                </div>
+              )}
+            </div>
           </main>
 
           <div className="lg:hidden">

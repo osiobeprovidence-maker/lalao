@@ -23,9 +23,9 @@
   
   /* Light Mode Tokens (Original Lalao Colors) */
   --color-theme-base: #F5EFE6; /* Warmer, slightly deeper cream for main background */
-  --color-theme-surface: #FFFFFF; /* Pure white for cards and surfaces */
-  --color-theme-surface-hover: #FAFAF8; 
-  --color-theme-surface-active: #F0EDE5;
+  --color-theme-surface: #FCF9F4; /* Subtle elevated surface, not pure white */
+  --color-theme-surface-hover: #F2EBE0; 
+  --color-theme-surface-active: #EBE3D5;
   --color-theme-inverse: #1C1917;
   
   --color-theme-primary: #1C1917; /* Very dark brown/gray for warm readable text */
