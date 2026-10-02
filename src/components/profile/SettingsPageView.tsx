@@ -25,6 +25,7 @@ import { useNavigate } from 'react-router-dom';
 import { uploadImageToCloudinary } from '../../lib/cloudinary';
 import { useTheme } from '../../context/ThemeContext';
 import { ChangePhoneModal } from './ChangePhoneModal';
+import { usePushNotifications } from '../../hooks/usePushNotifications';
 
 export const SettingsPageView: React.FC = () => {
   const {
@@ -70,6 +71,7 @@ export const SettingsPageView: React.FC = () => {
   const { theme, setTheme } = useTheme();
   
   const [isChangePhoneOpen, setIsChangePhoneOpen] = useState(false);
+  const pushContext = usePushNotifications();
 
   useEffect(() => {
     setName(currentUser.name);
@@ -447,6 +449,42 @@ export const SettingsPageView: React.FC = () => {
           </div>
 
           <div className="divide-y divide-neutral-100 border border-theme-divider-light rounded-2xl overflow-hidden bg-theme-surface">
+            {pushContext.isSupported && (
+              <div className="p-3.5 flex items-center justify-between bg-theme-base">
+                <div>
+                  <span className="text-xs font-bold text-theme-primary">Push Notifications</span>
+                  <p className="text-[11px] text-theme-tertiary">
+                    {pushContext.browserPermission === 'denied' 
+                      ? 'Push notifications are blocked by your browser' 
+                      : 'Get alerted even when the app is closed'}
+                  </p>
+                </div>
+                {pushContext.browserPermission !== 'denied' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (pushContext.hasActivePushToken) {
+                        // Normally we would disable it, but for now we just show it's active
+                        // A disable function could be added if needed
+                      } else {
+                        pushContext.enableNotifications();
+                      }
+                    }}
+                    disabled={pushContext.hasActivePushToken || pushContext.status === 'loading'}
+                    className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                      pushContext.hasActivePushToken ? 'bg-[#5E43F3]' : 'bg-theme-divider-strong'
+                    } ${pushContext.status === 'loading' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <div
+                      className={`w-5 h-5 rounded-full bg-theme-surface transition-transform absolute top-0.5 ${
+                        pushContext.hasActivePushToken ? 'right-0.5' : 'left-0.5'
+                      }`}
+                    />
+                  </button>
+                )}
+              </div>
+            )}
+
             <div className="p-3.5 flex items-center justify-between">
               <div>
                 <span className="text-xs font-bold text-theme-primary">Local Rallies & Meetups</span>

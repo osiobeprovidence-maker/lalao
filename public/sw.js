@@ -6,67 +6,58 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-// Handle incoming native Web Push messages
-self.addEventListener('push', (event) => {
-  if (!event.data) return;
-
-  try {
-    const payload = event.data.json();
-    console.log('[SW] Push received:', payload);
-
-    const title = payload.title || 'Lalao Notification';
-    const options = {
-      body: payload.body || 'You have a new notification',
-      icon: payload.icon || '/mascot.png',
-      badge: payload.badge || '/mascot.png',
-      image: payload.image,
-      data: {
-        url: payload.url || payload.data?.url || '/',
-        notificationId: payload.notificationId
-      },
-      tag: payload.tag || 'lalao-notification',
-      renotify: true,
-      vibrate: [100, 50, 100],
-    };
-
-    event.waitUntil(
-      self.registration.showNotification(title, options)
-    );
-  } catch (err) {
-    console.error('[SW] Error parsing push data:', err);
-    // Fallback if not JSON
-    event.waitUntil(
-      self.registration.showNotification('Lalao', {
-        body: event.data.text(),
-        icon: '/mascot.png'
-      })
-    );
+self.addEventListener('push', function (event) {
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      const options = {
+        body: data.body,
+        icon: data.icon || '/logo192.png',
+        badge: '/logo192.png', // A small monochrome icon is usually preferred for badge
+        data: data.data || {}
+      };
+      event.waitUntil(
+        self.registration.showNotification(data.title, options)
+      );
+    } catch (err) {
+      console.error('Error parsing push data', err);
+    }
   }
 });
 
-// Handle notification clicks
-self.addEventListener('notificationclick', (event) => {
+self.addEventListener('notificationclick', function (event) {
   event.notification.close();
 
-  const urlToOpen = event.notification.data?.url || '/';
+  const clickData = event.notification.data;
+  let urlToOpen = '/';
+
+  if (clickData && clickData.url) {
+    urlToOpen = clickData.url;
+  } else if (clickData && clickData.conversationId) {
+    urlToOpen = '/app?chat=' + clickData.conversationId;
+  } else if (clickData && clickData.postId) {
+    urlToOpen = '/app?post=' + clickData.postId;
+  }
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then((clientList) => {
-        // Try to find an open tab for this origin
-        for (const client of clientList) {
-          if (client.url.includes(self.location.origin) && 'focus' in client) {
-            client.focus();
-            if ('navigate' in client && client.url !== new URL(urlToOpen, self.location.origin).href) {
-               client.navigate(urlToOpen);
-            }
-            return;
-          }
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // Check if there is already a window/tab open with the target URL
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i];
+        if (client.url.includes('/app') && 'focus' in client) {
+          // Send message to the client to navigate to the specific chat/post without full reload
+          client.postMessage({
+            type: 'NAVIGATE',
+            url: urlToOpen,
+            data: clickData
+          });
+          return client.focus();
         }
-        // No matching tab, open a new one
-        if (self.clients.openWindow) {
-          return self.clients.openWindow(urlToOpen);
-        }
-      })
+      }
+      // If no window is open, open a new one
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
   );
 });

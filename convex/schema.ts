@@ -78,6 +78,11 @@ export default defineSchema({
         v.literal("waitlisted")
       )
     ),
+
+    // Disappearing Messages Setting
+    disappearingMode: v.optional(v.string()),
+    disappearingCustomValue: v.optional(v.number()),
+    disappearingCustomUnit: v.optional(v.string()),
   })
     .index("by_token", ["tokenIdentifier"])
     .index("by_email", ["email"])
@@ -100,6 +105,14 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_country", ["countryCode"]),
+
+  pushSubscriptions: defineTable({
+    userId: v.id("users"),
+    endpoint: v.string(),
+    p256dh: v.string(),
+    auth: v.string(),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]).index("by_endpoint", ["endpoint"]),
 
   posts: defineTable({
     authorId: v.id("users"),
@@ -286,6 +299,7 @@ export default defineSchema({
     pageSenderId: v.optional(v.id("pages")), // Present if the user is replying as the Page
     text: v.string(),
     isRead: v.optional(v.boolean()),
+    readAt: v.optional(v.number()),
     replyToMessageId: v.optional(v.id("messages")),
     isEdited: v.optional(v.boolean()),
     type: v.optional(v.union(v.literal("text"), v.literal("image"), v.literal("video"))),
@@ -1016,4 +1030,17 @@ export default defineSchema({
   })
     .index("by_story", ["storyId"])
     .index("by_story_user_type", ["storyId", "userId", "type"]),
+
+  pushSubscriptions: defineTable({
+    userId: v.id("users"),
+    endpoint: v.string(),
+    p256dh: v.string(),
+    auth: v.string(),
+    userAgent: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    isActive: v.boolean(),
+    provider: v.string(),
+  }).index("by_endpoint", ["endpoint"])
+    .index("by_user_active", ["userId", "isActive"]),
 });

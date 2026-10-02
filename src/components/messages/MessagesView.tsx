@@ -11,7 +11,12 @@ import {
   ArrowDown,
   CheckCircle2,
   UserPlus,
+  Settings,
+  Clock,
+  History,
 } from 'lucide-react';
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
@@ -32,6 +37,23 @@ export const MessagesView: React.FC = () => {
   } = useLalao();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
+  const [selectedMode, setSelectedMode] = useState(currentUser?.disappearingMode || 'off');
+  const [customValue, setCustomValue] = useState(currentUser?.disappearingCustomValue?.toString() || '1');
+  const [customUnit, setCustomUnit] = useState(currentUser?.disappearingCustomUnit || 'days');
+  
+  const updateDisappearingMessages = useMutation(api.social.updateDisappearingMessages);
+  
+  const handleSaveSettings = () => {
+    updateDisappearingMessages({
+      mode: selectedMode,
+      customValue: selectedMode === 'custom' ? parseInt(customValue) || 1 : undefined,
+      customUnit: selectedMode === 'custom' ? customUnit : undefined
+    }).catch(console.error);
+    triggerShareToast('Message settings updated');
+    setIsSettingsOpen(false);
+  };
 
   // Pull to refresh state
   const [pullDistance, setPullDistance] = useState(0);
@@ -173,6 +195,90 @@ export const MessagesView: React.FC = () => {
   }
 
   return (
+    <>
+    {isSettingsOpen && (
+      <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-200">
+        <div className="bg-theme-base w-full sm:w-[480px] sm:rounded-2xl rounded-t-2xl sm:max-h-[85vh] h-auto flex flex-col shadow-2xl border border-theme-divider animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200">
+          
+          <div className="flex items-center justify-between p-4 border-b border-theme-divider shrink-0">
+            <h2 className="text-lg font-bold text-theme-primary">Message Settings</h2>
+            <button
+              onClick={() => setIsSettingsOpen(false)}
+              className="p-2 rounded-full text-theme-secondary hover:bg-theme-surface-hover transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-6">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-base font-semibold text-theme-primary flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-[#5E43F3]" />
+                  Disappearing Messages
+                </h3>
+                <p className="text-xs text-theme-tertiary mt-1">
+                  Choose when messages automatically clear from your chats. This applies to new messages.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {[
+                  { id: 'off', label: 'Off', desc: 'Messages remain normally.' },
+                  { id: 'after_read', label: 'After messages are read', desc: 'Messages disappear shortly after being read.' },
+                  { id: '24_hours', label: '24 hours', desc: 'Messages disappear 24 hours after they are sent.' },
+                  { id: '7_days', label: '7 days', desc: 'Messages disappear 7 days after they are sent.' },
+                  { id: '1_month', label: '1 month', desc: 'Messages disappear 1 month after they are sent.' },
+                  { id: 'custom', label: 'Custom', desc: 'Set a custom duration.' }
+                ].map(opt => (
+                  <label key={opt.id} className="flex items-start gap-3 p-3 rounded-xl border border-theme-divider bg-theme-surface hover:bg-theme-surface-hover transition-colors cursor-pointer">
+                    <div className="mt-0.5 relative flex items-center justify-center w-5 h-5 rounded-full border border-theme-divider-strong shrink-0">
+                      {selectedMode === opt.id && <div className="w-2.5 h-2.5 rounded-full bg-[#5E43F3]" />}
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-theme-primary">{opt.label}</div>
+                      <div className="text-xs text-theme-tertiary mt-0.5">{opt.desc}</div>
+                    </div>
+                    <input type="radio" name="disappearingMode" className="hidden" checked={selectedMode === opt.id} onChange={() => setSelectedMode(opt.id)} />
+                  </label>
+                ))}
+              </div>
+
+              {selectedMode === 'custom' && (
+                <div className="flex items-center gap-3 p-4 bg-theme-surface rounded-xl border border-theme-divider animate-in slide-in-from-top-2 duration-200">
+                  <input
+                    type="number"
+                    min="1"
+                    value={customValue}
+                    onChange={(e) => setCustomValue(e.target.value)}
+                    className="w-20 px-3 py-2 bg-theme-base border border-theme-divider rounded-lg text-theme-primary outline-none focus:border-[#5E43F3] text-sm text-center"
+                  />
+                  <select
+                    value={customUnit}
+                    onChange={(e) => setCustomUnit(e.target.value)}
+                    className="flex-1 px-3 py-2 bg-theme-base border border-theme-divider rounded-lg text-theme-primary outline-none focus:border-[#5E43F3] text-sm appearance-none cursor-pointer"
+                  >
+                    <option value="hours">Hours</option>
+                    <option value="days">Days</option>
+                    <option value="weeks">Weeks</option>
+                    <option value="months">Months</option>
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="p-4 border-t border-theme-divider shrink-0">
+            <button
+              onClick={handleSaveSettings}
+              className="w-full py-2.5 bg-[#5E43F3] text-white font-bold rounded-xl hover:bg-[#4E34E0] active:scale-95 transition-all text-sm"
+            >
+              Save Settings
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     <div
       id="messages-view-container"
       className="min-h-screen bg-theme-base pb-24 relative select-none"
@@ -195,6 +301,13 @@ export const MessagesView: React.FC = () => {
               Messages
             </h1>
           </div>
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="p-1.5 rounded-full text-theme-tertiary hover:text-theme-secondary hover:bg-theme-surface-hover transition-colors"
+            title="Message settings"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Search */}
@@ -470,5 +583,6 @@ export const MessagesView: React.FC = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };

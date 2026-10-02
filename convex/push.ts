@@ -194,3 +194,65 @@ export const getUserIdFromIdentity = internalQuery({
     return user?._id ?? null;
   },
 });
+
+import { action } from "./_generated/server";
+import { internal } from "./_generated/api";
+import webpush from "web-push";
+
+export const sendWebPush = action({
+  args: {
+    userId: v.id("users"),
+    title: v.string(),
+    body: v.string(),
+    url: v.optional(v.string()),
+    conversationId: v.optional(v.string()),
+    postId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const subscriptions: any[] = await ctx.runQuery(internal.push.getWebPushSubscriptionsForUser, { userId: args.userId }) || [];
+    
+    if (subscriptions.length === 0) return;
+
+    if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+      console.warn("VAPID keys not configured");
+      return;
+    }
+
+    webpush.setVapidDetails(
+      process.env.VAPID_SUBJECT || 'mailto:admin@lalao.app',
+      process.env.VAPID_PUBLIC_KEY,
+      process.env.VAPID_PRIVATE_KEY
+    );
+
+    const payload = JSON.stringify({
+      title: args.title,
+      body: args.body,
+      data: {
+        url: args.url,
+        conversationId: args.conversationId,
+        postId: args.postId,
+      },
+    });
+
+    for (const sub of subscriptions) {
+      const pushSubscription = {
+        endpoint: sub.endpoint,
+        keys: {
+          p256dh: sub.p256dh,
+          auth: sub.auth,
+        }
+      };
+
+      try {
+        await webpush.sendNotification(pushSubscription, payload);
+      } catch (err: any) {
+        if (err.statusCode === 404 || err.statusCode === 410) {
+          // Subscription expired
+          await ctx.runMutation(internal.push.markWebPushSubscriptionInactive, { subscriptionId: sub._id });
+        } else {
+          console.error("Error sending push notification", err);
+        }
+      }
+    }
+  },
+});

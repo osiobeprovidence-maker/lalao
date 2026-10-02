@@ -697,8 +697,12 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       backendNotifications.forEach((n) => {
         if (!seenNotificationIds.current.has(n.id)) {
           seenNotificationIds.current.add(n.id);
-          if (!n.isRead && n.actor?.id !== currentUser?.id && n.type !== 'message') {
-            newUnreadCount++;
+          if (!n.isRead && n.actor?.id !== currentUser?.id) {
+            if (n.type !== 'message') {
+              newUnreadCount++;
+            } else if (n.type === 'message' && n.conversationId !== activeChatId) {
+              newUnreadCount++;
+            }
           }
         }
       });

@@ -1078,10 +1078,40 @@ export const listConversations = query({
         .first();
 
       // Calculate unread count
-      const allMessages = await ctx.db
+      let allMessagesRaw = await ctx.db
         .query("messages")
         .withIndex("by_conversation", (q: any) => q.eq("conversationId", conversation._id))
         .collect();
+
+      const now = Date.now();
+      
+      const allMessages = allMessagesRaw.filter(msg => {
+        // Apply disappearing message rule based on sender or recipient?
+        // Let's use currentUser's setting or if we want it to be fair, maybe just currentUser for their view.
+        const mode = currentUser.disappearingMode;
+        if (!mode || mode === 'off') return true;
+        
+        if (mode === 'after_read') {
+            // Disappear 1 minute after it was read
+            if (msg.isRead && msg.readAt && now - msg.readAt > 60000) return false;
+            return true;
+        }
+        
+        let expireDuration = 0;
+        if (mode === '24_hours') expireDuration = 24 * 60 * 60 * 1000;
+        else if (mode === '7_days') expireDuration = 7 * 24 * 60 * 60 * 1000;
+        else if (mode === '1_month') expireDuration = 30 * 24 * 60 * 60 * 1000;
+        else if (mode === 'custom' && currentUser.disappearingCustomValue) {
+           const unit = currentUser.disappearingCustomUnit || 'days';
+           const multiplier = unit === 'hours' ? 3600000 : unit === 'days' ? 86400000 : unit === 'weeks' ? 604800000 : 2592000000;
+           expireDuration = currentUser.disappearingCustomValue * multiplier;
+        }
+
+        if (expireDuration > 0 && now - msg.createdAt > expireDuration) {
+           return false;
+        }
+        return true;
+      });
 
       let unreadCount = 0;
       for (const msg of allMessages) {
@@ -2621,11 +2651,11 @@ export const markConversationRead = mutation({
     for (const msg of messages) {
       if (isManager && !amIUserA) {
         if (msg.senderId !== currentUser._id && !msg.pageSenderId) {
-          await ctx.db.patch(msg._id, { isRead: true });
+          await ctx.db.patch(msg._id, { isRead: true, readAt: Date.now() });
         }
       } else {
         if (msg.pageSenderId || msg.senderId !== currentUser._id) {
-          await ctx.db.patch(msg._id, { isRead: true });
+          await ctx.db.patch(msg._id, { isRead: true, readAt: Date.now() });
         }
       }
     }
@@ -2707,6 +2737,24 @@ export const markViewOnceOpened = mutation({
     await ctx.db.patch(args.messageId, {
       viewOnceOpened: true,
       viewedAt: Date.now(),
+    });
+  },
+});
+
+export const updateDisappearingMessages = mutation({
+  args: {
+    mode: v.string(), // "off", "after_read", "24_hours", "7_days", "1_month", "custom"
+    customValue: v.optional(v.number()),
+    customUnit: v.optional(v.string()), // "hours", "days", "weeks", "months"
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    await ctx.db.patch(currentUser._id, {
+      disappearingMode: args.mode,
+      disappearingCustomValue: args.customValue,
+      disappearingCustomUnit: args.customUnit,
     });
   },
 });

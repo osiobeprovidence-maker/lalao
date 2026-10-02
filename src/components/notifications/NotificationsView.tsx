@@ -11,7 +11,6 @@ import {
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { NotificationItem } from '../../types';
-import { PushNotificationSettings } from './PushNotificationSettings';
 
 export const NotificationsView: React.FC = () => {
   const {
@@ -128,9 +127,6 @@ export const NotificationsView: React.FC = () => {
           ))}
         </div>
       </div>
-
-      {/* Push notification settings banner */}
-      <PushNotificationSettings />
 
       <div className="px-4 pt-4 space-y-4">
         {(activeFilter === 'all' || activeFilter === 'suggested') && visibleSuggested.length > 0 && (
