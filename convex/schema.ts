@@ -106,14 +106,6 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_country", ["countryCode"]),
 
-  pushSubscriptions: defineTable({
-    userId: v.id("users"),
-    endpoint: v.string(),
-    p256dh: v.string(),
-    auth: v.string(),
-    createdAt: v.number(),
-  }).index("by_user", ["userId"]).index("by_endpoint", ["endpoint"]),
-
   posts: defineTable({
     authorId: v.id("users"),
     text: v.string(),
@@ -1030,17 +1022,4 @@ export default defineSchema({
   })
     .index("by_story", ["storyId"])
     .index("by_story_user_type", ["storyId", "userId", "type"]),
-
-  pushSubscriptions: defineTable({
-    userId: v.id("users"),
-    endpoint: v.string(),
-    p256dh: v.string(),
-    auth: v.string(),
-    userAgent: v.optional(v.string()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-    isActive: v.boolean(),
-    provider: v.string(),
-  }).index("by_endpoint", ["endpoint"])
-    .index("by_user_active", ["userId", "isActive"]),
 });
