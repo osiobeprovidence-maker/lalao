@@ -118,7 +118,7 @@ export const PageToolsModal: React.FC<PageToolsModalProps> = ({
             <div className="w-16 h-16 bg-[#5E43F3]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Briefcase className="w-8 h-8 text-[#5E43F3]" />
             </div>
-            <h2 className="text-2xl font-black text-theme-primary mb-3">Power up your business</h2>
+            <h2 className="text-xl sm:text-2xl font-black text-theme-primary mb-3">Power up your business</h2>
             <p className="text-theme-tertiary text-sm max-w-md mx-auto leading-relaxed">
               Your page is configured as a <span className="font-bold uppercase">{businessType}</span> business.
             </p>

@@ -9,7 +9,7 @@ export const AdminAuditLog: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-black text-theme-primary">Audit Log</h1>
+        <h1 className="text-xl sm:text-2xl font-black text-theme-primary">Audit Log</h1>
         <p className="text-sm text-theme-tertiary mt-1">Platform administrative actions history</p>
       </div>
 

@@ -8,7 +8,8 @@ import { Avatar } from '../../components/common/Avatar';
 import { useLalao } from '../../context/LalaoContext';
 export const RecommendationsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { toggleFollowUser, toggleFollowPage } = useLalao();
+  const toggleFollowUser = useMutation(api.social.toggleFollowUser);
+  const toggleFollowPage = useMutation(api.pages.toggleFollowPage);
   const recommendations = useQuery(api.recommendations.getOnboardingRecommendations, { limit: 15 });
   const completeOnboarding = useMutation(api.users.completeOnboardingStep);
   const dismissRec = useMutation(api.recommendations.dismissRecommendation);
@@ -41,9 +42,9 @@ export const RecommendationsPage: React.FC = () => {
 
     try {
       if (rec.type === 'user') {
-        await toggleFollowUser(rec.id);
+        await toggleFollowUser({ targetUserId: rec.id as any });
       } else if (rec.type === 'page' || rec.type === 'community') {
-        await toggleFollowPage(rec.id);
+        await toggleFollowPage({ pageId: rec.id as any });
       }
     } catch (err) {
       // Revert on error

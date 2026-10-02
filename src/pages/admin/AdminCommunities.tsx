@@ -29,7 +29,7 @@ const StatCard: React.FC<{
         <Icon className="w-4 h-4" />
       </div>
     </div>
-    <div className="text-3xl font-black text-theme-primary">
+    <div className="text-2xl sm:text-3xl font-black text-theme-primary">
       {value === null || value === undefined ? (
         <span className="text-theme-tertiary text-base font-semibold">Not available</span>
       ) : (
@@ -64,7 +64,7 @@ export const AdminCommunities: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-theme-primary tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-black text-theme-primary tracking-tight">
             Communities
           </h1>
           <p className="text-sm text-theme-tertiary mt-1">

@@ -310,9 +310,6 @@ export const UserProfileModal: React.FC = () => {
               <span className="font-bold text-sm text-theme-primary tracking-tight">
                 {activeUserProfile.username}
               </span>
-              {activeUserProfile.isVerified && (
-                <CheckCircle className="w-3.5 h-3.5 text-[#5E43F3] fill-[#5E43F3]/20" />
-              )}
             </div>
           </div>
 
@@ -404,48 +401,68 @@ export const UserProfileModal: React.FC = () => {
 
         {/* Scrollable Profile Body */}
         <div className="flex-1 overflow-y-auto no-scrollbar">
-          {/* Main User Card (Matching screenshot layout) */}
-          <div className="px-5 pt-4 pb-3 space-y-3 border-b border-theme-divider-light">
-            {/* Top Identity Row: Name/Stats on Left, Big Avatar on Right */}
+          <div className="p-4 space-y-3 border-b border-theme-divider-light">
             <div className="flex items-start justify-between gap-4">
-              {/* Left Column: Name, Username, Stats */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <h1 className="text-[22px] sm:text-2xl font-black text-theme-primary tracking-tight leading-tight">
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <div>
+                  <h2 className="text-xl font-bold text-theme-primary leading-tight flex items-center gap-2">
                     {activeUserProfile.name}
-                  </h1>
-                  {activeUserProfile.isVerified && (
-                    <CheckCircle className="w-4 h-4 text-[#5E43F3] fill-[#5E43F3]/20 shrink-0" />
+                    {activeUserProfile.badge && <Badge type={activeUserProfile.badge} />}
+                  </h2>
+                  <p className="text-xs text-theme-tertiary font-medium">
+                    @{activeUserProfile.username}
+                  </p>
+                </div>
+
+                {activeUserProfile.bio && (
+                  <p className="text-xs text-theme-primary leading-relaxed">
+                    {activeUserProfile.bio}
+                  </p>
+                )}
+
+                <div className="flex flex-wrap items-center gap-3 text-xs text-theme-tertiary pt-0.5">
+                  {activeUserProfile.location && (() => {
+                    const cleanLoc = activeUserProfile.location.replace(/\s*\(Detected\)\s*/i, '').replace(/^GPS Detected$/i, '').trim();
+                    return cleanLoc ? (
+                      <div className="flex items-center gap-1 text-theme-secondary font-medium">
+                        <MapPin className="w-3.5 h-3.5 text-[#5E43F3] shrink-0" />
+                        <span>{cleanLoc}</span>
+                      </div>
+                    ) : null;
+                  })()}
+                  
+                  {activeUserProfile.location && <span>·</span>}
+                  
+                  {activeUserProfile.mutualInfo ? (
+                    <div className="flex items-center gap-1 text-theme-tertiary text-xs">
+                      <Users className="w-3.5 h-3.5 text-theme-tertiary shrink-0" />
+                      <span>{activeUserProfile.mutualInfo}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 text-theme-tertiary text-xs">
+                      <Compass className="w-3 h-3 text-[#5E43F3]" />
+                      <span>Connected via Lalao West Africa Community</span>
+                    </div>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  <span className="text-xs sm:text-[13px] font-medium text-theme-tertiary">
-                    @{activeUserProfile.username}
+                <div className="flex items-center gap-4 text-xs pt-0.5">
+                  <span className="text-theme-tertiary">
+                    <strong className="text-theme-primary font-bold">{formatFollowers(activeUserProfile.followersCount)}</strong>{' '}
+                    followers
                   </span>
-                  {activeUserProfile.badge && <Badge type={activeUserProfile.badge} />}
-                </div>
-
-                {/* Follower Count and Total Likes Count (reactive real-time sum) */}
-                <div className="flex items-center gap-1.5 text-xs text-theme-tertiary mt-2 font-medium">
-                  <span className="text-theme-primary font-bold">
-                    {formatFollowers(activeUserProfile.followersCount)}
+                  <span className="text-theme-tertiary">
+                    <strong className="text-theme-primary font-bold">{formatLikes(totalLikes)}</strong>{' '}
+                    {totalLikes === 1 ? 'Like' : 'Likes'}
                   </span>
-                  <span>followers</span>
-                  <span>·</span>
-                  <span className="text-theme-primary font-bold">
-                    {formatLikes(totalLikes)}
-                  </span>
-                  <span>{totalLikes === 1 ? 'Like' : 'Likes'}</span>
                 </div>
               </div>
 
-              {/* Right Column: Prominent Circular Avatar with 24h Cycle Ring */}
-              <div className="shrink-0 pt-0.5">
+              <div className="relative shrink-0 pt-0.5">
                 {hasActiveCycle ? (
                   <div
                     onClick={handleOpenCycleStory}
-                    className="p-[3px] rounded-full bg-gradient-to-tr from-[#5E43F3] via-fuchsia-500 to-amber-400 cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-md relative group"
+                    className="p-[2.5px] rounded-full bg-gradient-to-tr from-[#5E43F3] via-fuchsia-500 to-amber-400 cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-md relative group"
                     title="Tap to watch 24h Cycle Story"
                   >
                     <div className="bg-theme-surface p-[2px] rounded-full">
@@ -453,10 +470,9 @@ export const UserProfileModal: React.FC = () => {
                         src={activeUserProfile.avatar}
                         alt={activeUserProfile.name}
                         size="lg"
-                        className="w-16 h-16 sm:w-18 sm:h-18"
+                        className="w-16 h-16"
                       />
                     </div>
-                    {/* Pulsing indicator badge */}
                     <span className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-gradient-to-tr from-[#5E43F3] to-fuchsia-500 border-2 border-white flex items-center justify-center text-[8px] text-white font-black shadow-xs">
                       <Flame className="w-2.5 h-2.5 fill-current" />
                     </span>
@@ -476,43 +492,11 @@ export const UserProfileModal: React.FC = () => {
                       src={activeUserProfile.avatar}
                       alt={activeUserProfile.name}
                       size="lg"
-                      className="w-16 h-16 sm:w-18 sm:h-18 ring-2 ring-neutral-100"
+                      className="w-16 h-16 ring-2 ring-neutral-100"
                     />
                   </div>
                 )}
               </div>
-            </div>
-
-            {/* Bio */}
-            {activeUserProfile.bio && (
-              <p className="text-[13px] sm:text-sm text-theme-primary leading-relaxed pt-0.5">
-                {activeUserProfile.bio}
-              </p>
-            )}
-
-            {/* Location & Mutual Connections Footprint */}
-            <div className="space-y-1.5 text-xs text-theme-tertiary pt-0.5">
-              {activeUserProfile.location && (() => {
-                const cleanLoc = activeUserProfile.location.replace(/\s*\(Detected\)\s*/i, '').replace(/^GPS Detected$/i, '').trim();
-                return cleanLoc ? (
-                  <div className="flex items-center gap-1.5 text-theme-secondary font-medium">
-                    <MapPin className="w-3.5 h-3.5 text-[#5E43F3] shrink-0" />
-                    <span>{cleanLoc}</span>
-                  </div>
-                ) : null;
-              })()}
-
-              {activeUserProfile.mutualInfo ? (
-                <div className="flex items-center gap-1.5 text-theme-tertiary text-[11px]">
-                  <Users className="w-3.5 h-3.5 text-theme-tertiary shrink-0" />
-                  <span>{activeUserProfile.mutualInfo}</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 text-theme-tertiary text-[11px]">
-                  <Compass className="w-3 h-3 text-[#5E43F3]" />
-                  <span>Connected via Lalao West Africa Community</span>
-                </div>
-              )}
             </div>
 
             {/* Active 24h Cycle Quick-Banner (Lalao Exclusive) */}

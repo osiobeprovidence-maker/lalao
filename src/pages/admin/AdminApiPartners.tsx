@@ -16,7 +16,7 @@ export const AdminApiPartners: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-theme-primary">API Partners</h1>
+          <h1 className="text-xl sm:text-2xl font-black text-theme-primary">API Partners</h1>
           <p className="text-sm text-theme-tertiary mt-1">Manage external event platforms connected to Lalao.</p>
         </div>
         <button onClick={() => setShowAddPartner(true)} className="flex items-center gap-2 px-4 py-2 bg-[#5E43F3] text-white font-bold rounded-xl hover:bg-indigo-600 transition-colors">
@@ -32,28 +32,28 @@ export const AdminApiPartners: React.FC = () => {
             <Users className="w-5 h-5" />
             <h3 className="font-bold text-sm uppercase tracking-wide">Active Partners</h3>
           </div>
-          <span className="text-3xl font-black text-theme-primary">{stats?.activePartners || 0}</span>
+          <span className="text-2xl sm:text-3xl font-black text-theme-primary">{stats?.activePartners || 0}</span>
         </div>
         <div className="bg-theme-surface p-5 rounded-2xl border border-theme-divider shadow-sm">
           <div className="flex items-center gap-3 mb-2 text-theme-tertiary">
             <DollarSign className="w-5 h-5 text-green-600" />
             <h3 className="font-bold text-sm uppercase tracking-wide">Monthly Revenue</h3>
           </div>
-          <span className="text-3xl font-black text-theme-primary">₦{(stats?.mrr || 0).toLocaleString()}</span>
+          <span className="text-2xl sm:text-3xl font-black text-theme-primary">₦{(stats?.mrr || 0).toLocaleString()}</span>
         </div>
         <div className="bg-theme-surface p-5 rounded-2xl border border-theme-divider shadow-sm">
           <div className="flex items-center gap-3 mb-2 text-theme-tertiary">
             <Database className="w-5 h-5 text-[#5E43F3]" />
             <h3 className="font-bold text-sm uppercase tracking-wide">API Requests</h3>
           </div>
-          <span className="text-3xl font-black text-theme-primary">{(stats?.totalRequests || 0).toLocaleString()}</span>
+          <span className="text-2xl sm:text-3xl font-black text-theme-primary">{(stats?.totalRequests || 0).toLocaleString()}</span>
         </div>
         <div className="bg-theme-surface p-5 rounded-2xl border border-theme-divider shadow-sm">
           <div className="flex items-center gap-3 mb-2 text-theme-tertiary">
             <Calendar className="w-5 h-5 text-orange-500" />
             <h3 className="font-bold text-sm uppercase tracking-wide">Active Events</h3>
           </div>
-          <span className="text-3xl font-black text-theme-primary">{(stats?.activeEvents || 0).toLocaleString()}</span>
+          <span className="text-2xl sm:text-3xl font-black text-theme-primary">{(stats?.activeEvents || 0).toLocaleString()}</span>
         </div>
       </div>
 

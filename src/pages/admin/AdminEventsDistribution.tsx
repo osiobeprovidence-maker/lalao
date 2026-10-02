@@ -17,7 +17,7 @@ export const AdminEventsDistribution: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-black text-theme-primary">Events Distribution Analytics</h1>
+        <h1 className="text-xl sm:text-2xl font-black text-theme-primary">Events Distribution Analytics</h1>
         <p className="text-sm text-theme-tertiary mt-1">Track the performance of events imported from external APIs.</p>
       </div>
 
@@ -29,7 +29,7 @@ export const AdminEventsDistribution: React.FC = () => {
             </div>
             <div>
               <p className="text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1">{stat.label}</p>
-              <p className="text-2xl font-black text-theme-primary">{stat.value}</p>
+              <p className="text-xl sm:text-2xl font-black text-theme-primary">{stat.value}</p>
             </div>
           </div>
         ))}

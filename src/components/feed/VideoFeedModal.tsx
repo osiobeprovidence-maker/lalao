@@ -138,13 +138,6 @@ const VideoFeedItem: React.FC<{ post: Post, isActive: boolean, onIntersect: () =
             <div>
               <h3 className="font-bold text-white text-[15px] leading-tight flex items-center group-hover:underline">
                 {post.author.name}
-                {post.author.isVerified && (
-                  <span className="ml-1 rounded-full bg-[#5E43F3] p-0.5">
-                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </span>
-                )}
               </h3>
               <p className="text-white/70 text-sm">@{post.author.username}</p>
             </div>

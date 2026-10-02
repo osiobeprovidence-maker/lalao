@@ -39,9 +39,10 @@ export interface PostItemProps {
   rally?: Rally;
   externalEvent?: ExternalEvent;
   onSelectAuthor?: () => void;
+  compactMedia?: boolean;
 }
 
-export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, externalEvent, onSelectAuthor }) => {
+export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, externalEvent, onSelectAuthor, compactMedia }) => {
   const {
     currentUser,
     toggleLikePost,
@@ -467,7 +468,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
 
           {/* Media Attachment (for normal post without rally or with independent media) */}
           {((post?.mediaUrl || (post as any)?.muxUploadId) && !linkedRally) && (
-            <div className="mt-3 w-full max-h-[450px] sm:max-h-[500px] rounded-[16px] overflow-hidden border border-theme-divider-light bg-black/5 dark:bg-white/5 flex items-center justify-center"> 
+            <div className={`mt-3 w-full rounded-[16px] overflow-hidden border border-theme-divider-light bg-black/5 dark:bg-theme-surface/5 flex items-center justify-center ${compactMedia ? 'max-h-[450px] sm:max-h-[300px]' : 'max-h-[450px] sm:max-h-[500px]'}`}> 
               {post.mediaType === 'video' ? (
                 <VideoPlayer
                   muxPlaybackId={(post as any).muxPlaybackId}
@@ -477,7 +478,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                   mediaHeight={(post as any).mediaHeight}
                   aspect="auto"
                   autoPlay={true}
-                  className="w-auto h-auto max-w-full max-h-[450px] sm:max-h-[500px] object-contain"
+                  className={`w-auto h-auto max-w-full object-contain ${compactMedia ? 'max-h-[450px] sm:max-h-[300px]' : 'max-h-[450px] sm:max-h-[500px]'}`}
                   onExpandVideo={() => setActiveVideoFeedPostId(post.id)}
                 />
               ) : (
@@ -486,7 +487,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                     src={post.mediaUrl}
                     alt="Post attachment"
                     referrerPolicy="no-referrer"
-                    className="w-auto h-auto max-w-full max-h-[450px] sm:max-h-[500px] object-contain cursor-pointer"
+                    className={`w-auto h-auto max-w-full object-contain cursor-pointer ${compactMedia ? 'max-h-[450px] sm:max-h-[300px]' : 'max-h-[450px] sm:max-h-[500px]'}`}
                     onClick={() => externalEvent && setShowEventModal(true)}
                     loading="lazy"
                   />
@@ -527,12 +528,12 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
 
           {/* GIF Attachment */}
           {post?.gifUrl && !linkedRally && (
-            <div className="mt-3 w-full max-h-[400px] rounded-[16px] overflow-hidden border border-theme-divider-light bg-black/5 dark:bg-white/5 flex items-center justify-center">
+            <div className={`mt-3 w-full rounded-[16px] overflow-hidden border border-theme-divider-light bg-black/5 dark:bg-theme-surface/5 flex items-center justify-center ${compactMedia ? 'max-h-[400px] sm:max-h-[250px]' : 'max-h-[400px]'}`}>
               <img
                 src={post.gifUrl}
                 alt="GIF attachment"
                 referrerPolicy="no-referrer"
-                className="w-auto h-auto max-w-full max-h-[400px] object-contain cursor-pointer"
+                className={`w-auto h-auto max-w-full object-contain cursor-pointer ${compactMedia ? 'max-h-[400px] sm:max-h-[250px]' : 'max-h-[400px]'}`}
                 loading="lazy"
               />
             </div>

@@ -1174,7 +1174,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
                     onClick={() => addSticker(sticker)}
                     className="aspect-square flex flex-col items-center justify-center rounded-2xl bg-theme-base hover:bg-theme-surface-hover transition-colors"
                   >
-                    <span className="text-3xl">{sticker.asset}</span>
+                    <span className="text-2xl sm:text-3xl">{sticker.asset}</span>
                   </button>
                 ))}
               </div>

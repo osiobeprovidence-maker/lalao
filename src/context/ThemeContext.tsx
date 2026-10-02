@@ -24,12 +24,12 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
     const applyTheme = () => {
       let activeTheme: 'light' | 'dark' = 'light';
       if (theme === 'system') {
-        activeTheme = mediaQuery.matches ? 'dark' : 'light';
+        const hour = new Date().getHours();
+        // Daytime: 6 AM (6) to 6 PM (17:59). Nighttime: 6 PM (18) to 5:59 AM (5)
+        activeTheme = (hour >= 18 || hour < 6) ? 'dark' : 'light';
       } else {
         activeTheme = theme;
       }
@@ -45,12 +45,12 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     
     applyTheme();
     
-    const listener = (e: MediaQueryListEvent) => {
+    // Check every minute if the time has crossed the daytime/nighttime threshold
+    const intervalId = setInterval(() => {
       if (theme === 'system') applyTheme();
-    };
+    }, 60000);
     
-    mediaQuery.addEventListener('change', listener);
-    return () => mediaQuery.removeEventListener('change', listener);
+    return () => clearInterval(intervalId);
   }, [theme]);
 
   return (

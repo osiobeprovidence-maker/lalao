@@ -10,7 +10,7 @@ export const AdminSubPlatforms: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-white">Subscription Platforms</h1>
+          <h1 className="text-xl sm:text-2xl font-black text-white">Subscription Platforms</h1>
           <p className="text-sm text-slate-400 mt-1">Manage global platforms available for businesses</p>
         </div>
         <button className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold transition">

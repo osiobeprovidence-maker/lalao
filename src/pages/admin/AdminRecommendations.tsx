@@ -43,7 +43,7 @@ export const AdminRecommendations: React.FC = () => {
     <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-theme-primary flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-black text-theme-primary flex items-center gap-2">
             <Star className="w-6 h-6 text-indigo-500" />
             Recommendations & Feed Seeding
           </h1>

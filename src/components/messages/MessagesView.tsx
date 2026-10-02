@@ -387,11 +387,6 @@ export const MessagesView: React.FC = () => {
                       <span className="font-bold text-sm text-theme-primary truncate">
                         {conv.participant?.name}
                       </span>
-                      {conv.participant?.isVerified && (
-                        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-[#0095F6] text-white shrink-0">
-                          <Check className="w-2.5 h-2.5 stroke-[3.5]" />
-                        </span>
-                      )}
                       {conv.participant?.badge && <Badge type={conv.participant.badge} />}
                     </div>
                     {(conv as any).isPageConvo && !(conv as any).amIUserA && (
@@ -452,11 +447,6 @@ export const MessagesView: React.FC = () => {
                     <span className="font-bold text-sm text-theme-primary truncate">
                       {contact.name}
                     </span>
-                    {contact.isVerified && (
-                      <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-[#0095F6] text-white shrink-0">
-                        <Check className="w-2.5 h-2.5 stroke-[3.5]" />
-                      </span>
-                    )}
                     {contact.badge && <Badge type={contact.badge} />}
                   </div>
                   <div className="flex items-center gap-1 text-xs text-theme-tertiary truncate mt-0.5 max-w-[220px]">

@@ -54,7 +54,7 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
       <div className="flex-1 flex flex-col items-center px-6 py-8 overflow-y-auto">
         <div className="w-full max-w-md space-y-6">
           <div className="space-y-1.5">
-            <h1 className="text-3xl font-black text-theme-primary tracking-tight">{title}</h1>
+            <h1 className="text-2xl sm:text-3xl font-black text-theme-primary tracking-tight">{title}</h1>
             {subtitle && <p className="text-theme-tertiary text-sm leading-relaxed">{subtitle}</p>}
           </div>
 

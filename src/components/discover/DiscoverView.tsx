@@ -710,7 +710,7 @@ export const DiscoverView: React.FC = () => {
                 )}
               </section>
             )}
-            {activeFilter === 'events' && <EventsView />}
+            {activeFilter === 'events' && <EventsView locationMode={locationMode} maxRadiusMeters={maxRadiusMeters} />}
           </>
         )}
       </div>

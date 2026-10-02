@@ -64,7 +64,7 @@ export const AdminPages: React.FC = () => {
     <div className="space-y-6 relative">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-theme-primary">Pages & Businesses</h1>
+          <h1 className="text-xl sm:text-2xl font-black text-theme-primary">Pages & Businesses</h1>
           <p className="text-sm text-theme-tertiary mt-1">All Lalao pages across the platform</p>
         </div>
         <button

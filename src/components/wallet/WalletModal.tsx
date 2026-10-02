@@ -126,7 +126,7 @@ export const WalletModal: React.FC = () => {
               <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mb-6">
                 <ArrowUpRight className="w-10 h-10 text-[#5E43F3]" />
               </div>
-              <h3 className="text-2xl font-black text-theme-primary mb-2">Klyro Wallet</h3>
+              <h3 className="text-xl sm:text-2xl font-black text-theme-primary mb-2">Klyro Wallet</h3>
               <p className="text-theme-tertiary text-sm mb-8 max-w-[260px] mx-auto">
                 Connect your wallet to send, receive, and tip inside Lalao.
               </p>

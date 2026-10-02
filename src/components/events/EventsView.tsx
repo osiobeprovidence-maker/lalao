@@ -5,7 +5,12 @@ import { calculateDistanceMeters } from '../../utils/locationUtils';
 import { MapPin, Calendar, Clock, ArrowRight } from 'lucide-react';
 import { ExternalEventDetailModal } from './ExternalEventDetailModal';
 
-export const EventsView: React.FC = () => {
+export interface EventsViewProps {
+  locationMode?: 'current' | 'selected' | 'global';
+  maxRadiusMeters?: number;
+}
+
+export const EventsView: React.FC<EventsViewProps> = ({ locationMode = 'global', maxRadiusMeters = Infinity }) => {
   const { location, currentUser } = useLalao();
   const { externalEvents, trackImpression } = useEventDistribution();
   const [activeTab, setActiveTab] = useState<'for_you' | 'nearby' | 'popular' | 'upcoming'>('for_you');
@@ -18,8 +23,14 @@ export const EventsView: React.FC = () => {
     return calculateDistanceMeters(location.latitude, location.longitude, lat, lng) / 1000;
   };
 
+  const filteredEvents = activeEvents.filter(e => {
+    if (locationMode === 'global') return true;
+    const dist = getDistance(e.latitude, e.longitude) * 1000;
+    return dist <= maxRadiusMeters;
+  });
+
   const sortedEvents = (() => {
-    const events = [...activeEvents];
+    const events = [...filteredEvents];
     switch (activeTab) {
       case 'nearby':
         return events.sort((a, b) => getDistance(a.latitude, a.longitude) - getDistance(b.latitude, b.longitude));
@@ -40,7 +51,7 @@ export const EventsView: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-transparent">
       <div className="px-4 pt-6 pb-2 sticky top-0 z-10 bg-theme-base/95 backdrop-blur-sm">
-        <h1 className="text-2xl font-black text-theme-primary mb-4">Discover Events</h1>
+        <h1 className="text-xl sm:text-2xl font-black text-theme-primary mb-4">Discover Events</h1>
         <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-2">
           {['for_you', 'nearby', 'popular', 'upcoming'].map((tab) => (
             <button

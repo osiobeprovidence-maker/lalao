@@ -313,7 +313,7 @@ export const ProfileView: React.FC = () => {
               <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-[#5E43F3]" />
             </div>
           ) : userPosts.length > 0 ? (
-            userPosts.map((post: any) => <PostItem key={post.id} post={post} />)
+            userPosts.map((post: any) => <PostItem key={post.id} post={post} compactMedia={true} />)
           ) : (
             <div className="p-8 text-center text-theme-tertiary text-xs">
               You haven&apos;t posted yet. Tap the center + button to share with your local community.
@@ -357,7 +357,7 @@ export const ProfileView: React.FC = () => {
 
         {profileTab === 'reposts' && (
           userReposts.length > 0 ? (
-            userReposts.map((post) => <PostItem key={post.id} post={post} />)
+            userReposts.map((post) => <PostItem key={post.id} post={post} compactMedia={true} />)
           ) : (
             <div className="p-8 text-center text-theme-tertiary text-xs">
               No reposts yet.

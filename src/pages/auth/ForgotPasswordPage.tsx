@@ -41,7 +41,7 @@ export const ForgotPasswordPage: React.FC = () => {
         {!sent ? (
           <>
             <div className="space-y-2">
-              <h1 className="text-3xl font-black text-theme-primary tracking-tight">Reset password</h1>
+              <h1 className="text-2xl sm:text-3xl font-black text-theme-primary tracking-tight">Reset password</h1>
               <p className="text-theme-tertiary text-sm leading-relaxed">
                 Enter the email or phone number linked to your account and we'll send you a reset link.
               </p>
@@ -97,7 +97,7 @@ export const ForgotPasswordPage: React.FC = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <h2 className="text-2xl font-black text-theme-primary tracking-tight">Check your inbox</h2>
+              <h2 className="text-xl sm:text-2xl font-black text-theme-primary tracking-tight">Check your inbox</h2>
               <p className="text-theme-tertiary text-sm leading-relaxed max-w-xs mx-auto">
                 We sent a reset link to <span className="font-bold text-theme-primary">{identifier}</span>. 
                 Check your spam folder if you don't see it.

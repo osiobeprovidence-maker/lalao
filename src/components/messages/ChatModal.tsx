@@ -75,18 +75,6 @@ export const MessageReceiptIndicator: React.FC<{
   );
 };
 
-// Instagram Verified Badge
-const VerifiedBadge: React.FC<{ size?: 'sm' | 'md' }> = ({ size = 'sm' }) => (
-  <span
-    className={`inline-flex items-center justify-center rounded-full bg-[#0095F6] text-white shrink-0 shadow-2xs ${
-      size === 'md' ? 'w-4 h-4' : 'w-3.5 h-3.5'
-    }`}
-    title="Verified"
-    aria-label="Verified account"
-  >
-    <Check className={size === 'md' ? 'w-3 h-3 stroke-[3.5]' : 'w-2.5 h-2.5 stroke-[3.5]'} />
-  </span>
-);
 
 function formatCount(num: number): string {
   if (num >= 1000000) {
@@ -223,7 +211,7 @@ export const ChatModal: React.FC = () => {
 
   const [inputMessage, setInputMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
-  const [showStickerTray, setShowStickerTray] = useState(true);
+
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -242,11 +230,6 @@ export const ChatModal: React.FC = () => {
   }, [activeChatId, conv?.messages?.length]);
 
   if (!activeChatId || !conv) return null;
-
-  const isVerified = conv.participant.isVerified ?? (conv.participant.badge !== undefined);
-  const followersStr = formatCount(conv.participant.followersCount || 1200);
-  const postsStr = formatCount(conv.participant.postsCount || 15000);
-  const mutualFollowStr = conv.participant.mutualInfo || 'You both follow instablog9ja';
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -320,7 +303,6 @@ export const ChatModal: React.FC = () => {
                     <span className="truncate text-sm font-bold text-theme-primary">
                       {conv.participant.name}
                     </span>
-                    {isVerified && <VerifiedBadge />}
                   </div>
                   <span className="block truncate text-[11px] text-theme-tertiary">
                     @{conv.participant.username}
@@ -354,14 +336,7 @@ export const ChatModal: React.FC = () => {
           ref={chatScrollRef}
           className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 space-y-4 bg-theme-base min-h-0"
         >
-          <div className="rounded-2xl border border-theme-divider/80 bg-theme-surface/70 px-3 py-2 text-center shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-theme-tertiary">
-              {conv.participant.name}
-            </p>
-            <p className="mt-1 text-xs text-theme-secondary">
-              {followersStr} followers · {postsStr} posts · {mutualFollowStr}
-            </p>
-          </div>
+
 
           {conv.messages.map((msg: DirectMessage) => {
             if (msg.isSticker && msg.stickerId) {
@@ -370,26 +345,35 @@ export const ChatModal: React.FC = () => {
                 <div
                   key={msg.id}
                   id={`chat-msg-${msg.id}`}
-                  className={`flex items-end gap-2 ${
-                    msg.isMine ? 'justify-end' : 'justify-start'
-                  } animate-in zoom-in-95 duration-150`}
+                  className="flex justify-start animate-in zoom-in-95 duration-150"
                 >
-                  <div className="flex flex-col items-end">
+                  <div className="flex flex-col items-start">
+                    <div className="flex items-center gap-1.5 mb-1 ml-1 text-theme-tertiary select-none">
+                      <span className="text-[10px] font-semibold tracking-wide">{msg.isMine ? 'Me' : conv.participant.name}</span>
+                      <span className="text-[10px] opacity-70">&middot; {msg.timestamp}</span>
+                      {msg.isMine && <MessageReceiptIndicator status={msg.status || 'read'} theme="light-bg" className="ml-0.5" />}
+                    </div>
                     <div className="p-2 hover:scale-105 transition-transform">
                       {matchedSticker ? matchedSticker.render() : <Sparkles className="w-12 h-12 text-amber-500" />}
                     </div>
-                    <div className="flex items-center gap-1 mt-0.5 pr-2 select-none">
-                      <span className="text-[10px] text-theme-tertiary">
-                        {msg.timestamp}
-                      </span>
-                      {msg.isMine && (
-                        <MessageReceiptIndicator
-                          status={msg.status || 'read'}
-                          theme="light-bg"
-                        />
-                      )}
-                    </div>
                   </div>
+                </div>
+              );
+            }
+
+            if (msg.isReply) {
+              return (
+                <div
+                  key={msg.id}
+                  id={`chat-msg-${msg.id}`}
+                  className="flex flex-col border-l-2 border-theme-divider-strong pl-3 ml-2 py-0.5 my-1"
+                >
+                  <div className="flex items-center gap-1.5 mb-0.5 text-theme-tertiary select-none">
+                    <span className="text-[10px] font-semibold tracking-wide">{msg.isMine ? 'Me' : conv.participant.name}</span>
+                    <span className="text-[10px] opacity-70">&middot; {msg.timestamp}</span>
+                    {msg.isMine && <MessageReceiptIndicator status={msg.status || 'read'} theme="light-bg" className="ml-0.5" />}
+                  </div>
+                  <p className="text-sm text-theme-primary break-words leading-relaxed">{msg.text}</p>
                 </div>
               );
             }
@@ -398,32 +382,22 @@ export const ChatModal: React.FC = () => {
               <div
                 key={msg.id}
                 id={`chat-msg-${msg.id}`}
-                className={`flex items-end gap-2 ${
-                  msg.isMine ? 'justify-end' : 'justify-start'
-                }`}
+                className="flex justify-start"
               >
-                <div
-                  className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-xs sm:text-sm leading-relaxed ${
-                    msg.isMine
-                      ? 'bg-[#5E43F3] text-white rounded-br-xs'
-                      : 'bg-theme-surface-hover text-theme-primary rounded-bl-xs'
-                  }`}
-                >
-                  <p className="break-words">{msg.text}</p>
+                <div className="flex flex-col max-w-[78%]">
+                  <div className="flex items-center gap-1.5 mb-1 ml-2 text-theme-tertiary select-none">
+                    <span className="text-[10px] font-semibold tracking-wide">{msg.isMine ? 'Me' : conv.participant.name}</span>
+                    <span className="text-[10px] opacity-70">&middot; {msg.timestamp}</span>
+                    {msg.isMine && <MessageReceiptIndicator status={msg.status || 'read'} theme="light-bg" className="ml-0.5" />}
+                  </div>
                   <div
-                    className={`flex items-center justify-end gap-1.5 mt-1 select-none ${
-                      msg.isMine ? 'text-indigo-200' : 'text-theme-tertiary'
+                    className={`px-3.5 py-2 text-xs sm:text-sm leading-relaxed rounded-2xl ${
+                      msg.isMine
+                        ? 'bg-neutral-900 text-white dark:bg-neutral-800'
+                        : 'bg-[#5E43F3] text-white'
                     }`}
                   >
-                    <span className="text-[10px] tracking-tight">
-                      {msg.timestamp}
-                    </span>
-                    {msg.isMine && (
-                      <MessageReceiptIndicator
-                        status={msg.status || 'read'}
-                        theme="dark-bubble"
-                      />
-                    )}
+                    <p className="break-words">{msg.text}</p>
                   </div>
                 </div>
               </div>
@@ -431,42 +405,7 @@ export const ChatModal: React.FC = () => {
           })}
         </div>
 
-        {/* Sticker Tray: "Say hello by sending a sticker" (matches screenshot) */}
-        {showStickerTray && (
-          <div
-            id="sticker-tray"
-            className="border-t border-theme-divider/80 bg-theme-base px-4 pt-3 pb-2 shrink-0 animate-in fade-in slide-in-from-bottom-2 duration-150"
-          >
-            <div className="mb-3 flex items-center justify-between text-theme-tertiary">
-              <span className="text-xs font-semibold text-theme-secondary">
-                Say hello by sending a sticker
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowStickerTray(false)}
-                className="p-1 -mr-1 rounded-full text-theme-tertiary hover:bg-theme-surface-active hover:text-theme-secondary transition-colors cursor-pointer"
-                title="Dismiss sticker tray"
-                aria-label="Dismiss stickers"
-              >
-                <X className="w-4 h-4 stroke-[2.2]" />
-              </button>
-            </div>
 
-            <div className="flex items-center justify-around gap-2 px-1 py-1">
-              {STICKERS.map((stk) => (
-                <button
-                  key={stk.id}
-                  type="button"
-                  onClick={() => handleSendSticker(stk)}
-                  className="flex items-center justify-center rounded-xl p-1 transition-transform hover:bg-theme-surface active:scale-110 cursor-pointer"
-                  title={`Send ${stk.name} sticker`}
-                >
-                  {stk.render()}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         <div className="border-t border-theme-divider/80 bg-theme-base p-3 shrink-0">
           <form onSubmit={handleSend} className="flex items-center gap-2">
@@ -482,16 +421,7 @@ export const ChatModal: React.FC = () => {
               />
 
               <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-theme-tertiary">
-                {!showStickerTray && (
-                  <button
-                    type="button"
-                    onClick={() => setShowStickerTray(true)}
-                    className="rounded-full p-1.5 text-theme-tertiary hover:bg-theme-surface-hover hover:text-theme-secondary transition-colors cursor-pointer"
-                    title="Show stickers"
-                  >
-                    <Smile className="w-4 h-4" />
-                  </button>
-                )}
+
 
                 <label className="rounded-full p-1.5 text-theme-tertiary hover:bg-theme-surface-hover hover:text-theme-secondary transition-colors cursor-pointer" title="Attach image">
                   <ImageIcon className="w-4 h-4" />

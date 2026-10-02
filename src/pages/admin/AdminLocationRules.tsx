@@ -5,7 +5,7 @@ export const AdminLocationRules: React.FC = () => {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-black text-theme-primary">Location Discovery Rules</h1>
+        <h1 className="text-xl sm:text-2xl font-black text-theme-primary">Location Discovery Rules</h1>
         <p className="text-sm text-theme-tertiary mt-1">Configure how external events are distributed into user feeds and discovery.</p>
       </div>
 

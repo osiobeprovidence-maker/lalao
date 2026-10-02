@@ -71,7 +71,7 @@ export const SignUpPage: React.FC = () => {
             <div className="w-10 h-10 rounded-xl bg-[#3823A4] flex items-center justify-center">
               <AppIcon className="w-5 h-5" fallbackClassName="text-white fill-white" />
             </div>
-            <span className="lalao-wordmark text-2xl text-theme-primary">lalao</span>
+            <span className="lalao-wordmark text-xl sm:text-2xl text-theme-primary">lalao</span>
           </div>
 
           <h1 className="text-4xl xl:text-5xl font-black text-theme-primary tracking-tight leading-tight mb-4">
@@ -114,12 +114,12 @@ export const SignUpPage: React.FC = () => {
           <div className="w-10 h-10 rounded-xl bg-[#3823A4] flex items-center justify-center">
             <AppIcon className="w-5 h-5" fallbackClassName="text-white fill-white" />
           </div>
-          <span className="lalao-wordmark text-2xl text-theme-primary">lalao</span>
+          <span className="lalao-wordmark text-xl sm:text-2xl text-theme-primary">lalao</span>
         </div>
 
         <div className="w-full max-w-sm">
           <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-            <h2 className="text-3xl font-black text-theme-primary tracking-tight mb-2">Create your account</h2>
+            <h2 className="text-2xl sm:text-3xl font-black text-theme-primary tracking-tight mb-2">Create your account</h2>
             <p className="text-theme-tertiary text-sm mb-8">Join Lalao and start connecting with your community.</p>
 
             <form onSubmit={handleSubmit} className="space-y-4">

@@ -378,9 +378,6 @@ export const CycleStoryViewerModal: React.FC = () => {
                 <span className="font-bold text-sm text-white truncate drop-shadow-sm group-hover:underline">
                   {authorName}
                 </span>
-                {!isMyCycle && (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-400 fill-blue-400/20 shrink-0" />
-                )}
               </div>
               <span className="text-[11px] text-theme-tertiary font-medium drop-shadow-xs">
                 {formatTime(currentItem.createdAt)}
@@ -481,7 +478,7 @@ export const CycleStoryViewerModal: React.FC = () => {
         {floatingHearts.map((fh) => (
           <div
             key={fh.id}
-            className="absolute bottom-20 z-40 text-3xl pointer-events-none animate-bounce"
+            className="absolute bottom-20 z-40 text-2xl sm:text-3xl pointer-events-none animate-bounce"
             style={{
               left: `${fh.x}%`,
               animation: 'floatUp 1.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards',

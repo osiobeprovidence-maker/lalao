@@ -107,7 +107,7 @@ export const OTPVerifyPage: React.FC = () => {
 
         {/* Heading */}
         <div className="space-y-2">
-          <h1 className="text-3xl font-black text-theme-primary tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-black text-theme-primary tracking-tight">
             {verified ? 'Verified!' : 'Check your inbox'}
           </h1>
           <p className="text-theme-tertiary text-sm leading-relaxed">
@@ -137,7 +137,7 @@ export const OTPVerifyPage: React.FC = () => {
                   value={digit}
                   onChange={(e) => handleChange(i, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(i, e)}
-                  className={`w-12 h-14 text-center text-2xl font-black rounded-xl border-2 transition-all focus:outline-none ${
+                  className={`w-12 h-14 text-center text-xl sm:text-2xl font-black rounded-xl border-2 transition-all focus:outline-none ${
                     error
                       ? 'border-red-400 bg-red-50 text-red-700'
                       : digit

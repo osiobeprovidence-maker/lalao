@@ -32,7 +32,7 @@ const StatCard: React.FC<{
         <Icon className="w-4 h-4" />
       </div>
     </div>
-    <div className="text-3xl font-black text-theme-primary">
+    <div className="text-2xl sm:text-3xl font-black text-theme-primary">
       {value === null || value === undefined ? (
         <span className="text-theme-tertiary text-base font-semibold">Not available</span>
       ) : (
@@ -71,7 +71,7 @@ export const AdminDashboard: React.FC = () => {
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-indigo-600 mb-1">
             Lalao Admin
           </p>
-          <h1 className="text-3xl font-black text-theme-primary tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-black text-theme-primary tracking-tight">
             Platform Control Center
           </h1>
           <p className="text-sm text-theme-tertiary mt-1">

@@ -75,7 +75,7 @@ export const LoginPage: React.FC = () => {
           <div className="w-10 h-10 rounded-2xl bg-theme-surface/15 backdrop-blur flex items-center justify-center border border-white/20">
             <AppIcon className="w-5 h-5" fallbackClassName="text-white fill-white" />
           </div>
-          <span className="lalao-wordmark text-white text-2xl">lalao</span>
+          <span className="lalao-wordmark text-white text-xl sm:text-2xl">lalao</span>
         </div>
 
         {/* Hero copy */}
@@ -130,7 +130,7 @@ export const LoginPage: React.FC = () => {
         <div className="w-full max-w-sm space-y-8">
           {/* Heading */}
           <div className="space-y-1.5">
-            <h2 className="text-3xl font-black text-theme-primary tracking-tight">Welcome back</h2>
+            <h2 className="text-2xl sm:text-3xl font-black text-theme-primary tracking-tight">Welcome back</h2>
             <p className="text-theme-tertiary text-sm">Sign in to your Lalao account</p>
           </div>
 

@@ -98,7 +98,7 @@ export const SubscriptionCheckoutModal: React.FC = () => {
                   Subscription Slot
                 </span>
               </div>
-              <h2 className="text-2xl font-black text-theme-primary mb-1">{plan.name}</h2>
+              <h2 className="text-xl sm:text-2xl font-black text-theme-primary mb-1">{plan.name}</h2>
               <p className="text-sm text-theme-secondary">{plan.description}</p>
             </div>
 
@@ -108,7 +108,7 @@ export const SubscriptionCheckoutModal: React.FC = () => {
                 <div>
                   <p className="text-xs font-bold text-theme-tertiary uppercase tracking-wide mb-1">Price Per Cycle</p>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-black text-theme-primary">
+                    <span className="text-2xl sm:text-3xl font-black text-theme-primary">
                       ₦{price.toLocaleString()}
                     </span>
                   </div>

@@ -186,9 +186,6 @@ export const CreatePostPage: React.FC = () => {
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="font-bold text-theme-primary">{currentUser?.displayName || currentUser?.username || 'You'}</span>
-            {currentUser?.isVerified && (
-              <CheckCircle2 className="w-4 h-4 text-[#5E43F3] fill-[#5E43F3] text-white" />
-            )}
           </div>
           
           {/* Audience Selector */}

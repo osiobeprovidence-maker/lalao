@@ -49,7 +49,7 @@ export const ExternalEventDetailModal: React.FC<ExternalEventDetailModalProps> =
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 bg-theme-surface">
-          <h2 className="text-2xl font-black text-theme-primary mb-2">{evt.title}</h2>
+          <h2 className="text-xl sm:text-2xl font-black text-theme-primary mb-2">{evt.title}</h2>
           
           <div className="flex flex-wrap gap-4 mb-6 text-sm font-semibold text-theme-secondary">
             <div className="flex items-center gap-1.5">

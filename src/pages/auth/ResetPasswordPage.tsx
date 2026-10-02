@@ -45,7 +45,7 @@ export const ResetPasswordPage: React.FC = () => {
               <div className="w-12 h-12 rounded-2xl bg-[#5E43F3]/10 flex items-center justify-center mb-4">
                 <ShieldCheck className="w-6 h-6 text-[#5E43F3]" />
               </div>
-              <h1 className="text-3xl font-black text-theme-primary tracking-tight">New password</h1>
+              <h1 className="text-2xl sm:text-3xl font-black text-theme-primary tracking-tight">New password</h1>
               <p className="text-theme-tertiary text-sm">Create a strong password for your Lalao account.</p>
             </div>
 
@@ -122,7 +122,7 @@ export const ResetPasswordPage: React.FC = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <h2 className="text-2xl font-black text-theme-primary">Password updated!</h2>
+              <h2 className="text-xl sm:text-2xl font-black text-theme-primary">Password updated!</h2>
               <p className="text-theme-tertiary text-sm">Redirecting you to login...</p>
             </div>
             <div className="w-8 h-8 border-3 border-[#5E43F3] border-t-transparent rounded-full animate-spin mx-auto" />

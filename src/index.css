@@ -23,8 +23,8 @@
   
   /* Light Mode Tokens (Original Lalao Colors) */
   --color-theme-base: #F5EFE6; /* Warmer, slightly deeper cream for main background */
-  --color-theme-surface: #FCF9F4; /* Subtle elevated surface, not pure white */
-  --color-theme-surface-hover: #F2EBE0; 
+  --color-theme-surface: #F8F3EC; /* Slightly lighter than base, but not pure white */ /* Subtle elevated surface, not pure white */
+  --color-theme-surface-hover: #F0E8DE; 
   --color-theme-surface-active: #EBE3D5;
   --color-theme-inverse: #1C1917;
   

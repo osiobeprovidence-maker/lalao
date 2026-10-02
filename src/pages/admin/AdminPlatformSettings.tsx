@@ -141,7 +141,7 @@ export const AdminPlatformSettings: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-black text-theme-primary">Branding & Appearance</h1>
+          <h1 className="text-xl sm:text-2xl font-black text-theme-primary">Branding & Appearance</h1>
           <p className="text-sm text-theme-tertiary mt-1">Configure global platform identity, colors, and metadata</p>
         </div>
         <button

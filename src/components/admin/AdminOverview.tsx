@@ -26,7 +26,7 @@ export const AdminOverview: React.FC = () => {
       </div>
       <div>
         <div className="text-[11px] font-bold uppercase tracking-wider text-theme-tertiary mb-1">{label}</div>
-        <div className="text-2xl font-black text-white">
+        <div className="text-xl sm:text-2xl font-black text-white">
           {value === undefined ? (
             <span className="inline-block w-16 h-6 bg-theme-surface/10 rounded animate-pulse" />
           ) : typeof value === 'number' ? value.toLocaleString() : value}
@@ -40,7 +40,7 @@ export const AdminOverview: React.FC = () => {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-black text-white">Platform Overview</h1>
+        <h1 className="text-xl sm:text-2xl font-black text-white">Platform Overview</h1>
         <p className="text-sm text-theme-tertiary mt-1">Real-time statistics from the Lalao database.</p>
       </div>
 

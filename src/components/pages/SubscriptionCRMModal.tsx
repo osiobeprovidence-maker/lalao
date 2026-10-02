@@ -149,7 +149,7 @@ const ListingDetailView = ({ listing }: { listing: any }) => {
     <div className="space-y-6">
       <div className="bg-theme-surface rounded-2xl border border-theme-divider p-6 flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
         <div>
-          <h2 className="text-2xl font-black text-theme-primary mb-1">{listing.name}</h2>
+          <h2 className="text-xl sm:text-2xl font-black text-theme-primary mb-1">{listing.name}</h2>
           <p className="text-sm text-theme-tertiary">Total Capacity: {listing.stats.totalCapacity} • Account Cost: ₦{listing.totalAccountCost.toLocaleString()}</p>
         </div>
         <div className="flex gap-4">

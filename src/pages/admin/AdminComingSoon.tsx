@@ -14,7 +14,7 @@ export const AdminComingSoon: React.FC<AdminComingSoonProps> = ({
     <div className="w-16 h-16 rounded-2xl bg-[#5200FF]/5 border border-[#5200FF]/10 flex items-center justify-center mb-5">
       <Construction className="w-8 h-8 text-[#5200FF]" />
     </div>
-    <h2 className="text-2xl font-black text-theme-primary mb-2">{title}</h2>
+    <h2 className="text-xl sm:text-2xl font-black text-theme-primary mb-2">{title}</h2>
     <p className="text-sm text-theme-tertiary max-w-sm leading-relaxed">
       {description ??
         'This section is being built. Check back soon — it will connect to real Lalao platform data.'}

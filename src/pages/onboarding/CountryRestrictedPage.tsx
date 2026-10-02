@@ -43,7 +43,7 @@ export const CountryRestrictedPage: React.FC = () => {
             <Globe className="w-8 h-8" />
           </div>
 
-          <h1 className="text-2xl font-black text-theme-primary tracking-tight mb-3">
+          <h1 className="text-xl sm:text-2xl font-black text-theme-primary tracking-tight mb-3">
             Lalao isn't available in your country yet.
           </h1>
           

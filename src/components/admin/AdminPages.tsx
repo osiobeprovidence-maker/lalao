@@ -29,7 +29,7 @@ export const AdminPages: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-black text-white">Pages & Businesses</h1>
+        <h1 className="text-xl sm:text-2xl font-black text-white">Pages & Businesses</h1>
         <p className="text-sm text-theme-tertiary mt-1">All Lalao pages and business accounts.</p>
       </div>
 

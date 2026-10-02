@@ -34,7 +34,6 @@ export const CommentThread = ({
 }) => {
   const isAuthor = comment.author.id === currentUser.id;
   const isPostAuthor = comment.author.id === postAuthorId;
-  const isVerified = comment.author.username === 'officialbovi' || comment.author.username === 'realwarripikin' || comment.author.followersCount > 10000;
   
   const [showMenu, setShowMenu] = useState(false);
 
@@ -72,7 +71,6 @@ export const CommentThread = ({
             >
               {comment.author.username}
             </span>
-            {isVerified && <CheckCircle className="h-3.5 w-3.5 text-[#5E43F3] fill-[#5E43F3]/20" />}
             {isPostAuthor && <span className="rounded bg-theme-surface-active px-1.5 py-0.2 text-[9px] font-medium text-theme-secondary">Author</span>}
             <span className="text-[10px] text-theme-tertiary">{comment.createdAt}</span>
           </div>

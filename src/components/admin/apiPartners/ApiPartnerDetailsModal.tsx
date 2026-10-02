@@ -46,7 +46,7 @@ export const ApiPartnerDetailsModal: React.FC<{ partnerId: string, onClose: () =
       <div className="bg-theme-surface w-full max-w-4xl rounded-2xl shadow-xl flex flex-col h-[90vh]">
         <div className="flex items-center justify-between p-6 border-b border-theme-divider-light shrink-0">
           <div>
-            <h2 className="font-black text-2xl text-theme-primary">{partner.name}</h2>
+            <h2 className="font-black text-xl sm:text-2xl text-theme-primary">{partner.name}</h2>
             <div className="flex items-center gap-2 mt-1">
               <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded capitalize">{partner.status}</span>
               <span className="text-xs text-theme-tertiary font-mono">Slug: {partner.slug}</span>
@@ -71,7 +71,7 @@ export const ApiPartnerDetailsModal: React.FC<{ partnerId: string, onClose: () =
                     <h3 className="font-bold text-sm uppercase tracking-wide">API Usage</h3>
                   </div>
                   <div className="flex items-end gap-2">
-                    <span className="text-3xl font-black text-theme-primary">{usageCount.toLocaleString()}</span>
+                    <span className="text-2xl sm:text-3xl font-black text-theme-primary">{usageCount.toLocaleString()}</span>
                     <span className="text-sm font-bold text-theme-tertiary mb-1">/ {plan?.requestLimit.toLocaleString()}</span>
                   </div>
                   <div className="w-full bg-theme-surface-hover h-1.5 rounded-full mt-3 overflow-hidden">
@@ -85,7 +85,7 @@ export const ApiPartnerDetailsModal: React.FC<{ partnerId: string, onClose: () =
                     <h3 className="font-bold text-sm uppercase tracking-wide">Events</h3>
                   </div>
                   <div className="flex items-end gap-2">
-                    <span className="text-3xl font-black text-theme-primary">{activeEventsCount.toLocaleString()}</span>
+                    <span className="text-2xl sm:text-3xl font-black text-theme-primary">{activeEventsCount.toLocaleString()}</span>
                     <span className="text-sm font-bold text-theme-tertiary mb-1">/ {plan?.eventLimit.toLocaleString()}</span>
                   </div>
                   <div className="w-full bg-theme-surface-hover h-1.5 rounded-full mt-3 overflow-hidden">

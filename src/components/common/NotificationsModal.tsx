@@ -29,16 +29,7 @@ interface SuggestedAccount {
 
 
 
-// Verified Badge (Instagram Blue Checkmark)
-const VerifiedBadge: React.FC = () => (
-  <span
-    className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-[#0095F6] text-white shrink-0 shadow-2xs"
-    title="Verified"
-    aria-label="Verified account"
-  >
-    <Check className="w-2.5 h-2.5 stroke-[3.5]" />
-  </span>
-);
+
 
 export const NotificationsModal: React.FC = () => {
   const {
@@ -158,7 +149,7 @@ export const NotificationsModal: React.FC = () => {
             >
               <ArrowLeft className="w-6 h-6 stroke-[2.4]" />
             </button>
-            <h1 className="text-2xl font-bold text-theme-primary tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-theme-primary tracking-tight">
               Notifications
             </h1>
           </div>
@@ -311,7 +302,6 @@ export const NotificationsModal: React.FC = () => {
                             <span className="font-bold text-sm text-theme-primary truncate">
                               {item.name}
                             </span>
-                            {item.isVerified && <VerifiedBadge />}
                           </div>
 
                           {/* Mutual avatars and count */}

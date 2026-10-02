@@ -502,6 +502,7 @@ export interface DirectMessage {
   isSticker?: boolean;
   stickerId?: string;
   status?: 'sending' | 'sent' | 'delivered' | 'read';
+  isReply?: boolean;
 }
 
 export interface Conversation {

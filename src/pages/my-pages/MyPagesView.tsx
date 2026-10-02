@@ -13,7 +13,7 @@ export const MyPagesView: React.FC = () => {
   return (
     <div className="mx-auto w-full max-w-[680px] px-4 py-8 pb-32">
       <div className="mb-6">
-        <h1 className="text-2xl font-black tracking-tight text-theme-primary">My Pages</h1>
+        <h1 className="text-xl sm:text-2xl font-black tracking-tight text-theme-primary">My Pages</h1>
         <p className="text-sm text-theme-tertiary mt-1">Pages you own and manage</p>
       </div>
 
