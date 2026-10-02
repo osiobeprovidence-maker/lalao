@@ -6,7 +6,6 @@ import {
   MessageCircle,
   UserPlus,
   Zap,
-  Sparkles,
   ArrowRight,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
@@ -20,6 +19,7 @@ export const NotificationsView: React.FC = () => {
     suggestedUsers,
     notifications,
     markAllNotificationsRead,
+    markNotificationRead,
     setActiveUserProfile,
     setActiveCommentsPostId,
     setActiveTab,
@@ -53,12 +53,19 @@ export const NotificationsView: React.FC = () => {
         return <UserPlus className="w-3.5 h-3.5 text-emerald-600" />;
       case 'rally_join':
         return <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />;
+      case 'message':
+      case 'mention':
+        return <MessageCircle className="w-3.5 h-3.5 text-blue-500 fill-blue-500/20" />;
       default:
-        return <Sparkles className="w-3.5 h-3.5 text-[#5E43F3]" />;
+        return <Bell className="w-3.5 h-3.5 text-theme-tertiary" />;
     }
   };
 
   const handleNotificationClick = (item: NotificationItem) => {
+    if (!item.isRead) {
+      markNotificationRead(item.id);
+    }
+    
     if (item.type === 'follow') {
       setActiveUserProfile(item.actor);
       setActiveTab('profile');
@@ -133,7 +140,7 @@ export const NotificationsView: React.FC = () => {
               <span className="text-[11px] text-theme-tertiary">{visibleSuggested.length}</span>
             </div>
 
-            <div className="divide-y divide-neutral-200/80">
+            <div className="divide-y divide-theme-divider/80">
               {visibleSuggested.map((user) => (
                 <div key={user.id} className="flex items-center justify-between gap-3 py-3">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -169,13 +176,13 @@ export const NotificationsView: React.FC = () => {
             {todayNotifs.length > 0 && (
               <div className="space-y-2">
                 <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-theme-tertiary">Today</div>
-                <div className="divide-y divide-neutral-200/80">
+                <div className="divide-y divide-theme-divider/80">
                   {todayNotifs.map((notif) => (
                     <button
                       key={notif.id}
                       type="button"
                       onClick={() => handleNotificationClick(notif)}
-                      className={`w-full text-left py-3 flex items-start gap-3 ${!notif.isRead ? 'bg-indigo-50/30 -mx-1 px-1 rounded-xl' : ''}`}
+                      className={`w-full text-left py-3 flex items-start gap-3 ${!notif.isRead ? 'bg-[#5E43F3]/10 -mx-1 px-1 rounded-xl' : ''}`}
                     >
                       <div className="relative shrink-0">
                         <Avatar src={notif.actor?.avatar} alt={notif.actor?.name || 'User'} size="md" />
@@ -207,13 +214,13 @@ export const NotificationsView: React.FC = () => {
             {earlierNotifs.length > 0 && (
               <div className="space-y-2 mt-4">
                 <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-theme-tertiary">Earlier</div>
-                <div className="divide-y divide-neutral-200/80">
+                <div className="divide-y divide-theme-divider/80">
                   {earlierNotifs.map((notif) => (
                     <button
                       key={notif.id}
                       type="button"
                       onClick={() => handleNotificationClick(notif)}
-                      className={`w-full text-left py-3 flex items-start gap-3 ${!notif.isRead ? 'bg-indigo-50/30 -mx-1 px-1 rounded-xl' : ''}`}
+                      className={`w-full text-left py-3 flex items-start gap-3 ${!notif.isRead ? 'bg-[#5E43F3]/10 -mx-1 px-1 rounded-xl' : ''}`}
                     >
                       <div className="relative shrink-0">
                         <Avatar src={notif.actor?.avatar} alt={notif.actor?.name || 'User'} size="md" />

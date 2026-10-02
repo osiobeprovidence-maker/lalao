@@ -61,8 +61,8 @@ function formatRelativeTime(ms: number | undefined | null): string {
   const hours = Math.floor(diff / 3_600_000);
   const days = Math.floor(diff / 86_400_000);
   if (minutes < 1 || isNaN(minutes)) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
+  if (minutes < 60) return `${minutes} min ago`;
+  if (hours < 24) return `${hours} hr ago`;
   if (days === 1) return "Yesterday";
   try {
     return new Date(ms).toLocaleDateString();
@@ -1109,6 +1109,57 @@ export const listConversations = query({
         }
       }
 
+      const messages = await Promise.all(
+        allMessages
+          .sort((a, b) => a.createdAt - b.createdAt)
+          .map(async (msg) => {
+            let isMine = false;
+            if (msg.pageSenderId && conversation.pageB) {
+                isMine = amIUserA ? false : true;
+            } else {
+                isMine = msg.senderId === currentUser._id;
+            }
+            
+            let replyToMessageText = undefined;
+            if (msg.replyToMessageId) {
+              const repliedMsg = allMessages.find(m => m._id === msg.replyToMessageId);
+              if (repliedMsg) {
+                replyToMessageText = repliedMsg.text;
+              }
+            }
+
+            let audioUrl = undefined;
+            if (msg.audioStorageId) {
+              audioUrl = (await ctx.storage.getUrl(msg.audioStorageId)) ?? undefined;
+            }
+            
+            let mediaUrl = undefined;
+            if (msg.mediaStorageId) {
+              mediaUrl = (await ctx.storage.getUrl(msg.mediaStorageId)) ?? undefined;
+            }
+
+            return {
+              id: msg._id,
+              senderId: msg.senderId,
+              text: msg.text,
+              timestamp: formatRelativeTime(msg.createdAt),
+              createdAt: msg.createdAt,
+              isMine,
+              status: msg.isRead ? 'read' : 'delivered',
+              replyToMessageId: msg.replyToMessageId,
+              replyToMessageText,
+              isEdited: msg.isEdited,
+              type: msg.type,
+              mediaUrl,
+              mimeType: msg.mimeType,
+              fileName: msg.fileName,
+              fileSize: msg.fileSize,
+              audioUrl,
+              audioDuration: msg.audioDuration
+            };
+          })
+      );
+
       result.push({
         id: conversation._id,
         isPageConvo,
@@ -1131,7 +1182,7 @@ export const listConversations = query({
           : "Now",
         updatedAt: conversation.updatedAt || latestMessage?.createdAt || 0,
         unreadCount,
-        messages: [],
+        messages,
       });
     }
 
@@ -2066,6 +2117,8 @@ const NOTIF_TEXT: Record<string, string> = {
   follow: "started following you",
   rally_join: "joined your rally",
   system_alert: "sent you a system alert",
+  message: "sent you a message",
+  mention: "mentioned you",
 };
 
 export const listNotifications = query({
@@ -2145,6 +2198,18 @@ export const markAllNotificationsRead = mutation({
 
     await Promise.all(unread.map((n: any) => ctx.db.patch(n._id, { isRead: true })));
     return { count: unread.length };
+  },
+});
+
+export const markNotificationRead = mutation({
+  args: { id: v.id("notifications") },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+    const notif = await ctx.db.get(args.id);
+    if (!notif) throw new Error("Notification not found");
+    if (notif.recipientId !== currentUser._id) throw new Error("Unauthorized");
+    await ctx.db.patch(args.id, { isRead: true });
   },
 });
 
@@ -2318,6 +2383,56 @@ export const getMessageContacts = query({
    MESSAGING
    ───────────────────────────────────────────────────────────────────────────── */
 
+export const getOrCreateConversation = mutation({
+  args: {
+    otherUserId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    if (args.otherUserId === currentUser._id) {
+      throw new Error("Cannot start a conversation with yourself");
+    }
+
+    // Check if conversation already exists in either direction (userA/userB)
+    const convoAsA = await ctx.db
+      .query("conversations")
+      .withIndex("by_user_a", (q) => q.eq("userA", currentUser._id))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("userB"), args.otherUserId),
+          q.eq(q.field("pageB"), undefined)
+        )
+      )
+      .first();
+
+    if (convoAsA) return convoAsA._id;
+
+    const convoAsB = await ctx.db
+      .query("conversations")
+      .withIndex("by_user_a", (q) => q.eq("userA", args.otherUserId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("userB"), currentUser._id),
+          q.eq(q.field("pageB"), undefined)
+        )
+      )
+      .first();
+
+    if (convoAsB) return convoAsB._id;
+
+    // Create a new conversation
+    const conversationId = await ctx.db.insert("conversations", {
+      userA: currentUser._id,
+      userB: args.otherUserId,
+      updatedAt: Date.now(),
+    });
+
+    return conversationId;
+  },
+});
+
 export const startPageConversation = mutation({
   args: {
     pageId: v.id("pages"),
@@ -2363,6 +2478,14 @@ export const sendMessage = mutation({
     conversationId: v.id("conversations"),
     text: v.string(),
     pageSenderId: v.optional(v.id("pages")),
+    replyToMessageId: v.optional(v.id("messages")),
+    type: v.optional(v.union(v.literal("text"), v.literal("image"), v.literal("video"))),
+    mediaStorageId: v.optional(v.id("_storage")),
+    mimeType: v.optional(v.string()),
+    fileName: v.optional(v.string()),
+    fileSize: v.optional(v.number()),
+    audioStorageId: v.optional(v.id("_storage")),
+    audioDuration: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const currentUser = await getAuthedUser(ctx);
@@ -2411,6 +2534,14 @@ export const sendMessage = mutation({
       pageSenderId: args.pageSenderId,
       text: args.text,
       isRead: false,
+      replyToMessageId: args.replyToMessageId,
+      type: args.type,
+      mediaStorageId: args.mediaStorageId,
+      mimeType: args.mimeType,
+      fileName: args.fileName,
+      fileSize: args.fileSize,
+      audioStorageId: args.audioStorageId,
+      audioDuration: args.audioDuration,
       createdAt: Date.now(),
     });
     
@@ -2509,3 +2640,44 @@ export const markConversationRead = mutation({
   },
 });
 
+export const editMessage = mutation({
+  args: {
+    messageId: v.id("messages"),
+    text: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const message = await ctx.db.get(args.messageId);
+    if (!message) throw new Error("Message not found");
+
+    if (message.senderId !== currentUser._id) {
+      throw new Error("Not authorized to edit this message");
+    }
+
+    await ctx.db.patch(args.messageId, {
+      text: args.text,
+      isEdited: true,
+    });
+  },
+});
+
+export const deleteMessage = mutation({
+  args: {
+    messageId: v.id("messages"),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const message = await ctx.db.get(args.messageId);
+    if (!message) throw new Error("Message not found");
+
+    if (message.senderId !== currentUser._id) {
+      throw new Error("Not authorized to delete this message");
+    }
+
+    await ctx.db.delete(args.messageId);
+  },
+});

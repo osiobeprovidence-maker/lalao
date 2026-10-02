@@ -93,6 +93,9 @@ interface LalaoContextType {
   deletePost: (postId: string) => Promise<void>;
   addComment: (postId: string, text: string, parentCommentId?: string, mediaStorageId?: string, mediaType?: 'image' | 'voice' | 'gif' | 'sticker') => Promise<void>;
   toggleLikeComment: (postId: string, commentId: string, replyId?: string) => void;
+  markNotificationsAsRead: () => void;
+  markAllNotificationsRead: () => void;
+  markNotificationRead: (id: string) => void;
   createPost: (post: { 
     text: string; 
     mediaUrl?: string; 
@@ -180,7 +183,23 @@ interface LalaoContextType {
   activeVideoFeedPostId: string | null;
   setActiveVideoFeedPostId: (id: string | null) => void;
 
-  sendDirectMessage: (conversationId: string, text: string, stickerId?: string) => void;
+  sendDirectMessage: (
+    conversationId: string, 
+    text: string, 
+    stickerId?: string, 
+    replyToMessageId?: string, 
+    audioStorageId?: string, 
+    audioDuration?: number,
+    options?: {
+      type?: 'text' | 'image' | 'video';
+      mediaStorageId?: string;
+      mimeType?: string;
+      fileName?: string;
+      fileSize?: number;
+    }
+  ) => void;
+  editMessage: (messageId: string, newText: string) => void;
+  deleteMessage: (messageId: string) => void;
   markConversationRead: (conversationId: string) => void;
   markNotificationsAsRead: () => void;
 
@@ -416,6 +435,12 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const messageContactsQuery = useQuery(api.social.getMessageContacts);
   const sendMessageMutation = useMutation(api.social.sendMessage);
+  const editMessageMutation = useMutation(api.social.editMessage);
+  const deleteMessageMutation = useMutation(api.social.deleteMessage);
+  const markConversationReadMutation = useMutation(api.social.markConversationRead);
+  const getOrCreateConversationMutation = useMutation(api.social.getOrCreateConversation);
+  const markAllNotificationsReadMutation = useMutation(api.social.markAllNotificationsRead);
+  const markNotificationReadMutation = useMutation(api.social.markNotificationRead);
   const backendNotifications = useQuery(api.social.listNotifications) as unknown as NotificationItem[] | undefined;
   const [pushEnabled, setPushEnabled] = useState<boolean>(false);
 
@@ -615,7 +640,14 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [activeCyclesQuery]);
 
+  const backendConversations = useQuery(api.social.listConversations);
   const [conversations, setConversations] = useState<Conversation[]>(EMPTY_CONVERSATIONS);
+
+  useEffect(() => {
+    if (backendConversations) {
+      setConversations(backendConversations as any);
+    }
+  }, [backendConversations]);
 
   const [messageContacts, setMessageContacts] = useState<User[]>([]);
 
@@ -627,11 +659,57 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [notifications, setNotifications] = useState<NotificationItem[]>(EMPTY_NOTIFICATIONS);
 
+  const seenNotificationIds = React.useRef<Set<string>>(new Set());
+  const initialLoadDone = React.useRef(false);
+
+  const playNotificationSound = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+
+      gainNode.gain.setValueAtTime(0, ctx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.3);
+    } catch (e) {
+      console.warn("Could not play notification sound", e);
+    }
+  };
+
   useEffect(() => {
     if (backendNotifications) {
       setNotifications(backendNotifications);
+      
+      let newUnreadCount = 0;
+      backendNotifications.forEach((n) => {
+        if (!seenNotificationIds.current.has(n.id)) {
+          seenNotificationIds.current.add(n.id);
+          if (!n.isRead && n.actor?.id !== currentUser?.id && n.type !== 'message') {
+            newUnreadCount++;
+          }
+        }
+      });
+
+      if (initialLoadDone.current && newUnreadCount > 0) {
+        // Respect settings: if push is enabled (as an indicator of user wanting notifications), or if we don't have a separate sound setting, play it.
+        playNotificationSound();
+      }
+
+      initialLoadDone.current = true;
     }
-  }, [backendNotifications]);
+  }, [backendNotifications, currentUser?.id]);
 
   useEffect(() => {
     if (feedPostsQuery) {
@@ -2070,28 +2148,19 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       replyToStoryMutation({ storyId: itemId as any, replyText: messageText.trim() }).catch(console.error);
     }
 
-    let conv = conversations.find((c) => c.participant.id === targetUser.id);
-    if (conv) {
-      sendDirectMessage(conv.id, dmText);
+    // Route through backend: get or create a real conversation, then send the message
+    if (targetUser.id && !targetUser.id.startsWith('user_')) {
+      getOrCreateConversationMutation({ otherUserId: targetUser.id as any })
+        .then((convId) => {
+          sendMessageMutation({ conversationId: convId, text: dmText, pageSenderId: undefined }).catch(console.error);
+        })
+        .catch(console.error);
     } else {
-      const newConv: Conversation = {
-        id: `conv_${Date.now()}`,
-        participant: targetUser,
-        lastMessage: dmText,
-        timestamp: 'Just now',
-        unreadCount: 0,
-        messages: [
-          {
-            id: `dm_${Date.now()}`,
-            senderId: currentUser.id,
-            text: dmText,
-            timestamp: 'Just now',
-            isMine: true,
-            status: 'sent',
-          },
-        ],
-      };
-      setConversations([newConv, ...conversations]);
+      // Fallback for local-only users
+      let conv = conversations.find((c) => c.participant.id === targetUser.id);
+      if (conv) {
+        sendDirectMessage(conv.id, dmText);
+      }
     }
     triggerShareToast(`Comment sent to @${targetUser.username || targetUser.name}!`);
   };
@@ -2112,124 +2181,108 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const sendDirectMessage = (conversationId: string, text: string, stickerId?: string) => {
-    if (!text.trim() && !stickerId) return;
-    const msgText = stickerId ? (text.trim() || 'Sent a sticker') : text.trim();
-    const msgId = `dm_${Date.now()}`;
-    const newMsg: DirectMessage = {
-      id: msgId,
-      senderId: currentUser.id,
-      text: msgText,
-      timestamp: 'Just now',
-      isMine: true,
-      isSticker: !!stickerId,
-      stickerId,
-      status: 'sent',
-    };
+  const sendDirectMessage = (
+    conversationId: string, 
+    text: string, 
+    stickerId?: string, 
+    replyToMessageId?: string, 
+    audioStorageId?: string, 
+    audioDuration?: number,
+    options?: {
+      type?: 'text' | 'image' | 'video';
+      mediaStorageId?: string;
+      mimeType?: string;
+      fileName?: string;
+      fileSize?: number;
+    }
+  ) => {
+    if (!text.trim() && !stickerId && !audioStorageId && !options?.mediaStorageId) return;
+    
+    let msgText = text.trim();
+    if (audioStorageId) msgText = '🎙️ Voice note';
+    else if (options?.type === 'image') msgText = text.trim() || '📷 Photo';
+    else if (options?.type === 'video') msgText = text.trim() || '🎥 Video';
+    else if (stickerId) msgText = text.trim() || 'Sent a sticker';
 
-    // Trigger real backend mutation to create notification if possible
+    // Always send through the backend — the reactive useQuery(listConversations)
+    // will automatically deliver the message to both sender and recipient.
     if (!conversationId.startsWith('conv_') && !conversationId.startsWith('mock_')) {
       sendMessageMutation({
         conversationId: conversationId as any,
         text: msgText,
-        pageSenderId: undefined
+        pageSenderId: undefined,
+        replyToMessageId: replyToMessageId as any,
+        audioStorageId: audioStorageId as any,
+        audioDuration,
+        type: options?.type,
+        mediaStorageId: options?.mediaStorageId as any,
+        mimeType: options?.mimeType,
+        fileName: options?.fileName,
+        fileSize: options?.fileSize,
       }).catch(console.error);
     }
+  };
 
-    setConversations((prev) =>
-      prev.map((conv) => {
-        if (conv.id === conversationId) {
-          return {
-            ...conv,
-            lastMessage: msgText,
-            timestamp: 'Just now',
-            messages: [...conv.messages, newMsg],
-          };
-        }
-        return conv;
-      })
-    );
+  const editMessage = (messageId: string, newText: string) => {
+    editMessageMutation({ messageId: messageId as any, text: newText }).catch(console.error);
+  };
 
-    // Simulate realistic delivery and read receipt status transitions
-    setTimeout(() => {
-      setConversations((prev) =>
-        prev.map((conv) => {
-          if (conv.id === conversationId) {
-            return {
-              ...conv,
-              messages: conv.messages.map((m) =>
-                m.id === msgId && m.status === 'sent' ? { ...m, status: 'delivered' } : m
-              ),
-            };
-          }
-          return conv;
-        })
-      );
-    }, 1000);
-
-    setTimeout(() => {
-      setConversations((prev) =>
-        prev.map((conv) => {
-          if (conv.id === conversationId) {
-            return {
-              ...conv,
-              messages: conv.messages.map((m) =>
-                m.id === msgId && (m.status === 'delivered' || m.status === 'sent')
-                  ? { ...m, status: 'read' }
-                  : m
-              ),
-            };
-          }
-          return conv;
-        })
-      );
-    }, 2400);
+  const deleteMessage = (messageId: string) => {
+    deleteMessageMutation({ messageId: messageId as any }).catch(console.error);
   };
 
   const markConversationRead = (conversationId: string) => {
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === conversationId && c.hasUnread
-          ? { ...c, hasUnread: false }
-          : c
-      )
-    );
+    // Call the backend mutation to mark messages and notifications as read
+    if (!conversationId.startsWith('conv_') && !conversationId.startsWith('mock_')) {
+      markConversationReadMutation({ conversationId: conversationId as any }).catch(console.error);
+    }
   };
 
   const markNotificationsAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
 
-  const openChatWithUser = (user: User, initialMessage?: string) => {
-    let targetChatId: string;
+  const markAllNotificationsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    markAllNotificationsReadMutation().catch(console.error);
+  };
+
+  const markNotificationRead = (id: string) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+    markNotificationReadMutation({ id: id as any }).catch(console.error);
+  };
+
+  const openChatWithUser = async (user: User, initialMessage?: string) => {
+    // Check if there's already a backend conversation in local state
     const existing = conversations.find(
       (c) => c.participant.id === user.id || c.participant.username === user.username
     );
+
     if (existing) {
-      targetChatId = existing.id;
-    } else {
-      const newConv: Conversation = {
-        id: `conv_${user.id}_${Date.now()}`,
-        participant: user,
-        lastMessage: initialMessage || 'Say hello by sending a sticker',
-        timestamp: 'Just now',
-        unreadCount: 0,
-        messages: [],
-      };
-      setConversations((prev) => [newConv, ...prev]);
-      targetChatId = newConv.id;
+      setActiveChatId(existing.id);
+      if (initialMessage) {
+        sendDirectMessage(existing.id, initialMessage);
+      }
+      setActiveTab('messages');
+      return;
     }
-    setActiveChatId(targetChatId);
-    
-    // If an initialMessage is provided, send it
-    if (initialMessage) {
-      sendDirectMessage(targetChatId, initialMessage);
+
+    // Create or find the conversation via backend mutation
+    try {
+      const convId = await getOrCreateConversationMutation({ otherUserId: user.id as any });
+      setActiveChatId(convId as string);
+      if (initialMessage) {
+        sendDirectMessage(convId as string, initialMessage);
+      }
+      setActiveTab('messages');
+    } catch (err) {
+      console.error('Failed to create conversation:', err);
+      // Fallback: still navigate to messages
+      setActiveTab('messages');
     }
-    
-    setActiveTab('messages');
   };
 
-  const unreadNotifsCount = notifications.filter((n) => !n.isRead).length;
+  const unreadNotifsCount = notifications.filter((n) => !n.isRead && n.type !== 'message').length;
 
   return (
     <LalaoContext.Provider
@@ -2313,8 +2366,12 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         activeVideoFeedPostId,
         setActiveVideoFeedPostId,
         sendDirectMessage,
+        editMessage,
+        deleteMessage,
         markConversationRead,
         markNotificationsAsRead,
+        markAllNotificationsRead,
+        markNotificationRead,
         isCreateSheetOpen,
         setIsCreateSheetOpen,
         createFlowType,

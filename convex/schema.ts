@@ -286,6 +286,15 @@ export default defineSchema({
     pageSenderId: v.optional(v.id("pages")), // Present if the user is replying as the Page
     text: v.string(),
     isRead: v.optional(v.boolean()),
+    replyToMessageId: v.optional(v.id("messages")),
+    isEdited: v.optional(v.boolean()),
+    type: v.optional(v.union(v.literal("text"), v.literal("image"), v.literal("video"))),
+    mediaStorageId: v.optional(v.id("_storage")),
+    mimeType: v.optional(v.string()),
+    fileName: v.optional(v.string()),
+    fileSize: v.optional(v.number()),
+    audioStorageId: v.optional(v.id("_storage")),
+    audioDuration: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_conversation", ["conversationId"])

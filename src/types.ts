@@ -498,11 +498,22 @@ export interface DirectMessage {
   senderId: string;
   text: string;
   timestamp: string;
+  createdAt: number;
   isMine: boolean;
   isSticker?: boolean;
   stickerId?: string;
   status?: 'sending' | 'sent' | 'delivered' | 'read';
   isReply?: boolean;
+  replyToMessageId?: string;
+  replyToMessageText?: string;
+  isEdited?: boolean;
+  type?: 'text' | 'image' | 'video';
+  mediaUrl?: string;
+  mimeType?: string;
+  fileName?: string;
+  fileSize?: number;
+  audioUrl?: string;
+  audioDuration?: number;
 }
 
 export interface Conversation {

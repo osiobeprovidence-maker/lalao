@@ -32,16 +32,16 @@ export const HomePushBanner: React.FC = () => {
     return (
       <div
         id="home-push-banner-denied"
-        className="mx-4 my-3 rounded-2xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 shadow-xs transition-all animate-in fade-in duration-200"
+        className="mx-4 my-3 rounded-2xl border border-rose-500/20 bg-theme-surface-hover/80 px-4 py-3 shadow-xs transition-all animate-in fade-in duration-200"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
+            <div className="w-9 h-9 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0 mt-0.5">
               <BellOff className="w-4.5 h-4.5" />
             </div>
             <div>
-              <p className="text-[13px] font-bold text-amber-950">Notifications are blocked</p>
-              <p className="text-[11px] text-amber-800/90 mt-0.5 leading-relaxed">
+              <p className="text-[13px] font-bold text-theme-primary">Notifications are blocked</p>
+              <p className="text-[11px] text-theme-secondary mt-0.5 leading-relaxed">
                 Allow notifications for Lalao in your browser&apos;s site settings to receive updates for local messages &amp; replies.
               </p>
             </div>
@@ -64,7 +64,7 @@ export const HomePushBanner: React.FC = () => {
   return (
     <div
       id="home-push-banner-prompt"
-      className="mx-4 my-3 rounded-2xl border border-[#5E43F3]/20 bg-gradient-to-br from-[#5E43F3]/5 via-indigo-50/70 to-purple-50/30 p-4 shadow-xs transition-all animate-in fade-in slide-in-from-top-2 duration-300 relative"
+      className="mx-4 my-3 rounded-2xl border border-[#5E43F3]/20 bg-theme-surface-hover/50 p-4 shadow-xs transition-all animate-in fade-in slide-in-from-top-2 duration-300 relative"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 flex-1 min-w-0">

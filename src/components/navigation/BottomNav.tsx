@@ -3,13 +3,15 @@ import { Home, Heart, Plus, MessageCircle, User } from 'lucide-react';
 import { useLalao, NavTab } from '../../context/LalaoContext';
 
 export const BottomNav: React.FC = () => {
-  const { activeTab, setActiveTab, setIsCreateSheetOpen, setCreateFlowType } = useLalao();
+  const { activeTab, setActiveTab, setIsCreateSheetOpen, setCreateFlowType, conversations, unreadNotifsCount } = useLalao();
+  
+  const unreadMessagesCount = conversations.reduce((sum, conv) => sum + (conv.unreadCount || 0), 0);
 
-  const navItems: { id: NavTab; label: string; icon: typeof Home }[] = [
+  const navItems: { id: NavTab; label: string; icon: typeof Home; badge?: number }[] = [
     { id: 'home', label: 'Home', icon: Home },
-    { id: 'messages', label: 'Messages', icon: MessageCircle },
+    { id: 'messages', label: 'Messages', icon: MessageCircle, badge: unreadMessagesCount > 0 ? unreadMessagesCount : undefined },
     { id: 'create', label: 'Create', icon: Plus },
-    { id: 'notifications', label: 'Likes', icon: Heart },
+    { id: 'notifications', label: 'Likes', icon: Heart, badge: unreadNotifsCount > 0 ? unreadNotifsCount : undefined },
     { id: 'profile', label: 'Profile', icon: User },
   ];
 
@@ -59,11 +61,18 @@ export const BottomNav: React.FC = () => {
             }`}
             aria-label={item.label}
           >
-            <Icon
-              className={`w-6 h-6 transition-transform ${
-                isActive ? 'scale-110 stroke-[2.2]' : 'stroke-[1.8]'
-              }`}
-            />
+            <div className="relative">
+              <Icon
+                className={`w-6 h-6 transition-transform ${
+                  isActive ? 'scale-110 stroke-[2.2]' : 'stroke-[1.8]'
+                }`}
+              />
+              {item.badge !== undefined && (
+                <div className="absolute -top-1.5 -right-2 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white shadow-sm ring-1 ring-white">
+                  {item.badge > 99 ? '99+' : item.badge}
+                </div>
+              )}
+            </div>
             {isActive && (
               <span className="absolute -bottom-1 w-1.5 h-1.5 rounded-full bg-[#5E43F3]" />
             )}
