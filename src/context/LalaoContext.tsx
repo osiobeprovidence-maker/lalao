@@ -415,6 +415,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const clearCartMutation = useMutation(api.ecommerce.clearCart);
 
   const messageContactsQuery = useQuery(api.social.getMessageContacts);
+  const sendMessageMutation = useMutation(api.social.sendMessage);
+  const backendNotifications = useQuery(api.social.listNotifications) as unknown as NotificationItem[] | undefined;
   const [pushEnabled, setPushEnabled] = useState<boolean>(false);
 
   useEffect(() => {
@@ -624,6 +626,12 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [messageContactsQuery]);
 
   const [notifications, setNotifications] = useState<NotificationItem[]>(EMPTY_NOTIFICATIONS);
+
+  useEffect(() => {
+    if (backendNotifications) {
+      setNotifications(backendNotifications);
+    }
+  }, [backendNotifications]);
 
   useEffect(() => {
     if (feedPostsQuery) {
@@ -2118,6 +2126,15 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       stickerId,
       status: 'sent',
     };
+
+    // Trigger real backend mutation to create notification if possible
+    if (!conversationId.startsWith('conv_') && !conversationId.startsWith('mock_')) {
+      sendMessageMutation({
+        conversationId: conversationId as any,
+        text: msgText,
+        pageSenderId: undefined
+      }).catch(console.error);
+    }
 
     setConversations((prev) =>
       prev.map((conv) => {
