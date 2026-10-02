@@ -196,6 +196,7 @@ interface LalaoContextType {
       mimeType?: string;
       fileName?: string;
       fileSize?: number;
+      viewOnce?: boolean;
     }
   ) => void;
   editMessage: (messageId: string, newText: string) => void;
@@ -2194,6 +2195,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       mimeType?: string;
       fileName?: string;
       fileSize?: number;
+      viewOnce?: boolean;
     }
   ) => {
     if (!text.trim() && !stickerId && !audioStorageId && !options?.mediaStorageId) return;
@@ -2219,6 +2221,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         mimeType: options?.mimeType,
         fileName: options?.fileName,
         fileSize: options?.fileSize,
+        viewOnce: options?.viewOnce,
       }).catch(console.error);
     }
   };

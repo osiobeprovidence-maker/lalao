@@ -514,6 +514,9 @@ export interface DirectMessage {
   fileSize?: number;
   audioUrl?: string;
   audioDuration?: number;
+  viewOnce?: boolean;
+  viewOnceOpened?: boolean;
+  viewedAt?: number;
 }
 
 export interface Conversation {

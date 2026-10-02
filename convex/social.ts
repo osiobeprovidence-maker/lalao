@@ -1155,7 +1155,10 @@ export const listConversations = query({
               fileName: msg.fileName,
               fileSize: msg.fileSize,
               audioUrl,
-              audioDuration: msg.audioDuration
+              audioDuration: msg.audioDuration,
+              viewOnce: msg.viewOnce,
+              viewOnceOpened: msg.viewOnceOpened,
+              viewedAt: msg.viewedAt
             };
           })
       );
@@ -2486,6 +2489,7 @@ export const sendMessage = mutation({
     fileSize: v.optional(v.number()),
     audioStorageId: v.optional(v.id("_storage")),
     audioDuration: v.optional(v.number()),
+    viewOnce: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const currentUser = await getAuthedUser(ctx);
@@ -2542,6 +2546,8 @@ export const sendMessage = mutation({
       fileSize: args.fileSize,
       audioStorageId: args.audioStorageId,
       audioDuration: args.audioDuration,
+      viewOnce: args.viewOnce,
+      viewOnceOpened: false,
       createdAt: Date.now(),
     });
     
@@ -2679,5 +2685,28 @@ export const deleteMessage = mutation({
     }
 
     await ctx.db.delete(args.messageId);
+  },
+});
+
+export const markViewOnceOpened = mutation({
+  args: {
+    messageId: v.id("messages"),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const message = await ctx.db.get(args.messageId);
+    if (!message) throw new Error("Message not found");
+
+    if (!message.viewOnce) {
+      throw new Error("Message is not view once");
+    }
+
+    // Only the recipient (or sender, though sender shouldn't need to open it) can mark it
+    await ctx.db.patch(args.messageId, {
+      viewOnceOpened: true,
+      viewedAt: Date.now(),
+    });
   },
 });

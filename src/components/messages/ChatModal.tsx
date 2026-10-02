@@ -432,7 +432,10 @@ export const ChatModal: React.FC = () => {
   const [mediaPreviewUrl, setMediaPreviewUrl] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [isViewOnce, setIsViewOnce] = useState(false);
+  const [activeViewOnceMedia, setActiveViewOnceMedia] = useState<{ id: string, url: string, type: 'image' | 'video' | 'voice', duration?: number } | null>(null);
   const generateUploadUrl = useMutation(api.social.generateUploadUrl);
+  const markViewOnceOpenedMutation = useMutation(api.social.markViewOnceOpened);
 
   // Voice recording state machine
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
@@ -713,6 +716,7 @@ export const ChatModal: React.FC = () => {
     setPreviewBars([]);
     setPlaybackProgress(0);
     setVoiceState('idle');
+    setIsViewOnce(false);
   }
 
   // ── Send voice note ───────────────────────────────────────────────────────
@@ -743,6 +747,7 @@ export const ChatModal: React.FC = () => {
         replyingTo?.id,
         storageId,
         previewDuration || 1,
+        { viewOnce: isViewOnce }
       );
 
       // Clean up
@@ -754,6 +759,7 @@ export const ChatModal: React.FC = () => {
       setPlaybackProgress(0);
       setReplyingTo(null);
       setVoiceState('idle');
+      setIsViewOnce(false);
     } catch (err) {
       console.error('Failed to upload voice note', err);
       triggerShareToast('Failed to send voice note. Please try again.');
@@ -804,6 +810,18 @@ export const ChatModal: React.FC = () => {
 
   // ── Media handling ───────────────────────────────────────────────────────
 
+  const handleOpenViewOnce = (msg: DirectMessage) => {
+    if (msg.isMine || msg.viewOnceOpened) return;
+    
+    markViewOnceOpenedMutation({ messageId: msg.id as any }).catch(console.error);
+    
+    if (msg.audioUrl) {
+      setActiveViewOnceMedia({ id: msg.id, url: msg.audioUrl, type: 'voice', duration: msg.audioDuration });
+    } else if (msg.mediaUrl) {
+      setActiveViewOnceMedia({ id: msg.id, url: msg.mediaUrl, type: (msg.type as 'image'|'video') || 'image' });
+    }
+  };
+
   const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -827,6 +845,7 @@ export const ChatModal: React.FC = () => {
     setMediaPreviewUrl(null);
     setMediaType(null);
     setInputMessage('');
+    setIsViewOnce(false);
   };
   
   const handleSendMedia = async () => {
@@ -850,6 +869,7 @@ export const ChatModal: React.FC = () => {
         mimeType: mediaFile.type,
         fileName: mediaFile.name,
         fileSize: mediaFile.size,
+        viewOnce: isViewOnce
       });
       
       cancelMediaPreview();
@@ -868,6 +888,39 @@ export const ChatModal: React.FC = () => {
 
   return (
     <div id="chat-screen" className="w-full min-h-screen bg-theme-base flex justify-center overflow-hidden animate-in fade-in duration-200">
+      
+      {/* ── VIEW ONCE PLAYER ─────────────────────────────────────────────────── */}
+      {activeViewOnceMedia && (
+        <div className="fixed inset-0 z-[100] bg-black/95 flex flex-col backdrop-blur-sm">
+          <div className="flex justify-end p-4">
+            <button onClick={() => setActiveViewOnceMedia(null)} className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+          <div className="flex-1 flex items-center justify-center p-4">
+            {activeViewOnceMedia.type === 'image' && (
+              <img src={activeViewOnceMedia.url} alt="View Once" className="max-w-full max-h-full object-contain" />
+            )}
+            {activeViewOnceMedia.type === 'video' && (
+              <video src={activeViewOnceMedia.url} autoPlay controls className="max-w-full max-h-full object-contain" />
+            )}
+            {activeViewOnceMedia.type === 'voice' && (
+              <div className="w-full max-w-md bg-[#1a1a1a] rounded-2xl p-6 border border-white/10">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-[#5E43F3]/20 flex items-center justify-center text-[#5E43F3]">
+                    <Mic className="w-8 h-8" />
+                  </div>
+                  <span className="text-white font-medium">Voice message</span>
+                  <div className="w-full">
+                    <CustomAudioPlayer url={activeViewOnceMedia.url} duration={activeViewOnceMedia.duration} isMine={false} autoPlay />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-[960px] min-h-screen bg-theme-base flex flex-col border-x border-theme-divider/80">
 
         {/* Header */}
@@ -978,7 +1031,28 @@ export const ChatModal: React.FC = () => {
                       </div>
                     )}
 
-                    {msg.isSticker && msg.stickerId ? (
+                    {msg.viewOnce ? (
+                      msg.viewOnceOpened ? (
+                        <div className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border ${msg.isMine ? 'border-neutral-800 bg-black' : 'border-[#5E43F3]/20 bg-[#5E43F3]'}`}>
+                          <CheckCheck className="w-4 h-4 text-theme-tertiary opacity-70" />
+                          <span className="text-xs font-medium text-theme-tertiary italic">Opened</span>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenViewOnce(msg)}
+                          disabled={msg.isMine}
+                          className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border ${msg.isMine ? 'border-neutral-800 bg-black cursor-default' : 'border-[#5E43F3]/30 bg-[#5E43F3]/10 hover:bg-[#5E43F3]/20 cursor-pointer transition-colors'}`}
+                        >
+                          <div className={`flex items-center justify-center w-5 h-5 rounded-full border-[1.5px] ${msg.isMine ? 'border-theme-tertiary text-theme-tertiary' : 'border-[#5E43F3] text-[#5E43F3]'}`}>
+                            <span className="text-[9px] font-bold">1</span>
+                          </div>
+                          <span className={`text-xs font-medium ${msg.isMine ? 'text-theme-tertiary' : 'text-[#5E43F3]'}`}>
+                            {msg.audioUrl ? 'Voice message' : (msg.type === 'video' ? 'Video' : 'Photo')}
+                          </span>
+                        </button>
+                      )
+                    ) : msg.isSticker && msg.stickerId ? (
                       <div className="p-2 hover:scale-105 transition-transform -ml-2">
                         {STICKERS.find((s) => s.id === msg.stickerId)?.render() || <Sparkles className="w-12 h-12 text-amber-500" />}
                       </div>
@@ -1159,15 +1233,25 @@ export const ChatModal: React.FC = () => {
 
               {/* Action row */}
               <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={discardPreview}
-                  disabled={voiceState === 'sending'}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-theme-surface-hover text-rose-500 hover:bg-rose-500/10 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-40"
-                >
-                  <Trash2 className="w-3 h-3" />
-                  Delete
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsViewOnce(!isViewOnce)}
+                    className={`flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold border transition-colors ${isViewOnce ? 'bg-[#5E43F3] border-[#5E43F3] text-white' : 'border-theme-divider-strong text-theme-tertiary hover:bg-theme-surface-hover'}`}
+                    title="View once"
+                  >
+                    1
+                  </button>
+                  <button
+                    type="button"
+                    onClick={discardPreview}
+                    disabled={voiceState === 'sending'}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-theme-surface-hover text-rose-500 hover:bg-rose-500/10 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Delete
+                  </button>
+                </div>
 
                 <button
                   type="button"
@@ -1214,19 +1298,29 @@ export const ChatModal: React.FC = () => {
                 placeholder="Add a caption (optional)"
                 className="w-full rounded-md border border-theme-divider bg-theme-base px-3 py-2 text-sm text-theme-primary outline-none focus:border-[#5E43F3]"
               />
-              <div className="flex justify-end gap-2 mt-1">
-                <button type="button" onClick={cancelMediaPreview} className="px-4 py-2 text-sm font-medium text-theme-secondary hover:bg-theme-surface-hover rounded-md">
-                  Cancel
-                </button>
+              <div className="flex justify-between items-center mt-1">
                 <button
                   type="button"
-                  onClick={handleSendMedia}
-                  disabled={isUploadingMedia}
-                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-[#5E43F3] text-white hover:bg-[#4E34E0] rounded-md disabled:opacity-50"
+                  onClick={() => setIsViewOnce(!isViewOnce)}
+                  className={`flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold border transition-colors ${isViewOnce ? 'bg-[#5E43F3] border-[#5E43F3] text-white' : 'border-theme-divider-strong text-theme-tertiary hover:bg-theme-surface-hover'}`}
+                  title="View once"
                 >
-                  {isUploadingMedia ? 'Sending...' : 'Send'}
-                  <Send className="w-3.5 h-3.5" />
+                  1
                 </button>
+                <div className="flex justify-end gap-2">
+                  <button type="button" onClick={cancelMediaPreview} className="px-4 py-2 text-sm font-medium text-theme-secondary hover:bg-theme-surface-hover rounded-md">
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSendMedia}
+                    disabled={isUploadingMedia}
+                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-[#5E43F3] text-white hover:bg-[#4E34E0] rounded-md disabled:opacity-50"
+                  >
+                    {isUploadingMedia ? 'Sending...' : 'Send'}
+                    <Send className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           )}

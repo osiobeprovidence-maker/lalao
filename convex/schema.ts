@@ -295,6 +295,9 @@ export default defineSchema({
     fileSize: v.optional(v.number()),
     audioStorageId: v.optional(v.id("_storage")),
     audioDuration: v.optional(v.number()),
+    viewOnce: v.optional(v.boolean()),
+    viewOnceOpened: v.optional(v.boolean()),
+    viewedAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_conversation", ["conversationId"])
