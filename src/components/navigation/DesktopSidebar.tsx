@@ -190,7 +190,7 @@ export const DesktopSidebar: React.FC = () => {
                 setIsCreateSheetOpen(false);
                 setActiveTab('create-post');
               }}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-theme-divider bg-theme-base text-theme-secondary transition hover:border-theme-divider-strong hover:text-theme-primary cursor-pointer"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-theme-divider bg-theme-surface text-theme-primary transition hover:border-theme-divider-strong hover:bg-theme-surface-hover cursor-pointer shadow-xs"
               aria-label="Create post"
               title="Create"
             >

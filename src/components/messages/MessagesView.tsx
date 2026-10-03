@@ -303,7 +303,7 @@ export const MessagesView: React.FC = () => {
           </div>
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="p-1.5 rounded-full text-theme-tertiary hover:text-theme-secondary hover:bg-theme-surface-hover transition-colors"
+            className="p-1.5 rounded-full text-theme-secondary hover:text-theme-primary hover:bg-theme-surface-hover transition-colors"
             title="Message settings"
           >
             <Settings className="w-5 h-5" />
@@ -312,14 +312,14 @@ export const MessagesView: React.FC = () => {
 
         {/* Search */}
         <div className="relative flex items-center">
-          <Search className="w-4 h-4 text-theme-tertiary absolute left-3 pointer-events-none" />
+          <Search className="w-4 h-4 text-theme-secondary absolute left-3 pointer-events-none" />
           <input
             id="input-messages-search"
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search messages & contacts..."
-            className="w-full pl-9 pr-9 py-2 rounded-full bg-theme-surface-hover hover:bg-theme-surface-active/60 focus:bg-theme-surface focus:ring-2 focus:ring-[#5E43F3]/20 focus:border-[#5E43F3] border border-transparent text-sm text-theme-primary placeholder:text-theme-tertiary transition-all outline-none"
+            className="w-full pl-9 pr-9 py-2 rounded-full bg-theme-surface hover:bg-theme-surface-hover focus:bg-theme-base focus:ring-2 focus:ring-[#5E43F3]/20 focus:border-[#5E43F3] border border-theme-divider text-sm text-theme-primary placeholder:text-theme-secondary transition-all outline-none"
           />
           {searchQuery && (
             <button
@@ -415,7 +415,7 @@ export const MessagesView: React.FC = () => {
                   e.stopPropagation();
                   setIsCreateCycleOpen(true);
                 }}
-                className="absolute -bottom-0.5 -right-0.5 w-4.5 h-4.5 rounded-full bg-[#5E43F3] text-white flex items-center justify-center border-2 border-white shadow-xs hover:bg-[#4E34E0]"
+                className="absolute -bottom-0.5 -right-0.5 w-4.5 h-4.5 rounded-full bg-[#5E43F3] text-white flex items-center justify-center border-[2px] border-theme-base shadow-xs hover:bg-[#4E34E0]"
                 title="Post to Cycle"
               >
                 <Plus className="w-3 h-3 stroke-[3]" />
@@ -455,7 +455,7 @@ export const MessagesView: React.FC = () => {
                     </div>
                   </div>
                   {cycle.hasUnseen && (
-                    <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#5E43F3] rounded-full border-2 border-white" />
+                    <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#5E43F3] rounded-full border-[2px] border-theme-base" />
                   )}
                 </div>
                 <span className="text-[11px] font-bold text-theme-primary mt-1.5 truncate w-full text-center block leading-tight">

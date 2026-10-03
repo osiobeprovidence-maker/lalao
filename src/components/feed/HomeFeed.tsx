@@ -360,7 +360,7 @@ const FeedSkeleton: React.FC = () => {
                 type="button"
                 id="btn-radius-drawer-trigger"
                 onClick={() => setIsRadiusDrawerOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50/90 hover:bg-indigo-100 text-[#5E43F3] border border-indigo-200/80 active:scale-95 transition-all cursor-pointer font-bold text-xs shadow-2xs"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#5E43F3]/10 hover:bg-[#5E43F3]/20 text-[#5E43F3] border border-[#5E43F3]/30 active:scale-95 transition-all cursor-pointer font-bold text-xs shadow-2xs"
                 title="Select distance radius from drawer"
               >
                 <span>{location.radiusKm} km</span>

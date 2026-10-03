@@ -252,7 +252,7 @@ export const DiscoverView: React.FC = () => {
               type="button"
               id="btn-discover-location-mode"
               onClick={() => setIsLocationModeMenuOpen(!isLocationModeMenuOpen)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50/90 hover:bg-indigo-100 text-xs font-bold text-[#5E43F3] border border-indigo-200/80 active:scale-95 transition-all shrink-0 cursor-pointer shadow-xs"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#5E43F3]/10 hover:bg-[#5E43F3]/20 text-xs font-bold text-[#5E43F3] border border-[#5E43F3]/30 active:scale-95 transition-all shrink-0 cursor-pointer shadow-xs"
             >
               {locationMode === 'global' ? (
                 <Compass className="w-3.5 h-3.5 text-[#5E43F3] shrink-0" />

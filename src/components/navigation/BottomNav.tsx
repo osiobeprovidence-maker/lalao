@@ -68,7 +68,7 @@ export const BottomNav: React.FC = () => {
                 }`}
               />
               {item.badge !== undefined && (
-                <div className="absolute -top-1.5 -right-2 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white shadow-sm ring-1 ring-white">
+                <div className="absolute -top-1.5 -right-2 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white shadow-sm ring-[1.5px] ring-theme-surface">
                   {item.badge > 99 ? '99+' : item.badge}
                 </div>
               )}

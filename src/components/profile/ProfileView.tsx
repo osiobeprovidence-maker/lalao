@@ -140,7 +140,7 @@ export const ProfileView: React.FC = () => {
             {unreadNotifsCount > 0 && (
               <span
                 id="badge-profile-unread-notif"
-                className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#5E43F3] rounded-full ring-2 ring-white"
+                className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#5E43F3] rounded-full ring-[2.5px] ring-theme-base"
               />
             )}
           </button>
@@ -254,8 +254,8 @@ export const ProfileView: React.FC = () => {
               </div>
 
               <div
-                className={`absolute bottom-0 right-0 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-black shadow-md ${
-                  myHasItems ? 'bg-[#5E43F3]' : 'bg-theme-inverse'
+                className={`absolute bottom-0 right-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-black shadow-md border-[1.5px] border-theme-base ${
+                  myHasItems ? 'bg-[#5E43F3] text-white' : 'bg-theme-inverse text-theme-text-inverse'
                 }`}
               >
                 {myHasItems ? <Clock className="w-3 h-3" /> : <Plus className="w-3 h-3 stroke-[3]" />}
@@ -269,14 +269,14 @@ export const ProfileView: React.FC = () => {
           <button
             id="btn-edit-profile"
             onClick={() => setIsEditProfileOpen(true)}
-            className="w-full py-2 px-4 rounded-xl border border-theme-divider-strong hover:bg-theme-base text-xs font-bold text-theme-primary transition-colors cursor-pointer"
+            className="w-full py-2 px-4 rounded-xl border border-theme-divider hover:bg-theme-surface-hover text-xs font-bold text-theme-primary transition-colors cursor-pointer"
           >
             Edit Profile
           </button>
           <button
             id="btn-share-profile"
             onClick={() => triggerShareToast('Profile link copied!')}
-            className="w-full py-2 px-4 rounded-xl border border-theme-divider-strong hover:bg-theme-base text-xs font-bold text-theme-primary transition-colors cursor-pointer"
+            className="w-full py-2 px-4 rounded-xl border border-theme-divider hover:bg-theme-surface-hover text-xs font-bold text-theme-primary transition-colors cursor-pointer"
           >
             Share Profile
           </button>
