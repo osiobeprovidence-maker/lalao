@@ -93,7 +93,6 @@ interface LalaoContextType {
   deletePost: (postId: string) => Promise<void>;
   addComment: (postId: string, text: string, parentCommentId?: string, mediaStorageId?: string, mediaType?: 'image' | 'voice' | 'gif' | 'sticker') => Promise<void>;
   toggleLikeComment: (postId: string, commentId: string, replyId?: string) => void;
-  markNotificationsAsRead: () => void;
   markAllNotificationsRead: () => void;
   markNotificationRead: (id: string) => void;
   createPost: (post: { 

@@ -499,7 +499,7 @@ export interface DirectMessage {
   senderId: string;
   text: string;
   timestamp: string;
-  createdAt: number;
+  createdAt?: number;
   isMine: boolean;
   isSticker?: boolean;
   stickerId?: string;
@@ -529,7 +529,7 @@ export interface Conversation {
   messages: DirectMessage[];
 }
 
-export type NotificationType = 'follow' | 'like' | 'reply' | 'rally_join' | 'page_interaction';
+export type NotificationType = 'follow' | 'like' | 'reply' | 'rally_join' | 'page_interaction' | 'message';
 
 export interface NotificationItem {
   id: string;
@@ -541,6 +541,7 @@ export interface NotificationItem {
   isRead: boolean;
   targetExcerpt?: string | null;
   targetId?: string | null;
+  conversationId?: string | null;
 }
 
 export interface Draft {

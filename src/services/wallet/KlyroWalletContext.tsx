@@ -29,11 +29,11 @@ export const KlyroWalletProvider: React.FC<{ children: React.ReactNode }> = ({ c
   useEffect(() => {
     if (!user) return;
     try {
-      const saved = localStorage.getItem(`${STORAGE_KEY}_${user.id}`);
+      const saved = localStorage.getItem(`${STORAGE_KEY}_${user.uid}`);
       if (saved) {
         const parsed = JSON.parse(saved);
         setIsConnected(parsed.isConnected);
-        setAddress(parsed.address || `0xKLY${user.id.substring(0,8)}...`);
+        setAddress(parsed.address || `0xKLY${user.uid.substring(0,8)}...`);
         setBalance(parsed.balance || { amount: DEFAULT_MOCK_BALANCE, currency: 'KLY' });
         setTransactions(parsed.transactions || []);
       }
@@ -46,14 +46,14 @@ export const KlyroWalletProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const saveState = (newState: any) => {
     if (!user) return;
     try {
-      localStorage.setItem(`${STORAGE_KEY}_${user.id}`, JSON.stringify(newState));
+      localStorage.setItem(`${STORAGE_KEY}_${user.uid}`, JSON.stringify(newState));
     } catch {}
   };
 
   const connectWallet = async () => {
     // Simulate API delay
     await new Promise((resolve) => setTimeout(resolve, 800));
-    const newAddress = `0xKLY${user?.id?.substring(0,8) || '12345678'}...`;
+    const newAddress = `0xKLY${user?.uid?.substring(0,8) || '12345678'}...`;
     
     setIsConnected(true);
     setAddress(newAddress);

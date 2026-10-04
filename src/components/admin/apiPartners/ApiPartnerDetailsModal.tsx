@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Key, Shield, Activity, DollarSign, Database, Copy, RefreshCw, KeyRound, AlertTriangle } from 'lucide-react';
+import { X, Key, Shield, Activity, DollarSign, Database, Copy, RefreshCw, KeyRound, AlertTriangle, Check } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
 

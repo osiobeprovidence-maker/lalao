@@ -423,7 +423,7 @@ export const transferCredits = mutation({
       fee: 0,
       currency: "LC",
       assetType: "LALAO_CREDITS",
-      type: "transfer_in",
+      type: "deposit",
       status: "completed",
       description: `Payment from ${sender.name || sender.username}`,
       reference: txId,

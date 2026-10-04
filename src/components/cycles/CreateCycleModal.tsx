@@ -794,7 +794,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
         location: location.name,
         excludedUserIds: excludedUsers.length > 0 ? excludedUsers.map(u => u.id as any) : undefined,
         duration: finalMediaType === 'audio' ? recordingSeconds : undefined,
-      });
+      } as any);
       
       triggerShareToast('Status published to your 24h Cycle!');
       resetAudioRecording();

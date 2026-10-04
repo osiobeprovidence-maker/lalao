@@ -61,7 +61,7 @@ export const DiscoverView: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'people' | 'pages' | 'shop' | 'events'>('people');
+  const [activeFilter, setActiveFilter] = useState<'trending' | 'people' | 'pages' | 'shop' | 'events'>('people');
   const [locationMode, setLocationMode] = useState<'current' | 'selected' | 'global'>('current');
   const [isLocationModeMenuOpen, setIsLocationModeMenuOpen] = useState(false);
   const navigate = useNavigate();

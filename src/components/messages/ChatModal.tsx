@@ -912,7 +912,7 @@ export const ChatModal: React.FC = () => {
                   </div>
                   <span className="text-white font-medium">Voice message</span>
                   <div className="w-full">
-                    <CustomAudioPlayer url={activeViewOnceMedia.url} duration={activeViewOnceMedia.duration} isMine={false} autoPlay />
+                    <CustomAudioPlayer url={activeViewOnceMedia.url} duration={activeViewOnceMedia.duration} isMine={false} />
                   </div>
                 </div>
               </div>

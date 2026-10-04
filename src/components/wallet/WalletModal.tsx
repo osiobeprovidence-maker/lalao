@@ -95,6 +95,7 @@ export const WalletModal: React.FC = () => {
   
   const [selectedTx, setSelectedTx] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [withdrawError, setWithdrawError] = useState('');
 
   // Withdrawal Mock State
   const [withdrawalAccounts, setWithdrawalAccounts] = useState<WithdrawalAccount[]>([
@@ -1079,16 +1080,16 @@ export const WalletModal: React.FC = () => {
                          </div>
                        )}
                        
-                       {(parseFloat(flowAmount) > 0 && parseFloat(flowAmount) < minWithdrawal) && (
+                       {(parseFloat(flowAmount) > 0 && parseFloat(flowAmount) < 500) && (
                          <div className="mt-4 flex items-center gap-2 text-red-500 text-sm font-bold bg-red-50 px-4 py-2 rounded-full">
-                           <AlertCircle className="w-4 h-4" /> Minimum withdrawal is ₦{minWithdrawal.toLocaleString()}.
+                           <AlertCircle className="w-4 h-4" /> Minimum withdrawal is ₦500.
                          </div>
                        )}
                     </div>
                     <div className="shrink-0 pt-4 border-t border-theme-divider-light space-y-3">
                        <button 
                          onClick={() => navigateTo('withdraw_review')}
-                         disabled={!flowAmount || parseFloat(flowAmount) < minWithdrawal || parseFloat(flowAmount) > internalBalance}
+                         disabled={!flowAmount || parseFloat(flowAmount) < 500 || parseFloat(flowAmount) > internalBalance}
                          className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-lg hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 disabled:shadow-none"
                        >
                          Continue
@@ -1254,7 +1255,7 @@ export const WalletModal: React.FC = () => {
                <div className="bg-theme-surface p-4 rounded-2xl border border-theme-divider-light space-y-3">
                  <div className="flex justify-between items-center text-sm">
                    <div className="text-theme-tertiary font-bold">Minimum withdrawal</div>
-                   <div className="font-bold text-theme-primary">₦{minWithdrawal.toLocaleString()}</div>
+                   <div className="font-bold text-theme-primary">₦500</div>
                  </div>
                  <div className="flex justify-between items-center text-sm">
                    <div className="text-theme-tertiary font-bold">Processing time</div>

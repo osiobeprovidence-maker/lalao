@@ -304,7 +304,7 @@ export const processWebhook = internalMutation({
       return;
     }
     
-    await updatePurchaseStatus.handler(ctx, {
+    await ctx.runMutation(internal.market.updatePurchaseStatus, {
       userId: marketTx.userId,
       marketTxId: marketTx._id,
       walletTxId: marketTx.metadata.walletTxId,
