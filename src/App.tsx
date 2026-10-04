@@ -150,9 +150,7 @@ const LalaoAppContent: React.FC = () => {
 
   useEffect(() => {
     if (currentUser) {
-      if (currentUser.phoneSetupCompleted === false) {
-        navigate('/onboarding/phone');
-      } else if (currentUser.accessStatus === 'country_restricted' || currentUser.accessStatus === 'waitlisted') {
+      if (currentUser.accessStatus === 'country_restricted' || currentUser.accessStatus === 'waitlisted') {
         navigate('/country-restricted');
       }
     }
@@ -214,6 +212,18 @@ const LalaoAppContent: React.FC = () => {
     }
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [activeTab]);
+
+  const { isLoading: isAuthLoading } = useAuth();
+  const currentUserQuery = useQuery(api.users.getCurrentUser);
+  
+  // Normal loading screen while resolving auth/user
+  if (isAuthLoading || currentUserQuery === undefined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-theme-surface">
+        <div className="w-8 h-8 rounded-full border-4 border-theme-divider border-t-[#5E43F3] animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-theme-base text-theme-primary flex justify-center selection:bg-[#5E43F3]/20 selection:text-[#5E43F3]">

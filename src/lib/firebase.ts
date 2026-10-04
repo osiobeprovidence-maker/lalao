@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { getMessaging, getToken, onMessage, Messaging } from "firebase/messaging";
 
@@ -17,6 +17,7 @@ const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase Auth
 export const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(console.error);
 
 // Initialize Firebase Storage using the canonical default bucket for this project.
 // The legacy .firebasestorage.app alias can trigger upload CORS failures for some projects.
