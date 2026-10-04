@@ -1,7 +1,7 @@
 {
   "name": "Lalao",
   "short_name": "Lalao",
-  "description": "Local Community & Social Platform",
+  "description": "Install Lalao on your phone for quick access to your communities, messages, and discoveries.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0d0e12",
@@ -13,14 +13,10 @@
       "type": "image/x-icon"
     },
     {
-      "src": "/logo192.png",
+      "src": "/mascot.png",
       "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "/logo512.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
     }
   ]
 }

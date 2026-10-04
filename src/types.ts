@@ -440,6 +440,7 @@ export interface CycleStoryItem {
   mediaUrl?: string;
   mediaType: 'image' | 'video' | 'audio' | 'text';
   text?: string;
+  duration?: number;
   backgroundColor?: string;
   textColor?: string;
   caption?: string;

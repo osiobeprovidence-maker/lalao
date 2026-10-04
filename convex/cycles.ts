@@ -23,6 +23,7 @@ export const postCycleStory = mutation({
     longitude: v.optional(v.number()),
     audience: v.optional(v.union(v.literal("community"), v.literal("nearby"), v.literal("friends"))),
     excludedUserIds: v.optional(v.array(v.id("users"))),
+    duration: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const currentUser = await getAuthedUser(ctx);
@@ -51,6 +52,7 @@ export const postCycleStory = mutation({
       longitude: args.longitude ?? currentUser.longitude,
       audience: args.audience ?? "community",
       excludedUserIds: args.excludedUserIds,
+      duration: args.duration,
       viewsCount: 0,
       likesCount: 0,
       createdAt: now,

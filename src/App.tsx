@@ -41,6 +41,7 @@ import { DigitalTicketModal } from './components/tickets/DigitalTicketModal';
 import { MyTicketsModal } from './components/tickets/MyTicketsModal';
 import { WalletModal } from './components/wallet/WalletModal';
 import { MySubscriptionsModal } from './components/subscriptions/MySubscriptionsModal';
+import { InstallAppModal } from './components/common/InstallAppModal';
 import { Check, Plus } from 'lucide-react';
 
 // Router
@@ -97,6 +98,7 @@ import { LocationSetupPage } from './pages/onboarding/LocationSetupPage';
 import { InterestsPage } from './pages/onboarding/InterestsPage';
 import { RecommendationsPage } from './pages/onboarding/RecommendationsPage';
 import { CompletePage } from './pages/onboarding/CompletePage';
+import { OnboardingGuard } from './pages/onboarding/OnboardingGuard';
 
 // Admin page
 import { AdminApp } from './pages/admin/AdminApp';
@@ -398,6 +400,7 @@ const LalaoApp: React.FC = () => (
 
 export default function App() {
   return (
+    <>
     <Routes>
       <Route path="/" element={<Navigate to="/app" replace />} />
 
@@ -407,16 +410,16 @@ export default function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      <Route path="/onboarding/welcome" element={<WelcomePage />} />
-      <Route path="/onboarding/phone" element={<PhoneSetupPage />} />
+      <Route path="/onboarding/welcome" element={<OnboardingGuard><WelcomePage /></OnboardingGuard>} />
+      <Route path="/onboarding/phone" element={<OnboardingGuard><PhoneSetupPage /></OnboardingGuard>} />
       <Route path="/country-restricted" element={<CountryRestrictedPage />} />
-      <Route path="/onboarding/name" element={<NameSetupPage />} />
-      <Route path="/onboarding/profile" element={<ProfileSetupPage />} />
-      <Route path="/onboarding/pronouns" element={<PronounsPage />} />
-      <Route path="/onboarding/location" element={<LocationSetupPage />} />
-      <Route path="/onboarding/interests" element={<InterestsPage />} />
-      <Route path="/onboarding/recommendations" element={<RecommendationsPage />} />
-      <Route path="/onboarding/complete" element={<CompletePage />} />
+      <Route path="/onboarding/name" element={<OnboardingGuard><NameSetupPage /></OnboardingGuard>} />
+      <Route path="/onboarding/profile" element={<OnboardingGuard><ProfileSetupPage /></OnboardingGuard>} />
+      <Route path="/onboarding/pronouns" element={<OnboardingGuard><PronounsPage /></OnboardingGuard>} />
+      <Route path="/onboarding/location" element={<OnboardingGuard><LocationSetupPage /></OnboardingGuard>} />
+      <Route path="/onboarding/interests" element={<OnboardingGuard><InterestsPage /></OnboardingGuard>} />
+      <Route path="/onboarding/recommendations" element={<OnboardingGuard><RecommendationsPage /></OnboardingGuard>} />
+      <Route path="/onboarding/complete" element={<OnboardingGuard><CompletePage /></OnboardingGuard>} />
 
       <Route path="/app" element={<LalaoApp />} />
       <Route path="/app/*" element={<LalaoApp />} />
@@ -433,5 +436,7 @@ export default function App() {
 
       <Route path="*" element={<Navigate to="/app" replace />} />
     </Routes>
+    <InstallAppModal />
+    </>
   );
 }

@@ -8,7 +8,7 @@ export const CompletePage: React.FC = () => {
 
   const handleContinue = () => {
     // Navigate to the main app feed
-    navigate('/app');
+    navigate('/app', { replace: true });
   };
 
   return (

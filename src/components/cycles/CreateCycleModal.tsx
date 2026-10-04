@@ -262,6 +262,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
   const [isProcessingVideo, setIsProcessingVideo] = useState(false);
   const [isVideoLoading, setIsVideoLoading] = useState(false);
   const [videoMuted, setVideoMuted] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   // Waveform / audio review state
   const [waveformBars, setWaveformBars] = useState<number[]>(Array(32).fill(2));
@@ -731,6 +732,9 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
   };
 
   const handlePublish = async () => {
+    if (isPublishing) return;
+    setIsPublishing(true);
+
     const finalMediaType: 'image' | 'video' | 'audio' | 'text' =
       contentType === 'audio' ? 'audio' : contentType === 'text' ? 'text' : mediaType;
 
@@ -748,6 +752,7 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
           if (processedBlob.size > 10 * 1024 * 1024) {
             triggerShareToast('The resulting video is too large (over 10 MB limit).');
             setIsProcessingVideo(false);
+            setIsPublishing(false);
             return;
           }
           fileToUpload = processedBlob;
@@ -772,25 +777,34 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
          console.error('Error uploading file', e);
          triggerShareToast('Failed to upload media. Please try again.');
          setIsProcessingVideo(false);
+         setIsPublishing(false);
          return;
        }
     }
 
-    postCycleStory({
-      mediaType: finalMediaType,
-      text: contentType === 'text' || textContent ? textContent : undefined,
-      backgroundColor: contentType === 'text' ? selectedGradient : undefined,
-      mediaUrl: (contentType !== 'text' && contentType !== 'audio' && !storageId) ? selectedMedia : (audioUrl && !storageId ? audioUrl : undefined),
-      mediaStorageId: storageId,
-      caption: textContent || undefined,
-      audience: selectedAudience,
-      location: location.name,
-      excludedUserIds: excludedUsers.length > 0 ? excludedUsers.map(u => u.id as any) : undefined,
-    });
-    
-    triggerShareToast('Status published to your 24h Cycle!');
-    resetAudioRecording();
-    onClose();
+    try {
+      await postCycleStory({
+        mediaType: finalMediaType,
+        text: contentType === 'text' || textContent ? textContent : undefined,
+        backgroundColor: contentType === 'text' ? selectedGradient : undefined,
+        mediaUrl: (contentType !== 'text' && contentType !== 'audio' && !storageId) ? selectedMedia : (audioUrl && !storageId ? audioUrl : undefined),
+        mediaStorageId: storageId,
+        caption: textContent || undefined,
+        audience: selectedAudience,
+        location: location.name,
+        excludedUserIds: excludedUsers.length > 0 ? excludedUsers.map(u => u.id as any) : undefined,
+        duration: finalMediaType === 'audio' ? recordingSeconds : undefined,
+      });
+      
+      triggerShareToast('Status published to your 24h Cycle!');
+      resetAudioRecording();
+      onClose();
+    } catch (error) {
+      console.error('Error publishing cycle:', error);
+      triggerShareToast('Failed to publish cycle. Please try again.');
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -1123,6 +1137,19 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
               </button>
             </div>
             <p className="text-white/40 text-xs">Review before sharing — tap Share Cycle to post</p>
+            
+            <button
+              type="button"
+              onClick={handlePublish}
+              disabled={isPublishing}
+              className={`mt-4 px-8 py-3 rounded-full font-bold text-[15px] shadow-lg transition-all flex items-center justify-center gap-2 ${
+                isPublishing 
+                  ? 'bg-theme-surface/50 text-purple-700/50 cursor-not-allowed'
+                  : 'bg-theme-surface text-purple-700 hover:scale-105 active:scale-95'
+              }`}
+            >
+              {isPublishing ? 'Sharing...' : 'Share Cycle'}
+            </button>
           </div>
         )}
         

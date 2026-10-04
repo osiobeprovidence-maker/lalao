@@ -5,6 +5,7 @@ import { ConvexProviderWithAuth, ConvexReactClient } from 'convex/react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DynamicBranding } from './components/common/DynamicBranding';
 import { ThemeProvider } from './context/ThemeContext';
+import { PWAProvider } from './hooks/usePWA';
 import App from './App.tsx';
 import './index.css';
 
@@ -17,7 +18,9 @@ createRoot(document.getElementById('root')!).render(
         <DynamicBranding />
         <ThemeProvider>
           <BrowserRouter>
-            <App />
+            <PWAProvider>
+              <App />
+            </PWAProvider>
           </BrowserRouter>
         </ThemeProvider>
       </ConvexProviderWithAuth>

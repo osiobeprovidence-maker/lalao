@@ -1065,9 +1065,21 @@ export const ChatModal: React.FC = () => {
                     ) : msg.mediaUrl ? (
                       <div className="flex flex-col gap-1 max-w-[280px]">
                         {msg.type === 'video' ? (
-                          <video src={msg.mediaUrl} controls className="rounded-md w-full max-h-[300px] object-contain bg-black/50" />
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setActiveViewOnceMedia({ id: msg.id + '_view', url: msg.mediaUrl!, type: 'video' }); }}
+                            className="rounded-md overflow-hidden w-full focus:outline-none"
+                          >
+                            <video src={msg.mediaUrl} className="rounded-md w-full max-h-[300px] object-contain bg-black/50 pointer-events-none" />
+                          </button>
                         ) : (
-                          <img src={msg.mediaUrl} alt="attachment" className="rounded-md w-full max-h-[300px] object-contain bg-black/50" />
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setActiveViewOnceMedia({ id: msg.id + '_view', url: msg.mediaUrl!, type: 'image' }); }}
+                            className="rounded-md overflow-hidden w-full focus:outline-none"
+                          >
+                            <img src={msg.mediaUrl} alt="attachment" className="rounded-md w-full max-h-[300px] object-contain bg-black/50" />
+                          </button>
                         )}
                         {msg.text && (
                           <div className={`px-3 py-2 text-sm leading-relaxed rounded-sm ${msg.isMine ? 'bg-black text-white dark:bg-[#0a0a0a]' : 'bg-[#5E43F3] text-white'}`}>
@@ -1097,10 +1109,13 @@ export const ChatModal: React.FC = () => {
                             onClick={(e) => { e.stopPropagation(); setReplyingTo({ id: msg.id, text: msg.text }); setActiveContextMenu(null); document.getElementById('input-direct-message')?.focus(); }}
                             className="text-left px-3 py-2 text-xs text-theme-primary hover:bg-theme-surface-hover transition-colors"
                           >Reply</button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setEditingMsg({ id: msg.id, text: msg.text }); setInputMessage(msg.text); setActiveContextMenu(null); document.getElementById('input-direct-message')?.focus(); }}
-                            className="text-left px-3 py-2 text-xs text-theme-primary hover:bg-theme-surface-hover transition-colors"
-                          >Edit</button>
+                          {/* Edit: only show if message has text (caption). Media-only messages are not editable. */}
+                          {(!msg.mediaUrl || msg.text) && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setEditingMsg({ id: msg.id, text: msg.text }); setInputMessage(msg.text); setActiveContextMenu(null); document.getElementById('input-direct-message')?.focus(); }}
+                              className="text-left px-3 py-2 text-xs text-theme-primary hover:bg-theme-surface-hover transition-colors"
+                            >Edit{msg.mediaUrl ? ' Caption' : ''}</button>
+                          )}
                           <button
                             onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete this message?')) { deleteMessage(msg.id); } setActiveContextMenu(null); }}
                             className="text-left px-3 py-2 text-xs text-red-500 hover:bg-red-500/10 transition-colors"
@@ -1340,14 +1355,16 @@ export const ChatModal: React.FC = () => {
                 />
 
                 <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-theme-tertiary">
-                  <label className="rounded-full p-1.5 text-theme-tertiary hover:bg-theme-surface-hover hover:text-theme-secondary transition-colors cursor-pointer" title="Attach image">
+                  {/* Gallery: pick existing images or videos from device */}
+                  <label className="rounded-full p-1.5 text-theme-tertiary hover:bg-theme-surface-hover hover:text-theme-secondary transition-colors cursor-pointer" title="Attach photo or video">
                     <ImageIcon className="w-4 h-4" />
                     <input type="file" accept="image/*,video/*" className="hidden" onChange={handleMediaSelect} />
                   </label>
 
-                  <label className="rounded-full p-1.5 text-theme-tertiary hover:bg-theme-surface-hover hover:text-theme-secondary transition-colors cursor-pointer" title="Camera snap">
+                  {/* Camera: capture a new photo only — no gallery access */}
+                  <label className="rounded-full p-1.5 text-theme-tertiary hover:bg-theme-surface-hover hover:text-theme-secondary transition-colors cursor-pointer" title="Take a photo">
                     <Camera className="w-4 h-4" />
-                    <input type="file" accept="image/*,video/*" capture="environment" className="hidden" onChange={handleMediaSelect} />
+                    <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleMediaSelect} />
                   </label>
 
                   <button

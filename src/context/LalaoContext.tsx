@@ -173,6 +173,7 @@ interface LalaoContextType {
     caption?: string;
     audience?: 'community' | 'nearby' | 'friends';
     location?: string;
+    duration?: number;
   }) => void;
   reactToCycleStory: (cycleId: string, itemId: string, emoji: string) => void;
   replyToCycleStory: (cycleId: string, itemId: string, messageText: string) => void;
@@ -2009,6 +2010,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     caption,
     audience,
     location: storyLoc,
+    duration,
   }: {
     mediaType: 'image' | 'video' | 'audio' | 'text';
     mediaUrl?: string;
@@ -2018,6 +2020,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     caption?: string;
     audience?: 'community' | 'nearby' | 'friends';
     location?: string;
+    duration?: number;
   }) => {
     const newItem: CycleStoryItem = {
       id: `si_${Date.now()}`,
@@ -2079,6 +2082,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         location: storyLoc || location.name,
         latitude: location.latitude,
         longitude: location.longitude,
+        duration,
       });
     } catch (err) {
       console.error('Failed to persist cycle story to Convex:', err);

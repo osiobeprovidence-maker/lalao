@@ -15,11 +15,13 @@ import {
   Wallet,
   ShoppingBag,
   X,
+  Download,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../common/Avatar';
+import { usePWA } from '../../hooks/usePWA';
 
 export const DesktopSidebar: React.FC = () => {
   const {
@@ -37,6 +39,7 @@ export const DesktopSidebar: React.FC = () => {
     setIsShoppingHistoryOpen,
   } = useLalao();
   const { logout, isAuthenticated } = useAuth();
+  const { isInstalled, setIsInstallModalOpen } = usePWA();
 
   const unreadMessagesCount = conversations.reduce(
     (acc, conv) => acc + (conv.unreadCount || 0),
@@ -360,6 +363,25 @@ export const DesktopSidebar: React.FC = () => {
               <span className="text-[14px] font-medium">{label}</span>
             </button>
           ))}
+        </div>
+
+        {/* ── APP INSTALL ── */}
+        <div className="space-y-1">
+          <button
+            type="button"
+            onClick={() => setIsInstallModalOpen(true)}
+            className="flex w-full items-center justify-between gap-3 rounded-full px-3 py-2 text-left transition cursor-pointer text-theme-secondary hover:bg-theme-base hover:text-theme-primary"
+          >
+            <div className="flex items-center gap-3">
+              <Download className="h-4 w-4 stroke-[1.8]" />
+              <span className="text-[14px] font-medium">Download App</span>
+            </div>
+            {isInstalled && (
+              <span className="text-[10px] font-bold text-[#5E43F3] bg-[#5E43F3]/10 px-1.5 py-0.5 rounded-full">
+                Installed
+              </span>
+            )}
+          </button>
         </div>
 
         {/* ── USER FOOTER ── */}

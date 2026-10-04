@@ -15,6 +15,8 @@ import type * as community from "../community.js";
 import type * as cycles from "../cycles.js";
 import type * as debug from "../debug.js";
 import type * as ecommerce from "../ecommerce.js";
+import type * as http from "../http.js";
+import type * as market from "../market.js";
 import type * as moderation from "../moderation.js";
 import type * as mux from "../mux.js";
 import type * as muxInternal from "../muxInternal.js";
@@ -33,6 +35,7 @@ import type * as social from "../social.js";
 import type * as subscriptions from "../subscriptions.js";
 import type * as topics from "../topics.js";
 import type * as users from "../users.js";
+import type * as vtu_ng from "../vtu_ng.js";
 import type * as wallet from "../wallet.js";
 
 import type {
@@ -49,6 +52,8 @@ declare const fullApi: ApiFromModules<{
   cycles: typeof cycles;
   debug: typeof debug;
   ecommerce: typeof ecommerce;
+  http: typeof http;
+  market: typeof market;
   moderation: typeof moderation;
   mux: typeof mux;
   muxInternal: typeof muxInternal;
@@ -67,6 +72,7 @@ declare const fullApi: ApiFromModules<{
   subscriptions: typeof subscriptions;
   topics: typeof topics;
   users: typeof users;
+  vtu_ng: typeof vtu_ng;
   wallet: typeof wallet;
 }>;
 

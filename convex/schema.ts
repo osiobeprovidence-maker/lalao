@@ -470,7 +470,17 @@ export default defineSchema({
   walletTransactions: defineTable({
     walletId: v.id("userWallets"),
     userId: v.id("users"),
+    relatedUserId: v.optional(v.id("users")),
+    relatedUserName: v.optional(v.string()),
+    relatedUserUsername: v.optional(v.string()),
     amount: v.number(),
+    fee: v.optional(v.number()),
+    currency: v.optional(v.string()), // 'LC' or 'USDC' etc.
+    assetType: v.optional(v.union(v.literal("LALAO_CREDITS"), v.literal("CRYPTO"))),
+    blockchainNetwork: v.optional(v.string()), // e.g. 'Ethereum', 'Polygon'
+    transactionHash: v.optional(v.string()),
+    paymentProvider: v.optional(v.string()), // e.g. 'paystack', 'metamask', 'internal'
+    providerTransactionId: v.optional(v.string()),
     type: v.union(
       v.literal("deposit"),
       v.literal("withdrawal"),
@@ -478,10 +488,11 @@ export default defineSchema({
       v.literal("product_order"),
       v.literal("tournament_fee"),
       v.literal("prize_payout"),
-      v.literal("transfer_in"),
-      v.literal("transfer_out")
+      v.literal("transfer_out"),
+      v.literal("MARKET_PURCHASE"),
+      v.literal("MARKET_REFUND")
     ),
-    status: v.union(v.literal("pending"), v.literal("completed"), v.literal("failed")),
+    status: v.union(v.literal("pending"), v.literal("processing"), v.literal("completed"), v.literal("failed"), v.literal("refunded"), v.literal("reversed")),
     description: v.string(),
     reference: v.optional(v.string()),
     createdAt: v.number(),
@@ -489,6 +500,51 @@ export default defineSchema({
     .index("by_wallet", ["walletId"])
     .index("by_user", ["userId"])
     .index("by_created", ["createdAt"]),
+
+  // ---- MARKET TRANSACTIONS ----
+  marketTransactions: defineTable({
+    userId: v.id("users"),
+    type: v.string(), // "MARKET_PURCHASE"
+    category: v.string(), // "AIRTIME", "DATA", "ELECTRICITY", "CABLE_TV"
+    provider: v.string(), // e.g. "vtu_ng"
+    status: v.union(
+      v.literal("PENDING"),
+      v.literal("PROCESSING"),
+      v.literal("COMPLETED"),
+      v.literal("FAILED"),
+      v.literal("REFUNDED"),
+      v.literal("REVERSED")
+    ),
+    requestId: v.string(),
+    providerOrderId: v.optional(v.string()),
+    amount: v.number(),
+    providerAmount: v.optional(v.number()),
+    providerDiscount: v.optional(v.number()),
+    platformFee: v.number(),
+    totalAmount: v.number(),
+    currency: v.string(),
+    recipient: v.string(),
+    customerId: v.optional(v.string()),
+    customerName: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    network: v.optional(v.string()),
+    variationId: v.optional(v.string()),
+    productName: v.optional(v.string()),
+    productDescription: v.optional(v.string()),
+    token: v.optional(v.string()),
+    units: v.optional(v.string()),
+    meterType: v.optional(v.string()),
+    metadata: v.optional(v.any()),
+    errorCode: v.optional(v.string()),
+    errorMessage: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    completedAt: v.optional(v.number()),
+    refundedAt: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_request_id", ["requestId"])
+    .index("by_provider_order_id", ["providerOrderId"]),
 
   // ---- SUBSCRIPTION BUSINESS SYSTEM ----
 
@@ -1005,6 +1061,7 @@ export default defineSchema({
     longitude: v.optional(v.number()),
     audience: v.optional(v.union(v.literal("community"), v.literal("nearby"), v.literal("friends"))),
     excludedUserIds: v.optional(v.array(v.id("users"))),
+    duration: v.optional(v.number()),
     viewsCount: v.number(),
     likesCount: v.number(),
     createdAt: v.number(),
