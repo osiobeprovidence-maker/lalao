@@ -84,6 +84,7 @@ html.dark {
   line-height: 1;
   text-transform: lowercase;
   display: inline-block;
+  transform: translateY(2px);
 }
 
 /* Custom scrollbar hiding for native mobile feel */
