@@ -75,7 +75,7 @@ export const LoginPage: React.FC = () => {
           <div className="w-10 h-10 rounded-2xl bg-theme-surface/15 backdrop-blur flex items-center justify-center border border-white/20">
             <AppIcon className="w-5 h-5" fallbackClassName="text-white fill-white" />
           </div>
-          <span className="lalao-wordmark text-white text-xl sm:text-2xl">lalao</span>
+          <span className="lalao-wordmark text-white text-2xl">lalao</span>
         </div>
 
         {/* Hero copy */}
@@ -120,11 +120,11 @@ export const LoginPage: React.FC = () => {
       {/* Right Panel — Form */}
       <div className="flex-1 flex flex-col justify-center items-center px-6 py-12 sm:px-12 bg-theme-surface">
         {/* Mobile logo */}
-        <div className="lg:hidden flex items-center gap-2.5 mb-10">
-          <div className="w-9 h-9 rounded-xl bg-[#5E43F3] flex items-center justify-center">
-            <AppIcon className="w-4 h-4" fallbackClassName="text-white fill-white" />
+        <div className="lg:hidden flex items-center gap-3 mb-10">
+          <div className="w-10 h-10 rounded-2xl bg-[#5E43F3] flex items-center justify-center shadow-sm">
+            <AppIcon className="w-5 h-5" fallbackClassName="text-white fill-white" />
           </div>
-          <span className="lalao-wordmark text-xl text-theme-primary">lalao</span>
+          <span className="lalao-wordmark text-2xl text-theme-primary">lalao</span>
         </div>
 
         <div className="w-full max-w-sm space-y-8">

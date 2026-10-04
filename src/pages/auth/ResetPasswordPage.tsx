@@ -32,11 +32,11 @@ export const ResetPasswordPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-theme-surface flex flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm space-y-8">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-[#5E43F3] flex items-center justify-center">
-            <AppIcon className="w-4 h-4" fallbackClassName="text-white fill-white" />
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-[#5E43F3] flex items-center justify-center shadow-sm">
+            <AppIcon className="w-5 h-5" fallbackClassName="text-white fill-white" />
           </div>
-          <span className="lalao-wordmark text-xl text-theme-primary">lalao</span>
+          <span className="lalao-wordmark text-2xl text-theme-primary">lalao</span>
         </div>
 
         {!done ? (

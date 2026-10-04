@@ -67,11 +67,11 @@ export const SignUpPage: React.FC = () => {
         
         <div>
           {/* Logo */}
-          <div className="flex items-center gap-2 mb-16">
-            <div className="w-10 h-10 rounded-xl bg-[#3823A4] flex items-center justify-center">
+          <div className="flex items-center gap-3 mb-16">
+            <div className="w-10 h-10 rounded-2xl bg-[#5E43F3] flex items-center justify-center shadow-sm">
               <AppIcon className="w-5 h-5" fallbackClassName="text-white fill-white" />
             </div>
-            <span className="lalao-wordmark text-xl sm:text-2xl text-theme-primary">lalao</span>
+            <span className="lalao-wordmark text-2xl text-theme-primary">lalao</span>
           </div>
 
           <h1 className="text-4xl xl:text-5xl font-black text-theme-primary tracking-tight leading-tight mb-4">
@@ -110,11 +110,11 @@ export const SignUpPage: React.FC = () => {
       <div className="flex-1 flex flex-col px-6 py-8 sm:px-12 lg:px-16 xl:px-24 justify-center items-center relative">
         
         {/* Mobile Header */}
-        <div className="lg:hidden w-full max-w-sm mb-10 flex items-center gap-2">
-          <div className="w-10 h-10 rounded-xl bg-[#3823A4] flex items-center justify-center">
+        <div className="lg:hidden w-full max-w-sm mb-10 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-[#5E43F3] flex items-center justify-center shadow-sm">
             <AppIcon className="w-5 h-5" fallbackClassName="text-white fill-white" />
           </div>
-          <span className="lalao-wordmark text-xl sm:text-2xl text-theme-primary">lalao</span>
+          <span className="lalao-wordmark text-2xl text-theme-primary">lalao</span>
         </div>
 
         <div className="w-full max-w-sm">
