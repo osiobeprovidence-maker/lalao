@@ -39,23 +39,27 @@
   --color-theme-divider-inverse: #292524;
 }
 
-/* Dark Mode Tokens (Warm/Beige Dark) */
+/* Dark Mode Tokens (Soft Premium Dark) */
 html.dark {
-  --color-theme-base: #121110; 
-  --color-theme-surface: #1E1C1A;
-  --color-theme-surface-hover: #2B2826;
-  --color-theme-surface-active: #383431;
-  --color-theme-inverse: #f6f3ee;
+  --color-theme-base: #101010; 
+  --color-theme-surface: #141414;
+  --color-theme-surface-hover: #181818;
+  --color-theme-surface-active: #202020;
+  --color-theme-inverse: #f2f2f2;
   
-  --color-theme-primary: #FDFCFB;
-  --color-theme-secondary: #C8C2BE; /* Stone-300 equivalent for better visibility */
-  --color-theme-tertiary: #9C9590; /* Stone-400 equivalent for better visibility */
-  --color-theme-text-inverse: #121110;
+  --color-theme-primary: #f2f2f2;
+  --color-theme-secondary: #a0a0a0;
+  --color-theme-tertiary: #707070;
+  --color-theme-text-inverse: #101010;
   
-  --color-theme-divider-light: #2B2826;
-  --color-theme-divider: #3A3633;
-  --color-theme-divider-strong: #4F4945;
-  --color-theme-divider-inverse: #FDFCFB;
+  --color-theme-divider-light: rgba(255, 255, 255, 0.04);
+  --color-theme-divider: rgba(255, 255, 255, 0.08);
+  --color-theme-divider-strong: rgba(255, 255, 255, 0.12);
+  --color-theme-divider-inverse: #f2f2f2;
+
+  /* Overrides for hardcoded neutral dividers that appear bright white in dark mode */
+  --color-neutral-100: rgba(255, 255, 255, 0.06);
+  --color-neutral-200: rgba(255, 255, 255, 0.08);
 }
 
 @layer base {
