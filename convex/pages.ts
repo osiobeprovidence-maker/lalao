@@ -15,18 +15,25 @@ export const getMyPages = query({
 
     if (!user) return [];
 
-    const pages = await ctx.db
-      .query("pages")
-      .withIndex("by_owner", (q) => q.eq("ownerId", user._id))
+    const memberships = await ctx.db
+      .query("pageMembers")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
+
+    const pagesWithRoles = (await Promise.all(
+      memberships.map(async (m) => {
+        const page = await ctx.db.get(m.pageId);
+        return page ? { page, role: m.role } : null;
+      })
+    )).filter((item): item is { page: any, role: string } => item !== null);
 
     const flags = await getFeatureFlagsInternal(ctx);
 
-    const filteredPages = flags.communityEnabled 
-      ? pages 
-      : pages.filter(p => p.type !== "community");
+    const filteredItems = flags.communityEnabled 
+      ? pagesWithRoles 
+      : pagesWithRoles.filter(item => item.page.type !== "community");
 
-    return Promise.all(filteredPages.map(async (page) => {
+    return Promise.all(filteredItems.map(async ({ page, role }) => {
       const events = await ctx.db
         .query("pageEvents")
         .withIndex("by_page", (q) => q.eq("pageId", page._id))
@@ -45,7 +52,8 @@ export const getMyPages = query({
         location: page.location ?? "",
         followersCount: page.followersCount ?? 0,
         isFollowing: true,
-        isOwner: true,
+        isOwner: role === "owner",
+        role: role,
         category: page.category ?? "",
         aboutInfo: page.aboutInfo ?? {},
         businessType: page.businessType,
@@ -239,7 +247,7 @@ export const createPage = mutation({
 
     const now = Date.now();
     const newPageId = await ctx.db.insert("pages", {
-      ownerId: user._id,
+      ownerId: user._id, // Legacy compatibility
       name: args.name,
       username: args.username.replace('@', ''),
       type: args.type,
@@ -253,6 +261,15 @@ export const createPage = mutation({
       serviceAreas: args.serviceAreas ?? [],
       isOnlineBusiness: args.isOnlineBusiness ?? false,
       followersCount: 1, // Default followers (owner)
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Add to pageMembers table
+    await ctx.db.insert("pageMembers", {
+      pageId: newPageId,
+      userId: user._id,
+      role: "owner",
       createdAt: now,
       updatedAt: now,
     });
@@ -302,7 +319,13 @@ export const updatePage = mutation({
 
     const page = await ctx.db.get(args.pageId);
     if (!page) throw new Error("Page not found");
-    if (page.ownerId !== user._id) throw new Error("Unauthorized: Only the owner can update the page");
+    const membership = await ctx.db
+      .query("pageMembers")
+      .withIndex("by_page_user", (q) => q.eq("pageId", args.pageId).eq("userId", user._id))
+      .first();
+    if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
+      throw new Error("Unauthorized: Only owners and admins can update the page");
+    }
 
     const updates: any = { updatedAt: Date.now() };
     if (args.name !== undefined) updates.name = args.name;
@@ -342,7 +365,13 @@ export const deletePage = mutation({
 
     const page = await ctx.db.get(args.pageId);
     if (!page) throw new Error("Page not found");
-    if (page.ownerId !== user._id) throw new Error("Unauthorized: Only the owner can delete the page");
+    const membership = await ctx.db
+      .query("pageMembers")
+      .withIndex("by_page_user", (q) => q.eq("pageId", args.pageId).eq("userId", user._id))
+      .first();
+    if (!membership || membership.role !== "owner") {
+      throw new Error("Unauthorized: Only the owner can delete the page");
+    }
 
     // We can just delete the page, related data deletion would be handled by cascades or cleanups
     await ctx.db.delete(args.pageId);
@@ -367,7 +396,13 @@ export const updatePageBusinessSettings = mutation({
 
     const page = await ctx.db.get(args.pageId);
     if (!page) throw new Error("Page not found");
-    if (page.ownerId !== user._id) throw new Error("Unauthorized: Only the owner can update the page");
+    const membership = await ctx.db
+      .query("pageMembers")
+      .withIndex("by_page_user", (q) => q.eq("pageId", args.pageId).eq("userId", user._id))
+      .first();
+    if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
+      throw new Error("Unauthorized: Insufficient permissions to update business settings");
+    }
 
     await ctx.db.patch(args.pageId, {
       businessType: args.businessType,
@@ -495,7 +530,13 @@ export const addPageLocation = mutation({
 
     const page = await ctx.db.get(args.pageId);
     if (!page) throw new Error("Page not found");
-    if (page.ownerId !== user._id) throw new Error("Unauthorized");
+    const membership = await ctx.db
+      .query("pageMembers")
+      .withIndex("by_page_user", (q) => q.eq("pageId", args.pageId).eq("userId", user._id))
+      .first();
+    if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
+      throw new Error("Unauthorized");
+    }
 
     // If setting as primary, we should probably clear other primaries, but skipping for simplicity unless needed
     return await ctx.db.insert("pageLocations", {
@@ -540,7 +581,14 @@ export const updatePageLocation = mutation({
     if (!locationDoc) throw new Error("Location not found");
     
     const page = await ctx.db.get(locationDoc.pageId);
-    if (!page || page.ownerId !== user._id) throw new Error("Unauthorized");
+    if (!page) throw new Error("Page not found");
+    const membership = await ctx.db
+      .query("pageMembers")
+      .withIndex("by_page_user", (q) => q.eq("pageId", page._id).eq("userId", user._id))
+      .first();
+    if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
+      throw new Error("Unauthorized");
+    }
 
     const updates: any = { updatedAt: Date.now() };
     if (args.name !== undefined) updates.name = args.name;
@@ -574,7 +622,14 @@ export const removePageLocation = mutation({
     if (!locationDoc) throw new Error("Location not found");
     
     const page = await ctx.db.get(locationDoc.pageId);
-    if (!page || page.ownerId !== user._id) throw new Error("Unauthorized");
+    if (!page) throw new Error("Page not found");
+    const membership = await ctx.db
+      .query("pageMembers")
+      .withIndex("by_page_user", (q) => q.eq("pageId", page._id).eq("userId", user._id))
+      .first();
+    if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
+      throw new Error("Unauthorized");
+    }
 
     await ctx.db.delete(args.locationId);
   }

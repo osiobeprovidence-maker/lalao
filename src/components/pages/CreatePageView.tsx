@@ -2,17 +2,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   ArrowLeft,
-  Building2,
   Check,
   MapPin,
-  Sparkles,
   Camera,
-  Globe,
-  Phone,
-  Eye,
-  ImagePlus,
   Trash2,
   Image,
+  Store,
+  Ticket,
+  MessageSquare,
+  CreditCard,
+  Users
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Page } from '../../types';
@@ -32,21 +31,25 @@ export const CreatePageView: React.FC = () => {
 
   const [stage, setStage] = useState<1 | 2 | 3>(1);
 
-  // Stage 1
-  const [type, setType] = useState<Page['type']>('club');
+  // Stage 1: Core Info
+  const [type, setType] = useState<Page['type']>('business');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
+  const [category, setCategory] = useState('Cafe & Lounge');
+  const [pageLocation, setPageLocation] = useState(`${location.name}, ${location.subArea}`);
+  const [description, setDescription] = useState('');
+  
   const [avatarUrl, setAvatarUrl] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  // Stage 2
-  const [category, setCategory] = useState('Sports Club');
-  const [description, setDescription] = useState('');
-  const [pageLocation, setPageLocation] = useState(`${location.name}, ${location.subArea}`);
-  const [website, setWebsite] = useState('');
-  const [phone, setPhone] = useState('');
+  // Stage 2: Tools
+  const [activeTools, setActiveTools] = useState<string[]>(['messaging']);
+
+  // Stage 3: Staff
+  const [teamMembers, setTeamMembers] = useState<{username: string, role: string}[]>([]);
+  const [newMemberUsername, setNewMemberUsername] = useState('');
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -92,6 +95,21 @@ export const CreatePageView: React.FC = () => {
     }
   };
 
+  const handleAddMember = () => {
+    if (!newMemberUsername.trim()) return;
+    if (teamMembers.find(m => m.username.toLowerCase() === newMemberUsername.toLowerCase())) return;
+    setTeamMembers([...teamMembers, { username: newMemberUsername.trim(), role: 'staff' }]);
+    setNewMemberUsername('');
+  };
+
+  const toggleTool = (tool: string) => {
+    if (activeTools.includes(tool)) {
+      setActiveTools(activeTools.filter(t => t !== tool));
+    } else {
+      setActiveTools([...activeTools, tool]);
+    }
+  };
+
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!name.trim() || !description.trim()) return;
@@ -105,10 +123,10 @@ export const CreatePageView: React.FC = () => {
         const signatureData = await generateCloudinarySignature("pages");
         finalAvatarUrl = await uploadImageToCloudinary(avatarFile, signatureData);
       } else if (!finalAvatarUrl) {
-        const config = typesConfig.find(t => t.type === type);
-        finalAvatarUrl = config?.sampleAvatar || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=300&auto=format&fit=crop&q=80';
+        finalAvatarUrl = 'https://images.unsplash.com/photo-1556742049-0a67e5572263?w=300&auto=format&fit=crop&q=80';
       }
 
+      // We will create the page. In future, teamMembers & activeTools will be sent to API.
       const newPageId = await createPage({
         name: name.trim(),
         username: username.trim() || name.toLowerCase().replace(/[^a-z0-9]/g, ''),
@@ -122,90 +140,29 @@ export const CreatePageView: React.FC = () => {
       if (newPageId) {
         setActiveTab('home');
         setActivePageId(newPageId);
+        triggerShareToast('Page Created Successfully!');
       } else {
         handleClose();
       }
     } catch (err: any) {
-      console.error("Create page failed at Cloudinary signature generation:", err.data || err.message || err);
+      console.error(err);
       triggerShareToast('Unable to create page. Please try again.');
     } finally {
       setIsUploading(false);
     }
   };
 
-  const typesConfig: {
-    type: Page['type'];
-    label: string;
-    badge: Page['badge'];
-    desc: string;
-    capabilityTag: string;
-    sampleAvatar: string;
-  }[] = [
-    {
-      type: 'club',
-      label: 'Club / Team',
-      badge: 'CLUB',
-      desc: 'Football clubs, athletics, fitness teams, dance crews',
-      capabilityTag: '🎟 Tickets & Tournaments',
-      sampleAvatar: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=300&auto=format&fit=crop&q=80',
-    },
-    {
-      type: 'business',
-      label: 'Local Business',
-      badge: 'BIZ',
-      desc: 'Stores, cafes, boutiques, eateries, professional services',
-      capabilityTag: '🛍 Storefront & Orders',
-      sampleAvatar: 'https://images.unsplash.com/photo-1556742049-0a67e5572263?w=300&auto=format&fit=crop&q=80',
-    },
-    {
-      type: 'community',
-      label: 'Community',
-      badge: 'COMMUNITY',
-      desc: 'Tech developers, creatives, student hubs, gaming guilds',
-      capabilityTag: '🎟 Meetup Passes & Tickets',
-      sampleAvatar: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=300&auto=format&fit=crop&q=80',
-    },
-    {
-      type: 'organization',
-      label: 'Esports / Organization',
-      badge: 'ORG',
-      desc: 'Esports orgs, leagues, civic initiatives, student unions',
-      capabilityTag: '🎟 Event Ticketing & Passes',
-      sampleAvatar: 'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=300&auto=format&fit=crop&q=80',
-    },
+  const isStage1Valid = name.trim().length > 0 && username.trim().length > 0 && description.trim().length > 0 && pageLocation.trim().length > 0;
+
+  const toolsList = [
+    { id: 'commerce', label: 'Products & Storefront', icon: Store, desc: 'Sell physical or digital items.' },
+    { id: 'ticketing', label: 'Events & Tickets', icon: Ticket, desc: 'Host events and sell tickets.' },
+    { id: 'messaging', label: 'Customer Messaging', icon: MessageSquare, desc: 'Chat directly with customers.' },
+    { id: 'subscriptions', label: 'Paid Memberships', icon: CreditCard, desc: 'Offer exclusive content for subscribers.' },
   ];
-
-  const availablePageTypes = featureFlags?.communityEnabled 
-    ? typesConfig 
-    : typesConfig.filter(p => p.type !== 'community');
-  const pageTypes = availablePageTypes;
-  const availableTypesConfig = typesConfig;
-
-  const quickCategories = [
-    'Sports Club', 'Football Academy', 'Tech Community',
-    'Streetwear & Fashion', 'Cafe & Lounge', 'Art & Photography',
-    'NGO & Civic', 'Music Band', 'Fitness & Gym',
-  ];
-
-  const quickLocations = [
-    'Udu, Delta State', 'Enerhen, Warri', 'Effurun, Delta State',
-    'GRA Warri', 'Airport Road, Warri', 'PTI Road, Effurun', 'Deco Road, Warri',
-  ];
-
-  const handleTypeSelect = (selectedType: Page['type']) => {
-    setType(selectedType);
-    if (selectedType === 'club') setCategory('Sports Club');
-    if (selectedType === 'business') setCategory('Cafe & Lounge');
-    if (selectedType === 'community') setCategory('Tech Community');
-    if (selectedType === 'organization') setCategory('NGO & Civic');
-  };
-
-  const isStage1Valid = name.trim().length > 0 && username.trim().length > 0;
-  const isStage2Valid = description.trim().length > 0 && pageLocation.trim().length > 0 && category.trim().length > 0;
 
   return (
     <div ref={containerRef} className="w-full flex flex-col min-h-full">
-      {/* Top Header - Using standard app layout style */}
       <div className="sticky top-0 z-20 bg-theme-base/95 backdrop-blur-md border-b border-theme-divider/80 px-4 py-2.5 space-y-2">
         <div className="flex items-center gap-3">
           <button
@@ -242,63 +199,20 @@ export const CreatePageView: React.FC = () => {
             ))}
           </div>
           <span className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">
-            {stage === 1 ? 'Identity' : stage === 2 ? 'Local Presence' : 'Review'}
+            {stage === 1 ? 'Core Info' : stage === 2 ? 'Choose Tools' : 'Team & Launch'}
           </span>
         </div>
 
-        {/* STAGE 1: IDENTITY */}
+        {/* STAGE 1: CORE INFO */}
         {stage === 1 && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
-            {/* Page Type */}
-            <div className="space-y-3">
-              <label className="text-sm font-bold text-theme-primary block">
-                Select Stand Type
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {availablePageTypes.map((item) => {
-                  const isSelected = type === item.type;
-                  return (
-                    <button
-                      key={item.type}
-                      type="button"
-                      onClick={() => handleTypeSelect(item.type)}
-                      className={`p-4 rounded-2xl border text-left transition-all relative flex flex-col justify-between cursor-pointer ${
-                        isSelected
-                          ? 'border-[#5E43F3] bg-indigo-50/40 ring-1.5 ring-[#5E43F3] shadow-xs'
-                          : 'border-theme-divider hover:border-theme-divider-strong hover:bg-theme-base/70 bg-theme-surface'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between w-full">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-sm text-theme-primary">{item.label}</span>
-                          <Badge type={item.badge} size="sm" />
-                        </div>
-                        {isSelected && (
-                          <div className="w-5 h-5 rounded-full bg-[#5E43F3] text-white flex items-center justify-center shrink-0">
-                            <Check className="w-3 h-3 stroke-[3]" />
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-xs text-theme-tertiary mt-2 leading-relaxed">{item.desc}</p>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             {/* Photo Upload */}
             <div className="space-y-3">
-              <label className="text-sm font-bold text-theme-primary block">
-                Stand Photo
-              </label>
+              <label className="text-sm font-bold text-theme-primary block">Stand Photo</label>
               <div className="flex items-start gap-4 p-4 rounded-2xl bg-theme-surface border border-theme-divider">
                 <div className="relative shrink-0">
                   {avatarUrl ? (
-                    <img
-                      src={avatarUrl}
-                      alt="Uploaded"
-                      className="w-20 h-20 rounded-2xl object-cover ring-1 ring-theme-divider"
-                    />
+                    <img src={avatarUrl} alt="Uploaded" className="w-20 h-20 rounded-2xl object-cover ring-1 ring-theme-divider" />
                   ) : (
                     <div className="w-20 h-20 rounded-2xl bg-theme-surface-hover flex items-center justify-center ring-1 ring-theme-divider">
                       <Image className="w-6 h-6 text-theme-tertiary" />
@@ -306,323 +220,138 @@ export const CreatePageView: React.FC = () => {
                   )}
                 </div>
                 <div className="flex-1">
-                  <input
-                    type="file"
-                    ref={avatarInputRef}
-                    onChange={handleAvatarChange}
-                    accept="image/jpeg, image/png, image/webp"
-                    className="hidden"
-                  />
+                  <input type="file" ref={avatarInputRef} onChange={handleAvatarChange} accept="image/jpeg, image/png, image/webp" className="hidden" />
                   <div className="flex flex-wrap items-center gap-2 mt-2">
-                    <button
-                      type="button"
-                      onClick={() => avatarInputRef.current?.click()}
-                      className="px-3 py-1.5 rounded-xl bg-theme-surface-hover text-theme-secondary text-xs font-bold hover:bg-theme-surface-active transition-colors flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Camera className="w-3.5 h-3.5" />
+                    <button type="button" onClick={() => avatarInputRef.current?.click()} className="px-3 py-1.5 rounded-xl bg-theme-surface-hover text-theme-secondary text-xs font-bold hover:bg-theme-surface-active cursor-pointer">
                       {avatarUrl ? 'Change photo' : 'Upload photo'}
                     </button>
                     {avatarUrl && (
-                      <button
-                        type="button"
-                        onClick={removeAvatar}
-                        className="px-3 py-1.5 rounded-xl text-red-600 text-xs font-bold hover:bg-red-50 transition-colors flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
+                      <button type="button" onClick={removeAvatar} className="px-3 py-1.5 rounded-xl text-red-600 text-xs font-bold hover:bg-red-50 cursor-pointer">
                         Remove
                       </button>
                     )}
                   </div>
-                  <p className="text-[11px] text-theme-tertiary mt-2">
-                    JPG, PNG, or WebP. Max 5MB.
-                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Name & Handle */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-bold text-theme-primary mb-2 block">
-                  Stand Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder="e.g. Udu Lions FC"
-                  className="w-full px-4 py-3 rounded-xl border border-theme-divider text-sm font-semibold text-theme-primary focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] outline-none transition-all bg-theme-surface"
-                />
+                <label className="text-sm font-bold text-theme-primary mb-2 block">Stand Name *</label>
+                <input type="text" value={name} onChange={(e) => handleNameChange(e.target.value)} placeholder="e.g. Udu Lions FC" className="w-full px-4 py-3 rounded-xl border border-theme-divider text-sm bg-theme-surface focus:border-[#5E43F3] outline-none" />
               </div>
-
               <div>
-                <label className="text-sm font-bold text-theme-primary mb-2 block">
-                  Handle <span className="text-red-500">*</span>
-                </label>
-                <div className="flex items-center px-4 py-3 rounded-xl border border-theme-divider text-sm font-semibold text-theme-primary focus-within:border-[#5E43F3] focus-within:ring-1 focus-within:ring-[#5E43F3] transition-all bg-theme-surface">
+                <label className="text-sm font-bold text-theme-primary mb-2 block">Handle *</label>
+                <div className="flex items-center px-4 py-3 rounded-xl border border-theme-divider text-sm bg-theme-surface focus-within:border-[#5E43F3]">
                   <span className="text-theme-tertiary mr-0.5">@</span>
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                    placeholder="udulions"
-                    className="w-full outline-none text-sm bg-transparent"
-                  />
+                  <input type="text" value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} placeholder="udulions" className="w-full outline-none text-sm bg-transparent" />
                 </div>
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-bold text-theme-primary mb-2 block">Category *</label>
+                <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Cafe & Lounge" className="w-full px-4 py-3 rounded-xl border border-theme-divider text-sm bg-theme-surface focus:border-[#5E43F3] outline-none" />
+              </div>
+              <div>
+                <label className="text-sm font-bold text-theme-primary mb-2 block">Location *</label>
+                <div className="flex items-center px-4 py-3 rounded-xl border border-theme-divider text-sm bg-theme-surface focus-within:border-[#5E43F3]">
+                  <MapPin className="w-4 h-4 text-[#5E43F3] mr-2 shrink-0" />
+                  <input type="text" value={pageLocation} onChange={(e) => setPageLocation(e.target.value)} placeholder="e.g. Udu, Delta State" className="w-full outline-none text-sm bg-transparent" />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-bold text-theme-primary mb-2 block">About *</label>
+              <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Briefly describe your business or community..." className="w-full px-4 py-3 rounded-xl border border-theme-divider text-sm bg-theme-surface focus:border-[#5E43F3] outline-none resize-none" />
             </div>
 
             <div className="pt-6 border-t border-theme-divider/80">
-              <button
-                type="button"
-                onClick={() => setStage(2)}
-                disabled={!isStage1Valid}
-                className={`w-full sm:w-auto px-8 py-3 rounded-xl text-sm font-bold transition-all float-right cursor-pointer ${
-                  isStage1Valid
-                    ? 'bg-[#5E43F3] text-white hover:bg-[#4E34E0] shadow-md shadow-[#5E43F3]/25'
-                    : 'bg-theme-surface-hover text-theme-tertiary cursor-not-allowed'
-                }`}
-              >
-                Continue
-              </button>
+              <button type="button" onClick={() => setStage(2)} disabled={!isStage1Valid} className={`w-full sm:w-auto px-8 py-3 rounded-xl text-sm font-bold float-right ${isStage1Valid ? 'bg-[#5E43F3] text-white cursor-pointer' : 'bg-theme-surface-hover text-theme-tertiary cursor-not-allowed'}`}>Continue</button>
             </div>
           </div>
         )}
 
-        {/* STAGE 2: LOCAL PRESENCE */}
+        {/* STAGE 2: TOOLS */}
         {stage === 2 && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
-            {/* Location */}
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div>
-              <label className="text-sm font-bold text-theme-primary mb-2 block">
-                Location <span className="text-red-500">*</span>
-              </label>
-              <div className="flex items-center px-4 py-3 rounded-xl border border-theme-divider text-sm font-medium text-theme-primary focus-within:border-[#5E43F3] focus-within:ring-1 focus-within:ring-[#5E43F3] transition-all bg-theme-surface">
-                <MapPin className="w-4 h-4 text-[#5E43F3] mr-2 shrink-0" />
-                <input
-                  type="text"
-                  value={pageLocation}
-                  onChange={(e) => setPageLocation(e.target.value)}
-                  placeholder="e.g. Udu, Delta State"
-                  className="w-full outline-none text-sm bg-transparent"
-                />
-              </div>
-              <div className="flex flex-wrap gap-2 mt-3">
-                {quickLocations.map((loc) => (
-                  <button
-                    key={loc}
-                    type="button"
-                    onClick={() => setPageLocation(loc)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                      pageLocation === loc
-                        ? 'bg-theme-inverse text-theme-text-inverse'
-                        : 'bg-theme-surface-hover text-theme-secondary hover:bg-theme-surface-active'
-                    }`}
-                  >
-                    {loc}
-                  </button>
-                ))}
-              </div>
+              <h2 className="text-lg font-black text-theme-primary mb-1">Choose Tools</h2>
+              <p className="text-sm text-theme-tertiary">Select the features your Stand needs. You can always change these later.</p>
             </div>
 
-            {/* Category */}
-            <div>
-              <label className="text-sm font-bold text-theme-primary mb-2 block">
-                Category <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                placeholder="e.g. Football Academy, Cafe, Tech Hub"
-                className="w-full px-4 py-3 rounded-xl border border-theme-divider text-sm text-theme-primary focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] outline-none transition-all bg-theme-surface"
-              />
-              <div className="flex flex-wrap gap-2 mt-3">
-                {quickCategories.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setCategory(c)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                      category === c
-                        ? 'bg-[#5E43F3] text-white'
-                        : 'bg-theme-surface-hover text-theme-secondary hover:bg-theme-surface-active'
-                    }`}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* About */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-bold text-theme-primary block">
-                  About your Stand <span className="text-red-500">*</span>
-                </label>
-                <span className="text-[11px] text-theme-tertiary font-mono">
-                  {description.length}/300
-                </span>
-              </div>
-              <textarea
-                rows={4}
-                maxLength={300}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Tell your local community what your Stand is about, what you offer, meeting times, or special events..."
-                className="w-full px-4 py-3 rounded-xl border border-theme-divider text-sm text-theme-primary focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] outline-none resize-none leading-relaxed transition-all bg-theme-surface"
-              />
-            </div>
-
-            {/* Contact */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-bold text-theme-primary mb-2 block">
-                  Website / Social (Optional)
-                </label>
-                <div className="flex items-center px-4 py-3 rounded-xl border border-theme-divider text-sm text-theme-primary bg-theme-surface">
-                  <Globe className="w-4 h-4 text-theme-tertiary mr-2 shrink-0" />
-                  <input
-                    type="text"
-                    value={website}
-                    onChange={(e) => setWebsite(e.target.value)}
-                    placeholder="https://..."
-                    className="w-full outline-none text-sm bg-transparent"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-bold text-theme-primary mb-2 block">
-                  Phone / WhatsApp (Optional)
-                </label>
-                <div className="flex items-center px-4 py-3 rounded-xl border border-theme-divider text-sm text-theme-primary bg-theme-surface">
-                  <Phone className="w-4 h-4 text-theme-tertiary mr-2 shrink-0" />
-                  <input
-                    type="text"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+234..."
-                    className="w-full outline-none text-sm bg-transparent"
-                  />
-                </div>
-              </div>
+              {toolsList.map((tool) => {
+                const isActive = activeTools.includes(tool.id);
+                const Icon = tool.icon;
+                return (
+                  <button key={tool.id} onClick={() => toggleTool(tool.id)} className={`p-4 rounded-2xl border text-left flex flex-col justify-between cursor-pointer ${isActive ? 'border-[#5E43F3] bg-indigo-50/40 ring-1.5 ring-[#5E43F3]' : 'border-theme-divider hover:border-theme-divider-strong bg-theme-surface'}`}>
+                    <div className="flex items-start justify-between w-full mb-3">
+                      <div className={`p-2 rounded-xl ${isActive ? 'bg-[#5E43F3] text-white' : 'bg-theme-surface-hover text-theme-secondary'}`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      {isActive && (
+                        <div className="w-5 h-5 rounded-full bg-[#5E43F3] text-white flex items-center justify-center">
+                          <Check className="w-3 h-3 stroke-[3]" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm text-theme-primary">{tool.label}</h3>
+                      <p className="text-xs text-theme-tertiary mt-1">{tool.desc}</p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
-            <div className="pt-6 border-t border-theme-divider/80 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setStage(1)}
-                className="px-6 py-3 rounded-xl text-sm font-bold text-theme-secondary hover:bg-theme-surface-hover transition-colors cursor-pointer"
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                onClick={() => setStage(3)}
-                disabled={!isStage2Valid}
-                className={`px-8 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer ${
-                  isStage2Valid
-                    ? 'bg-[#5E43F3] text-white hover:bg-[#4E34E0] shadow-md shadow-[#5E43F3]/25'
-                    : 'bg-theme-surface-hover text-theme-tertiary cursor-not-allowed'
-                }`}
-              >
-                Continue
-              </button>
+            <div className="pt-6 border-t border-theme-divider/80 flex justify-between">
+              <button type="button" onClick={() => setStage(1)} className="px-6 py-3 rounded-xl text-sm font-bold text-theme-secondary hover:bg-theme-surface-hover cursor-pointer">Back</button>
+              <button type="button" onClick={() => setStage(3)} className="px-8 py-3 rounded-xl text-sm font-bold bg-[#5E43F3] text-white hover:bg-[#4E34E0] cursor-pointer">Continue</button>
             </div>
           </div>
         )}
 
-        {/* STAGE 3: REVIEW & LAUNCH */}
+        {/* STAGE 3: STAFF & LAUNCH */}
         {stage === 3 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div>
-              <h2 className="text-lg font-black text-theme-primary mb-1">Review your Stand</h2>
-              <p className="text-sm text-theme-tertiary">This is how your Stand will appear in the local feed and discovery pages.</p>
+              <h2 className="text-lg font-black text-theme-primary mb-1">Invite Team (Optional)</h2>
+              <p className="text-sm text-theme-tertiary">Add staff or admins to help manage your Stand.</p>
             </div>
 
-            <div className="p-5 rounded-2xl bg-theme-surface border border-theme-divider shadow-sm flex flex-col gap-4">
-              <div className="flex items-start gap-4">
-                <img
-                  src={avatarUrl || typesConfig.find((t) => t.type === type)?.sampleAvatar}
-                  alt="Preview"
-                  className="w-14 h-14 rounded-xl object-cover border border-theme-divider-light shrink-0"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <h3 className="font-bold text-base text-theme-primary truncate">{name}</h3>
-                    <Badge type={typesConfig.find((t) => t.type === type)?.badge || 'CLUB'} size="sm" />
+            <div className="p-5 rounded-2xl bg-theme-surface border border-theme-divider space-y-4">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-theme-secondary" />
+                <h3 className="font-bold text-sm text-theme-primary">Team Members</h3>
+              </div>
+              
+              <div className="space-y-2">
+                {teamMembers.map((member, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-theme-base border border-theme-divider-light">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-[#5E43F3]/10 flex items-center justify-center text-[#5E43F3] font-bold text-xs uppercase">
+                        {member.username.charAt(0)}
+                      </div>
+                      <span className="font-semibold text-sm text-theme-primary">@{member.username}</span>
+                    </div>
+                    <Badge type="ORG" size="sm" />
                   </div>
-                  <p className="text-xs text-theme-tertiary truncate mb-1">
-                    @{username} · {category} · {pageLocation}
-                  </p>
-                  <p className="text-sm text-theme-secondary line-clamp-3 leading-relaxed mt-2 bg-theme-base p-3 rounded-xl">
-                    {description}
-                  </p>
-                </div>
+                ))}
               </div>
-              <div className="pt-2 border-t border-theme-divider-light">
-                <button
-                  type="button"
-                  disabled
-                  className="w-full sm:w-auto px-6 py-2 rounded-xl bg-theme-inverse text-theme-text-inverse text-xs font-bold opacity-80"
-                >
-                  Follow Stand
-                </button>
+
+              <div className="flex gap-2">
+                <input type="text" value={newMemberUsername} onChange={(e) => setNewMemberUsername(e.target.value)} placeholder="Username to invite..." className="flex-1 px-4 py-2 rounded-xl border border-theme-divider text-sm bg-theme-base focus:border-[#5E43F3] outline-none" />
+                <button type="button" onClick={handleAddMember} disabled={!newMemberUsername.trim()} className="px-4 py-2 rounded-xl bg-theme-surface-hover text-theme-secondary font-bold text-sm hover:bg-theme-surface-active cursor-pointer disabled:opacity-50">Add</button>
               </div>
             </div>
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-4 rounded-xl bg-theme-base border border-theme-divider">
-                <div className="min-w-0">
-                  <h4 className="text-sm font-bold text-theme-primary">Identity & Branding</h4>
-                  <p className="text-xs text-theme-tertiary mt-0.5 truncate">{name}, @{username}, {typesConfig.find(t => t.type === type)?.label}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setStage(1)}
-                  className="text-xs font-bold text-[#5E43F3] hover:underline cursor-pointer shrink-0 ml-4"
-                >
-                  Edit
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between p-4 rounded-xl bg-theme-base border border-theme-divider">
-                <div className="min-w-0">
-                  <h4 className="text-sm font-bold text-theme-primary">Local Presence</h4>
-                  <p className="text-xs text-theme-tertiary mt-0.5 truncate">{pageLocation}, {category}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setStage(2)}
-                  className="text-xs font-bold text-[#5E43F3] hover:underline cursor-pointer shrink-0 ml-4"
-                >
-                  Edit
-                </button>
-              </div>
-            </div>
-
-            <div className="pt-6 border-t border-theme-divider/80 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setStage(2)}
-                className="px-6 py-3 rounded-xl text-sm font-bold text-theme-secondary hover:bg-theme-surface-hover transition-colors cursor-pointer"
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={isUploading}
-                className="px-8 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 bg-[#5E43F3] text-white hover:bg-[#4E34E0] shadow-md shadow-[#5E43F3]/25 active:scale-95 disabled:opacity-70 cursor-pointer"
-              >
-                {isUploading ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <Building2 className="w-4 h-4" />
-                )}
-                <span>Launch Page</span>
+            <div className="pt-6 border-t border-theme-divider/80 flex justify-between">
+              <button type="button" onClick={() => setStage(2)} className="px-6 py-3 rounded-xl text-sm font-bold text-theme-secondary hover:bg-theme-surface-hover cursor-pointer">Back</button>
+              <button type="button" onClick={handleSubmit} disabled={isUploading} className={`px-8 py-3 rounded-xl text-sm font-bold text-white transition-all cursor-pointer ${isUploading ? 'bg-[#5E43F3]/70' : 'bg-[#5E43F3] hover:bg-[#4E34E0]'}`}>
+                {isUploading ? 'Creating...' : 'Launch Stand'}
               </button>
             </div>
           </div>

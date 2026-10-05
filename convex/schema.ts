@@ -253,6 +253,32 @@ export default defineSchema({
     .searchIndex("search_name", { searchField: "name" })
     .searchIndex("search_category", { searchField: "category" }),
 
+  pageMembers: defineTable({
+    pageId: v.id("pages"),
+    userId: v.id("users"),
+    role: v.union(
+      v.literal("owner"),
+      v.literal("admin"),
+      v.literal("staff"),
+      v.literal("editor")
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_page", ["pageId"])
+    .index("by_user", ["userId"])
+    .index("by_page_user", ["pageId", "userId"]),
+
+  pageExtensions: defineTable({
+    pageId: v.id("pages"),
+    category: v.string(),
+    data: v.any(), // Flexible JSON payload for category-specific data
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_page", ["pageId"])
+    .index("by_category", ["category"]),
+
   pageLocations: defineTable({
     pageId: v.id("pages"),
     name: v.string(),

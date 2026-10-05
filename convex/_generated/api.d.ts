@@ -17,6 +17,7 @@ import type * as debug from "../debug.js";
 import type * as ecommerce from "../ecommerce.js";
 import type * as http from "../http.js";
 import type * as market from "../market.js";
+import type * as migrations from "../migrations.js";
 import type * as moderation from "../moderation.js";
 import type * as mux from "../mux.js";
 import type * as muxInternal from "../muxInternal.js";
@@ -54,6 +55,7 @@ declare const fullApi: ApiFromModules<{
   ecommerce: typeof ecommerce;
   http: typeof http;
   market: typeof market;
+  migrations: typeof migrations;
   moderation: typeof moderation;
   mux: typeof mux;
   muxInternal: typeof muxInternal;
