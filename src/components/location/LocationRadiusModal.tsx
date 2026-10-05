@@ -215,7 +215,7 @@ export const LocationRadiusModal: React.FC = () => {
           {activeTab === 'location' ? (
             <>
               {/* GPS Auto-Detect Button */}
-              <div className="p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100/70 space-y-2">
+              <div className="p-3.5 rounded-2xl bg-indigo-50/50 dark:bg-[#1a1a2e] border border-indigo-100/70 dark:border-[#5E43F3]/20 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-[#5E43F3]" />
@@ -225,14 +225,14 @@ export const LocationRadiusModal: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-1.5">
                     {permissions.location === 'granted' ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300">
                         {permissions.preciseLocation ? 'Precise GPS' : 'Approximate'}
                       </span>
                     ) : (
                       <button
                         type="button"
                         onClick={() => setActivePermissionPrompt('location')}
-                        className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 hover:bg-amber-200"
+                        className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/70"
                       >
                         Approval Required
                       </button>
@@ -250,7 +250,7 @@ export const LocationRadiusModal: React.FC = () => {
                     type="button"
                     onClick={handleGpsDetect}
                     disabled={isDetectingGps}
-                    className="py-2 px-3 rounded-xl bg-theme-surface border border-indigo-200 hover:border-[#5E43F3] text-xs font-bold text-[#5E43F3] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs hover:bg-indigo-50/40"
+                    className="py-2 px-3 rounded-xl bg-theme-surface border border-indigo-200 dark:border-[#5E43F3]/30 hover:border-[#5E43F3] text-xs font-bold text-[#5E43F3] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs hover:bg-indigo-50/40 dark:hover:bg-[#5E43F3]/10"
                   >
                     <MapPin className={`w-3.5 h-3.5 ${isDetectingGps ? 'animate-spin' : ''}`} />
                     <span>{isDetectingGps ? 'Detecting coordinates...' : 'Use My Current Location'}</span>
@@ -259,7 +259,7 @@ export const LocationRadiusModal: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsPermissionsModalOpen(true)}
-                    className="py-2 px-3 rounded-xl bg-indigo-100/60 hover:bg-indigo-100 border border-indigo-200/50 text-xs font-semibold text-theme-secondary flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    className="py-2 px-3 rounded-xl bg-indigo-100/60 dark:bg-[#1f1f2e] hover:bg-indigo-100 dark:hover:bg-[#28283d] border border-indigo-200/50 dark:border-[#5E43F3]/20 text-xs font-semibold text-theme-secondary flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <ShieldCheck className="w-3.5 h-3.5 text-[#5E43F3]" />
                     <span>All Permissions</span>
@@ -267,7 +267,7 @@ export const LocationRadiusModal: React.FC = () => {
                 </div>
 
                 {gpsError && (
-                  <div className="flex items-start gap-1.5 text-[11px] text-rose-600 bg-rose-50 p-2 rounded-lg">
+                  <div className="flex items-start gap-1.5 text-[11px] text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 p-2 rounded-lg">
                     <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                     <span>{gpsError}</span>
                   </div>
@@ -281,7 +281,7 @@ export const LocationRadiusModal: React.FC = () => {
                     <Sliders className="w-4 h-4 text-[#5E43F3]" />
                     <span className="text-xs font-bold text-theme-primary">Discovery Radius</span>
                   </div>
-                  <span className="text-sm font-black text-[#5E43F3] font-mono bg-theme-surface px-2.5 py-0.5 rounded-full border border-indigo-100 shadow-2xs">
+                  <span className="text-sm font-black text-[#5E43F3] font-mono bg-theme-surface px-2.5 py-0.5 rounded-full border border-indigo-100 dark:border-[#5E43F3]/30 shadow-2xs">
                     {radius} km
                   </span>
                 </div>
@@ -334,19 +334,19 @@ export const LocationRadiusModal: React.FC = () => {
               </div>
 
               {/* Concentric Radar Map Visualizer */}
-              <div className="p-3.5 rounded-2xl bg-theme-inverse text-theme-text-inverse space-y-2.5">
+              <div className="p-3.5 rounded-2xl bg-neutral-900 dark:bg-[#12121a] text-white space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-theme-tertiary">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-400">
                     <Radio className="w-4 h-4 text-[#5E43F3]" />
                     <span>Proximity Radar Preview</span>
                   </div>
-                  <span className="text-[10px] text-theme-tertiary font-mono">
+                  <span className="text-[10px] text-neutral-400 font-mono">
                     Center: {customInput.trim() || selectedName}
                   </span>
                 </div>
 
                 {/* Radar SVG */}
-                <div className="relative h-44 w-full bg-theme-inverse/80 rounded-xl overflow-hidden border border-theme-divider-inverse flex items-center justify-center">
+                <div className="relative h-44 w-full bg-neutral-950 dark:bg-[#0a0a12] rounded-xl overflow-hidden border border-neutral-800 flex items-center justify-center">
                   <svg className="w-full h-full" viewBox="-120 -90 240 180">
                     {/* Concentric Radius Rings */}
                     <circle cx="0" cy="0" r="25" fill="none" stroke="#333" strokeWidth="1" strokeDasharray="3 3" />
@@ -417,7 +417,7 @@ export const LocationRadiusModal: React.FC = () => {
                   </svg>
 
                   {/* Legend Overlay */}
-                  <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] text-theme-tertiary">
+                  <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] text-neutral-400">
                     <span className="flex items-center gap-1">
                       <span className="w-2 h-2 rounded-full bg-[#A78BFA]" />
                       <span>Posts</span>
@@ -469,7 +469,7 @@ export const LocationRadiusModal: React.FC = () => {
                         }}
                         className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
                           isSelected
-                            ? 'border-[#5E43F3] bg-indigo-50/70 ring-1 ring-[#5E43F3]'
+                            ? 'border-[#5E43F3] bg-indigo-50/70 dark:bg-[#5E43F3]/10 ring-1 ring-[#5E43F3]'
                             : 'border-theme-divider hover:bg-theme-base'
                         }`}
                       >
@@ -501,9 +501,9 @@ export const LocationRadiusModal: React.FC = () => {
           ) : (
             /* Privacy Controls Tab */
             <div className="space-y-4">
-              <div className="p-3 rounded-2xl bg-emerald-50/60 border border-emerald-100 flex items-start gap-2.5">
-                <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                <div className="text-xs text-emerald-950">
+              <div className="p-3 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800/40 flex items-start gap-2.5">
+                <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                <div className="text-xs text-emerald-950 dark:text-emerald-200">
                   <p className="font-bold">Privacy-First Proximity Protection</p>
                   <p className="mt-0.5 text-theme-secondary leading-relaxed">
                     Lalao is designed to foster real-world local community without compromising your physical safety.
