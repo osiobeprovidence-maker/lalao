@@ -219,6 +219,11 @@ export const createPage = mutation({
     globalDiscoveryStatus: v.optional(v.union(v.literal("global"), v.literal("national"), v.literal("regional"), v.literal("local"))),
     serviceAreas: v.optional(v.array(v.string())),
     isOnlineBusiness: v.optional(v.boolean()),
+    activeTools: v.optional(v.array(v.string())),
+    teamInvites: v.optional(v.array(v.object({
+      username: v.string(),
+      role: v.union(v.literal("admin"), v.literal("staff"), v.literal("editor")),
+    }))),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -257,6 +262,7 @@ export const createPage = mutation({
       avatar: args.avatar,
       coverImage: args.coverImage,
       category: args.category,
+      activeTools: args.activeTools ?? [],
       globalDiscoveryStatus: args.globalDiscoveryStatus ?? "global",
       serviceAreas: args.serviceAreas ?? [],
       isOnlineBusiness: args.isOnlineBusiness ?? false,
@@ -280,6 +286,25 @@ export const createPage = mutation({
       pageId: newPageId,
       createdAt: now,
     });
+
+    // Process team invitations
+    if (args.teamInvites && args.teamInvites.length > 0) {
+      for (const invite of args.teamInvites) {
+        const invitedUser = await ctx.db
+          .query("users")
+          .withIndex("by_username", (q: any) => q.eq("username", invite.username))
+          .first();
+        if (invitedUser) {
+          await ctx.db.insert("pageMembers", {
+            pageId: newPageId,
+            userId: invitedUser._id,
+            role: invite.role,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+      }
+    }
 
     return newPageId;
   },
@@ -633,4 +658,115 @@ export const removePageLocation = mutation({
 
     await ctx.db.delete(args.locationId);
   }
+});
+
+// ========== PAGE MEMBERS ==========
+
+export const getPageMembers = query({
+  args: { pageId: v.id("pages") },
+  handler: async (ctx, args) => {
+    const members = await ctx.db
+      .query("pageMembers")
+      .withIndex("by_page", (q) => q.eq("pageId", args.pageId))
+      .collect();
+
+    return Promise.all(
+      members.map(async (m) => {
+        const user = await ctx.db.get(m.userId);
+        return {
+          id: m._id,
+          userId: m.userId,
+          role: m.role,
+          username: user?.username ?? "unknown",
+          name: user?.name ?? "Unknown",
+          avatar: (user as any)?.profileImage ?? "",
+          createdAt: m.createdAt,
+        };
+      })
+    );
+  },
+});
+
+export const invitePageMember = mutation({
+  args: {
+    pageId: v.id("pages"),
+    username: v.string(),
+    role: v.union(v.literal("admin"), v.literal("staff"), v.literal("editor")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+    if (!user) throw new Error("User not found");
+
+    // Check caller is owner or admin
+    const callerMembership = await ctx.db
+      .query("pageMembers")
+      .withIndex("by_page_user", (q) => q.eq("pageId", args.pageId).eq("userId", user._id))
+      .first();
+    if (!callerMembership || (callerMembership.role !== "owner" && callerMembership.role !== "admin")) {
+      throw new Error("Unauthorized: Only owners and admins can invite members");
+    }
+
+    // Find the invited user by username
+    const invitedUser = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q: any) => q.eq("username", args.username))
+      .first();
+    if (!invitedUser) throw new Error("User not found with that username");
+
+    // Check they aren't already a member
+    const existingMembership = await ctx.db
+      .query("pageMembers")
+      .withIndex("by_page_user", (q) => q.eq("pageId", args.pageId).eq("userId", invitedUser._id))
+      .first();
+    if (existingMembership) throw new Error("User is already a member of this page");
+
+    const now = Date.now();
+    await ctx.db.insert("pageMembers", {
+      pageId: args.pageId,
+      userId: invitedUser._id,
+      role: args.role,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return { success: true };
+  },
+});
+
+export const removePageMember = mutation({
+  args: {
+    pageId: v.id("pages"),
+    memberId: v.id("pageMembers"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+    if (!user) throw new Error("User not found");
+
+    const callerMembership = await ctx.db
+      .query("pageMembers")
+      .withIndex("by_page_user", (q) => q.eq("pageId", args.pageId).eq("userId", user._id))
+      .first();
+    if (!callerMembership || callerMembership.role !== "owner") {
+      throw new Error("Unauthorized: Only owners can remove members");
+    }
+
+    const targetMember = await ctx.db.get(args.memberId);
+    if (!targetMember) throw new Error("Member not found");
+    if (targetMember.role === "owner") throw new Error("Cannot remove the owner");
+
+    await ctx.db.delete(args.memberId);
+    return { success: true };
+  },
 });

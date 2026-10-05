@@ -132,7 +132,7 @@ interface LalaoContextType {
   createRally: (rally: { title: string; description: string; location: string; timeDate: string; category: Rally['category'] }) => void;
 
   toggleFollowPage: (pageId: string) => void;
-  createPage: (pageData: { name: string; username: string; category: string; description: string; type: Page['type']; location: string; avatar?: string; coverImage?: string }) => void;
+  createPage: (pageData: { name: string; username: string; category: string; description: string; type: Page['type']; location: string; avatar?: string; coverImage?: string; activeTools?: string[]; teamInvites?: { username: string; role: string }[] }) => void;
   updatePage: (pageId: string, updatedData: Partial<Page>) => void;
   deletePage: (pageId: string) => Promise<void>;
   createPagePost: (pageId: string, postData: { text: string; mediaUrl?: string; mediaType?: 'image' | 'video'; location?: string }) => void;
@@ -1636,6 +1636,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     location: pageLoc,
     avatar,
     coverImage,
+    activeTools,
+    teamInvites,
   }: {
     name: string;
     username: string;
@@ -1645,6 +1647,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     location: string;
     avatar?: string;
     coverImage?: string;
+    activeTools?: string[];
+    teamInvites?: { username: string; role: string }[];
   }) => {
     try {
       const newPageId = await createPageMutation({
@@ -1655,7 +1659,9 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         type,
         location: pageLoc || `${location.name}, ${location.subArea}`,
         avatar,
-        coverImage
+        coverImage,
+        activeTools: activeTools ?? [],
+        teamInvites: (teamInvites ?? []).map(t => ({ username: t.username, role: t.role as any })),
       });
       setCreateFlowType(null);
       setIsCreateSheetOpen(false);

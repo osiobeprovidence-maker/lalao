@@ -126,7 +126,6 @@ export const CreatePageView: React.FC = () => {
         finalAvatarUrl = 'https://images.unsplash.com/photo-1556742049-0a67e5572263?w=300&auto=format&fit=crop&q=80';
       }
 
-      // We will create the page. In future, teamMembers & activeTools will be sent to API.
       const newPageId = await createPage({
         name: name.trim(),
         username: username.trim() || name.toLowerCase().replace(/[^a-z0-9]/g, ''),
@@ -136,6 +135,8 @@ export const CreatePageView: React.FC = () => {
         location: pageLocation.trim(),
         avatar: finalAvatarUrl,
         coverImage: finalCoverImage,
+        activeTools,
+        teamInvites: teamMembers.map(m => ({ username: m.username, role: m.role })),
       });
       if (newPageId) {
         setActiveTab('home');
