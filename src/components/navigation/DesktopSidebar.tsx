@@ -16,7 +16,7 @@ import {
   ShoppingBag,
   X,
   Download,
-  Sparkles,
+  BadgeCheck,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useLalao } from '../../context/LalaoContext';
@@ -42,6 +42,11 @@ export const DesktopSidebar: React.FC = () => {
     openCreatorHub,
     openCreatorSubscription,
   } = useLalao();
+
+  const isVerified = Boolean(
+    (currentUser?.verificationTier && currentUser.verificationTier !== 'none' && (!currentUser.verificationExpiresAt || currentUser.verificationExpiresAt > Date.now())) ||
+    currentUser?.isVerified
+  );
   const { logout, isAuthenticated } = useAuth();
   const { isInstalled, setIsInstallModalOpen } = usePWA();
 
@@ -343,30 +348,27 @@ export const DesktopSidebar: React.FC = () => {
           })}
         </nav>
 
-        {/* ── CREATOR HUB / VERIFICATION ── */}
+        {/* ── VERIFIED STATUS ENTRY ── */}
         <div className="space-y-1">
-          <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-theme-tertiary">
-            Creators
-          </div>
           <button
             type="button"
             onClick={() => {
-              if (currentUser?.verificationTier === 'creator') {
-                openCreatorHub();
+              if (isVerified) {
+                if (currentUser?.verificationTier === 'creator') {
+                  openCreatorHub();
+                } else {
+                  openCreatorSubscription(currentUser?.verificationTier || 'verified');
+                }
               } else {
-                openCreatorSubscription('creator');
+                openCreatorSubscription();
               }
             }}
-            className="flex w-full items-center justify-between rounded-full px-3 py-2.5 text-left transition cursor-pointer bg-gradient-to-r from-teal-500/10 via-emerald-500/10 to-teal-500/5 hover:from-teal-500/15 hover:via-emerald-500/15 hover:to-teal-500/10 border border-teal-500/20 text-teal-700 dark:text-teal-300 group"
+            className="flex w-full items-center gap-3 rounded-full px-3 py-2 text-left transition cursor-pointer text-theme-secondary hover:bg-theme-base hover:text-theme-primary"
+            title={isVerified ? 'Verified Account' : 'Get Verified'}
           >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <Sparkles className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400 group-hover:scale-110 transition-transform" />
-              <span className="text-[14px] font-bold truncate">
-                {currentUser?.verificationTier === 'creator' ? 'Creator Hub' : 'Get Verified'}
-              </span>
-            </div>
-            <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-teal-600/15 text-teal-700 dark:text-teal-300 shrink-0">
-              {currentUser?.verificationTier === 'creator' ? 'Hub' : '₦800+'}
+            <BadgeCheck className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400 stroke-[2]" />
+            <span className="text-[14px] font-medium">
+              {isVerified ? 'Verified' : 'Get Verified'}
             </span>
           </button>
         </div>
