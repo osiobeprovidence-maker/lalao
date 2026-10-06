@@ -25,12 +25,14 @@ import {
   ShieldAlert,
   Compass,
   UserPlus,
+  TrendingUp,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
+import { VerificationBadge } from '../common/VerificationBadge';
 import { PostItem } from '../feed/PostItem';
 import { Post, Rally } from '../../types';
 
@@ -405,13 +407,26 @@ export const UserProfileModal: React.FC = () => {
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0 space-y-1.5">
                 <div>
-                  <h2 className="text-xl font-bold text-theme-primary leading-tight flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-theme-primary leading-tight flex items-center gap-2 flex-wrap">
                     {activeUserProfile.name}
+                    <VerificationBadge user={activeUserProfile} size="sm" />
                     {activeUserProfile.badge && <Badge type={activeUserProfile.badge} />}
                   </h2>
                   <p className="text-xs text-theme-tertiary font-medium">
                     @{activeUserProfile.username}
                   </p>
+                  {activeUserProfile.verificationTier === 'creator' && (
+                    <div className="flex items-center gap-1.5 pt-1 flex-wrap">
+                      <span className="px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                        <Sparkles className="w-2.5 h-2.5 text-teal-600" />
+                        {activeUserProfile.creatorCategory || 'Creator'} · Level {activeUserProfile.creatorLevel || 1}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-theme-surface text-theme-secondary border border-theme-divider-light text-[10px] font-bold flex items-center gap-1">
+                        <TrendingUp className="w-2.5 h-2.5 text-teal-600" />
+                        Ranked Creator
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {activeUserProfile.bio && (

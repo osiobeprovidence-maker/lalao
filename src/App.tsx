@@ -42,6 +42,8 @@ import { DigitalTicketModal } from './components/tickets/DigitalTicketModal';
 import { MyTicketsModal } from './components/tickets/MyTicketsModal';
 import { WalletModal } from './components/wallet/WalletModal';
 import { MySubscriptionsModal } from './components/subscriptions/MySubscriptionsModal';
+import { CreatorHubModal } from './components/creators/CreatorHubModal';
+import { CreatorSubscriptionModal } from './components/creators/CreatorSubscriptionModal';
 import { InstallAppModal } from './components/common/InstallAppModal';
 import { Check, Plus } from 'lucide-react';
 
@@ -120,6 +122,12 @@ const LalaoAppContent: React.FC = () => {
     currentUser,
     activePageId,
     setActivePageId,
+    isCreatorHubOpen,
+    setIsCreatorHubOpen,
+    isCreatorSubscriptionOpen,
+    setIsCreatorSubscriptionOpen,
+    creatorSubscriptionInitialTier,
+    openCreatorSubscription,
   } = useLalao();
   const mainRef = useRef<HTMLElement>(null);
   
@@ -387,6 +395,16 @@ const LalaoAppContent: React.FC = () => {
       {!['create-post'].includes(activeTab) && <MyTicketsModal />}
       {!['create-post'].includes(activeTab) && <WalletModal />}
       {!['create-post'].includes(activeTab) && <MySubscriptionsModal />}
+      <CreatorHubModal
+        isOpen={isCreatorHubOpen}
+        onClose={() => setIsCreatorHubOpen(false)}
+        onOpenSubscriptionModal={() => openCreatorSubscription('creator')}
+      />
+      <CreatorSubscriptionModal
+        isOpen={isCreatorSubscriptionOpen}
+        onClose={() => setIsCreatorSubscriptionOpen(false)}
+        initialTier={creatorSubscriptionInitialTier}
+      />
       <AuthPromptModal />
         <NotificationListener />
 

@@ -20,6 +20,7 @@ import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
+import { VerificationBadge } from '../common/VerificationBadge';
 import { ChatModal } from './ChatModal';
 
 export const MessagesView: React.FC = () => {
@@ -501,6 +502,7 @@ export const MessagesView: React.FC = () => {
                         {conv.participant?.name}
                       </span>
                       {conv.participant?.badge && <Badge type={conv.participant.badge} />}
+                      <VerificationBadge user={conv.participant} size="xs" />
                     </div>
                     {(conv as any).isPageConvo && !(conv as any).amIUserA && (
                       <div className="text-[10px] font-black tracking-wider text-[#5E43F3] bg-[#5E43F3]/10 border border-[#5E43F3]/20 px-1.5 py-0.5 rounded-sm uppercase mt-1 w-fit mb-0.5">
@@ -561,6 +563,7 @@ export const MessagesView: React.FC = () => {
                       {contact.name}
                     </span>
                     {contact.badge && <Badge type={contact.badge} />}
+                    <VerificationBadge user={contact} size="xs" />
                   </div>
                   <div className="flex items-center gap-1 text-xs text-theme-tertiary truncate mt-0.5 max-w-[220px]">
                     <span className="truncate">Start a conversation</span>

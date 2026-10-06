@@ -92,6 +92,31 @@ export default defineSchema({
         mentions: v.optional(v.boolean()),
         desktop: v.optional(v.boolean())
       })),
+
+    // Creator Ecosystem & Verification Tiers
+    verificationTier: v.optional(
+      v.union(
+        v.literal("none"),
+        v.literal("verified"),      // Tier 3 — Standard Verified (₦800)
+        v.literal("priority"),      // Tier 4 — Priority Verified (₦1,700)
+        v.literal("creator")        // Tier 5 — Creator Premium (₦3,500)
+      )
+    ),
+    verificationStatus: v.optional(
+      v.union(
+        v.literal("inactive"),
+        v.literal("active"),
+        v.literal("expired"),
+        v.literal("cancelled")
+      )
+    ),
+    verificationExpiresAt: v.optional(v.number()),
+    creatorCategory: v.optional(v.string()),
+    creatorLevel: v.optional(v.number()),
+    creatorEarnings: v.optional(v.number()),
+    creatorPendingEarnings: v.optional(v.number()),
+    creatorAchievements: v.optional(v.array(v.string())),
+    creatorPriorityWeight: v.optional(v.number()),
   })
     .index("by_token", ["tokenIdentifier"])
     .index("by_email", ["email"])
@@ -658,6 +683,26 @@ export default defineSchema({
     .index("by_subscription", ["subscriptionId"])
     .index("by_slot", ["slotId"])
     .index("by_user_subscription", ["userId", "subscriptionId"]),
+
+  creatorSubscriptions: defineTable({
+    userId: v.id("users"),
+    tier: v.union(v.literal("verified"), v.literal("priority"), v.literal("creator")),
+    status: v.union(v.literal("active"), v.literal("cancelled"), v.literal("expired")),
+    price: v.number(),
+    currency: v.string(),
+    paymentMethod: v.string(),
+    paystackReference: v.optional(v.string()),
+    startedAt: v.number(),
+    expiresAt: v.number(),
+    cancelledAt: v.optional(v.number()),
+    cancelAtPeriodEnd: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_status", ["status"])
+    .index("by_tier", ["tier"])
+    .index("by_user_status", ["userId", "status"]),
 
   // ---- PLATFORM ADMINISTRATION ----
 

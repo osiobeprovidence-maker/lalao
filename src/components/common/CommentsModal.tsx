@@ -4,6 +4,7 @@ import { X, Send, Heart, CornerDownRight, Pin, CheckCircle, Search, Smile, Image
 import { CommentComposer } from './CommentComposer';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from './Avatar';
+import { VerificationBadge } from './VerificationBadge';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { VideoPlayer } from '../feed/VideoPlayer';

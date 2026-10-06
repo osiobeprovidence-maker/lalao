@@ -31,6 +31,7 @@ import {
   UserWallet,
   PageMonetization,
   PageAnalytics,
+  VerificationTier,
 } from '../types';
 
 import { HOK_EVENTS, HOK_SEED_TICKETS, HOK_ORGANIZATION_PAGE } from '../data/honorOfKingsData';
@@ -301,6 +302,16 @@ interface LalaoContextType {
   setIsWalletModalOpen: (open: boolean) => void;
   topUpWallet: (amount: number, method?: string) => void;
   payWithWallet: (amount: number, description: string, reference?: string) => boolean;
+
+  // Creator Ecosystem
+  isCreatorHubOpen: boolean;
+  setIsCreatorHubOpen: (open: boolean) => void;
+  isCreatorSubscriptionOpen: boolean;
+  setIsCreatorSubscriptionOpen: (open: boolean) => void;
+  creatorSubscriptionInitialTier: VerificationTier | undefined;
+  setCreatorSubscriptionInitialTier: (tier: VerificationTier | undefined) => void;
+  openCreatorSubscription: (initialTier?: VerificationTier) => void;
+  openCreatorHub: () => void;
 
   // Utilities
   shareToast: string | null;
@@ -859,6 +870,20 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [shareToast, setShareToast] = useState<string | null>(null);
+
+  // Creator Ecosystem modals
+  const [isCreatorHubOpen, setIsCreatorHubOpen] = useState(false);
+  const [isCreatorSubscriptionOpen, setIsCreatorSubscriptionOpen] = useState(false);
+  const [creatorSubscriptionInitialTier, setCreatorSubscriptionInitialTier] = useState<VerificationTier | undefined>(undefined);
+
+  const openCreatorSubscription = (initialTier?: VerificationTier) => {
+    setCreatorSubscriptionInitialTier(initialTier);
+    setIsCreatorSubscriptionOpen(true);
+  };
+
+  const openCreatorHub = () => {
+    setIsCreatorHubOpen(true);
+  };
 
   // Shopping, Cart & Saved Products
   const cart = (cartQuery as unknown as CartItem[]) || [];
@@ -2476,6 +2501,14 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setIsWalletModalOpen,
         topUpWallet,
         payWithWallet,
+        isCreatorHubOpen,
+        setIsCreatorHubOpen,
+        isCreatorSubscriptionOpen,
+        setIsCreatorSubscriptionOpen,
+        creatorSubscriptionInitialTier,
+        setCreatorSubscriptionInitialTier,
+        openCreatorSubscription,
+        openCreatorHub,
         activeTopics,
         updateHomePreference,
         updateUserProfile,

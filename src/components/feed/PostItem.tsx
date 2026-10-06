@@ -20,6 +20,7 @@ import {
 import { Post, Rally, User } from '../../types';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
+import { VerificationBadge } from '../common/VerificationBadge';
 import { useLalao } from '../../context/LalaoContext';
 import { formatDistance, getProximityCategory } from '../../utils/locationUtils';
 import { useQuery } from 'convex/react';

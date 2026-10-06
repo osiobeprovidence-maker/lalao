@@ -20,6 +20,7 @@ import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
+import { VerificationBadge } from '../common/VerificationBadge';
 import { PostItem } from '../feed/PostItem';
 import { User } from '../../types';
 import { SuggestCommunityModal } from './SuggestCommunityModal';
@@ -36,6 +37,8 @@ export const ProfileView: React.FC = () => {
     setIsCreateCycleOpen,
     triggerShareToast,
     setIsEditProfileOpen,
+    openCreatorHub,
+    openCreatorSubscription,
     setIsNotificationsOpen,
     setActiveTab,
     unreadNotifsCount,

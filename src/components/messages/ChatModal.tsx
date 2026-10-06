@@ -21,6 +21,7 @@ import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
+import { VerificationBadge } from '../common/VerificationBadge';
 import { DirectMessage } from '../../types';
 
 // ─── Receipt Indicator ──────────────────────────────────────────────────────
@@ -949,6 +950,7 @@ export const ChatModal: React.FC = () => {
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className="truncate text-sm font-bold text-theme-primary">{conv.participant.name}</span>
+                    <VerificationBadge user={conv.participant} size="xs" />
                   </div>
                   <span className="block truncate text-[11px] text-theme-tertiary">@{conv.participant.username}</span>
                 </div>

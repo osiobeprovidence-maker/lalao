@@ -26,6 +26,7 @@ import {
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../common/Avatar';
+import { VerificationBadge } from '../common/VerificationBadge';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useNavigate } from 'react-router-dom';
@@ -48,6 +49,8 @@ export const SettingsPageView: React.FC = () => {
     activeTopics,
     updateHomePreference,
     updateUserProfile,
+    openCreatorSubscription,
+    openCreatorHub,
   } = useLalao();
   
   const generateCloudinarySignatureAction = useAction(api.cloudinary.generateSignature);
@@ -750,6 +753,71 @@ export const SettingsPageView: React.FC = () => {
                 className="text-[11px] font-bold text-[#5E43F3] cursor-pointer"
               >
                 {currentUser.phone || currentUser.phoneNumber ? 'Edit' : 'Add'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 4.8 Verification & Creator Subscriptions */}
+        <div className="space-y-3">
+          <div className="border-b border-theme-divider-light pb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">
+              Verification & Creator Subscriptions
+            </h3>
+            <p className="text-[11px] text-theme-tertiary mt-1">
+              Unlock official verification seals, priority explore discovery, and Creator Hub monetization tools.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-teal-500/20 bg-gradient-to-br from-teal-500/[0.04] to-emerald-500/[0.02] p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-theme-primary">Current Tier:</span>
+                    <span className="text-xs font-extrabold capitalize text-teal-600 dark:text-teal-400">
+                      {currentUser?.verificationTier === 'creator'
+                        ? 'Creator Premium'
+                        : currentUser?.verificationTier === 'priority'
+                        ? 'Priority Verified'
+                        : currentUser?.verificationTier === 'verified'
+                        ? 'Standard Verified'
+                        : 'Unverified'}
+                    </span>
+                    <VerificationBadge user={currentUser} size="xs" />
+                  </div>
+                  <p className="text-[11px] text-theme-tertiary mt-0.5">
+                    {currentUser?.verificationTier === 'creator'
+                      ? 'Full Creator Hub, Monetization, Analytics, & Rankings Active'
+                      : currentUser?.verificationTier === 'priority'
+                      ? 'Priority Discovery Weighting & Verified Seal Active'
+                      : currentUser?.verificationTier === 'verified'
+                      ? 'Official Verified Seal Active'
+                      : 'Standard account without verification benefits'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => openCreatorSubscription()}
+                className="w-full rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.99] text-white py-2.5 px-3 text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                {currentUser?.verificationTier ? 'Manage Tier / Upgrade' : 'Get Verified (from ₦800)'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => openCreatorHub()}
+                className="w-full rounded-xl border border-teal-500/30 bg-teal-500/5 hover:bg-teal-500/10 active:scale-[0.99] text-teal-700 dark:text-teal-300 py-2.5 px-3 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                Open Creator Hub
               </button>
             </div>
           </div>

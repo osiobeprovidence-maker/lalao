@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { Save, Upload, Image as ImageIcon, CheckCircle2, RotateCcw, Building2, Camera, ExternalLink } from 'lucide-react';
+import { Save, Upload, Image as ImageIcon, CheckCircle2, RotateCcw, Building2, Camera, ExternalLink, Sparkles, ShieldCheck } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { uploadImageToCloudinary } from '../../lib/cloudinary';
 
@@ -14,6 +14,20 @@ export const AdminPlatformSettings: React.FC = () => {
   // Super Admin System Pages Media Controls
   const systemPagesMedia = useQuery(api.admin.getSystemPagesMedia);
   const updateSystemPageMedia = useMutation(api.admin.updateSystemPageMedia);
+
+  // Creator Ecosystem & Verification Settings
+  const creatorSettingsData = useQuery((api as any).platformSettings.getCreatorSettings);
+  const updateCreatorSettings = useMutation((api as any).platformSettings.updateCreatorSettings);
+
+  const [creatorForm, setCreatorForm] = useState({
+    tier3Price: 800,
+    tier4Price: 1700,
+    tier5Price: 3500,
+    priorityWeight: 1.15,
+    risingFollowerCap: 5000,
+  });
+  const [isSavingCreator, setIsSavingCreator] = useState(false);
+  const [saveCreatorSuccess, setSaveCreatorSuccess] = useState(false);
 
   const { generateCloudinarySignature } = useLalao();
   

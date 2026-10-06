@@ -16,11 +16,13 @@ import {
   ShoppingBag,
   X,
   Download,
+  Sparkles,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../common/Avatar';
+import { VerificationBadge } from '../common/VerificationBadge';
 import { usePWA } from '../../hooks/usePWA';
 
 export const DesktopSidebar: React.FC = () => {
@@ -37,6 +39,8 @@ export const DesktopSidebar: React.FC = () => {
     conversations,
     setIsWalletModalOpen,
     setIsShoppingHistoryOpen,
+    openCreatorHub,
+    openCreatorSubscription,
   } = useLalao();
   const { logout, isAuthenticated } = useAuth();
   const { isInstalled, setIsInstallModalOpen } = usePWA();
@@ -339,6 +343,34 @@ export const DesktopSidebar: React.FC = () => {
           })}
         </nav>
 
+        {/* ── CREATOR HUB / VERIFICATION ── */}
+        <div className="space-y-1">
+          <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-theme-tertiary">
+            Creators
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (currentUser?.verificationTier === 'creator') {
+                openCreatorHub();
+              } else {
+                openCreatorSubscription('creator');
+              }
+            }}
+            className="flex w-full items-center justify-between rounded-full px-3 py-2.5 text-left transition cursor-pointer bg-gradient-to-r from-teal-500/10 via-emerald-500/10 to-teal-500/5 hover:from-teal-500/15 hover:via-emerald-500/15 hover:to-teal-500/10 border border-teal-500/20 text-teal-700 dark:text-teal-300 group"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Sparkles className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400 group-hover:scale-110 transition-transform" />
+              <span className="text-[14px] font-bold truncate">
+                {currentUser?.verificationTier === 'creator' ? 'Creator Hub' : 'Get Verified'}
+              </span>
+            </div>
+            <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-teal-600/15 text-teal-700 dark:text-teal-300 shrink-0">
+              {currentUser?.verificationTier === 'creator' ? 'Hub' : '₦800+'}
+            </span>
+          </button>
+        </div>
+
         {/* ── MY PAGES ── */}
         <div className="space-y-1">
           <div className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-theme-tertiary">
@@ -400,7 +432,10 @@ export const DesktopSidebar: React.FC = () => {
                 >
                   <Avatar src={currentUser?.avatar} alt={currentUser?.name} size="sm" />
                   <div className="min-w-0">
-                    <div className="truncate text-[12px] font-bold text-theme-primary">{currentUser?.name}</div>
+                    <div className="truncate text-[12px] font-bold text-theme-primary flex items-center gap-1.5">
+                      <span className="truncate">{currentUser?.name}</span>
+                      <VerificationBadge user={currentUser} size="xs" />
+                    </div>
                     <div className="truncate text-[11px] text-theme-tertiary">@{currentUser?.username}</div>
                   </div>
                 </button>

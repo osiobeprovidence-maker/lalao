@@ -24,6 +24,8 @@ import { useLalao } from '../../context/LalaoContext';
 import { EventsView } from '../events/EventsView';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
+import { VerificationBadge } from '../common/VerificationBadge';
+import { CreatorRankingsView } from '../creators/CreatorRankingsView';
 import { PostItem } from '../feed/PostItem';
 import {
   calculateDistanceMeters,
@@ -61,7 +63,7 @@ export const DiscoverView: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'trending' | 'people' | 'pages' | 'shop' | 'events'>('people');
+  const [activeFilter, setActiveFilter] = useState<'creators' | 'people' | 'pages' | 'shop' | 'events'>('creators');
   const [locationMode, setLocationMode] = useState<'current' | 'selected' | 'global'>('current');
   const [isLocationModeMenuOpen, setIsLocationModeMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -321,7 +323,7 @@ export const DiscoverView: React.FC = () => {
 
         {/* Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-          {['people', 'pages', 'shop', 'events'].map((filter) => (
+          {['creators', 'people', 'pages', 'shop', 'events'].map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter as any)}
@@ -331,7 +333,7 @@ export const DiscoverView: React.FC = () => {
                   : 'bg-theme-surface text-theme-secondary border border-theme-divider/80 hover:bg-theme-base hover:text-theme-primary'
               }`}
             >
-              {filter.charAt(0).toUpperCase() + filter.slice(1)}
+              {filter === 'creators' ? 'Creators' : filter.charAt(0).toUpperCase() + filter.slice(1)}
             </button>
           ))}
         </div>
@@ -387,7 +389,7 @@ export const DiscoverView: React.FC = () => {
               <h2 className="text-sm font-bold text-theme-primary">Search results for "{debouncedQuery}"</h2>
             </div>
             
-            {activeFilter === 'trending' ? (
+            {(activeFilter as any) === 'trending' ? (
               <div className="px-4 py-8 text-center space-y-2">
                  <p className="text-sm font-bold text-theme-primary">Search for this type of content isn't available yet.</p>
                  <p className="text-xs text-theme-tertiary">We're working on bringing Trending searches to Lalao.</p>

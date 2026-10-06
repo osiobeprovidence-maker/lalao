@@ -12,6 +12,11 @@ export const CURRENT_USER: User = {
   longitude: 5.8276,
   followersCount: 342,
   followingCount: 188,
+  verificationTier: 'creator',
+  creatorCategory: 'Tech & Community',
+  creatorLevel: 3,
+  creatorEarnings: 24500,
+  creatorPendingEarnings: 8200,
 };
 
 export const DEFAULT_LOCATION_PRIVACY: LocationPrivacySettings = {
@@ -85,6 +90,9 @@ export const SEED_USERS: Record<string, User> = {
     followersCount: 920,
     followingCount: 412,
     isFollowing: true,
+    verificationTier: 'priority',
+    creatorCategory: 'Design & Visuals',
+    creatorLevel: 2,
   },
   tunde: {
     id: 'user_tunde',
@@ -97,6 +105,9 @@ export const SEED_USERS: Record<string, User> = {
     followersCount: 1540,
     followingCount: 380,
     isFollowing: false,
+    verificationTier: 'creator',
+    creatorCategory: 'Film & Tech',
+    creatorLevel: 3,
   },
   fatima: {
     id: 'user_fatima',
@@ -138,6 +149,9 @@ export const SEED_USERS: Record<string, User> = {
     viewsCount: 1250000,
     isFollowing: false,
     isVerified: true,
+    verificationTier: 'creator',
+    creatorCategory: 'Photography & Stories',
+    creatorLevel: 4,
     mutualInfo: 'You both follow instablog9ja',
   },
   matthew: {
@@ -154,6 +168,9 @@ export const SEED_USERS: Record<string, User> = {
     viewsCount: 18300,
     isFollowing: false,
     isVerified: true,
+    verificationTier: 'priority',
+    creatorCategory: 'Community & Culture',
+    creatorLevel: 3,
     mutualInfo: 'Followed by tundebalo + 4 others you know',
   },
   isbae_u: {
@@ -170,6 +187,9 @@ export const SEED_USERS: Record<string, User> = {
     viewsCount: 2840000,
     isFollowing: true,
     isVerified: true,
+    verificationTier: 'creator',
+    creatorCategory: 'Comedy & Entertainment',
+    creatorLevel: 5,
     mutualInfo: 'Followed by tundebalo and officialbovi',
   },
 };

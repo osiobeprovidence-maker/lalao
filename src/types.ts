@@ -1,5 +1,7 @@
 export type UserType = 'person' | 'business' | 'organization' | 'club' | 'community';
 
+export type VerificationTier = 'none' | 'verified' | 'priority' | 'creator';
+
 export interface User {
   id: string;
   name: string;
@@ -18,10 +20,40 @@ export interface User {
   isFollowing?: boolean;
   relationship?: "none" | "following" | "follower" | "friends";
   isVerified?: boolean;
+  verificationTier?: VerificationTier;
+  creatorCategory?: string;
+  creatorLevel?: number;
+  creatorEarnings?: number;
+  creatorPendingEarnings?: number;
+  creatorAchievements?: string[];
+  creatorRank?: number;
+  creatorRankMovement?: number;
   mutualInfo?: string;
   phoneSetupCompleted?: boolean;
   accessStatus?: "available" | "country_restricted" | "waitlisted";
   [key: string]: any;
+}
+
+export interface CreatorSubscriptionTier {
+  id: 'verified' | 'priority' | 'creator';
+  tierNumber: number;
+  name: string;
+  price: number;
+  currency: string;
+  badgeLabel: string;
+  description: string;
+  hasCreatorTools: boolean;
+  hasMonetization: boolean;
+  priorityWeight?: number;
+}
+
+export interface CreatorRankingItem {
+  rank: number;
+  movement: number;
+  user: User;
+  metricLabel: string;
+  metricValue: string;
+  score: number;
 }
 
 export interface CommentReply {

@@ -94,6 +94,21 @@ function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number)
  * Build the author sub-object for feed / comment payloads.
  * Resolves real isFollowing state from the follows table.
  */
+export function resolveUserVerification(doc: any) {
+  if (!doc) return { isVerified: false, verificationTier: "none" as const };
+  const isVerified = Boolean(
+    doc.verificationTier &&
+    doc.verificationTier !== "none" &&
+    (!doc.verificationExpiresAt || doc.verificationExpiresAt > Date.now())
+  );
+  return {
+    isVerified,
+    verificationTier: isVerified ? (doc.verificationTier ?? "none") : "none",
+    creatorCategory: doc.creatorCategory,
+    creatorLevel: doc.creatorLevel,
+  };
+}
+
 async function resolveAuthor(ctx: any, authorDoc: any, currentUserId: string | null) {
   if (!authorDoc) return null;
 
