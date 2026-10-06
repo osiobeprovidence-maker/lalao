@@ -72,20 +72,42 @@ self.addEventListener('fetch', (event) => {
 
 self.addEventListener('push', function (event) {
   if (event.data) {
-    try {
-      const data = event.data.json();
-      const options = {
-        body: data.body,
-        icon: data.icon || '/logo192.png',
-        badge: '/logo192.png', // A small monochrome icon is usually preferred for badge
-        data: data.data || {}
-      };
-      event.waitUntil(
-        self.registration.showNotification(data.title, options)
-      );
-    } catch (err) {
-      console.error('Error parsing push data', err);
-    }
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+        let isFocused = false;
+        let focusedClient = null;
+        for (let i = 0; i < windowClients.length; i++) {
+          if (windowClients[i].focused) {
+            isFocused = true;
+            focusedClient = windowClients[i];
+            break;
+          }
+        }
+
+        try {
+          const data = event.data.json();
+          const options = {
+            body: data.body,
+            icon: data.icon || '/logo192.png',
+            badge: '/logo192.png', // A small monochrome icon is usually preferred for badge
+            data: data.data || { url: data.url }
+          };
+
+          if (isFocused && focusedClient) {
+            // App is open and focused - send message for in-app toast
+            focusedClient.postMessage({
+              type: 'PUSH_RECEIVED',
+              payload: data
+            });
+            return Promise.resolve();
+          }
+
+          return self.registration.showNotification(data.title, options);
+        } catch (err) {
+          console.error('Error parsing push data', err);
+        }
+      })
+    );
   }
 });
 

@@ -83,6 +83,15 @@ export default defineSchema({
     disappearingMode: v.optional(v.string()),
     disappearingCustomValue: v.optional(v.number()),
     disappearingCustomUnit: v.optional(v.string()),
+      notificationPrefs: v.optional(v.object({
+        messages: v.optional(v.boolean()),
+        cycles: v.optional(v.boolean()),
+        likes: v.optional(v.boolean()),
+        comments: v.optional(v.boolean()),
+        follows: v.optional(v.boolean()),
+        mentions: v.optional(v.boolean()),
+        desktop: v.optional(v.boolean())
+      })),
   })
     .index("by_token", ["tokenIdentifier"])
     .index("by_email", ["email"])

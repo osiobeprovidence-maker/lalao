@@ -342,7 +342,7 @@ const FeedSkeleton: React.FC = () => {
               <button
                 type="button"
                 id="btn-nearby-location-trigger"
-                onClick={() => setIsLocationModalOpen(true)}
+                onClick={() => setActiveTab('location')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-theme-base hover:bg-indigo-50/70 border border-theme-divider/80 hover:border-indigo-200 active:scale-95 transition-all cursor-pointer group min-w-0"
                 title={`Change neighborhood (${location.name})`}
               >
@@ -371,7 +371,7 @@ const FeedSkeleton: React.FC = () => {
               <button
                 type="button"
                 id="btn-radius-more-options"
-                onClick={() => setIsLocationModalOpen(true)}
+                onClick={() => setActiveTab('location')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-theme-base hover:bg-theme-surface-hover/90 text-theme-secondary hover:text-theme-primary border border-theme-divider/80 active:scale-95 transition-all cursor-pointer font-semibold text-xs"
                 title="Open custom radius & location settings"
               >
@@ -509,7 +509,7 @@ const FeedSkeleton: React.FC = () => {
                 id="btn-radius-drawer-custom"
                 onClick={() => {
                   setIsRadiusDrawerOpen(false);
-                  setIsLocationModalOpen(true);
+                  setActiveTab('location');
                 }}
                 className="w-full py-2.5 px-3 rounded-xl bg-theme-surface-hover hover:bg-theme-surface-active/70 text-theme-primary text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors"
               >

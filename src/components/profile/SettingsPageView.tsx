@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   ArrowLeft,
   Camera,
@@ -15,6 +15,13 @@ import {
   LogOut,
   Building2,
   Upload,
+  MessageCircle,
+  Heart,
+  MessageSquare,
+  UserPlus,
+  AtSign,
+  Video,
+  Loader2,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
@@ -100,10 +107,39 @@ export const SettingsPageView: React.FC = () => {
     }
   }, [isEditProfileOpen]);
 
-  // Preference switches
+  // Notification preferences (synced with backend)
+  const updateNotificationPrefs = useMutation(api.users.updateNotificationPrefs);
+  const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>({
+    messages: true,
+    cycles: true,
+    likes: true,
+    comments: true,
+    follows: true,
+    mentions: true,
+    desktop: true,
+  });
+  const [isSavingNotifPrefs, setIsSavingNotifPrefs] = useState(false);
+
+  // Sync from backend on mount
+  useEffect(() => {
+    const saved = (currentUser as any)?.notificationPrefs;
+    if (saved) {
+      setNotifPrefs((prev) => ({ ...prev, ...saved }));
+    }
+  }, [currentUser]);
+
+  const handleNotifToggle = useCallback(async (key: string, value: boolean) => {
+    const next = { ...notifPrefs, [key]: value };
+    setNotifPrefs(next);
+    try {
+      await updateNotificationPrefs({ prefs: next as any });
+    } catch (err) {
+      console.error('[Settings] Failed to save notification prefs:', err);
+    }
+  }, [notifPrefs, updateNotificationPrefs]);
+
+  // Preference switches (non-notification)
   const [notifyRallies, setNotifyRallies] = useState(true);
-  const [notifyCycles, setNotifyCycles] = useState(true);
-  const [notifyMessages, setNotifyMessages] = useState(true);
   const [publicVisibility, setPublicVisibility] = useState(true);
   const [showActiveStatus, setShowActiveStatus] = useState(true);
 
@@ -446,104 +482,82 @@ export const SettingsPageView: React.FC = () => {
             <h3 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">
               Notifications & Alerts
             </h3>
+            <p className="text-[11px] text-theme-tertiary mt-1">Control which events notify you on this device.</p>
           </div>
 
+          {/* Desktop push on/off */}
           <div className="divide-y divide-neutral-100 border border-theme-divider-light rounded-2xl overflow-hidden bg-theme-surface">
             {pushContext.isSupported && (
-              <div className="p-3.5 flex items-center justify-between bg-theme-base">
-                <div>
-                  <span className="text-xs font-bold text-theme-primary">Push Notifications</span>
-                  <p className="text-[11px] text-theme-tertiary">
-                    {pushContext.browserPermission === 'denied' 
-                      ? 'Push notifications are blocked by your browser' 
-                      : 'Get alerted even when the app is closed'}
-                  </p>
+              <div className="p-3.5 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-[#5E43F3]/10 text-[#5E43F3] flex items-center justify-center shrink-0">
+                    <Bell className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-theme-primary">Desktop Notifications</span>
+                    <p className="text-[11px] text-theme-tertiary">
+                      {pushContext.browserPermission === 'denied'
+                        ? 'Blocked in browser — open site settings to allow'
+                        : pushContext.hasActivePushToken
+                        ? 'Active on this device'
+                        : 'Get alerted even when the app is closed'}
+                    </p>
+                  </div>
                 </div>
-                {pushContext.browserPermission !== 'denied' && (
+                {pushContext.browserPermission === 'denied' ? (
+                  <span className="text-[10px] font-bold text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-full">Blocked</span>
+                ) : pushContext.hasActivePushToken ? (
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full">On</span>
+                ) : (
                   <button
                     type="button"
-                    onClick={() => {
-                      if (pushContext.hasActivePushToken) {
-                        // Normally we would disable it, but for now we just show it's active
-                        // A disable function could be added if needed
-                      } else {
-                        pushContext.enableNotifications();
-                      }
-                    }}
-                    disabled={pushContext.hasActivePushToken || pushContext.status === 'loading'}
-                    className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                      pushContext.hasActivePushToken ? 'bg-[#5E43F3]' : 'bg-theme-divider-strong'
-                    } ${pushContext.status === 'loading' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onClick={() => pushContext.enableNotifications()}
+                    disabled={pushContext.status === 'loading'}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#5E43F3] text-white text-[11px] font-bold hover:bg-[#4E34E0] active:scale-95 transition-all cursor-pointer disabled:opacity-60"
                   >
-                    <div
-                      className={`w-5 h-5 rounded-full bg-theme-surface transition-transform absolute top-0.5 ${
-                        pushContext.hasActivePushToken ? 'right-0.5' : 'left-0.5'
-                      }`}
-                    />
+                    {pushContext.status === 'loading' ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                    Enable
                   </button>
                 )}
               </div>
             )}
+          </div>
 
-            <div className="p-3.5 flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-theme-primary">Local Rallies & Meetups</span>
-                <p className="text-[11px] text-theme-tertiary">Get alerted when a rally happens nearby</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setNotifyRallies(!notifyRallies)}
-                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  notifyRallies ? 'bg-[#5E43F3]' : 'bg-theme-divider-strong'
-                }`}
-              >
-                <div
-                  className={`w-5 h-5 rounded-full bg-theme-surface transition-transform absolute top-0.5 ${
-                    notifyRallies ? 'right-0.5' : 'left-0.5'
+          {/* Per-category toggles */}
+          <div className="divide-y divide-neutral-100 border border-theme-divider-light rounded-2xl overflow-hidden bg-theme-surface">
+            {([
+              { key: 'messages',  label: 'Messages',        desc: 'Direct chats and DMs',                   Icon: MessageCircle },
+              { key: 'comments',  label: 'Comments & Replies', desc: 'Replies to your posts and comments',  Icon: MessageSquare },
+              { key: 'likes',     label: 'Likes',            desc: 'When someone likes your content',        Icon: Heart },
+              { key: 'follows',   label: 'New Followers',    desc: 'When someone follows you',               Icon: UserPlus },
+              { key: 'mentions',  label: 'Mentions',         desc: 'When someone mentions you',              Icon: AtSign },
+              { key: 'cycles',    label: '24-Hour Cycles',   desc: 'Stories from people you follow',         Icon: Video },
+            ] as const).map(({ key, label, desc, Icon }) => (
+              <div key={key} className="p-3.5 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-theme-surface-active text-theme-secondary flex items-center justify-center shrink-0">
+                    <Icon className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-theme-primary">{label}</span>
+                    <p className="text-[11px] text-theme-tertiary">{desc}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleNotifToggle(key, !notifPrefs[key])}
+                  className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer shrink-0 ${
+                    notifPrefs[key] !== false ? 'bg-[#5E43F3]' : 'bg-theme-divider-strong'
                   }`}
-                />
-              </button>
-            </div>
-
-            <div className="p-3.5 flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-theme-primary">24-Hour Cycle Updates</span>
-                <p className="text-[11px] text-theme-tertiary">Notifications when following post stories</p>
+                >
+                  <div
+                    className={`w-5 h-5 rounded-full bg-white transition-transform absolute top-0.5 shadow-sm ${
+                      notifPrefs[key] !== false ? 'right-0.5' : 'left-0.5'
+                    }`}
+                  />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setNotifyCycles(!notifyCycles)}
-                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  notifyCycles ? 'bg-[#5E43F3]' : 'bg-theme-divider-strong'
-                }`}
-              >
-                <div
-                  className={`w-5 h-5 rounded-full bg-theme-surface transition-transform absolute top-0.5 ${
-                    notifyCycles ? 'right-0.5' : 'left-0.5'
-                  }`}
-                />
-              </button>
-            </div>
-
-            <div className="p-3.5 flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-theme-primary">Messages & Replies</span>
-                <p className="text-[11px] text-theme-tertiary">Direct chats and comment notifications</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setNotifyMessages(!notifyMessages)}
-                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  notifyMessages ? 'bg-[#5E43F3]' : 'bg-theme-divider-strong'
-                }`}
-              >
-                <div
-                  className={`w-5 h-5 rounded-full bg-theme-surface transition-transform absolute top-0.5 ${
-                    notifyMessages ? 'right-0.5' : 'left-0.5'
-                  }`}
-                />
-              </button>
-            </div>
+            ))}
           </div>
         </div>
 

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { getAuthedUser, getRelationshipSets } from "./social";
 
 export const generateUploadUrl = mutation({
@@ -58,6 +59,28 @@ export const postCycleStory = mutation({
       createdAt: now,
       expiresAt,
     });
+
+    // Dispatch push notifications to followers (do not notify self, respect audience)
+    const authorName = currentUser.name ?? "Someone";
+    const followers = await ctx.db
+      .query("follows")
+      .withIndex("by_following", (q: any) => q.eq("followingId", currentUser._id))
+      .collect();
+
+    for (const follow of followers) {
+      if (follow.followerId === currentUser._id) continue; // don't self-notify
+      if (
+        args.excludedUserIds &&
+        args.excludedUserIds.includes(follow.followerId)
+      ) continue;
+      await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
+        recipientId: follow.followerId,
+        title: `${authorName} posted a new Cycle`,
+        body: args.caption ?? args.text ?? "Tap to view their story",
+        icon: currentUser.avatar ?? "/mascot.png",
+        url: "/",
+      });
+    }
 
     return storyId;
   },

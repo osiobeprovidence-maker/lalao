@@ -44,15 +44,19 @@ const PRESET_AVATARS = [
 ];
 
 const CATEGORIES = [
-  'Creative Studio',
+  'Housing & Accommodation',
+  'Community Organization',
+  'Student Organization',
+  'Non-Profit / NGO',
   'Community & Hub',
-  'Fashion & Apparel',
+  'Creative Studio',
   'Esports & Gaming',
   'Tech & Startup',
   'Sports Club',
+  'Education & Training',
+  'Fashion & Apparel',
   'Food & Dining',
   'Music & Entertainment',
-  'Education & Training',
   'Retail Store',
 ];
 
@@ -73,7 +77,13 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
 
   const [name, setName] = useState(page.name);
   const [username, setUsername] = useState(page.username);
-  const [category, setCategory] = useState(page.category || 'Community & Hub');
+  const [type, setType] = useState<'business' | 'organization' | 'club' | 'community'>(
+    page.type || (page.username === 'roomy' ? 'organization' : 'business')
+  );
+  const [badge, setBadge] = useState<'BIZ' | 'ORG' | 'CLUB' | 'COMMUNITY'>(
+    page.badge || (page.username === 'roomy' || page.type === 'organization' ? 'ORG' : 'BIZ')
+  );
+  const [category, setCategory] = useState(page.category || (page.username === 'roomy' ? 'Housing & Accommodation' : 'Community & Hub'));
   const [description, setDescription] = useState(page.description);
   const [location, setLocation] = useState(page.location || '');
   
@@ -108,19 +118,26 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
       let finalCoverImage = coverImage;
       let finalAvatar = avatar;
 
-      if (coverImageFile) {
-        const signatureData = await generateCloudinarySignature("pages");
-        finalCoverImage = await uploadImageToCloudinary(coverImageFile, signatureData);
-      }
-      
-      if (avatarFile) {
-        const signatureData = await generateCloudinarySignature("pages");
-        finalAvatar = await uploadImageToCloudinary(avatarFile, signatureData);
+      if (page.username === 'roomy') {
+        finalCoverImage = page.coverImage;
+        finalAvatar = page.avatar;
+      } else {
+        if (coverImageFile) {
+          const signatureData = await generateCloudinarySignature("pages");
+          finalCoverImage = await uploadImageToCloudinary(coverImageFile, signatureData);
+        }
+        
+        if (avatarFile) {
+          const signatureData = await generateCloudinarySignature("pages");
+          finalAvatar = await uploadImageToCloudinary(avatarFile, signatureData);
+        }
       }
 
       await updatePage(page.id, {
         name: name.trim(),
         username: username.trim().replace('@', ''),
+        type,
+        badge,
         category,
         description: description.trim(),
         location: location.trim(),
@@ -233,159 +250,222 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
       <div className="w-full max-w-2xl mx-auto p-4 sm:p-6 pb-24 flex-1">
         {activeTab === 'profile' ? (
         <form onSubmit={handleSave} className="space-y-6">
-          {/* Visual Branding Section: Cover & Avatar with Upload Controls */}
-          <div className="bg-theme-base/80 p-4 sm:p-5 rounded-2xl border border-theme-divider-light space-y-4">
-            <label className="text-xs font-black uppercase tracking-wider text-theme-tertiary block">
-              Visual Branding
-            </label>
-            
-            {/* Cover Image Container */}
-            <div className="relative h-44 sm:h-52 rounded-2xl overflow-hidden bg-theme-inverse border border-theme-divider group">
-              <img
-                src={coverImage}
-                alt="Page Cover Preview"
-                className="w-full h-full object-cover opacity-90"
-              />
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCoverSelector(!showCoverSelector)}
-                  className="px-3.5 py-2 rounded-full bg-theme-surface/90 hover:bg-theme-surface text-theme-primary text-xs font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
-                >
-                  <ImageIcon className="w-3.5 h-3.5 text-[#5E43F3]" />
-                  <span>Choose Cover</span>
-                </button>
-                <label className="px-3.5 py-2 rounded-full bg-black/70 hover:bg-theme-inverse text-theme-text-inverse text-xs font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>Upload File</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleCustomCoverUpload}
-                    className="hidden"
-                  />
+          {/* Visual Branding Section: Controlled by Super Admin for Roomy */}
+          {page.username === 'roomy' ? (
+            <div className="bg-theme-base/80 p-4 sm:p-5 rounded-2xl border border-theme-divider-light space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-black uppercase tracking-wider text-theme-tertiary block">
+                  Visual Branding
                 </label>
+                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-[#5E43F3]/10 text-[#5E43F3] border border-[#5E43F3]/20">
+                  Controlled by Super Admin
+                </span>
               </div>
-            </div>
-
-            {/* Cover Presets Dropdown Tray */}
-            {showCoverSelector && (
-              <div className="p-3 bg-theme-surface rounded-xl border border-theme-divider animate-in fade-in">
-                <p className="text-[11px] font-bold text-theme-tertiary mb-2">Select a preset cover banner:</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {PRESET_COVERS.map((url, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => {
-                        setCoverImage(url);
-                        setCoverImageFile(null);
-                        setShowCoverSelector(false);
-                      }}
-                      className={`relative h-14 rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
-                        coverImage === url ? 'border-[#5E43F3] scale-[1.02]' : 'border-transparent opacity-80 hover:opacity-100'
-                      }`}
-                    >
-                      <img src={url} alt={`Preset ${i}`} className="w-full h-full object-cover" />
-                      {coverImage === url && (
-                        <div className="absolute top-1 right-1 w-4 h-4 bg-[#5E43F3] text-white rounded-full flex items-center justify-center">
-                          <Check className="w-2.5 h-2.5 stroke-[3]" />
-                        </div>
-                      )}
-                    </button>
-                  ))}
+              
+              <div className="relative h-28 sm:h-36 rounded-xl overflow-hidden bg-theme-inverse border border-theme-divider">
+                {page.coverImage ? (
+                  <img
+                    src={page.coverImage}
+                    alt="Roomy Cover"
+                    className="w-full h-full object-cover opacity-90"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-theme-tertiary">
+                    No cover image configured
+                  </div>
+                )}
+                <div className="absolute bottom-2 left-3 flex items-center gap-2">
+                  <div className="w-10 h-10 rounded-full border-2 border-white overflow-hidden bg-theme-surface shadow-md">
+                    {page.avatar ? (
+                      <img src={page.avatar} alt="Roomy Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-[#5E43F3] flex items-center justify-center text-white text-xs font-bold">R</div>
+                    )}
+                  </div>
+                  <span className="text-xs font-bold text-white drop-shadow-md">Roomy Cover & Profile</span>
                 </div>
               </div>
-            )}
-
-            {/* Avatar Preview & Changer */}
-            <div className="flex items-center gap-4 pt-2">
-              <div className="relative group shrink-0">
+              <p className="text-xs text-theme-tertiary">
+                The cover image and profile photo for Roomy are configured globally by Super Admin.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-theme-base/80 p-4 sm:p-5 rounded-2xl border border-theme-divider-light space-y-4">
+              <label className="text-xs font-black uppercase tracking-wider text-theme-tertiary block">
+                Visual Branding
+              </label>
+              
+              {/* Cover Image Container */}
+              <div className="relative h-44 sm:h-52 rounded-2xl overflow-hidden bg-theme-inverse border border-theme-divider group">
                 <img
-                  src={avatar}
-                  alt="Page Avatar Preview"
-                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover ring-4 ring-white shadow-md bg-theme-surface-hover"
+                  src={coverImage}
+                  alt="Page Cover Preview"
+                  className="w-full h-full object-cover opacity-90"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowAvatarSelector(!showAvatarSelector)}
-                  className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                  title="Change avatar"
-                >
-                  <Camera className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="flex-1 space-y-1.5">
-                <div className="flex items-center gap-2">
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setShowAvatarSelector(!showAvatarSelector)}
-                    className="text-xs font-bold text-[#5E43F3] hover:underline cursor-pointer"
+                    onClick={() => setShowCoverSelector(!showCoverSelector)}
+                    className="px-3.5 py-2 rounded-full bg-theme-surface/90 hover:bg-theme-surface text-theme-primary text-xs font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
                   >
-                    Select Avatar Preset
+                    <ImageIcon className="w-3.5 h-3.5 text-[#5E43F3]" />
+                    <span>Choose Cover</span>
                   </button>
-                  <span className="text-theme-tertiary">·</span>
-                  <label className="text-xs font-bold text-theme-secondary hover:text-theme-primary cursor-pointer">
-                    Upload Custom
+                  <label className="px-3.5 py-2 rounded-full bg-black/70 hover:bg-theme-inverse text-theme-text-inverse text-xs font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Upload File</span>
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={handleCustomAvatarUpload}
+                      onChange={handleCustomCoverUpload}
                       className="hidden"
                     />
                   </label>
                 </div>
-                <p className="text-[11px] text-theme-tertiary">
-                  Recommended: 400x400px square logo or photo
-                </p>
               </div>
-            </div>
 
-            {/* Avatar Presets */}
-            {showAvatarSelector && (
-              <div className="p-3 bg-theme-surface rounded-xl border border-theme-divider animate-in fade-in flex items-center gap-2 overflow-x-auto">
-                {PRESET_AVATARS.map((url, i) => (
+              {/* Cover Presets Dropdown Tray */}
+              {showCoverSelector && (
+                <div className="p-3 bg-theme-surface rounded-xl border border-theme-divider animate-in fade-in">
+                  <p className="text-[11px] font-bold text-theme-tertiary mb-2">Select a preset cover banner:</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {PRESET_COVERS.map((url, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => {
+                          setCoverImage(url);
+                          setCoverImageFile(null);
+                          setShowCoverSelector(false);
+                        }}
+                        className={`relative h-14 rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
+                          coverImage === url ? 'border-[#5E43F3] scale-[1.02]' : 'border-transparent opacity-80 hover:opacity-100'
+                        }`}
+                      >
+                        <img src={url} alt={`Preset ${i}`} className="w-full h-full object-cover" />
+                        {coverImage === url && (
+                          <div className="absolute top-1 right-1 w-4 h-4 bg-[#5E43F3] text-white rounded-full flex items-center justify-center">
+                            <Check className="w-2.5 h-2.5 stroke-[3]" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Avatar Preview & Changer */}
+              <div className="flex items-center gap-4 pt-2">
+                <div className="relative group shrink-0">
+                  <img
+                    src={avatar}
+                    alt="Page Avatar Preview"
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover ring-4 ring-white shadow-md bg-theme-surface-hover"
+                  />
                   <button
-                    key={i}
                     type="button"
-                    onClick={() => {
-                      setAvatar(url);
-                      setAvatarFile(null);
-                      setShowAvatarSelector(false);
-                    }}
-                    className={`relative w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${
-                      avatar === url ? 'border-[#5E43F3] ring-2 ring-[#5E43F3]/20' : 'border-theme-divider opacity-70 hover:opacity-100'
-                    }`}
+                    onClick={() => setShowAvatarSelector(!showAvatarSelector)}
+                    className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    title="Change avatar"
                   >
-                    <img src={url} alt={`Avatar preset ${i}`} className="w-full h-full object-cover" />
+                    <Camera className="w-5 h-5" />
                   </button>
-                ))}
+                </div>
+
+                <div className="flex-1 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowAvatarSelector(!showAvatarSelector)}
+                      className="text-xs font-bold text-[#5E43F3] hover:underline cursor-pointer"
+                    >
+                      Select Avatar Preset
+                    </button>
+                    <span className="text-theme-tertiary">·</span>
+                    <label className="text-xs font-bold text-theme-secondary hover:text-theme-primary cursor-pointer">
+                      Upload Custom
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleCustomAvatarUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                  <p className="text-[11px] text-theme-tertiary">
+                    Recommended: 400x400px square logo or photo
+                  </p>
+                </div>
               </div>
-            )}
-          </div>
+
+              {/* Avatar Presets */}
+              {showAvatarSelector && (
+                <div className="p-3 bg-theme-surface rounded-xl border border-theme-divider animate-in fade-in flex items-center gap-2 overflow-x-auto">
+                  {PRESET_AVATARS.map((url, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => {
+                        setAvatar(url);
+                        setAvatarFile(null);
+                        setShowAvatarSelector(false);
+                      }}
+                      className={`relative w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${
+                        avatar === url ? 'border-[#5E43F3] ring-2 ring-[#5E43F3]/20' : 'border-theme-divider opacity-70 hover:opacity-100'
+                      }`}
+                    >
+                      <img src={url} alt={`Avatar preset ${i}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Core Info */}
           <div className="space-y-4">
             <label className="text-xs font-black uppercase tracking-wider text-theme-tertiary block">
-              Basic Details
+              {type === 'organization' ? 'Organization Details' : 'Basic Details'}
             </label>
 
             <div>
               <label className="text-xs font-bold text-theme-secondary block mb-1">
-                Page Name *
+                {type === 'organization' ? 'Organization Name *' : 'Page Name *'}
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                placeholder="e.g. Delta Creators Lab"
+                placeholder={type === 'organization' ? 'e.g. Roomy' : 'e.g. Delta Creators Lab'}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-theme-divider text-sm font-semibold text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs font-bold text-theme-secondary block mb-1">
+                  Profile Type
+                </label>
+                <select
+                  value={type}
+                  onChange={(e) => {
+                    const nextType = e.target.value as any;
+                    setType(nextType);
+                    if (nextType === 'organization') setBadge('ORG');
+                    else if (nextType === 'business') setBadge('BIZ');
+                    else if (nextType === 'club') setBadge('CLUB');
+                    else if (nextType === 'community') setBadge('COMMUNITY');
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-theme-divider text-sm font-semibold text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3] bg-theme-surface"
+                >
+                  <option value="organization">Organization</option>
+                  <option value="community">Community</option>
+                  <option value="club">Club</option>
+                  <option value="business">Business</option>
+                </select>
+              </div>
+
               <div>
                 <label className="text-xs font-bold text-theme-secondary block mb-1">
                   Username Handle *
@@ -397,7 +477,7 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
                     value={username}
                     onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
                     required
-                    placeholder="deltacreators"
+                    placeholder="roomy"
                     className="w-full pl-8 pr-3.5 py-2.5 rounded-xl border border-theme-divider text-sm font-semibold text-theme-primary focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
                   />
                 </div>
@@ -405,7 +485,7 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
 
               <div>
                 <label className="text-xs font-bold text-theme-secondary block mb-1">
-                  Primary Category
+                  Category
                 </label>
                 <select
                   value={category}

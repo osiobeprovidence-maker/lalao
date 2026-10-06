@@ -286,7 +286,7 @@ export const DiscoverView: React.FC = () => {
                     onClick={() => {
                       setLocationMode('selected');
                       setIsLocationModeMenuOpen(false);
-                      setIsLocationModalOpen(true);
+                      setActiveTab('location');
                     }}
                     className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
                       locationMode === 'selected' ? 'bg-[#5E43F3]/10 text-[#5E43F3]' : 'text-theme-secondary hover:bg-theme-base'

@@ -33,10 +33,11 @@ interface PostComposerProps {
   onClose?: () => void;
   initialAudience?: string;
   initialPageRefId?: string;
+  initialText?: string;
   onSuccess?: () => void;
 }
 
-function PostComposerInner({ embedded = false, onClose, initialAudience = 'everyone', initialPageRefId, onSuccess }: PostComposerProps) {
+function PostComposerInner({ embedded = false, onClose, initialAudience = 'everyone', initialPageRefId, initialText = '', onSuccess }: PostComposerProps) {
   const {
     currentUser,
     pages,
@@ -57,7 +58,13 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
   const pollMuxStatus = useAction(api.mux.pollAndUpdatePost);
 
   // States
-  const [text, setText] = useState('');
+  const [text, setText] = useState(initialText || '');
+
+  useEffect(() => {
+    if (initialText) {
+      setText(initialText);
+    }
+  }, [initialText]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
@@ -888,7 +895,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
             </div>
             <button
               type="button"
-              onClick={() => setIsLocationModalOpen(true)}
+              onClick={() => setActiveTab('location')}
               className="flex h-9 w-9 items-center justify-center rounded-full text-[#5E43F3] hover:bg-[#5E43F3]/10 transition"
               title="Location"
             >

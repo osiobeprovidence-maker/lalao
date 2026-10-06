@@ -921,10 +921,10 @@ export const ChatModal: React.FC = () => {
         </div>
       )}
 
-      <div className="w-full max-w-[960px] min-h-screen bg-theme-base flex flex-col border-x border-theme-divider/80">
+      <div className="w-full max-w-[960px] min-h-screen bg-theme-base flex flex-col border-x border-black/[0.04] dark:border-white/[0.06]">
 
         {/* Header */}
-        <header className="shrink-0 border-b border-theme-divider/80 bg-theme-base/95 backdrop-blur-md px-3 sm:px-4 py-2.5">
+        <header className="shrink-0 border-b border-black/[0.04] dark:border-white/[0.06] bg-theme-base/95 backdrop-blur-md px-3 sm:px-4 py-2.5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2.5">
               <button
@@ -1350,7 +1350,7 @@ export const ChatModal: React.FC = () => {
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   placeholder="Message"
-                  className="w-full rounded-full border border-theme-divider bg-theme-surface pl-4 pr-16 py-3 text-sm text-theme-primary placeholder:text-theme-tertiary outline-none transition-all focus:border-[#5E43F3] focus:ring-2 focus:ring-[#5E43F3]/15"
+                  className="w-full rounded-full border border-black/[0.06] dark:border-white/[0.06] bg-theme-surface dark:bg-[#141414] pl-4 pr-16 py-3 text-sm text-theme-primary placeholder:text-theme-tertiary outline-none transition-all focus:border-[#5E43F3] focus:ring-2 focus:ring-[#5E43F3]/15"
                   autoFocus
                 />
 
@@ -1394,7 +1394,7 @@ export const ChatModal: React.FC = () => {
             </form>
           )}
 
-          <div className="mx-auto mt-2.5 h-1 w-24 rounded-full bg-theme-divider-strong" />
+          <div className="mx-auto mt-2.5 h-1 w-24 rounded-full bg-black/[0.06] dark:bg-white/[0.06]" />
         </div>
       </div>
     </div>

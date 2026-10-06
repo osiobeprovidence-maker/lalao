@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-theme-base: var(--color-theme-base);
   --color-theme-surface: var(--color-theme-surface);
@@ -16,6 +18,9 @@
   --color-theme-divider: var(--color-theme-divider);
   --color-theme-divider-strong: var(--color-theme-divider-strong);
   --color-theme-divider-inverse: var(--color-theme-divider-inverse);
+  
+  --color-neutral-100: var(--color-neutral-100);
+  --color-neutral-200: var(--color-neutral-200);
 }
 
 :root {
@@ -23,7 +28,7 @@
   
   /* Light Mode Tokens (Original Lalao Colors) */
   --color-theme-base: #F5EFE6; /* Warmer, slightly deeper cream for main background */
-  --color-theme-surface: #F8F3EC; /* Slightly lighter than base, but not pure white */ /* Subtle elevated surface, not pure white */
+  --color-theme-surface: #F8F3EC; /* Slightly lighter than base, but not pure white */
   --color-theme-surface-hover: #F0E8DE; 
   --color-theme-surface-active: #EBE3D5;
   --color-theme-inverse: #1C1917;
@@ -37,6 +42,9 @@
   --color-theme-divider: #E0D9D0;
   --color-theme-divider-strong: #D1C7BB;
   --color-theme-divider-inverse: #292524;
+
+  --color-neutral-100: #EBE6DF;
+  --color-neutral-200: #E0D9D0;
 }
 
 /* Dark Mode Tokens (Soft Premium Dark) */
@@ -45,17 +53,17 @@ html.dark {
   --color-theme-surface: #141414;
   --color-theme-surface-hover: #181818;
   --color-theme-surface-active: #202020;
-  --color-theme-inverse: #f2f2f2;
+  --color-theme-inverse: #F1F1F1;
   
-  --color-theme-primary: #f2f2f2;
-  --color-theme-secondary: #a0a0a0;
+  --color-theme-primary: #F1F1F1;
+  --color-theme-secondary: #A0A0A0;
   --color-theme-tertiary: #707070;
   --color-theme-text-inverse: #101010;
   
   --color-theme-divider-light: rgba(255, 255, 255, 0.04);
-  --color-theme-divider: rgba(255, 255, 255, 0.08);
-  --color-theme-divider-strong: rgba(255, 255, 255, 0.12);
-  --color-theme-divider-inverse: #f2f2f2;
+  --color-theme-divider: rgba(255, 255, 255, 0.06);
+  --color-theme-divider-strong: rgba(255, 255, 255, 0.08);
+  --color-theme-divider-inverse: rgba(255, 255, 255, 0.10);
 
   /* Overrides for hardcoded neutral dividers that appear bright white in dark mode */
   --color-neutral-100: rgba(255, 255, 255, 0.06);

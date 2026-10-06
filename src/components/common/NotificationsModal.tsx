@@ -15,6 +15,7 @@ import {
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from './Avatar';
 import { NotificationItem } from '../../types';
+import { SEED_NOTIFICATIONS } from '../../data/seedData';
 
 interface SuggestedAccount {
   id: string;
@@ -123,11 +124,13 @@ export const NotificationsModal: React.FC = () => {
     }
   };
 
+  const safeNotifications = (notifications && notifications.length > 0) ? notifications : SEED_NOTIFICATIONS;
+
   // Group notifications into Today vs Earlier
-  const todayNotifs = notifications.filter(
+  const todayNotifs = safeNotifications.filter(
     (n) => n.timestamp.includes('m ago') || n.timestamp.includes('h ago')
   );
-  const earlierNotifs = notifications.filter(
+  const earlierNotifs = safeNotifications.filter(
     (n) => !n.timestamp.includes('m ago') && !n.timestamp.includes('h ago')
   );
 
@@ -138,7 +141,7 @@ export const NotificationsModal: React.FC = () => {
     >
       <div className="w-full max-w-xl mx-auto flex-1 flex flex-col bg-theme-surface overflow-hidden">
         {/* Instagram Inspo Header with Back Arrow & Bold Title */}
-        <div className="pt-4 pb-3 px-4 bg-theme-surface border-b border-theme-divider-light flex items-center justify-between shrink-0">
+        <div className="pt-4 pb-3 px-4 bg-theme-surface border-b border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <button
               id="btn-notifications-back"
@@ -157,7 +160,7 @@ export const NotificationsModal: React.FC = () => {
           <div className="flex items-center gap-1">
             <button
               onClick={markNotificationsAsRead}
-              className="p-2 rounded-full text-theme-tertiary hover:text-theme-primary hover:bg-theme-surface-hover transition-colors cursor-pointer"
+              className="p-2 rounded-full text-[#707070] dark:text-[#707070] hover:text-[#5E43F3] dark:hover:text-[#7C65F6] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
               title="Mark all as read"
             >
               <CheckCheck className="w-4 h-4" />
@@ -169,14 +172,14 @@ export const NotificationsModal: React.FC = () => {
         </div>
 
         {/* Filter Chips Bar */}
-        <div className="px-4 py-2 bg-theme-base/60 border-b border-theme-divider-light flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+        <div className="px-4 py-2 bg-theme-base/60 border-b border-black/[0.04] dark:border-white/[0.06] flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
           <button
             type="button"
             onClick={() => setActiveFilter('all')}
             className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
               activeFilter === 'all'
-                ? 'bg-theme-inverse text-theme-text-inverse'
-                : 'bg-theme-surface text-theme-secondary border border-theme-divider/70 hover:bg-theme-surface-hover'
+                ? 'bg-theme-inverse text-theme-text-inverse shadow-xs'
+                : 'bg-black/[0.03] dark:bg-white/[0.04] text-theme-secondary hover:bg-black/[0.06] dark:hover:bg-white/[0.07] hover:text-theme-primary'
             }`}
           >
             All
@@ -186,8 +189,8 @@ export const NotificationsModal: React.FC = () => {
             onClick={() => setActiveFilter('suggested')}
             className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
               activeFilter === 'suggested'
-                ? 'bg-theme-inverse text-theme-text-inverse'
-                : 'bg-theme-surface text-theme-secondary border border-theme-divider/70 hover:bg-theme-surface-hover'
+                ? 'bg-theme-inverse text-theme-text-inverse shadow-xs'
+                : 'bg-black/[0.03] dark:bg-white/[0.04] text-theme-secondary hover:bg-black/[0.06] dark:hover:bg-white/[0.07] hover:text-theme-primary'
             }`}
           >
             Suggested for you
@@ -197,8 +200,8 @@ export const NotificationsModal: React.FC = () => {
             onClick={() => setActiveFilter('activity')}
             className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
               activeFilter === 'activity'
-                ? 'bg-theme-inverse text-theme-text-inverse'
-                : 'bg-theme-surface text-theme-secondary border border-theme-divider/70 hover:bg-theme-surface-hover'
+                ? 'bg-theme-inverse text-theme-text-inverse shadow-xs'
+                : 'bg-black/[0.03] dark:bg-white/[0.04] text-theme-secondary hover:bg-black/[0.06] dark:hover:bg-white/[0.07] hover:text-theme-primary'
             }`}
           >
             Recent Activity
@@ -226,7 +229,7 @@ export const NotificationsModal: React.FC = () => {
         )}
 
         {/* Scrollable Content */}
-        <div ref={containerRef} className="flex-1 overflow-y-auto min-h-0 divide-y divide-neutral-100">
+        <div ref={containerRef} className="flex-1 overflow-y-auto min-h-0 divide-y divide-black/[0.04] dark:divide-white/[0.06]">
           {/* SECTION 1: FEATURED (from inspo screenshot) */}
           {(activeFilter === 'all' || activeFilter === 'suggested') && !isFeaturedDismissed && (
             <div className="pb-2">
@@ -360,52 +363,59 @@ export const NotificationsModal: React.FC = () => {
               {todayNotifs.length > 0 && (
                 <div>
                   <div className="px-4 pt-3 pb-2">
-                    <h2 className="text-sm font-bold text-theme-primary uppercase tracking-wider text-[11px] text-theme-tertiary">
+                    <h2 className="text-sm font-bold uppercase tracking-wider text-[11px] text-[#707070] dark:text-[#707070]">
                       Today
                     </h2>
                   </div>
 
-                  {todayNotifs.map((notif) => (
-                    <div
-                      key={notif.id}
-                      onClick={() => handleNotificationClick(notif)}
-                      className={`px-4 py-3 flex items-start gap-3 transition-colors cursor-pointer hover:bg-theme-base ${
-                        !notif.isRead ? 'bg-indigo-50/25' : 'bg-theme-surface'
-                      }`}
-                    >
-                      <div className="relative shrink-0">
-                        <Avatar
-                          src={notif.actor?.avatar}
-                          alt={notif.actor?.name || 'Notification'}
-                          size="md"
-                        />
-                        <span className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-theme-surface shadow-xs">
-                          {getNotifIcon(notif.type)}
-                        </span>
-                      </div>
+                  <div className="divide-y divide-black/[0.04] dark:divide-white/[0.06] px-2">
+                    {todayNotifs.map((notif) => {
+                      const isLikeCard = notif.type === 'like';
+                      return (
+                        <div
+                          key={notif.id}
+                          onClick={() => handleNotificationClick(notif)}
+                          className={`px-3 py-3.5 flex items-start gap-3 transition-colors cursor-pointer rounded-xl ${
+                            isLikeCard
+                              ? 'bg-[#5E43F3]/[0.08] dark:bg-[#171326] border border-[#5E43F3]/20 shadow-xs my-1'
+                              : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.02]'
+                          }`}
+                        >
+                        <div className="relative shrink-0 mt-0.5">
+                          <Avatar
+                            src={notif.actor?.avatar}
+                            alt={notif.actor?.name || 'Notification'}
+                            size="md"
+                          />
+                          <span className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-theme-surface dark:bg-[#141414] border border-black/[0.04] dark:border-white/[0.06] shadow-xs">
+                            {getNotifIcon(notif.type)}
+                          </span>
+                        </div>
 
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-theme-primary leading-snug">
-                          <strong className="text-theme-primary font-bold">
-                            {notif.actor?.name || 'Lalao'}
-                          </strong>{' '}
-                          {notif.text}
-                        </p>
-
-                        {notif.targetExcerpt && (
-                          <p className="text-[11px] text-theme-tertiary mt-1 line-clamp-1 bg-theme-surface-hover/70 px-2 py-1 rounded-md">
-                            &ldquo;{notif.targetExcerpt}&rdquo;
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs leading-snug">
+                            <span className="text-theme-primary font-bold">
+                              {notif.actor?.name || 'Lalao'}
+                            </span>{' '}
+                            <span className="text-theme-secondary">{notif.text}</span>
                           </p>
+
+                          {notif.targetExcerpt && (
+                            <div className="mt-1.5">
+                              <span className="text-[11px] text-theme-secondary inline-block line-clamp-1 bg-[#EBE6DF] dark:bg-[#181818] border border-transparent dark:border-white/[0.04] px-2.5 py-1 rounded-lg">
+                                &ldquo;{notif.targetExcerpt}&rdquo;
+                              </span>
+                            </div>
+                          )}
+
+                          <span className="text-[10px] text-[#707070] dark:text-[#707070] mt-1.5 block font-medium">
+                            {notif.timestamp}
+                          </span>
+                        </div>
+
+                        {!notif.isRead && (
+                          <span className="w-2 h-2 rounded-full bg-[#5E43F3] shadow-[0_0_8px_rgba(94,67,243,0.5)] shrink-0 mt-2" />
                         )}
-
-                        <span className="text-[10px] text-theme-tertiary mt-1 block">
-                          {notif.timestamp}
-                        </span>
-                      </div>
-
-                      {!notif.isRead && (
-                        <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0 mt-2 ring-2 ring-rose-200" />
-                      )}
 
                       {/* Action Button (e.g., Follow Back / Friends) */}
                       {notif.type === 'follow' && (
@@ -457,60 +467,69 @@ export const NotificationsModal: React.FC = () => {
                         </div>
                       )}
                     </div>
-                  ))}
-                </div>
-              )}
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
               {/* Earlier */}
               {earlierNotifs.length > 0 && (
                 <div className="mt-2">
                   <div className="px-4 pt-3 pb-2">
-                    <h2 className="text-sm font-bold text-theme-primary uppercase tracking-wider text-[11px] text-theme-tertiary">
+                    <h2 className="text-sm font-bold uppercase tracking-wider text-[11px] text-[#707070] dark:text-[#707070]">
                       Earlier
                     </h2>
                   </div>
 
-                  {earlierNotifs.map((notif) => (
-                    <div
-                      key={notif.id}
-                      onClick={() => handleNotificationClick(notif)}
-                      className={`px-4 py-3 flex items-start gap-3 transition-colors cursor-pointer hover:bg-theme-base ${
-                        !notif.isRead ? 'bg-indigo-50/25' : 'bg-theme-surface'
-                      }`}
-                    >
-                      <div className="relative shrink-0">
-                        <Avatar
-                          src={notif.actor?.avatar}
-                          alt={notif.actor?.name || 'Notification'}
-                          size="md"
-                        />
-                        <span className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-theme-surface shadow-xs">
-                          {getNotifIcon(notif.type)}
-                        </span>
-                      </div>
+                  <div className="divide-y divide-black/[0.04] dark:divide-white/[0.06] px-2">
+                    {earlierNotifs.map((notif) => {
+                      const isLikeCard = notif.type === 'like';
+                      return (
+                        <div
+                          key={notif.id}
+                          onClick={() => handleNotificationClick(notif)}
+                          className={`px-3 py-3.5 flex items-start gap-3 transition-colors cursor-pointer rounded-xl ${
+                            isLikeCard
+                              ? 'bg-[#5E43F3]/[0.08] dark:bg-[#171326] border border-[#5E43F3]/20 shadow-xs my-1'
+                              : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.02]'
+                          }`}
+                        >
+                        <div className="relative shrink-0 mt-0.5">
+                          <Avatar
+                            src={notif.actor?.avatar}
+                            alt={notif.actor?.name || 'Notification'}
+                            size="md"
+                          />
+                          <span className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-theme-surface dark:bg-[#141414] border border-black/[0.04] dark:border-white/[0.06] shadow-xs">
+                            {getNotifIcon(notif.type)}
+                          </span>
+                        </div>
 
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-theme-primary leading-snug">
-                          <strong className="text-theme-primary font-bold">
-                            {notif.actor?.name || 'Lalao'}
-                          </strong>{' '}
-                          {notif.text}
-                        </p>
-
-                        {notif.targetExcerpt && (
-                          <p className="text-[11px] text-theme-tertiary mt-1 line-clamp-1 bg-theme-surface-hover/70 px-2 py-1 rounded-md">
-                            &ldquo;{notif.targetExcerpt}&rdquo;
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs leading-snug">
+                            <span className="text-theme-primary font-bold">
+                              {notif.actor?.name || 'Lalao'}
+                            </span>{' '}
+                            <span className="text-theme-secondary">{notif.text}</span>
                           </p>
+
+                          {notif.targetExcerpt && (
+                            <div className="mt-1.5">
+                              <span className="text-[11px] text-theme-secondary inline-block line-clamp-1 bg-[#EBE6DF] dark:bg-[#181818] border border-transparent dark:border-white/[0.04] px-2.5 py-1 rounded-lg">
+                                &ldquo;{notif.targetExcerpt}&rdquo;
+                              </span>
+                            </div>
+                          )}
+
+                          <span className="text-[10px] text-[#707070] dark:text-[#707070] mt-1.5 block font-medium">
+                            {notif.timestamp}
+                          </span>
+                        </div>
+
+                        {!notif.isRead && (
+                          <span className="w-2 h-2 rounded-full bg-[#5E43F3] shadow-[0_0_8px_rgba(94,67,243,0.5)] shrink-0 mt-2" />
                         )}
-
-                        <span className="text-[10px] text-theme-tertiary mt-1 block">
-                          {notif.timestamp}
-                        </span>
-                      </div>
-
-                      {!notif.isRead && (
-                        <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0 mt-2 ring-2 ring-rose-200" />
-                      )}
 
                       {/* Action Button (e.g., Follow Back / Friends) */}
                       {notif.type === 'follow' && (
@@ -562,11 +581,13 @@ export const NotificationsModal: React.FC = () => {
                         </div>
                       )}
                     </div>
-                  ))}
-                </div>
-              )}
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
-              {notifications.length === 0 && (
+              {safeNotifications.length === 0 && (
                 <div className="p-8 text-center text-theme-tertiary space-y-2">
                   <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center mx-auto text-rose-500">
                     <Heart className="w-6 h-6 fill-rose-500" />

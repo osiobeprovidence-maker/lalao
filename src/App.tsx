@@ -26,6 +26,7 @@ import { EventDistributionProvider } from './services/events/EventDistributionCo
 import { KlyroWalletProvider } from './services/wallet/KlyroWalletContext';
 import { UserProfileModal } from './components/profile/UserProfileModal';
 import { SettingsPageView } from './components/profile/SettingsPageView';
+import { NotificationListener } from './components/notifications/NotificationListener';
 import { CommentsModal } from './components/common/CommentsModal';
 import { NotificationsModal } from './components/common/NotificationsModal';
 import { AuthPromptModal } from './components/common/AuthPromptModal';
@@ -300,6 +301,11 @@ const LalaoAppContent: React.FC = () => {
                 />
               </div>
             )}
+            {activeTab === 'location' && (
+              <div key="tab-location" className="animate-in fade-in duration-200 min-h-full w-full bg-transparent">
+                <LocationRadiusModal />
+              </div>
+            )}
             {activeTab === 'saved' && (
               <div key="tab-saved" className="animate-in fade-in duration-200">
                 {renderListPage(
@@ -348,7 +354,6 @@ const LalaoAppContent: React.FC = () => {
       </div>
 
       <SettingsPageView />
-      <LocationRadiusModal />
       <RallyComposerModal />
       <CreateCycleModal isOpen={isCreateCycleOpen} onClose={() => setIsCreateCycleOpen(false)} />
       <CycleDetailModal />
@@ -383,6 +388,7 @@ const LalaoAppContent: React.FC = () => {
       {!['create-post'].includes(activeTab) && <WalletModal />}
       {!['create-post'].includes(activeTab) && <MySubscriptionsModal />}
       <AuthPromptModal />
+        <NotificationListener />
 
 
       {shareToast && (

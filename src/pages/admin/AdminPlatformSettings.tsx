@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { Save, Upload, Image as ImageIcon, CheckCircle2, RotateCcw } from 'lucide-react';
+import { Save, Upload, Image as ImageIcon, CheckCircle2, RotateCcw, Building2, Camera, ExternalLink } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { uploadImageToCloudinary } from '../../lib/cloudinary';
 
@@ -10,6 +10,11 @@ export const AdminPlatformSettings: React.FC = () => {
   const updateBrandingSettings = useMutation((api as any).platformSettings.updateBrandingSettings);
   const featureFlagsData = useQuery((api as any).platformSettings.getFeatureFlags);
   const updateFeatureFlags = useMutation((api as any).platformSettings.updateFeatureFlags);
+  
+  // Super Admin System Pages Media Controls
+  const systemPagesMedia = useQuery(api.admin.getSystemPagesMedia);
+  const updateSystemPageMedia = useMutation(api.admin.updateSystemPageMedia);
+
   const { generateCloudinarySignature } = useLalao();
   
   const [formData, setFormData] = useState({
@@ -42,6 +47,21 @@ export const AdminPlatformSettings: React.FC = () => {
   const [isSavingFlags, setIsSavingFlags] = useState(false);
   const [saveFlagsSuccess, setSaveFlagsSuccess] = useState(false);
 
+  // System Pages Media state (Roomy & Lalao)
+  const [roomyMedia, setRoomyMedia] = useState({
+    coverImage: '',
+    avatar: '',
+  });
+  const [isSavingRoomyMedia, setIsSavingRoomyMedia] = useState(false);
+  const [saveRoomySuccess, setSaveRoomySuccess] = useState(false);
+
+  const [lalaoMedia, setLalaoMedia] = useState({
+    coverImage: '',
+    avatar: '',
+  });
+  const [isSavingLalaoMedia, setIsSavingLalaoMedia] = useState(false);
+  const [saveLalaoSuccess, setSaveLalaoSuccess] = useState(false);
+
   // Initialize form when data loads
   useEffect(() => {
     if (brandingSettings) {
@@ -62,6 +82,87 @@ export const AdminPlatformSettings: React.FC = () => {
       });
     }
   }, [featureFlagsData]);
+
+  useEffect(() => {
+    if (systemPagesMedia) {
+      if (systemPagesMedia.roomy) {
+        setRoomyMedia({
+          coverImage: systemPagesMedia.roomy.coverImage || '',
+          avatar: systemPagesMedia.roomy.avatar || '',
+        });
+      }
+      if (systemPagesMedia.lalao) {
+        setLalaoMedia({
+          coverImage: systemPagesMedia.lalao.coverImage || '',
+          avatar: systemPagesMedia.lalao.avatar || '',
+        });
+      }
+    }
+  }, [systemPagesMedia]);
+
+  const handleUploadMediaFile = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    type: 'roomy' | 'lalao',
+    field: 'coverImage' | 'avatar'
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const sigData = await generateCloudinarySignature("pages");
+      if (!sigData) throw new Error("Could not get signature");
+
+      const url = await uploadImageToCloudinary(file, sigData);
+      if (type === 'roomy') {
+        setRoomyMedia(prev => ({ ...prev, [field]: url }));
+      } else {
+        setLalaoMedia(prev => ({ ...prev, [field]: url }));
+      }
+    } catch (err) {
+      console.error("Upload failed", err);
+      alert("Failed to upload image. Check console for details.");
+    }
+  };
+
+  const handleSaveRoomyMedia = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingRoomyMedia(true);
+    setSaveRoomySuccess(false);
+
+    try {
+      await updateSystemPageMedia({
+        username: 'roomy',
+        coverImage: roomyMedia.coverImage || undefined,
+        avatar: roomyMedia.avatar || undefined,
+      });
+      setSaveRoomySuccess(true);
+      setTimeout(() => setSaveRoomySuccess(false), 3000);
+    } catch (err: any) {
+      alert(`Error saving Roomy media: ${err.message}`);
+    } finally {
+      setIsSavingRoomyMedia(false);
+    }
+  };
+
+  const handleSaveLalaoMedia = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingLalaoMedia(true);
+    setSaveLalaoSuccess(false);
+
+    try {
+      await updateSystemPageMedia({
+        username: 'lalao',
+        coverImage: lalaoMedia.coverImage || undefined,
+        avatar: lalaoMedia.avatar || undefined,
+      });
+      setSaveLalaoSuccess(true);
+      setTimeout(() => setSaveLalaoSuccess(false), 3000);
+    } catch (err: any) {
+      alert(`Error saving Lalao media: ${err.message}`);
+    } finally {
+      setIsSavingLalaoMedia(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -495,6 +596,349 @@ export const AdminPlatformSettings: React.FC = () => {
           </div>
         </div>
       </form>
+
+      {/* System Pages Media Section (Roomy & Lalao) */}
+      <div className="rounded-2xl border border-theme-divider bg-theme-surface p-6 shadow-sm mt-8 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-theme-divider-light pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-black text-theme-primary">System Pages Branding & Media</h2>
+              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-[#5E43F3]/10 text-[#5E43F3] border border-[#5E43F3]/20">
+                Super Admin Managed
+              </span>
+            </div>
+            <p className="text-xs text-theme-tertiary mt-1">
+              Super Admin controls the Cover Image and Profile Image for official system pages (Rommy and Lalao).
+              Page admins can manage page content, but media is governed centrally here.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* ROOMY CARD */}
+          <div className="rounded-2xl border border-theme-divider bg-theme-base/60 p-5 space-y-4 flex flex-col justify-between">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center text-[#5E43F3]">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-theme-primary">Rommy Organization</h3>
+                    <p className="text-xs text-theme-tertiary">@roomy · Landlord & Accommodation Hub</p>
+                  </div>
+                </div>
+                <a
+                  href="/app/page/roomy"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 text-xs text-[#5E43F3] hover:underline font-semibold"
+                >
+                  <span>View Page</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+
+              {/* Cover Preview & Input */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-theme-secondary flex items-center justify-between">
+                  <span>Cover Image</span>
+                  <span className="text-[11px] font-normal text-theme-tertiary">Banner overlay</span>
+                </label>
+                <div className="relative h-28 rounded-xl overflow-hidden bg-theme-inverse border border-theme-divider group">
+                  {roomyMedia.coverImage ? (
+                    <img
+                      src={roomyMedia.coverImage}
+                      alt="Roomy Cover Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-theme-tertiary">
+                      No cover image set
+                    </div>
+                  )}
+                  <label className="absolute bottom-2 right-2 px-3 py-1.5 rounded-lg bg-black/70 hover:bg-black/90 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md backdrop-blur-sm">
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Upload Cover</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleUploadMediaFile(e, 'roomy', 'coverImage')}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                <input
+                  type="text"
+                  placeholder="https://... cover image URL"
+                  value={roomyMedia.coverImage}
+                  onChange={(e) => setRoomyMedia(prev => ({ ...prev, coverImage: e.target.value }))}
+                  className="w-full px-3.5 py-2 rounded-xl bg-theme-surface border border-theme-divider text-xs text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3]"
+                />
+                {/* Preset covers */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] text-theme-tertiary font-bold">Presets:</span>
+                  <button
+                    type="button"
+                    onClick={() => setRoomyMedia(prev => ({ ...prev, coverImage: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200&auto=format&fit=crop&q=80' }))}
+                    className="text-[10px] px-2 py-0.5 rounded-full bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider text-theme-secondary font-medium cursor-pointer"
+                  >
+                    Living Room
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRoomyMedia(prev => ({ ...prev, coverImage: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&auto=format&fit=crop&q=80' }))}
+                    className="text-[10px] px-2 py-0.5 rounded-full bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider text-theme-secondary font-medium cursor-pointer"
+                  >
+                    Modern Loft
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRoomyMedia(prev => ({ ...prev, coverImage: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200&auto=format&fit=crop&q=80' }))}
+                    className="text-[10px] px-2 py-0.5 rounded-full bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider text-theme-secondary font-medium cursor-pointer"
+                  >
+                    Apartment
+                  </button>
+                </div>
+              </div>
+
+              {/* Profile Image (Avatar) Preview & Input */}
+              <div className="space-y-2 pt-2 border-t border-theme-divider-light">
+                <label className="text-xs font-bold text-theme-secondary flex items-center justify-between">
+                  <span>Profile Avatar</span>
+                  <span className="text-[11px] font-normal text-theme-tertiary">Logo / Icon</span>
+                </label>
+                <div className="flex items-center gap-3">
+                  <div className="w-16 h-16 rounded-full overflow-hidden bg-theme-surface border-2 border-theme-divider shrink-0 flex items-center justify-center">
+                    {roomyMedia.avatar ? (
+                      <img src={roomyMedia.avatar} alt="Roomy Avatar Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-sm font-black text-theme-tertiary">Roomy</span>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <input
+                      type="text"
+                      placeholder="https://... avatar URL"
+                      value={roomyMedia.avatar}
+                      onChange={(e) => setRoomyMedia(prev => ({ ...prev, avatar: e.target.value }))}
+                      className="w-full px-3.5 py-2 rounded-xl bg-theme-surface border border-theme-divider text-xs text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3]"
+                    />
+                    <div className="flex items-center gap-2">
+                      <label className="px-3 py-1 rounded-lg bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider text-theme-primary text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+                        <Camera className="w-3.5 h-3.5 text-[#5E43F3]" />
+                        <span>Upload File</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleUploadMediaFile(e, 'roomy', 'avatar')}
+                          className="hidden"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setRoomyMedia(prev => ({ ...prev, avatar: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=400&auto=format&fit=crop&q=80' }))}
+                        className="text-[10px] px-2 py-1 rounded-lg bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider text-theme-secondary font-medium cursor-pointer"
+                      >
+                        House Icon
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRoomyMedia(prev => ({ ...prev, avatar: 'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?w=400&auto=format&fit=crop&q=80' }))}
+                        className="text-[10px] px-2 py-1 rounded-lg bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider text-theme-secondary font-medium cursor-pointer"
+                      >
+                        Modern Villa
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-theme-divider-light flex items-center justify-between">
+              {saveRoomySuccess ? (
+                <span className="text-emerald-600 text-xs font-bold flex items-center gap-1">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Roomy media saved!
+                </span>
+              ) : (
+                <span className="text-[11px] text-theme-tertiary">Rommy page displays these images.</span>
+              )}
+              <button
+                type="button"
+                onClick={handleSaveRoomyMedia}
+                disabled={isSavingRoomyMedia}
+                className="px-4 py-2 rounded-xl bg-[#5E43F3] hover:bg-[#4E34E0] disabled:opacity-50 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+              >
+                {isSavingRoomyMedia ? (
+                  <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                ) : (
+                  <Save className="w-3.5 h-3.5" />
+                )}
+                <span>Save Rommy Media</span>
+              </button>
+            </div>
+          </div>
+
+          {/* LALAO CARD */}
+          <div className="rounded-2xl border border-theme-divider bg-theme-base/60 p-5 space-y-4 flex flex-col justify-between">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-theme-primary">Lalao Official Page</h3>
+                    <p className="text-xs text-theme-tertiary">@lalao · Platform Official Page</p>
+                  </div>
+                </div>
+                <a
+                  href="/app/page/lalao"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 text-xs text-[#5E43F3] hover:underline font-semibold"
+                >
+                  <span>View Page</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+
+              {/* Cover Preview & Input */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-theme-secondary flex items-center justify-between">
+                  <span>Cover Image</span>
+                  <span className="text-[11px] font-normal text-theme-tertiary">Banner overlay</span>
+                </label>
+                <div className="relative h-28 rounded-xl overflow-hidden bg-theme-inverse border border-theme-divider group">
+                  {lalaoMedia.coverImage ? (
+                    <img
+                      src={lalaoMedia.coverImage}
+                      alt="Lalao Cover Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-theme-tertiary">
+                      No cover image set
+                    </div>
+                  )}
+                  <label className="absolute bottom-2 right-2 px-3 py-1.5 rounded-lg bg-black/70 hover:bg-black/90 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md backdrop-blur-sm">
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Upload Cover</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleUploadMediaFile(e, 'lalao', 'coverImage')}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                <input
+                  type="text"
+                  placeholder="https://... cover image URL"
+                  value={lalaoMedia.coverImage}
+                  onChange={(e) => setLalaoMedia(prev => ({ ...prev, coverImage: e.target.value }))}
+                  className="w-full px-3.5 py-2 rounded-xl bg-theme-surface border border-theme-divider text-xs text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3]"
+                />
+                {/* Preset covers */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] text-theme-tertiary font-bold">Presets:</span>
+                  <button
+                    type="button"
+                    onClick={() => setLalaoMedia(prev => ({ ...prev, coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80' }))}
+                    className="text-[10px] px-2 py-0.5 rounded-full bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider text-theme-secondary font-medium cursor-pointer"
+                  >
+                    Vibrant Fluid
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLalaoMedia(prev => ({ ...prev, coverImage: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1200&auto=format&fit=crop&q=80' }))}
+                    className="text-[10px] px-2 py-0.5 rounded-full bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider text-theme-secondary font-medium cursor-pointer"
+                  >
+                    Soft Gradient
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLalaoMedia(prev => ({ ...prev, coverImage: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1200&auto=format&fit=crop&q=80' }))}
+                    className="text-[10px] px-2 py-0.5 rounded-full bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider text-theme-secondary font-medium cursor-pointer"
+                  >
+                    Retro Tech
+                  </button>
+                </div>
+              </div>
+
+              {/* Profile Image (Avatar) Preview & Input */}
+              <div className="space-y-2 pt-2 border-t border-theme-divider-light">
+                <label className="text-xs font-bold text-theme-secondary flex items-center justify-between">
+                  <span>Profile Avatar</span>
+                  <span className="text-[11px] font-normal text-theme-tertiary">Logo / Icon</span>
+                </label>
+                <div className="flex items-center gap-3">
+                  <div className="w-16 h-16 rounded-full overflow-hidden bg-theme-surface border-2 border-theme-divider shrink-0 flex items-center justify-center">
+                    {lalaoMedia.avatar ? (
+                      <img src={lalaoMedia.avatar} alt="Lalao Avatar Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-sm font-black text-theme-tertiary">Lalao</span>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <input
+                      type="text"
+                      placeholder="https://... avatar URL"
+                      value={lalaoMedia.avatar}
+                      onChange={(e) => setLalaoMedia(prev => ({ ...prev, avatar: e.target.value }))}
+                      className="w-full px-3.5 py-2 rounded-xl bg-theme-surface border border-theme-divider text-xs text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3]"
+                    />
+                    <div className="flex items-center gap-2">
+                      <label className="px-3 py-1 rounded-lg bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider text-theme-primary text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+                        <Camera className="w-3.5 h-3.5 text-[#5E43F3]" />
+                        <span>Upload File</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleUploadMediaFile(e, 'lalao', 'avatar')}
+                          className="hidden"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setLalaoMedia(prev => ({ ...prev, avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&auto=format&fit=crop&q=80' }))}
+                        className="text-[10px] px-2 py-1 rounded-lg bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider text-theme-secondary font-medium cursor-pointer"
+                      >
+                        Glyph Icon
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-theme-divider-light flex items-center justify-between">
+              {saveLalaoSuccess ? (
+                <span className="text-emerald-600 text-xs font-bold flex items-center gap-1">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Lalao media saved!
+                </span>
+              ) : (
+                <span className="text-[11px] text-theme-tertiary">Lalao page displays these images.</span>
+              )}
+              <button
+                type="button"
+                onClick={handleSaveLalaoMedia}
+                disabled={isSavingLalaoMedia}
+                className="px-4 py-2 rounded-xl bg-[#5E43F3] hover:bg-[#4E34E0] disabled:opacity-50 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+              >
+                {isSavingLalaoMedia ? (
+                  <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                ) : (
+                  <Save className="w-3.5 h-3.5" />
+                )}
+                <span>Save Lalao Media</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

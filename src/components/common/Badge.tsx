@@ -15,27 +15,27 @@ export const Badge: React.FC<BadgeProps> = ({ type, className = '', size = 'sm' 
   const config = {
     BIZ: {
       label: 'BIZ',
-      bg: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
+      bg: 'bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60',
     },
     ORG: {
       label: 'ORG',
-      bg: 'bg-blue-50 text-blue-700 border-blue-200/80',
+      bg: 'bg-blue-50 text-blue-700 border-blue-200/80 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800/60',
     },
     CLUB: {
       label: 'CLUB',
-      bg: 'bg-amber-50 text-amber-800 border-amber-200/80',
+      bg: 'bg-amber-50 text-amber-800 border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60',
     },
     COMMUNITY: {
       label: 'COMMUNITY',
-      bg: 'bg-indigo-50 text-[#5E43F3] border-indigo-200/80',
+      bg: 'bg-indigo-50 text-[#5E43F3] border-indigo-200/80 dark:bg-indigo-950/40 dark:text-[#7C65F6] dark:border-indigo-800/60',
     },
     BUSINESS: {
       label: 'BIZ',
-      bg: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
+      bg: 'bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60',
     },
     ORGANIZATION: {
-      label: 'ORG',
-      bg: 'bg-blue-50 text-blue-700 border-blue-200/80',
+      label: 'ORGANIZATION',
+      bg: 'bg-blue-50 text-blue-700 border-blue-200/80 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800/60',
     },
   }[normalized] || {
     label: normalized,

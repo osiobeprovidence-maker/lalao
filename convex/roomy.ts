@@ -27,6 +27,14 @@ export const bootstrapRoomyPage = mutation({
       .unique();
 
     if (existing) {
+      if (existing.type !== "organization" || existing.badge !== "ORG" || !existing.description) {
+        await ctx.db.patch(existing._id, {
+          type: "organization",
+          badge: "ORG",
+          description: existing.description || "Roomy is a community organization helping students and young people find suitable accommodation and connect with compatible roommates.",
+          updatedAt: Date.now(),
+        });
+      }
       return existing._id;
     }
 
@@ -35,8 +43,9 @@ export const bootstrapRoomyPage = mutation({
       ownerId: user._id,
       name: "Roomy",
       username: "roomy",
-      type: "community",
-      description: "The official Lalao housing and roommate marketplace. Find rooms, find roommates, and list properties for free.",
+      type: "organization",
+      badge: "ORG",
+      description: "Roomy is a community organization helping students and young people find suitable accommodation and connect with compatible roommates.",
       location: "Global",
       activeTools: ["roomy"], // Special active tool flag to trigger the Roomy UI tab
       followersCount: 0,
@@ -44,7 +53,40 @@ export const bootstrapRoomyPage = mutation({
       updatedAt: Date.now(),
     });
 
+    await ctx.db.insert("pageMembers", {
+      pageId,
+      userId: user._id,
+      role: "owner",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
     return pageId;
+  },
+});
+
+export const ensureRoomyOrganization = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const existing = await ctx.db
+      .query("pages")
+      .withIndex("by_username", (q) => q.eq("username", "roomy"))
+      .unique();
+
+    if (existing) {
+      const updates: any = {};
+      if (existing.type !== "organization") updates.type = "organization";
+      if (existing.badge !== "ORG") updates.badge = "ORG";
+      if (!existing.description || existing.description.includes("marketplace")) {
+        updates.description = "Roomy is a community organization helping students and young people find suitable accommodation and connect with compatible roommates.";
+      }
+      if (Object.keys(updates).length > 0) {
+        updates.updatedAt = Date.now();
+        await ctx.db.patch(existing._id, updates);
+      }
+      return existing._id;
+    }
+    return null;
   },
 });
 

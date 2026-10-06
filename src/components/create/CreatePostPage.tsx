@@ -290,7 +290,7 @@ export const CreatePostPage: React.FC = () => {
           {/* Location Button */}
           <button
             type="button"
-            onClick={() => setIsLocationModalOpen(true)}
+            onClick={() => setActiveTab('location')}
             className="h-9 w-9 rounded-full flex items-center justify-center text-[#5E43F3] hover:bg-[#5E43F3]/10 transition"
             title={locationText}
           >

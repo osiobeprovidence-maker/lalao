@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { Search, Building2, Users, Edit2, Play } from 'lucide-react';
+import { Search, Building2, Users, Edit2, Play, Camera, X, Image as ImageIcon } from 'lucide-react';
 
 const TYPE_COLORS: Record<string, string> = {
   business: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -22,6 +22,7 @@ export const AdminPages: React.FC = () => {
 
   const bootstrapPages = useMutation(api.admin.bootstrapPlatformPages);
   const assignOwner = useMutation(api.admin.assignPageOwner);
+  const updatePageMedia = useMutation(api.admin.updatePageMediaByAdmin);
 
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [selectedPage, setSelectedPage] = useState<any>(null);
@@ -30,6 +31,39 @@ export const AdminPages: React.FC = () => {
   const searchResults = useQuery(api.admin.listUsers, assignModalOpen ? { search: userSearch || undefined, limit: 5 } : 'skip') || [];
   const [assigning, setAssigning] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(false);
+
+  // Super Admin Media Modal State
+  const [mediaModalOpen, setMediaModalOpen] = useState(false);
+  const [mediaModalPage, setMediaModalPage] = useState<any>(null);
+  const [mediaCoverUrl, setMediaCoverUrl] = useState('');
+  const [mediaAvatarUrl, setMediaAvatarUrl] = useState('');
+  const [savingMedia, setSavingMedia] = useState(false);
+
+  const openMediaModal = (p: any) => {
+    setMediaModalPage(p);
+    setMediaCoverUrl(p.coverImage || '');
+    setMediaAvatarUrl(p.avatar || '');
+    setMediaModalOpen(true);
+  };
+
+  const handleSavePageMedia = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mediaModalPage) return;
+    try {
+      setSavingMedia(true);
+      await updatePageMedia({
+        pageId: mediaModalPage._id,
+        coverImage: mediaCoverUrl || undefined,
+        avatar: mediaAvatarUrl || undefined,
+      });
+      alert(`Media updated successfully for @${mediaModalPage.username}`);
+      setMediaModalOpen(false);
+    } catch (e: any) {
+      alert(e.message || 'Failed to update page media');
+    } finally {
+      setSavingMedia(false);
+    }
+  };
 
   const handleBootstrap = async () => {
     try {
@@ -140,13 +174,22 @@ export const AdminPages: React.FC = () => {
                     <span className="font-medium text-theme-primary">{p.ownerName}</span>
                     {p.ownerEmail && <span className="text-theme-tertiary ml-1">({p.ownerEmail})</span>}
                   </div>
-                  <button 
-                    onClick={() => { setSelectedPage(p); setAssignModalOpen(true); }}
-                    className="p-1 text-theme-tertiary hover:text-theme-primary bg-theme-base hover:bg-theme-surface-hover rounded"
-                    title="Re-assign owner"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={() => openMediaModal(p)}
+                      className="p-1 text-theme-tertiary hover:text-[#5E43F3] bg-theme-base hover:bg-theme-surface-hover rounded transition-colors"
+                      title="Edit Cover & Profile Picture"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                    </button>
+                    <button 
+                      onClick={() => { setSelectedPage(p); setAssignModalOpen(true); }}
+                      className="p-1 text-theme-tertiary hover:text-theme-primary bg-theme-base hover:bg-theme-surface-hover rounded transition-colors"
+                      title="Re-assign owner"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
               
@@ -245,13 +288,22 @@ export const AdminPages: React.FC = () => {
                       {new Date(p.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button 
-                        onClick={() => { setSelectedPage(p); setAssignModalOpen(true); }}
-                        className="p-1.5 text-theme-tertiary hover:text-[#5E43F3] bg-theme-base hover:bg-indigo-50 rounded-lg transition-colors"
-                        title="Re-assign owner"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button 
+                          onClick={() => openMediaModal(p)}
+                          className="p-1.5 text-theme-tertiary hover:text-[#5E43F3] bg-theme-base hover:bg-indigo-50 dark:hover:bg-theme-surface-hover rounded-lg transition-colors cursor-pointer"
+                          title="Edit Cover & Profile Images (Super Admin)"
+                        >
+                          <Camera className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => { setSelectedPage(p); setAssignModalOpen(true); }}
+                          className="p-1.5 text-theme-tertiary hover:text-[#5E43F3] bg-theme-base hover:bg-indigo-50 dark:hover:bg-theme-surface-hover rounded-lg transition-colors cursor-pointer"
+                          title="Re-assign owner"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -332,6 +384,95 @@ export const AdminPages: React.FC = () => {
                   className="flex-1 px-4 py-2 rounded-xl text-sm font-bold text-white bg-[#5E43F3] hover:bg-[#4E34E0] disabled:opacity-50 transition-colors"
                 >
                   {assigning ? 'Assigning...' : 'Assign Owner'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Super Admin Media Modal */}
+      {mediaModalOpen && mediaModalPage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-theme-surface rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-theme-divider">
+            <div className="flex items-center justify-between pb-4 border-b border-theme-divider">
+              <div>
+                <h3 className="text-base font-black text-theme-primary">Manage Page Media</h3>
+                <p className="text-xs text-theme-tertiary mt-0.5">
+                  Super Admin control for @{mediaModalPage.username} ({mediaModalPage.name})
+                </p>
+              </div>
+              <button 
+                onClick={() => setMediaModalOpen(false)}
+                className="p-1.5 text-theme-tertiary hover:text-theme-primary rounded-lg hover:bg-theme-surface-hover"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePageMedia} className="space-y-4 pt-4">
+              {/* Cover Preview & URL */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-theme-secondary flex items-center justify-between">
+                  <span>Cover Image</span>
+                  <span className="text-[10px] text-theme-tertiary">Banner</span>
+                </label>
+                <div className="h-28 rounded-xl overflow-hidden bg-theme-inverse border border-theme-divider">
+                  {mediaCoverUrl ? (
+                    <img src={mediaCoverUrl} alt="Cover Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-theme-tertiary">
+                      No cover image set
+                    </div>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  placeholder="https://... cover image URL"
+                  value={mediaCoverUrl}
+                  onChange={(e) => setMediaCoverUrl(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl bg-theme-base border border-theme-divider text-xs text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3]"
+                />
+              </div>
+
+              {/* Profile Avatar Preview & URL */}
+              <div className="space-y-2 pt-2 border-t border-theme-divider-light">
+                <label className="text-xs font-bold text-theme-secondary flex items-center justify-between">
+                  <span>Profile Avatar</span>
+                  <span className="text-[10px] text-theme-tertiary">Square logo/icon</span>
+                </label>
+                <div className="flex items-center gap-3">
+                  <div className="w-14 h-14 rounded-full overflow-hidden bg-theme-base border border-theme-divider shrink-0 flex items-center justify-center">
+                    {mediaAvatarUrl ? (
+                      <img src={mediaAvatarUrl} alt="Avatar Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xs font-bold text-theme-tertiary">Avatar</span>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="https://... avatar URL"
+                    value={mediaAvatarUrl}
+                    onChange={(e) => setMediaAvatarUrl(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl bg-theme-base border border-theme-divider text-xs text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-4 border-t border-theme-divider-light">
+                <button
+                  type="button"
+                  onClick={() => setMediaModalOpen(false)}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-xs font-bold text-theme-secondary bg-theme-surface-hover hover:bg-theme-surface-active transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingMedia}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-[#5E43F3] hover:bg-[#4E34E0] disabled:opacity-50 transition-colors cursor-pointer"
+                >
+                  {savingMedia ? 'Saving Media...' : 'Save Media'}
                 </button>
               </div>
             </form>

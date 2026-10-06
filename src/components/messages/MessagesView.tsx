@@ -198,9 +198,9 @@ export const MessagesView: React.FC = () => {
     <>
     {isSettingsOpen && (
       <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-200">
-        <div className="bg-theme-base w-full sm:w-[480px] sm:rounded-2xl rounded-t-2xl sm:max-h-[85vh] h-auto flex flex-col shadow-2xl border border-theme-divider animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200">
+        <div className="bg-[#F8F3EC] dark:bg-[#141414] w-full sm:w-[480px] sm:rounded-2xl rounded-t-2xl sm:max-h-[85vh] h-auto flex flex-col shadow-2xl border border-black/[0.06] dark:border-white/[0.06] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200">
           
-          <div className="flex items-center justify-between p-4 border-b border-theme-divider shrink-0">
+          <div className="flex items-center justify-between p-4 border-b border-black/[0.04] dark:border-white/[0.06] shrink-0">
             <h2 className="text-lg font-bold text-theme-primary">Message Settings</h2>
             <button
               onClick={() => setIsSettingsOpen(false)}
@@ -231,7 +231,7 @@ export const MessagesView: React.FC = () => {
                   { id: '1_month', label: '1 month', desc: 'Messages disappear 1 month after they are sent.' },
                   { id: 'custom', label: 'Custom', desc: 'Set a custom duration.' }
                 ].map(opt => (
-                  <label key={opt.id} className="flex items-start gap-3 p-3 rounded-xl border border-theme-divider bg-theme-surface hover:bg-theme-surface-hover transition-colors cursor-pointer">
+                  <label key={opt.id} className="flex items-start gap-3 p-3 rounded-xl border border-black/[0.06] dark:border-white/[0.06] bg-theme-surface dark:bg-[#181818] hover:bg-theme-surface-hover dark:hover:bg-[#1E1E1E] transition-colors cursor-pointer">
                     <div className="mt-0.5 relative flex items-center justify-center w-5 h-5 rounded-full border border-theme-divider-strong shrink-0">
                       {selectedMode === opt.id && <div className="w-2.5 h-2.5 rounded-full bg-[#5E43F3]" />}
                     </div>
@@ -245,18 +245,18 @@ export const MessagesView: React.FC = () => {
               </div>
 
               {selectedMode === 'custom' && (
-                <div className="flex items-center gap-3 p-4 bg-theme-surface rounded-xl border border-theme-divider animate-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center gap-3 p-4 bg-theme-surface dark:bg-[#181818] rounded-xl border border-black/[0.06] dark:border-white/[0.06] animate-in slide-in-from-top-2 duration-200">
                   <input
                     type="number"
                     min="1"
                     value={customValue}
                     onChange={(e) => setCustomValue(e.target.value)}
-                    className="w-20 px-3 py-2 bg-theme-base border border-theme-divider rounded-lg text-theme-primary outline-none focus:border-[#5E43F3] text-sm text-center"
+                    className="w-20 px-3 py-2 bg-theme-base border border-black/[0.06] dark:border-white/[0.06] rounded-lg text-theme-primary outline-none focus:border-[#5E43F3] text-sm text-center"
                   />
                   <select
                     value={customUnit}
                     onChange={(e) => setCustomUnit(e.target.value)}
-                    className="flex-1 px-3 py-2 bg-theme-base border border-theme-divider rounded-lg text-theme-primary outline-none focus:border-[#5E43F3] text-sm appearance-none cursor-pointer"
+                    className="flex-1 px-3 py-2 bg-theme-base border border-black/[0.06] dark:border-white/[0.06] rounded-lg text-theme-primary outline-none focus:border-[#5E43F3] text-sm appearance-none cursor-pointer"
                   >
                     <option value="hours">Hours</option>
                     <option value="days">Days</option>
@@ -268,10 +268,10 @@ export const MessagesView: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-4 border-t border-theme-divider shrink-0">
+          <div className="p-4 border-t border-black/[0.04] dark:border-white/[0.06] shrink-0">
             <button
               onClick={handleSaveSettings}
-              className="w-full py-2.5 bg-[#5E43F3] text-white font-bold rounded-xl hover:bg-[#4E34E0] active:scale-95 transition-all text-sm"
+              className="w-full py-2.5 bg-[#5E43F3] text-white font-bold rounded-xl hover:bg-[#4E34E0] active:scale-95 transition-all text-sm shadow-sm"
             >
               Save Settings
             </button>
@@ -290,7 +290,7 @@ export const MessagesView: React.FC = () => {
       onMouseUp={handleMouseUp}
     >
       {/* Top Header */}
-      <div className="sticky top-0 z-20 bg-theme-base/95 backdrop-blur-md border-b border-theme-divider/80 px-4 py-2.5 space-y-2">
+      <div className="sticky top-0 z-20 bg-theme-base/95 backdrop-blur-md border-b border-black/[0.04] dark:border-white/[0.06] px-4 py-2.5 space-y-2">
         <div className="flex items-center justify-between">
           <div
             onClick={handleRefresh}
@@ -303,7 +303,7 @@ export const MessagesView: React.FC = () => {
           </div>
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="p-1.5 rounded-full text-theme-secondary hover:text-theme-primary hover:bg-theme-surface-hover transition-colors"
+            className="p-1.5 rounded-full text-[#707070] dark:text-[#707070] hover:text-theme-primary hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors"
             title="Message settings"
           >
             <Settings className="w-5 h-5" />
@@ -319,7 +319,7 @@ export const MessagesView: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search messages & contacts..."
-            className="w-full pl-9 pr-9 py-2 rounded-full bg-theme-surface hover:bg-theme-surface-hover focus:bg-theme-base focus:ring-2 focus:ring-[#5E43F3]/20 focus:border-[#5E43F3] border border-theme-divider text-sm text-theme-primary placeholder:text-theme-secondary transition-all outline-none"
+            className="w-full pl-9 pr-9 py-2 rounded-full bg-theme-surface dark:bg-[#141414] hover:bg-theme-surface-hover focus:bg-theme-base focus:ring-2 focus:ring-[#5E43F3]/20 focus:border-[#5E43F3] border border-black/[0.06] dark:border-white/[0.06] text-sm text-theme-primary placeholder:text-theme-secondary transition-all outline-none"
           />
           {searchQuery && (
             <button
@@ -376,10 +376,10 @@ export const MessagesView: React.FC = () => {
       </div>
 
       {/* Status / Story Cycles Section */}
-      <div className="pt-3 pb-3 border-b border-theme-divider-light">
+      <div className="pt-3 pb-3 border-b border-black/[0.04] dark:border-white/[0.06]">
         <div className="px-4 flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-theme-secondary">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-[#707070] dark:text-[#707070]">
               Status
             </h2>
           </div>
@@ -470,12 +470,12 @@ export const MessagesView: React.FC = () => {
       {/* Chats Section */}
       <div className="pt-3">
         <div className="px-4 mb-1">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-theme-secondary">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-[#707070] dark:text-[#707070]">
             Direct Chats
           </h2>
         </div>
 
-        <div className="divide-y divide-neutral-100">
+        <div className="divide-y divide-black/[0.04] dark:divide-white/[0.06]">
           {/* 1. Render Conversations */}
           {unifiedChats.matchedConvs.map((conv) => {
             const lastMsg = conv.messages && conv.messages.length > 0 ? conv.messages[conv.messages.length - 1] : null;
@@ -486,7 +486,7 @@ export const MessagesView: React.FC = () => {
                 key={conv.id}
                 id={`conv-item-${conv.id}`}
                 onClick={() => setActiveChatId(conv.id)}
-                className="p-4 flex items-center justify-between hover:bg-theme-base/70 transition-colors cursor-pointer"
+                className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <Avatar
@@ -547,7 +547,7 @@ export const MessagesView: React.FC = () => {
             <div
               key={contact.id}
               onClick={() => openChatWithUser(contact)}
-              className="p-4 flex items-center justify-between hover:bg-theme-base/70 transition-colors cursor-pointer"
+              className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <Avatar

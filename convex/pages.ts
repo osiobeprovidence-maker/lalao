@@ -25,7 +25,7 @@ export const getMyPages = query({
         const page = await ctx.db.get(m.pageId);
         return page ? { page, role: m.role } : null;
       })
-    )).filter((item): item is { page: any, role: string } => item !== null);
+    )).filter((item): item is NonNullable<typeof item> => item !== null);
 
     const flags = await getFeatureFlagsInternal(ctx);
 
@@ -45,7 +45,7 @@ export const getMyPages = query({
         name: page.name,
         username: page.username,
         type: page.type,
-        badge: page.badge ?? "COMMUNITY",
+        badge: page.badge ?? (page.type === "organization" ? "ORG" : page.type === "business" ? "BIZ" : "COMMUNITY"),
         avatar: page.avatar ?? "",
         coverImage: page.coverImage ?? "",
         description: page.description ?? "",
@@ -97,6 +97,24 @@ export const listDiscoverablePages = query({
     const flags = await getFeatureFlagsInternal(ctx);
     const pages = await ctx.db.query("pages").collect();
     
+    // Check viewer identity to mark isOwner and role accurately
+    const identity = await ctx.auth.getUserIdentity();
+    let currentUserId: any = null;
+    let userMemberships: any[] = [];
+    if (identity) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+        .unique();
+      if (user) {
+        currentUserId = user._id;
+        userMemberships = await ctx.db
+          .query("pageMembers")
+          .withIndex("by_user", (q) => q.eq("userId", user._id))
+          .collect();
+      }
+    }
+
     // Filter out community pages if disabled
     const filteredPages = flags.communityEnabled 
       ? pages 
@@ -108,14 +126,22 @@ export const listDiscoverablePages = query({
         .withIndex("by_page", (q) => q.eq("pageId", page._id))
         .collect();
 
+      const mem = userMemberships.find(m => m.pageId === page._id);
+      const isOwner = Boolean(currentUserId && page.ownerId === currentUserId) || mem?.role === "owner";
+      const role = mem?.role || (isOwner ? "owner" : undefined);
+
       return {
         id: page._id,
+        ownerId: page.ownerId,
         name: page.name,
         username: page.username,
         type: page.type,
-        badge: page.badge,
+        badge: page.badge ?? (page.type === "organization" ? "ORG" : page.type === "business" ? "BIZ" : "COMMUNITY"),
         businessType: page.businessType,
+        activeTools: page.activeTools ?? [],
+        description: page.description ?? "",
         globalDiscoveryStatus: page.globalDiscoveryStatus,
+        serviceAreas: page.serviceAreas ?? [],
         isOnlineBusiness: page.isOnlineBusiness,
         location: page.location,
         latitude: (page as any).latitude,
@@ -125,6 +151,8 @@ export const listDiscoverablePages = query({
         category: page.category,
         aboutInfo: page.aboutInfo,
         followersCount: page.followersCount ?? 0,
+        isOwner,
+        role,
         events: events.map(e => ({
           id: e._id,
           pageId: e.pageId,
@@ -331,6 +359,8 @@ export const updatePage = mutation({
     globalDiscoveryStatus: v.optional(v.union(v.literal("global"), v.literal("national"), v.literal("regional"), v.literal("local"))),
     serviceAreas: v.optional(v.array(v.string())),
     isOnlineBusiness: v.optional(v.boolean()),
+    type: v.optional(v.union(v.literal("business"), v.literal("organization"), v.literal("club"), v.literal("community"))),
+    badge: v.optional(v.union(v.literal("BIZ"), v.literal("ORG"), v.literal("CLUB"), v.literal("COMMUNITY"))),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -358,8 +388,11 @@ export const updatePage = mutation({
     if (args.category !== undefined) updates.category = args.category;
     if (args.description !== undefined) updates.description = args.description;
     if (args.location !== undefined) updates.location = args.location;
-    if (args.avatar !== undefined) updates.avatar = args.avatar;
-    if (args.coverImage !== undefined) updates.coverImage = args.coverImage;
+    const isSystemManagedMedia = (page.username === "roomy" || page.username === "lalao") && user.role !== "super_admin";
+    if (args.avatar !== undefined && !isSystemManagedMedia) updates.avatar = args.avatar;
+    if (args.coverImage !== undefined && !isSystemManagedMedia) updates.coverImage = args.coverImage;
+    if (args.type !== undefined) updates.type = args.type;
+    if (args.badge !== undefined) updates.badge = args.badge;
     if (args.aboutInfo !== undefined) {
       updates.aboutInfo = {
         ...page.aboutInfo,
@@ -770,3 +803,37 @@ export const removePageMember = mutation({
     return { success: true };
   },
 });
+
+/**
+ * leavePageManagement
+ * Allows a non-owner team member (admin, editor, moderator) to remove
+ * themselves from a page's management team.
+ * Owners cannot use this — they must transfer ownership or delete the page.
+ */
+export const leavePageManagement = mutation({
+  args: { pageId: v.id("pages") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+    if (!user) throw new Error("User not found");
+
+    const membership = await ctx.db
+      .query("pageMembers")
+      .withIndex("by_page_user", (q) => q.eq("pageId", args.pageId).eq("userId", user._id))
+      .first();
+
+    if (!membership) throw new Error("You are not a member of this page");
+    if (membership.role === "owner") {
+      throw new Error("Owners cannot leave a page. Transfer ownership or delete the page instead.");
+    }
+
+    await ctx.db.delete(membership._id);
+    return { success: true };
+  },
+});
+

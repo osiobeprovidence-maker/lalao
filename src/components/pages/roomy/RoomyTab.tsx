@@ -101,36 +101,39 @@ export const RoomyTab: React.FC<RoomyTabProps> = ({ page }) => {
       {/* Prominent Actions */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <button
+          type="button"
           onClick={() => handleCreateListing('room_offered')}
-          className="flex flex-col items-center justify-center p-4 rounded-2xl bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 transition-colors cursor-pointer group"
+          className="flex flex-col items-center justify-center p-4 rounded-2xl bg-theme-surface border border-theme-divider hover:bg-theme-surface-hover hover:border-theme-divider-strong transition-all cursor-pointer group shadow-xs active:scale-[0.99]"
         >
-          <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-            <Home className="w-5 h-5 text-emerald-600" />
+          <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform text-emerald-600 dark:text-emerald-400">
+            <Home className="w-5 h-5 stroke-[2.2]" />
           </div>
-          <span className="font-bold text-emerald-900 text-sm">Find a Roommate</span>
-          <span className="text-[10px] text-emerald-600 font-medium uppercase tracking-wider mt-1">List a Room</span>
+          <span className="font-bold text-theme-primary text-sm">List a Room</span>
+          <span className="text-xs text-theme-tertiary font-medium mt-0.5">I have a room</span>
         </button>
 
         <button
+          type="button"
           onClick={() => handleCreateListing('room_wanted')}
-          className="flex flex-col items-center justify-center p-4 rounded-2xl bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-colors cursor-pointer group"
+          className="flex flex-col items-center justify-center p-4 rounded-2xl bg-theme-surface border border-theme-divider hover:bg-theme-surface-hover hover:border-theme-divider-strong transition-all cursor-pointer group shadow-xs active:scale-[0.99]"
         >
-          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-            <Search className="w-5 h-5 text-blue-600" />
+          <div className="w-10 h-10 rounded-full bg-[#5E43F3]/10 flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform text-[#5E43F3] dark:text-[#7C65F6]">
+            <Search className="w-5 h-5 stroke-[2.2]" />
           </div>
-          <span className="font-bold text-blue-900 text-sm">Find a Room</span>
-          <span className="text-[10px] text-blue-600 font-medium uppercase tracking-wider mt-1">I'm Looking For</span>
+          <span className="font-bold text-theme-primary text-sm">Find a Room</span>
+          <span className="text-xs text-theme-tertiary font-medium mt-0.5">I need a room</span>
         </button>
 
         <button
+          type="button"
           onClick={() => handleCreateListing('roommate_wanted')}
-          className="flex flex-col items-center justify-center p-4 rounded-2xl bg-purple-50 border border-purple-100 hover:bg-purple-100 transition-colors cursor-pointer group"
+          className="flex flex-col items-center justify-center p-4 rounded-2xl bg-theme-surface border border-theme-divider hover:bg-theme-surface-hover hover:border-theme-divider-strong transition-all cursor-pointer group shadow-xs active:scale-[0.99]"
         >
-          <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-            <Users className="w-5 h-5 text-purple-600" />
+          <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform text-purple-600 dark:text-purple-400">
+            <Users className="w-5 h-5 stroke-[2.2]" />
           </div>
-          <span className="font-bold text-purple-900 text-sm">Find a Roommate</span>
-          <span className="text-[10px] text-purple-600 font-medium uppercase tracking-wider mt-1">I'm Looking For</span>
+          <span className="font-bold text-theme-primary text-sm">Find a Roommate</span>
+          <span className="text-xs text-theme-tertiary font-medium mt-0.5">I need someone to share with</span>
         </button>
       </div>
 

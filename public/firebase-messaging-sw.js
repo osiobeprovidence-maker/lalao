@@ -24,7 +24,7 @@ messaging.onBackgroundMessage((payload) => {
   const body =
     payload.notification?.body ?? payload.data?.body ?? "You have a new notification";
   const url = payload.data?.url ?? payload.fcmOptions?.link ?? "/";
-  const icon = payload.notification?.icon ?? "/mascot.png";
+  const icon = payload.notification?.icon ?? payload.data?.icon ?? "/mascot.png";
 
   self.registration.showNotification(title, {
     body,
@@ -37,21 +37,21 @@ messaging.onBackgroundMessage((payload) => {
   });
 });
 
-// When the user clicks a notification, open/focus the app
+// When the user clicks a notification, open/focus the app at the correct URL
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
+
   const url = event.notification.data?.url ?? "/";
 
   event.waitUntil(
     clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clientList) => {
-        // Try to find an existing open window and navigate it
+        // Try to find an existing open LALAO window and navigate it
         for (const client of clientList) {
           if (client.url.includes(self.location.origin) && "focus" in client) {
-            client.focus();
-            client.navigate(url);
-            return;
+            client.postMessage({ type: 'NAVIGATE', url, data: event.notification.data });
+            return client.focus();
           }
         }
         // Otherwise open a new tab

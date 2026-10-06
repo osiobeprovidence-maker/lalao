@@ -163,7 +163,7 @@ export const DesktopSidebar: React.FC = () => {
   return (
     <aside
       id="desktop-navigation-sidebar"
-      className="hidden lg:flex flex-col h-screen sticky top-0 shrink-0 w-[220px] xl:w-[240px] bg-theme-base border-r border-theme-divider/80 px-4 py-5 select-none z-30"
+      className="hidden lg:flex flex-col h-screen sticky top-0 shrink-0 w-[220px] xl:w-[240px] bg-theme-base border-r border-black/[0.06] dark:border-white/[0.06] px-4 py-5 select-none z-30"
     >
       <div className="flex flex-col gap-6 h-full">
 
@@ -261,7 +261,7 @@ export const DesktopSidebar: React.FC = () => {
               </div>
 
               {/* Divider */}
-              <div className="my-2 mx-3 border-t border-theme-divider-light" />
+              <div className="my-2 mx-3 border-t border-black/[0.06] dark:border-white/[0.06]" />
 
               {/* ACCOUNT section */}
               <div className="px-3 pt-1">
@@ -294,8 +294,8 @@ export const DesktopSidebar: React.FC = () => {
         {/* ── LOCATION SELECTOR ── */}
         <button
           type="button"
-          onClick={() => setIsLocationModalOpen(true)}
-          className="flex items-center justify-between border-b border-theme-divider/80 px-2 pb-3 text-left cursor-pointer"
+          onClick={() => setActiveTab('location')}
+          className="flex items-center justify-between border-b border-black/[0.06] dark:border-white/[0.06] px-2 pb-3 text-left cursor-pointer"
           aria-label="Change location"
         >
           <div className="flex items-center gap-2 min-w-0">
@@ -385,7 +385,7 @@ export const DesktopSidebar: React.FC = () => {
         </div>
 
         {/* ── USER FOOTER ── */}
-        <div className="mt-auto pt-4 border-t border-theme-divider/80">
+        <div className="mt-auto pt-4 border-t border-black/[0.06] dark:border-white/[0.06]">
           {isAuthenticated ? (
             <>
               <div className="flex w-full items-center justify-between gap-2 rounded-full px-2 py-2 transition hover:bg-theme-base">

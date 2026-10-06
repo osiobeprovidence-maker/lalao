@@ -18,7 +18,7 @@ export const BottomNav: React.FC = () => {
   return (
     <nav
       id="lalao-bottom-nav"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-theme-divider-light bg-theme-surface/95 px-6 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.06)] backdrop-blur-lg flex items-center justify-between"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-black/[0.04] dark:border-white/[0.06] bg-theme-surface/95 dark:bg-[#111111]/95 px-6 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(0,0,0,0.15)] backdrop-blur-lg flex items-center justify-between"
     >
       {navItems.map((item) => {
         const isCenter = item.id === 'create';

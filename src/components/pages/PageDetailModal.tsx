@@ -24,6 +24,8 @@ import {
   Users,
   Award,
   Shield,
+  Camera,
+  Building2,
   MoreVertical,
   Edit3,
   BarChart3,
@@ -47,7 +49,7 @@ import {
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
@@ -69,6 +71,7 @@ import { EventAttendeesModal } from './EventAttendeesModal';
 import { PageManageProductsModal } from './PageManageProductsModal';
 import { PostComposer } from '../create/PostComposer';
 import { RoomyTab } from './roomy/RoomyTab';
+import { PageManagementView } from './PageManagementView';
 
 type PageTab = 'posts' | 'shop' | 'auctions' | 'subscriptions' | 'media' | 'events' | 'about' | 'roomy' | 'locations';
 
@@ -119,11 +122,15 @@ export const PageDetailModal: React.FC = () => {
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [isManageProductsOpen, setIsManageProductsOpen] = useState(false);
   const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
+  const [isPageManagementOpen, setIsPageManagementOpen] = useState(false);
   const [eventToEdit, setEventToEdit] = useState<OrgEvent | null>(null);
   const [selectedEventForAttendees, setSelectedEventForAttendees] = useState<OrgEvent | null>(null);
   const [isPostComposerOpen, setIsPostComposerOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditingAbout, setIsEditingAbout] = useState(false);
+  const [aboutDescriptionDraft, setAboutDescriptionDraft] = useState('');
+  const [isSavingAbout, setIsSavingAbout] = useState(false);
 
   const isVirtualPage = activePageId === 'page_honorofkings';
   
@@ -133,6 +140,7 @@ export const PageDetailModal: React.FC = () => {
   const activePlans = useQuery(api.subscriptions.getPageSubscriptions, resolvedPageId && !isVirtualPage ? { pageId: resolvedPageId as any } : 'skip') || [];
   const myMemberships = useQuery(api.subscriptions.getMyMemberships) || [];
   const pageLocations = useQuery(api.pages.getPageLocations, resolvedPageId && !isVirtualPage ? { pageId: resolvedPageId as any } : 'skip') || [];
+  const ensureRoomyOrg = useMutation((api.roomy as any)?.ensureRoomyOrganization);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -162,6 +170,12 @@ export const PageDetailModal: React.FC = () => {
       setIsMenuOpen(false);
     }
   }, [activePageId]);
+
+  useEffect(() => {
+    if ((activePageId === 'roomy' || currentPage?.username === 'roomy') && ensureRoomyOrg) {
+      ensureRoomyOrg().catch(() => {});
+    }
+  }, [activePageId, currentPage?.username, ensureRoomyOrg]);
 
   if (!activePageId) return null;
 
@@ -195,11 +209,26 @@ export const PageDetailModal: React.FC = () => {
   const hasSubscriptions = page.activeTools?.includes('subscriptions') || page.businessType === 'subscription' || page.businessType === 'hybrid';
   const isSubscribed = myMemberships.some((m: any) => m.pageId === page.id && m.status === 'active');
 
-  // Use Convex's authoritative isOwner flag for management mode
-  const isManager = Boolean(page.isOwner);
+  // Use Convex's authoritative isOwner flag or role for management mode
+  const isManager = Boolean(page.isOwner || (page as any).role === 'admin' || (page as any).role === 'owner');
 
-  // Check if page has BIZ tag
-  const isBizPage = page.badge === 'BIZ' || page.type === 'business';
+  // Distinguish organization vs business cleanly
+  const isRoomy = Boolean(
+    page.username?.toLowerCase() === 'roomy' ||
+    page.id === 'roomy' ||
+    page.id === 'page_roomy' ||
+    (page as any).slug?.toLowerCase() === 'roomy'
+  );
+  const isOrgPage = page.type === 'organization' || page.badge === 'ORG' || isRoomy;
+  const isBizPage = (page.badge === 'BIZ' || page.type === 'business') && !isOrgPage;
+  // Fallback activeTab if organization/roomy doesn't support the tab
+  useEffect(() => {
+    if (isRoomy && activeTab === 'events') {
+      setActiveTab('posts');
+    } else if (isOrgPage && (activeTab === 'media' || activeTab === 'shop' || activeTab === 'auctions' || activeTab === 'subscriptions')) {
+      setActiveTab('posts');
+    }
+  }, [isOrgPage, isRoomy, activeTab]);
   // Check if page is eligible for ticketing (Community, Club, Esports Org, etc.)
   const isTicketingEligible = isPageTicketingEligible(page);
 
@@ -276,12 +305,14 @@ export const PageDetailModal: React.FC = () => {
       : products.filter((p) => p.category === selectedCategory);
 
   const hasEvents = Boolean(
-    (Array.isArray(page.events) && page.events.length > 0) ||
-      (events || []).some((e) => e?.pageId === page.id) ||
-      page.id === 'page_honorofkings' ||
-      page.type === 'organization' ||
-      page.type === 'community' ||
-      page.type === 'club'
+    !isRoomy && (
+      (Array.isArray(page.events) && page.events.length > 0) ||
+        (events || []).some((e) => e?.pageId === page.id) ||
+        page.id === 'page_honorofkings' ||
+        page.type === 'organization' ||
+        page.type === 'community' ||
+        page.type === 'club'
+    )
   );
 
   let tabs: { id: PageTab; label: string }[] = [];
@@ -289,9 +320,21 @@ export const PageDetailModal: React.FC = () => {
 
   const activeTools = page.activeTools || (page.partnerType === 'COMMERCE_PARTNER' ? ['shop', 'auction'] : []);
   
-  const isSuperPage = activeTools.some(t => ['shop', 'auction', 'booking', 'services', 'subscriptions'].includes(t)) || page.partnerType === 'COMMERCE_PARTNER';
+  const isSuperPage = !isOrgPage && (activeTools.some(t => ['shop', 'auction', 'booking', 'services', 'subscriptions'].includes(t)) || page.partnerType === 'COMMERCE_PARTNER');
 
-  if (isSuperPage) {
+  if (isOrgPage) {
+    // Organization Tab Structure:
+    // For Roomy: Posts | Roomy | About (NO Events)
+    if (isRoomy || activeTools.includes('roomy')) {
+      tabs.push({ id: 'roomy', label: 'Roomy' });
+    }
+    if (hasEvents && !isRoomy) {
+      tabs.push({ id: 'events', label: 'Events' });
+    }
+    if (pageLocations.length > 0 && !isRoomy) {
+      tabs.push({ id: 'locations', label: 'Locations' });
+    }
+  } else if (isSuperPage) {
     if (activeTools.includes('shop')) tabs.push({ id: 'shop', label: 'Shop' });
     if (activeTools.includes('auction')) tabs.push({ id: 'auctions', label: 'Auctions' });
     if (activeTools.includes('booking')) tabs.push({ id: 'booking', label: 'Booking' });
@@ -329,14 +372,26 @@ export const PageDetailModal: React.FC = () => {
 
   tabs.push({ id: 'about', label: 'About' });
 
-  // Filter posts belonging to this page
-  // Instead of guessing by name/username, use pageRefId or exact author id
-  const pagePosts = (posts || []).filter(
-    (p) =>
-      p?.author?.id === page.id ||
-      p?.pageRefId === page.id ||
-      p?.author?.username === page.username
-  );
+  // Filter posts belonging to this page or tagging/mentioning this organization
+  const pagePosts = (posts || []).filter((p) => {
+    if (!p) return false;
+    // Direct author or page destination reference
+    if (p.author?.id === page.id || p.pageRefId === page.id) return true;
+    if (p.author?.username && p.author.username.toLowerCase() === page.username.toLowerCase()) return true;
+
+    // Tag / mention in post text (e.g. "@roomy")
+    if (p.text && page.username) {
+      const mentionPattern = new RegExp(`@${page.username}\\b`, 'i');
+      if (mentionPattern.test(p.text)) return true;
+    }
+
+    // Mentioned in content topics or tags
+    if (p.contentTopics && p.contentTopics.some((t: string) => t.toLowerCase() === page.username.toLowerCase())) {
+      return true;
+    }
+
+    return false;
+  });
   const pageMediaPosts = pagePosts.filter((p) => Boolean(p?.mediaUrl));
 
   // If a product is selected, render the dedicated full Product Detail Page
@@ -373,6 +428,19 @@ export const PageDetailModal: React.FC = () => {
             </>
           )}
 
+          {/* Admin Cover Image Edit Control - Hidden on Roomy as media is managed by Super Admin */}
+          {isManager && !isRoomy && (
+            <button
+              type="button"
+              onClick={() => setIsEditModalOpen(true)}
+              className="absolute right-3 bottom-3 z-10 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-xs font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer border border-white/20"
+              title="Edit cover photo"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>Edit Cover</span>
+            </button>
+          )}
+
           {/* Top Bar with Back, Badges, Cart and Share/More Menu */}
           <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
             <button
@@ -390,7 +458,7 @@ export const PageDetailModal: React.FC = () => {
             </button>
 
             <div className="flex items-center gap-2">
-              {hasSubscriptions && (
+              {hasSubscriptions && !isOrgPage && (
                 <button
                   id="btn-biz-page-subscriptions"
                   type="button"
@@ -413,67 +481,85 @@ export const PageDetailModal: React.FC = () => {
                 </button>
               )}
 
-              {isBizPage && (
-                <>
-                  <button
-                    id="btn-biz-page-history-open"
-                    type="button"
-                    onClick={() => setIsShoppingHistoryOpen(true)}
-                    className="relative p-2 rounded-full bg-black/60 backdrop-blur-md text-white hover:bg-black/80 active:scale-95 transition-all cursor-pointer shadow-md"
-                    title="Shopping History"
-                    aria-label="Shopping history"
-                  >
-                    <History className="w-4 h-4 stroke-[2]" />
-                  </button>
-
-                  <button
-                    id="btn-biz-page-cart-open"
-                    type="button"
-                    onClick={() => setIsCartOpen(true)}
-                    className="relative p-2 rounded-full bg-black/60 backdrop-blur-md text-white hover:bg-black/80 active:scale-95 transition-all cursor-pointer shadow-md"
-                    title="View Shopping Cart"
-                    aria-label="View Shopping Cart"
-                  >
-                    <ShoppingBag className="w-4 h-4 stroke-[2]" />
-                    {cartCount > 0 && (
-                      <span
-                        id="badge-biz-page-cart-count"
-                        className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-[#5E43F3] text-white text-[10px] font-black rounded-full flex items-center justify-center ring-2 ring-white"
-                      >
-                        {cartCount > 9 ? '9+' : cartCount}
-                      </span>
-                    )}
-                  </button>
-                </>
+              {/* History button for organizations and businesses (completely removed on Roomy) */}
+              {(isBizPage || isOrgPage) && !isRoomy && (
+                <button
+                  id="btn-page-history-open"
+                  type="button"
+                  onClick={() => setIsShoppingHistoryOpen(true)}
+                  className="relative p-2 rounded-full bg-black/60 backdrop-blur-md text-white hover:bg-black/80 active:scale-95 transition-all cursor-pointer shadow-md"
+                  title="Activity & History"
+                  aria-label="Activity and history"
+                >
+                  <History className="w-4 h-4 stroke-[2]" />
+                </button>
               )}
 
-              <Badge type={page.badge} size="md" />
+              {/* Shopping Bag / Cart button strictly for businesses only */}
+              {isBizPage && (
+                <button
+                  id="btn-biz-page-cart-open"
+                  type="button"
+                  onClick={() => setIsCartOpen(true)}
+                  className="relative p-2 rounded-full bg-black/60 backdrop-blur-md text-white hover:bg-black/80 active:scale-95 transition-all cursor-pointer shadow-md"
+                  title="View Shopping Cart"
+                  aria-label="View Shopping Cart"
+                >
+                  <ShoppingBag className="w-4 h-4 stroke-[2]" />
+                  {cartCount > 0 && (
+                    <span
+                      id="badge-biz-page-cart-count"
+                      className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-[#5E43F3] text-white text-[10px] font-black rounded-full flex items-center justify-center ring-2 ring-white"
+                    >
+                      {cartCount > 9 ? '9+' : cartCount}
+                    </span>
+                  )}
+                </button>
+              )}
+
+              <Badge type={isOrgPage ? 'ORGANIZATION' : page.badge} size="md" />
             </div>
           </div>
         </div>
 
         {/* Profile Content Body */}
         <div className="px-4 sm:px-6 pb-3">
-          {/* Avatar */}
-          <div className="relative shrink-0 w-max -mt-10 sm:-mt-12 mb-3.5 z-10">
+          {/* Avatar with Admin Edit Control */}
+          <div className="relative shrink-0 w-max -mt-10 sm:-mt-12 mb-3.5 z-10 group">
             <Avatar
               src={page?.avatar}
               alt={page?.name || 'Page'}
               size="xl"
               className="ring-4 ring-[#f6f3ee] shadow-md bg-theme-surface"
             />
+            {/* Profile Avatar Edit Control - Hidden on Roomy as media is managed by Super Admin */}
+            {isManager && !isRoomy && (
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(true)}
+                className="absolute bottom-0 right-0 p-1.5 rounded-full bg-[#5E43F3] hover:bg-[#4E34E0] text-white shadow-md transition-all cursor-pointer ring-2 ring-white"
+                title="Edit profile picture"
+                aria-label="Edit profile picture"
+              >
+                <Camera className="w-3.5 h-3.5 stroke-[2.5]" />
+              </button>
+            )}
           </div>
 
           {/* Title & Metadata */}
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-black text-theme-primary tracking-tight">{page.name}</h2>
-              <Badge type={page.badge} />
+              <Badge type={isOrgPage ? 'ORGANIZATION' : page.badge} />
 
-              {/* Manager Perspective Indicator */}
+              {/* Perspective Indicator */}
               {isManager && (
-                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-violet-100 text-[#5E43F3] border border-violet-200">
-                  Manager View
+                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                  isOrgPage
+                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                    : 'bg-violet-100 text-[#5E43F3] border border-violet-200'
+                }`}>
+                  {isOrgPage ? 'Admin View' : 'Manager View'}
                 </span>
               )}
             </div>
@@ -486,7 +572,9 @@ export const PageDetailModal: React.FC = () => {
               <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase bg-theme-inverse text-theme-text-inverse shadow-xs">
                 {page.id === 'page_honorofkings' || page.category === 'ESPORTS / GAMING'
                   ? 'ESPORTS'
-                  : page.type === 'business' || page.badge === 'BIZ'
+                  : isOrgPage
+                  ? 'ORGANIZATION'
+                  : isBizPage
                   ? 'BUSINESS'
                   : page.category || page.type.toUpperCase()}
               </span>
@@ -527,19 +615,21 @@ export const PageDetailModal: React.FC = () => {
                   className="px-4 py-2 rounded-full bg-theme-inverse text-theme-text-inverse hover:bg-theme-inverse text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
-                  <span>Edit Page</span>
+                  <span>{isOrgPage ? 'Edit Organization' : 'Edit Page'}</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setIsMonetizationOpen(true)}
-                  className="px-4 py-2 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
-                >
-                  <Coins className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Monetize</span>
-                </button>
+                {isBizPage && (
+                  <button
+                    type="button"
+                    onClick={() => setIsMonetizationOpen(true)}
+                    className="px-4 py-2 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Coins className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Monetize</span>
+                  </button>
+                )}
 
-                {(page.type === 'business' || page.badge === 'BIZ') && (
+                {(isBizPage || isOrgPage) && (
                   <button
                     type="button"
                     onClick={() => {
@@ -590,7 +680,7 @@ export const PageDetailModal: React.FC = () => {
                     </>
                   )}
                 </button>
-                {(page.type === 'business' || page.badge === 'BIZ') && (
+                {(isBizPage || isOrgPage) && (
                   <button
                     type="button"
                     onClick={() => {
@@ -598,7 +688,7 @@ export const PageDetailModal: React.FC = () => {
                       setActivePageId(null);
                     }}
                     className="p-2 rounded-full border border-theme-divider text-theme-secondary hover:bg-theme-surface-hover bg-theme-surface transition-colors cursor-pointer"
-                    title="Direct inquiry"
+                    title={`Message ${isOrgPage ? 'organization' : 'page'}`}
                   >
                     <MessageSquare className="w-4 h-4 text-[#5E43F3]" />
                   </button>
@@ -614,6 +704,18 @@ export const PageDetailModal: React.FC = () => {
             >
               <Share2 className="w-4 h-4" />
             </button>
+
+            {/* Shopping & Activity History button - Completely removed on Roomy */}
+            {!isRoomy && (
+              <button
+                type="button"
+                onClick={() => setIsShoppingHistoryOpen(true)}
+                className="p-2 rounded-full border border-theme-divider text-theme-secondary hover:bg-theme-surface-hover bg-theme-surface transition-colors cursor-pointer"
+                title="Activity & History"
+              >
+                <History className="w-4 h-4" />
+              </button>
+            )}
 
             {/* 3-Dot Menu Dropdown */}
             <div>
@@ -687,26 +789,12 @@ export const PageDetailModal: React.FC = () => {
                           type="button"
                           onClick={() => {
                             setIsMenuOpen(false);
-                            setIsToolsModalOpen(true);
+                            setIsPageManagementOpen(true);
                           }}
                           className="w-full px-3.5 py-2 text-left text-xs font-semibold text-theme-primary hover:bg-theme-base flex items-center gap-2.5 cursor-pointer"
                         >
                           <Briefcase className="w-4 h-4 text-[#5E43F3]" />
                           <span>Manage Page</span>
-                        </button>
-                      </div>
-
-                      <div className="py-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsMenuOpen(false);
-                            setIsDeleteConfirmOpen(true);
-                          }}
-                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2.5 cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                          <span>Delete Page</span>
                         </button>
                       </div>
                     </div>
@@ -819,25 +907,25 @@ export const PageDetailModal: React.FC = () => {
           {/* TAB: POSTS */}
           {activeTab === 'posts' && (
             <div>
-              {/* If manager, show quick composer banner */}
-              {isManager && (
-                <div className="p-3.5 bg-theme-base border-b border-theme-divider-light flex items-center justify-between gap-3">
-                  <div
-                    onClick={() => setIsPostComposerOpen(true)}
-                    className="flex-1 bg-theme-surface border border-theme-divider rounded-xl px-3.5 py-2 text-xs text-theme-tertiary hover:text-theme-secondary hover:border-theme-divider-strong transition-all cursor-pointer"
-                  >
-                    Post an announcement or update as {page.name}...
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsPostComposerOpen(true)}
-                    className="px-3.5 py-2 rounded-xl bg-[#5E43F3] text-white text-xs font-bold hover:bg-[#4E34E0] shadow-sm flex items-center gap-1.5 cursor-pointer shrink-0"
-                  >
-                    <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                    <span>Create Post</span>
-                  </button>
+              {/* Quick Composer Banner for Manager or Visitors */}
+              <div className="p-3.5 bg-theme-base border-b border-theme-divider-light flex items-center justify-between gap-3">
+                <div
+                  onClick={() => setIsPostComposerOpen(true)}
+                  className="flex-1 bg-theme-surface border border-theme-divider rounded-xl px-3.5 py-2 text-xs text-theme-tertiary hover:text-theme-secondary hover:border-theme-divider-strong transition-all cursor-pointer truncate"
+                >
+                  {isManager
+                    ? `Post an announcement or update as ${page.name}...`
+                    : `Post and tag @${page.username}...`}
                 </div>
-              )}
+                <button
+                  type="button"
+                  onClick={() => setIsPostComposerOpen(true)}
+                  className="px-3.5 py-2 rounded-xl bg-[#5E43F3] text-white text-xs font-bold hover:bg-[#4E34E0] shadow-sm flex items-center gap-1.5 cursor-pointer shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                  <span>{isManager ? 'Create Post' : `Tag @${page.username}`}</span>
+                </button>
+              </div>
 
               <div className="divide-y divide-neutral-100">
                 {pagePosts.length > 0 ? (
@@ -845,18 +933,18 @@ export const PageDetailModal: React.FC = () => {
                 ) : (
                   <div className="p-10 text-center space-y-3">
                     <p className="text-xs text-theme-tertiary">
-                      No posts from this page yet.
+                      {isOrgPage
+                        ? `No posts or mentions for ${page.name} yet.`
+                        : 'No posts from this page yet.'}
                     </p>
-                    {isManager && (
-                      <button
-                        type="button"
-                        onClick={() => setIsPostComposerOpen(true)}
-                        className="px-4 py-2 rounded-xl bg-[#5E43F3] text-white text-xs font-bold hover:bg-[#4E34E0] shadow-sm inline-flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                        <span>Publish First Post</span>
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsPostComposerOpen(true)}
+                      className="px-4 py-2 rounded-xl bg-[#5E43F3] text-white text-xs font-bold hover:bg-[#4E34E0] shadow-sm inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>{isManager ? 'Publish First Announcement' : `Post & Tag @${page.username}`}</span>
+                    </button>
                   </div>
                 )}
               </div>
@@ -930,7 +1018,7 @@ export const PageDetailModal: React.FC = () => {
                     <span>Manage Shop</span>
                   </button>
                 ) : (
-                  <Badge type="BIZ" size="sm" />
+                  <Badge type={page.badge || "BIZ"} size="sm" />
                 )}
               </div>
 
@@ -1478,21 +1566,120 @@ export const PageDetailModal: React.FC = () => {
           {/* TAB: ABOUT */}
           {activeTab === 'about' && (
             <div className="p-4 sm:p-5 space-y-4 text-xs">
-              {page.activeTools?.includes('roomy') ? (
-                // Custom Roomy About Tab
+              {page.username === 'roomy' || page.activeTools?.includes('roomy') ? (
+                // Organization About Tab for Roomy
                 <div className="space-y-6">
+                  {/* Organization Description Card */}
                   <div className="bg-gradient-to-br from-[#5E43F3]/10 to-[#4E34E0]/5 rounded-2xl p-5 border border-[#5E43F3]/20">
-                    <h4 className="font-black text-[#5E43F3] text-lg mb-2">Welcome to Roomy</h4>
-                    <p className="text-theme-secondary leading-relaxed text-sm">
-                      Roomy is a community-driven marketplace built right into Lalao. It is designed to help you find rooms, roommates, and accommodation options around you. 
-                      Our mission is to make housing search transparent, safe, and entirely free for the community.
-                    </p>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-black text-[#5E43F3] text-lg flex items-center gap-2">
+                        <Building2 className="w-5 h-5" />
+                        About {page.name}
+                      </h4>
+                      {isManager && !isEditingAbout && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAboutDescriptionDraft(
+                              page.description ||
+                                'Roomy is a community organization helping students and young people find suitable accommodation and connect with compatible roommates.'
+                            );
+                            setIsEditingAbout(true);
+                          }}
+                          className="px-3 py-1 rounded-full bg-[#5E43F3] text-white hover:bg-[#4E34E0] text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-sm"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {isEditingAbout ? (
+                      <div className="space-y-3 mt-3">
+                        <textarea
+                          value={aboutDescriptionDraft}
+                          onChange={(e) => setAboutDescriptionDraft(e.target.value)}
+                          rows={4}
+                          className="w-full p-3 rounded-xl border border-theme-divider bg-theme-surface text-theme-primary text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#5E43F3]"
+                          placeholder="Write about the organization..."
+                        />
+                        <div className="flex items-center gap-2 justify-end">
+                          <button
+                            type="button"
+                            disabled={isSavingAbout}
+                            onClick={() => setIsEditingAbout(false)}
+                            className="px-3.5 py-1.5 rounded-xl border border-theme-divider text-theme-secondary hover:bg-theme-surface-hover text-xs font-bold transition-colors cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isSavingAbout}
+                            onClick={async () => {
+                              try {
+                                setIsSavingAbout(true);
+                                await updatePage(page.id, {
+                                  description: aboutDescriptionDraft.trim(),
+                                });
+                                setIsEditingAbout(false);
+                              } catch (err) {
+                                console.error('Failed to update description', err);
+                              } finally {
+                                setIsSavingAbout(false);
+                              }
+                            }}
+                            className="px-4 py-1.5 rounded-xl bg-[#5E43F3] text-white hover:bg-[#4E34E0] text-xs font-bold transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
+                          >
+                            {isSavingAbout ? (
+                              <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                            ) : (
+                              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                            )}
+                            <span>Save Description</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-theme-secondary leading-relaxed text-sm">
+                        {page.description ||
+                          'Roomy is a community organization helping students and young people find suitable accommodation and connect with compatible roommates.'}
+                      </p>
+                    )}
                   </div>
                   
-                  <div className="bg-theme-surface rounded-2xl p-5 border border-theme-divider-light shadow-sm">
+                  {/* Organization Highlights & Stats */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="bg-theme-surface rounded-xl p-3 border border-theme-divider-light text-center shadow-xs">
+                      <p className="text-base sm:text-lg font-black text-theme-primary">
+                        {page.followersCount || 1}
+                      </p>
+                      <p className="text-[10px] uppercase font-bold text-theme-tertiary mt-0.5">Followers</p>
+                    </div>
+                    <div className="bg-theme-surface rounded-xl p-3 border border-theme-divider-light text-center shadow-xs">
+                      <p className="text-base sm:text-lg font-black text-[#5E43F3]">
+                        {page.category || 'Housing & Roommates'}
+                      </p>
+                      <p className="text-[10px] uppercase font-bold text-theme-tertiary mt-0.5">Focus</p>
+                    </div>
+                    <div className="bg-theme-surface rounded-xl p-3 border border-theme-divider-light text-center shadow-xs">
+                      <p className="text-base sm:text-lg font-black text-blue-600">
+                        Organization
+                      </p>
+                      <p className="text-[10px] uppercase font-bold text-theme-tertiary mt-0.5">Type</p>
+                    </div>
+                    <div className="bg-theme-surface rounded-xl p-3 border border-theme-divider-light text-center shadow-xs">
+                      <p className="text-base sm:text-lg font-black text-emerald-600">
+                        Verified
+                      </p>
+                      <p className="text-[10px] uppercase font-bold text-theme-tertiary mt-0.5">Status</p>
+                    </div>
+                  </div>
+
+                  {/* Community Rules & Safety Guidelines */}
+                  <div className="bg-theme-surface rounded-2xl p-5 border border-theme-divider-light shadow-xs">
                     <h4 className="font-extrabold text-theme-primary text-sm mb-3 flex items-center gap-2">
                       <Shield className="w-4 h-4 text-emerald-500" />
-                      Community Rules
+                      Community Rules & Safety Guidelines
                     </h4>
                     <ul className="space-y-2.5 text-theme-secondary">
                       <li className="flex gap-2"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /> <strong>Free forever:</strong> We don't charge listing fees or commissions.</li>
@@ -1501,19 +1688,41 @@ export const PageDetailModal: React.FC = () => {
                     </ul>
                   </div>
 
-                  <div className="bg-theme-inverse rounded-2xl p-5 text-theme-text-inverse flex flex-col items-center text-center">
-                    <Heart className="w-8 h-8 text-rose-500 mb-3" />
-                    <h4 className="font-black text-white text-base mb-2">Support Roomy</h4>
-                    <p className="text-theme-tertiary text-xs leading-relaxed mb-4 max-w-xs">
-                      Roomy is maintained by the community and is completely free to use. If you found your perfect room or roommate through us, consider leaving a small donation to help keep the servers running.
-                    </p>
-                    <button 
-                      onClick={() => alert("Thank you for your support! Donation integration coming soon.")}
-                      className="px-6 py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl text-sm transition-colors cursor-pointer"
-                    >
-                      Donate to Roomy
-                    </button>
-                  </div>
+                  {/* Coverage & Location Information */}
+                  {(page.location || page.aboutInfo?.address || page.aboutInfo?.website) && (
+                    <div className="bg-theme-surface rounded-2xl p-4 border border-theme-divider-light space-y-3 shadow-xs">
+                      <h4 className="font-extrabold text-theme-primary text-sm flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-[#5E43F3]" />
+                        Organization Location & Details
+                      </h4>
+                      {page.location && (
+                        <div>
+                          <p className="font-bold text-theme-primary text-xs">Coverage Region</p>
+                          <p className="text-theme-secondary mt-0.5">{page.location}</p>
+                        </div>
+                      )}
+                      {page.aboutInfo?.address && (
+                        <div>
+                          <p className="font-bold text-theme-primary text-xs">Physical Address / Headquarters</p>
+                          <p className="text-theme-secondary mt-0.5">{page.aboutInfo.address}</p>
+                        </div>
+                      )}
+                      {page.aboutInfo?.website && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-theme-tertiary">Official Website</span>
+                          <a
+                            href={`https://${page.aboutInfo.website}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[#5E43F3] font-bold hover:underline flex items-center gap-1"
+                          >
+                            <span>{page.aboutInfo.website}</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : (
                 // Standard Organization About Tab
@@ -1718,6 +1927,21 @@ export const PageDetailModal: React.FC = () => {
         />
       )}
 
+      {isPageManagementOpen && page && (
+        <PageManagementView
+          page={page}
+          onClose={() => setIsPageManagementOpen(false)}
+          onEditPage={() => {
+            setIsPageManagementOpen(false);
+            setIsEditModalOpen(true);
+          }}
+          onManageAdmins={() => {
+            setIsPageManagementOpen(false);
+            // Could open a dedicated admin management view in the future
+          }}
+        />
+      )}
+
       {isEventModalOpen && (
         <PageEventModal
           page={page}
@@ -1758,6 +1982,7 @@ export const PageDetailModal: React.FC = () => {
             <div className="pt-8 pb-4">
               <PostComposer
                 initialPageRefId={page.id}
+                initialText={isManager ? '' : `@${page.username} `}
                 onClose={() => setIsPostComposerOpen(false)}
                 onSuccess={() => setIsPostComposerOpen(false)}
               />

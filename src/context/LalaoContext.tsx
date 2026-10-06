@@ -53,7 +53,9 @@ export type NavTab =
   | 'create-page'
   | 'my-pages'
   | 'liked'
-  | 'events';
+  | 'events'
+  | 'location'
+  | 'pages';
 export type FeedTab = 'for_you' | 'following' | 'community' | 'nearby' | (string & {});
 export type CreateOption = 'post' | 'rally' | 'page' | 'cycle' | null;
 
@@ -1681,6 +1683,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         pageId: pageId as any,
         name: updatedData.name,
         username: updatedData.username,
+        type: updatedData.type as any,
+        badge: updatedData.badge as any,
         category: updatedData.category,
         description: updatedData.description,
         location: updatedData.location,
@@ -1691,6 +1695,9 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         serviceAreas: updatedData.serviceAreas,
         isOnlineBusiness: updatedData.isOnlineBusiness,
       });
+      setPages((prev) =>
+        prev.map((p) => (p.id === pageId ? { ...p, ...updatedData } : p))
+      );
       triggerShareToast('Page details updated successfully!');
     } catch (err) {
       console.error("Failed to update page", err);

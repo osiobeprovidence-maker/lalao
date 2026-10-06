@@ -548,6 +548,7 @@ export const bootstrapPlatformPages = mutation({
         username: "roomy",
         type: "organization",
         badge: "ORG",
+        description: "Roomy is a community organization helping students and young people find suitable accommodation and connect with compatible roommates.",
         activeTools: ['roomy'],
       },
       {
@@ -577,6 +578,7 @@ export const bootstrapPlatformPages = mutation({
           username: sysPage.username,
           type: sysPage.type as any,
           badge: sysPage.badge as any,
+          description: (sysPage as any).description,
           activeTools: sysPage.activeTools || [],
           location: "Global",
           followersCount: 0,
@@ -587,7 +589,14 @@ export const bootstrapPlatformPages = mutation({
         results.push({ name: sysPage.name, status: "created" });
       } else {
         results.push({ name: sysPage.name, status: "already exists" });
-        // Patch if needed (e.g. for Roomy tools)
+        // Patch if needed (e.g. for Roomy tools or type/badge classification)
+        const patchData: any = {};
+        if (existing.type !== sysPage.type) patchData.type = sysPage.type;
+        if (existing.badge !== sysPage.badge) patchData.badge = sysPage.badge;
+        if ((sysPage as any).description && (!existing.description || existing.description.includes("marketplace"))) {
+          patchData.description = (sysPage as any).description;
+        }
+
         if (sysPage.activeTools) {
           const currentTools = existing.activeTools || [];
           let needsUpdate = false;
@@ -598,8 +607,13 @@ export const bootstrapPlatformPages = mutation({
             }
           }
           if (needsUpdate) {
-            await ctx.db.patch(existing._id, { activeTools: currentTools });
+            patchData.activeTools = currentTools;
           }
+        }
+
+        if (Object.keys(patchData).length > 0) {
+          patchData.updatedAt = time;
+          await ctx.db.patch(existing._id, patchData);
         }
       }
     }
@@ -608,6 +622,125 @@ export const bootstrapPlatformPages = mutation({
   }
 });
 
+export const getSystemPagesMedia = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const roomy = await ctx.db
+      .query("pages")
+      .withIndex("by_username", (q) => q.eq("username", "roomy"))
+      .first();
+    const lalao = await ctx.db
+      .query("pages")
+      .withIndex("by_username", (q) => q.eq("username", "lalao"))
+      .first();
+
+    return {
+      roomy: roomy ? {
+        _id: roomy._id,
+        name: roomy.name,
+        username: roomy.username,
+        coverImage: roomy.coverImage || "",
+        avatar: roomy.avatar || "",
+      } : null,
+      lalao: lalao ? {
+        _id: lalao._id,
+        name: lalao.name,
+        username: lalao.username,
+        coverImage: lalao.coverImage || "",
+        avatar: lalao.avatar || "",
+      } : null,
+    };
+  },
+});
+
+export const updateSystemPageMedia = mutation({
+  args: {
+    username: v.union(v.literal("roomy"), v.literal("lalao")),
+    coverImage: v.optional(v.string()),
+    avatar: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const admin = await requireAdmin(ctx);
+    const time = Date.now();
+    let page = await ctx.db
+      .query("pages")
+      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .first();
+
+    if (!page) {
+      const pageId = await ctx.db.insert("pages", {
+        ownerId: admin._id,
+        name: args.username === "roomy" ? "Roomy" : "Lalao",
+        username: args.username,
+        type: "organization",
+        badge: "ORG",
+        description: args.username === "roomy"
+          ? "Roomy is a community organization helping students and young people find suitable accommodation and connect with compatible roommates."
+          : "Official Lalao platform organization.",
+        activeTools: args.username === "roomy" ? ["roomy"] : [],
+        location: "Global",
+        followersCount: 0,
+        coverImage: args.coverImage,
+        avatar: args.avatar,
+        createdAt: time,
+        updatedAt: time,
+      });
+
+      await writeAudit(ctx, admin._id, `create_system_page_media:${args.username}`, {
+        target: args.username,
+        after: JSON.stringify({ coverImage: args.coverImage, avatar: args.avatar }),
+      });
+      return { success: true, pageId };
+    }
+
+    const updates: any = { updatedAt: time };
+    if (args.coverImage !== undefined) updates.coverImage = args.coverImage;
+    if (args.avatar !== undefined) updates.avatar = args.avatar;
+
+    await ctx.db.patch(page._id, updates);
+    await writeAudit(ctx, admin._id, `update_system_page_media:${args.username}`, {
+      target: args.username,
+      before: JSON.stringify({ coverImage: page.coverImage, avatar: page.avatar }),
+      after: JSON.stringify({ coverImage: args.coverImage, avatar: args.avatar }),
+    });
+
+    return { success: true, pageId: page._id };
+  },
+});
+
+export const updatePageMediaByAdmin = mutation({
+  args: {
+    pageId: v.optional(v.id("pages")),
+    username: v.optional(v.string()),
+    coverImage: v.optional(v.string()),
+    avatar: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const admin = await requireAdmin(ctx);
+    let page: any = null;
+    if (args.pageId) {
+      page = await ctx.db.get(args.pageId);
+    } else if (args.username) {
+      page = await ctx.db
+        .query("pages")
+        .withIndex("by_username", (q) => q.eq("username", args.username!))
+        .first();
+    }
+    if (!page) throw new Error("Page not found");
+
+    const updates: any = { updatedAt: Date.now() };
+    if (args.coverImage !== undefined) updates.coverImage = args.coverImage;
+    if (args.avatar !== undefined) updates.avatar = args.avatar;
+
+    await ctx.db.patch(page._id, updates);
+    await writeAudit(ctx, admin._id, `update_page_media:${page.username}`, {
+      target: page.username,
+      after: JSON.stringify({ coverImage: args.coverImage, avatar: args.avatar }),
+    });
+    return { success: true, pageId: page._id };
+  },
+});
 
 export const listPages = query({
   args: {

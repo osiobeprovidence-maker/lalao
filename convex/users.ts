@@ -573,3 +573,38 @@ export const joinWaitlist = mutation({
     return waitlistId;
   },
 });
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   NOTIFICATION PREFERENCES
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * updateNotificationPrefs
+ * Stores per-user notification category preferences.
+ * Called from the notification settings UI inside LALAO Settings.
+ */
+export const updateNotificationPrefs = mutation({
+  args: {
+    prefs: v.object({
+      messages: v.optional(v.boolean()),
+      cycles: v.optional(v.boolean()),
+      likes: v.optional(v.boolean()),
+      comments: v.optional(v.boolean()),
+      follows: v.optional(v.boolean()),
+      mentions: v.optional(v.boolean()),
+      desktop: v.optional(v.boolean()),
+    }),
+  },
+  handler: async (ctx, { prefs }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .first();
+    if (!user) throw new Error("User not found");
+    const currentPrefs = (user as any).notificationPrefs || {};
+    await ctx.db.patch(user._id, { notificationPrefs: { ...currentPrefs, ...prefs } } as any);
+  },
+});
+
