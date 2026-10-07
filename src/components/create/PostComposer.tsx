@@ -23,6 +23,7 @@ import { Avatar } from '../common/Avatar';
 import { Popover } from '../common/Popover';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { uploadImageToCloudinary } from '../../lib/cloudinary';
+import { compressImage } from '../../lib/imageCompression';
 import { GifPickerPopover } from './GifPickerPopover';
 import { EmojiPickerPopover } from './EmojiPickerPopover';
 
@@ -313,15 +314,21 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
           }
         } else {
           try {
+            const fileToUpload = selectedFile.type.startsWith('image/')
+              ? await compressImage(selectedFile, { maxWidth: 1600, quality: 0.82 })
+              : selectedFile;
             const uploadUrl = await generateUploadUrl();
-            const res = await uploadFileWithProgress(uploadUrl, 'POST', selectedFile, () => undefined);
+            const res = await uploadFileWithProgress(uploadUrl, 'POST', fileToUpload, () => undefined);
             finalMediaStorageId = res.storageId;
             finalMediaUrl = '';
           } catch (storageErr) {
             console.warn('[Lalao Media Upload] Storage upload failed; falling back to Cloudinary:', storageErr);
             try {
+              const fileToUpload = selectedFile.type.startsWith('image/')
+                ? await compressImage(selectedFile, { maxWidth: 1600, quality: 0.82 })
+                : selectedFile;
               const sig = await generateCloudinarySignature('posts');
-              finalMediaUrl = await uploadImageToCloudinary(selectedFile, sig);
+              finalMediaUrl = await uploadImageToCloudinary(fileToUpload, sig);
             } catch (cloudErr) {
               console.error('[Lalao Media Upload] Image upload failed:', cloudErr);
               triggerShareToast('Image upload failed. Please try again.');

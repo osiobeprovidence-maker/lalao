@@ -3,7 +3,7 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Save, Upload, Image as ImageIcon, CheckCircle2, RotateCcw, Building2, Camera, ExternalLink, Sparkles, ShieldCheck } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
-import { uploadImageToCloudinary } from '../../lib/cloudinary';
+import { uploadImageToCloudinary, uploadImageWithFallback } from '../../lib/cloudinary';
 
 export const AdminPlatformSettings: React.FC = () => {
   const brandingSettings = useQuery((api as any).platformSettings.getBrandingSettings);
@@ -18,6 +18,9 @@ export const AdminPlatformSettings: React.FC = () => {
   // Creator Ecosystem & Verification Settings
   const creatorSettingsData = useQuery((api as any).platformSettings.getCreatorSettings);
   const updateCreatorSettings = useMutation((api as any).platformSettings.updateCreatorSettings);
+
+  const generateConvexUploadUrl = useMutation(api.social.generateUploadUrl);
+  const resolveStorageUrl = useMutation(api.social.resolveStorageUrl);
 
   const [creatorForm, setCreatorForm] = useState({
     tier3Price: 800,
@@ -123,10 +126,13 @@ export const AdminPlatformSettings: React.FC = () => {
     if (!file) return;
 
     try {
-      const sigData = await generateCloudinarySignature("pages");
-      if (!sigData) throw new Error("Could not get signature");
-
-      const url = await uploadImageToCloudinary(file, sigData);
+      const url = await uploadImageWithFallback(
+        file,
+        'pages',
+        generateCloudinarySignature,
+        generateConvexUploadUrl,
+        resolveStorageUrl
+      );
       if (type === 'roomy') {
         setRoomyMedia(prev => ({ ...prev, [field]: url }));
       } else {
@@ -188,10 +194,13 @@ export const AdminPlatformSettings: React.FC = () => {
     if (!file) return;
 
     try {
-      const sigData = await generateCloudinarySignature();
-      if (!sigData) throw new Error("Could not get signature");
-
-      const url = await uploadImageToCloudinary(file, sigData);
+      const url = await uploadImageWithFallback(
+        file,
+        'branding',
+        generateCloudinarySignature,
+        generateConvexUploadUrl,
+        resolveStorageUrl
+      );
       setFormData(prev => ({ ...prev, [fieldName]: url }));
     } catch (err) {
       console.error("Upload failed", err);

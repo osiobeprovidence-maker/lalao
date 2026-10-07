@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, CornerDownRight, Smile, Image as ImageIcon, Mic, Square } from 'lucide-react';
 import { Avatar } from './Avatar';
 import { useLalao } from '../../context/LalaoContext';
+import { compressImage } from '../../lib/imageCompression';
 
 export interface CommentComposerProps {
   postId: string;
@@ -94,11 +95,15 @@ export const CommentComposer: React.FC<CommentComposerProps> = ({
       else mediaType = 'image';
 
       try {
+        const fileToUpload = mediaFile.type.startsWith('image/')
+          ? await compressImage(mediaFile, { maxWidth: 1200, quality: 0.82 })
+          : mediaFile;
+
         const uploadUrl = await generateUploadUrl();
         const result = await fetch(uploadUrl, {
           method: "POST",
-          headers: { "Content-Type": mediaFile.type },
-          body: mediaFile,
+          headers: { "Content-Type": fileToUpload.type },
+          body: fileToUpload,
         });
         const { storageId: uploadedStorageId } = await result.json();
         storageId = uploadedStorageId;

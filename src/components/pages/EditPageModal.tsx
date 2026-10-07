@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Page } from '../../types';
 import { useLalao } from '../../context/LalaoContext';
-import { uploadImageToCloudinary } from '../../lib/cloudinary';
+import { uploadImageToCloudinary, uploadImageWithFallback } from '../../lib/cloudinary';
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -73,6 +73,8 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
   // Queries & Mutations for Locations
   const locations = useQuery(api.pages.getPageLocations, { pageId: page.id as Id<"pages"> }) || [];
   const addLocation = useMutation(api.pages.addPageLocation);
+  const generateConvexUploadUrl = useMutation(api.social.generateUploadUrl);
+  const resolveStorageUrl = useMutation(api.social.resolveStorageUrl);
   const removeLocation = useMutation(api.pages.removePageLocation);
 
   const [name, setName] = useState(page.name);
@@ -123,13 +125,23 @@ export const EditPageModal: React.FC<EditPageModalProps> = ({
         finalAvatar = page.avatar;
       } else {
         if (coverImageFile) {
-          const signatureData = await generateCloudinarySignature("pages");
-          finalCoverImage = await uploadImageToCloudinary(coverImageFile, signatureData);
+          finalCoverImage = await uploadImageWithFallback(
+            coverImageFile,
+            'pages',
+            generateCloudinarySignature,
+            generateConvexUploadUrl,
+            resolveStorageUrl
+          );
         }
         
         if (avatarFile) {
-          const signatureData = await generateCloudinarySignature("pages");
-          finalAvatar = await uploadImageToCloudinary(avatarFile, signatureData);
+          finalAvatar = await uploadImageWithFallback(
+            avatarFile,
+            'pages',
+            generateCloudinarySignature,
+            generateConvexUploadUrl,
+            resolveStorageUrl
+          );
         }
       }
 

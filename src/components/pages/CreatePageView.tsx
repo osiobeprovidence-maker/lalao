@@ -16,7 +16,9 @@ import {
 import { useLalao } from '../../context/LalaoContext';
 import { Page } from '../../types';
 import { Badge } from '../common/Badge';
-import { uploadImageToCloudinary } from '../../lib/cloudinary';
+import { uploadImageToCloudinary, uploadImageWithFallback } from '../../lib/cloudinary';
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 export const CreatePageView: React.FC = () => {
   const {
@@ -30,6 +32,9 @@ export const CreatePageView: React.FC = () => {
   } = useLalao();
 
   const [stage, setStage] = useState<1 | 2 | 3>(1);
+
+  const generateConvexUploadUrl = useMutation(api.social.generateUploadUrl);
+  const resolveStorageUrl = useMutation(api.social.resolveStorageUrl);
 
   // Stage 1: Core Info
   const [type, setType] = useState<Page['type']>('business');
@@ -120,8 +125,13 @@ export const CreatePageView: React.FC = () => {
       let finalCoverImage = 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&auto=format&fit=crop&q=80';
 
       if (avatarFile) {
-        const signatureData = await generateCloudinarySignature("pages");
-        finalAvatarUrl = await uploadImageToCloudinary(avatarFile, signatureData);
+        finalAvatarUrl = await uploadImageWithFallback(
+          avatarFile,
+          'pages',
+          generateCloudinarySignature,
+          generateConvexUploadUrl,
+          resolveStorageUrl
+        );
       } else if (!finalAvatarUrl) {
         finalAvatarUrl = 'https://images.unsplash.com/photo-1556742049-0a67e5572263?w=300&auto=format&fit=crop&q=80';
       }

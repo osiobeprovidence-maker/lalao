@@ -26,6 +26,7 @@ import { useLalao } from '../../context/LalaoContext';
 import { EmojiPickerPopover } from '../create/EmojiPickerPopover';
 import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import { compressImage } from '../../lib/imageCompression';
 
 interface CreateCycleModalProps {
   isOpen: boolean;
@@ -765,11 +766,15 @@ export const CreateCycleModal: React.FC<CreateCycleModalProps> = ({ isOpen, onCl
 
     if (fileToUpload && finalMediaType !== 'text') {
        try {
+         const file = finalMediaType === 'image' && fileToUpload.type.startsWith('image/')
+           ? await compressImage(fileToUpload, { maxWidth: 1080, maxHeight: 1920, quality: 0.82 })
+           : fileToUpload;
+
          const uploadUrl = await generateUploadUrl();
          const result = await fetch(uploadUrl, {
            method: "POST",
-           headers: { "Content-Type": fileToUpload.type },
-           body: fileToUpload,
+           headers: { "Content-Type": file.type },
+           body: file,
          });
          const { storageId: returnedStorageId } = await result.json();
          storageId = returnedStorageId;

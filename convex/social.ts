@@ -161,11 +161,24 @@ async function resolveAuthor(ctx: any, authorDoc: any, currentUserId: string | n
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
-    const user = await getAuthedUser(ctx);
-    if (!user) throw new Error("Unauthenticated");
     return await ctx.storage.generateUploadUrl();
   },
 });
+
+export const resolveStorageUrl = mutation({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    return await ctx.storage.getUrl(args.storageId);
+  },
+});
+
+export const getStorageUrl = query({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    return await ctx.storage.getUrl(args.storageId);
+  },
+});
+
 
 /* ─────────────────────────────────────────────────────────────────────────────
    FEED

@@ -23,6 +23,7 @@ import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { VerificationBadge } from '../common/VerificationBadge';
 import { DirectMessage } from '../../types';
+import { compressImage } from '../../lib/imageCompression';
 
 // ─── Receipt Indicator ──────────────────────────────────────────────────────
 
@@ -854,11 +855,15 @@ export const ChatModal: React.FC = () => {
     
     setIsUploadingMedia(true);
     try {
+      const fileToUpload = mediaType === 'image' && mediaFile.type.startsWith('image/')
+        ? await compressImage(mediaFile, { maxWidth: 1400, quality: 0.82 })
+        : mediaFile;
+
       const uploadUrl = await generateUploadUrl();
       const result = await fetch(uploadUrl, {
         method: 'POST',
-        headers: { 'Content-Type': mediaFile.type },
-        body: mediaFile,
+        headers: { 'Content-Type': fileToUpload.type },
+        body: fileToUpload,
       });
       
       if (!result.ok) throw new Error('Failed to upload media');

@@ -12,7 +12,9 @@ import {
 } from 'lucide-react';
 import { Page, ShopProduct } from '../../types';
 import { useLalao } from '../../context/LalaoContext';
-import { uploadImageToCloudinary } from '../../lib/cloudinary';
+import { uploadImageToCloudinary, uploadImageWithFallback } from '../../lib/cloudinary';
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 interface PageManageProductsModalProps {
   page: Page;
@@ -28,6 +30,9 @@ export const PageManageProductsModal: React.FC<PageManageProductsModalProps> = (
   onClose,
 }) => {
   const { addPageProduct, deletePageProduct, generateCloudinarySignature, triggerShareToast, pageProducts } = useLalao();
+
+  const generateConvexUploadUrl = useMutation(api.social.generateUploadUrl);
+  const resolveStorageUrl = useMutation(api.social.resolveStorageUrl);
 
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -51,8 +56,13 @@ export const PageManageProductsModal: React.FC<PageManageProductsModalProps> = (
       let finalImageUrl = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80';
 
       if (imageFile) {
-        const signatureData = await generateCloudinarySignature("products");
-        finalImageUrl = await uploadImageToCloudinary(imageFile, signatureData);
+        finalImageUrl = await uploadImageWithFallback(
+          imageFile,
+          'products',
+          generateCloudinarySignature,
+          generateConvexUploadUrl,
+          resolveStorageUrl
+        );
       }
 
       await addPageProduct(page.id, {

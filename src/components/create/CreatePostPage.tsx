@@ -14,6 +14,9 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { compressImage } from '../../lib/imageCompression';
 
 type PostType = 'normal' | 'rally';
 type MediaKind = 'image' | 'video';
@@ -32,6 +35,7 @@ export const CreatePostPage: React.FC = () => {
   } = useLalao();
 
   const [caption, setCaption] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<MediaKind>('image');
   const [locationText, setLocationText] = useState(location.name);
@@ -41,6 +45,8 @@ export const CreatePostPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  const generateUploadUrl = useMutation(api.social.generateUploadUrl);
 
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -80,6 +86,7 @@ export const CreatePostPage: React.FC = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setSelectedFile(file);
     const nextUrl = URL.createObjectURL(file);
     setMediaUrl((current) => {
       if (current && current.startsWith('blob:')) {
@@ -108,14 +115,35 @@ export const CreatePostPage: React.FC = () => {
     setIsSubmitting(true);
     setError(null);
     try {
-      createPost({
+      let finalStorageId: string | undefined = undefined;
+      if (selectedFile) {
+        const fileToUpload = selectedFile.type.startsWith('image/')
+          ? await compressImage(selectedFile, { maxWidth: 1600, quality: 0.82 })
+          : selectedFile;
+
+        const uploadUrl = await generateUploadUrl();
+        const res = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': fileToUpload.type || 'application/octet-stream' },
+          body: fileToUpload,
+        });
+        if (!res.ok) {
+          throw new Error('Failed to upload media file');
+        }
+        const data = await res.json();
+        finalStorageId = data.storageId;
+      }
+
+      await createPost({
         text: caption.trim(),
-        mediaUrl: mediaUrl || undefined,
+        mediaUrl: finalStorageId ? undefined : (mediaUrl || undefined),
+        mediaStorageId: finalStorageId,
         mediaType,
         location: locationText || location.name,
         audience: audience.toLowerCase(),
       });
       setCaption('');
+      setSelectedFile(null);
       setMediaUrl(null);
       setError(null);
       setActiveTab('home');
@@ -238,6 +266,7 @@ export const CreatePostPage: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setMediaUrl(null);
+                  setSelectedFile(null);
                   setMediaType('image');
                 }}
                 className="absolute top-2 right-2 h-8 w-8 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center text-white z-10 hover:bg-black/80 transition"
