@@ -14,6 +14,7 @@ import {
   Settings,
   Clock,
   History,
+  Users,
 } from 'lucide-react';
 import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
@@ -35,6 +36,7 @@ export const MessagesView: React.FC = () => {
     currentUser,
     triggerShareToast,
     openChatWithUser,
+    setIsCreateGroupChatOpen,
   } = useLalao();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -302,13 +304,23 @@ export const MessagesView: React.FC = () => {
               Messages
             </h1>
           </div>
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="p-1.5 rounded-full text-[#707070] dark:text-[#707070] hover:text-theme-primary hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors"
-            title="Message settings"
-          >
-            <Settings className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setIsCreateGroupChatOpen(true)}
+              className="p-1.5 rounded-full text-[#707070] dark:text-[#707070] hover:text-[#5E43F3] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors"
+              title="New group chat"
+              aria-label="New group chat"
+            >
+              <Users className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-1.5 rounded-full text-[#707070] dark:text-[#707070] hover:text-theme-primary hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors"
+              title="Message settings"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Search */}
@@ -512,6 +524,11 @@ export const MessagesView: React.FC = () => {
                     {(conv as any).isPageConvo && (conv as any).amIUserA && (
                       <div className="text-[10px] font-black tracking-wider text-theme-tertiary bg-theme-surface-hover border border-theme-divider px-1.5 py-0.5 rounded-sm uppercase mt-1 w-fit mb-0.5">
                         Business Chat
+                      </div>
+                    )}
+                    {(conv as any).isGroupChat && (
+                      <div className="text-[10px] font-black tracking-wider text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/40 px-1.5 py-0.5 rounded-sm uppercase mt-1 w-fit mb-0.5">
+                        Group Chat
                       </div>
                     )}
                     <div className="flex items-center gap-1 text-xs text-theme-tertiary truncate mt-0.5 max-w-[220px]">

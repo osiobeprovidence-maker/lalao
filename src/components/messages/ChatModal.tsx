@@ -957,7 +957,11 @@ export const ChatModal: React.FC = () => {
                     <span className="truncate text-sm font-bold text-theme-primary">{conv.participant.name}</span>
                     <VerificationBadge user={conv.participant} size="xs" />
                   </div>
-                  <span className="block truncate text-[11px] text-theme-tertiary">@{conv.participant.username}</span>
+                  <span className="block truncate text-[11px] text-theme-tertiary">
+                    {(conv as any).isGroupChat
+                      ? `${conv.participant.followersCount || 1} members • Private Group`
+                      : `@${conv.participant.username}`}
+                  </span>
                 </div>
               </button>
             </div>
