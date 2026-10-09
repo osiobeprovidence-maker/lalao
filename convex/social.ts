@@ -2503,20 +2503,34 @@ export const createGroupChat = mutation({
   args: {
     name: v.string(),
     description: v.optional(v.string()),
-    memberIds: v.array(v.id("users")),
+    memberIds: v.array(v.string()),
     avatarUrl: v.optional(v.string()),
     interests: v.array(v.string()),
+    creatorUserId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const currentUser = await getAuthedUser(ctx);
-    if (!currentUser) throw new Error("Not authenticated");
+    let currentUser = await getAuthedUser(ctx);
+    if (!currentUser && args.creatorUserId) {
+      const normId = ctx.db.normalizeId("users", args.creatorUserId);
+      if (normId) {
+        currentUser = await ctx.db.get(normId);
+      }
+    }
+    if (!currentUser) throw new Error("Please sign in to create a group chat");
 
-    const memberIds = Array.from(new Set([currentUser._id, ...args.memberIds]));
+    const validMemberIds: Id<"users">[] = [currentUser._id];
+    for (const rawId of args.memberIds) {
+      const norm = ctx.db.normalizeId("users", rawId);
+      if (norm && !validMemberIds.includes(norm)) {
+        validMemberIds.push(norm);
+      }
+    }
+
     const groupChatId = await ctx.db.insert("groupChats", {
       name: args.name,
       description: args.description,
       creatorId: currentUser._id,
-      memberIds,
+      memberIds: validMemberIds,
       avatarUrl: args.avatarUrl,
       interests: args.interests,
       createdAt: Date.now(),
@@ -2537,20 +2551,36 @@ export const createGroupCycle = mutation({
   args: {
     name: v.string(),
     description: v.optional(v.string()),
-    memberIds: v.array(v.id("users")),
+    memberIds: v.optional(v.array(v.string())),
     avatarUrl: v.optional(v.string()),
     interests: v.array(v.string()),
+    creatorUserId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const currentUser = await getAuthedUser(ctx);
-    if (!currentUser) throw new Error("Not authenticated");
+    let currentUser = await getAuthedUser(ctx);
+    if (!currentUser && args.creatorUserId) {
+      const normId = ctx.db.normalizeId("users", args.creatorUserId);
+      if (normId) {
+        currentUser = await ctx.db.get(normId);
+      }
+    }
+    if (!currentUser) throw new Error("Please sign in to create a group cycle");
 
-    const memberIds = Array.from(new Set([currentUser._id, ...args.memberIds]));
+    const validMemberIds: Id<"users">[] = [currentUser._id];
+    if (args.memberIds) {
+      for (const rawId of args.memberIds) {
+        const norm = ctx.db.normalizeId("users", rawId);
+        if (norm && !validMemberIds.includes(norm)) {
+          validMemberIds.push(norm);
+        }
+      }
+    }
+
     const groupCycleId = await ctx.db.insert("groupCycles", {
       name: args.name,
       description: args.description,
       creatorId: currentUser._id,
-      memberIds,
+      memberIds: validMemberIds,
       avatarUrl: args.avatarUrl,
       interests: args.interests,
       createdAt: Date.now(),
@@ -2564,7 +2594,7 @@ export const createGroupCycle = mutation({
 export const inviteUserToGroupChat = mutation({
   args: {
     groupChatId: v.id("groupChats"),
-    userId: v.id("users"),
+    userId: v.string(),
   },
   handler: async (ctx, args) => {
     const currentUser = await getAuthedUser(ctx);
@@ -2576,9 +2606,12 @@ export const inviteUserToGroupChat = mutation({
       throw new Error("Not authorized to invite members");
     }
 
-    if (groupChat.memberIds.includes(args.userId)) return groupChat._id;
+    const normUser = ctx.db.normalizeId("users", args.userId);
+    if (!normUser) return args.groupChatId;
+
+    if (groupChat.memberIds.includes(normUser)) return groupChat._id;
     await ctx.db.patch(args.groupChatId, {
-      memberIds: [...groupChat.memberIds, args.userId],
+      memberIds: [...groupChat.memberIds, normUser],
       updatedAt: Date.now(),
     });
     return args.groupChatId;

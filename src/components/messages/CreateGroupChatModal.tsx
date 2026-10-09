@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
+import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../common/Avatar';
 import { Users, X } from 'lucide-react';
 
@@ -14,7 +15,9 @@ export const CreateGroupChatModal: React.FC = () => {
     setIsCreateGroupChatOpen,
     isCreateGroupChatOpen,
     triggerShareToast,
+    showAuthPrompt,
   } = useLalao();
+  const { isAuthenticated } = useAuth();
   const createGroupChat = useMutation(api.social.createGroupChat);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -29,6 +32,13 @@ export const CreateGroupChatModal: React.FC = () => {
 
   const handleCreate = async () => {
     if (!name.trim()) return;
+
+    if (!isAuthenticated) {
+      setIsCreateGroupChatOpen(false);
+      showAuthPrompt('Sign in to create a private group chat');
+      return;
+    }
+
     setIsCreating(true);
     try {
       const result = await createGroupChat({
@@ -37,6 +47,7 @@ export const CreateGroupChatModal: React.FC = () => {
         memberIds: selectedMembers,
         avatarUrl: undefined,
         interests: currentUser.interests || [],
+        creatorUserId: currentUser.id,
       });
       setActiveChatId(result.conversationId);
       setActiveTab('messages');
@@ -45,8 +56,8 @@ export const CreateGroupChatModal: React.FC = () => {
       setSelectedMembers([]);
       setIsCreateGroupChatOpen(false);
       triggerShareToast('Private group chat created');
-    } catch (error) {
-      triggerShareToast('Could not create the group chat');
+    } catch (error: any) {
+      triggerShareToast(error?.message || 'Could not create the group chat');
       console.error(error);
     } finally {
       setIsCreating(false);

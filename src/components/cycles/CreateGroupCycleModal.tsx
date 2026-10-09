@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
+import { useAuth } from '../../context/AuthContext';
 import { X, Users, Sparkles } from 'lucide-react';
 
 const INTERESTS = ['Football', 'Music', 'Art', 'Technology', 'Travel', 'Food', 'Wellness', 'Community'];
@@ -12,7 +13,9 @@ export const CreateGroupCycleModal: React.FC = () => {
     isCreateGroupCycleOpen,
     setIsCreateGroupCycleOpen,
     triggerShareToast,
+    showAuthPrompt,
   } = useLalao();
+  const { isAuthenticated } = useAuth();
   const createGroupCycle = useMutation(api.social.createGroupCycle);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -26,20 +29,28 @@ export const CreateGroupCycleModal: React.FC = () => {
 
   const handleCreate = async () => {
     if (!name.trim()) return;
+
+    if (!isAuthenticated) {
+      setIsCreateGroupCycleOpen(false);
+      showAuthPrompt('Sign in to create a group cycle');
+      return;
+    }
+
     try {
       await createGroupCycle({
         name: name.trim(),
         description: description.trim() || undefined,
-        memberIds: [currentUser.id],
+        memberIds: [],
         interests: selectedInterests,
         avatarUrl: undefined,
+        creatorUserId: currentUser.id,
       });
       setName('');
       setDescription('');
       setIsCreateGroupCycleOpen(false);
       triggerShareToast('Group Cycle created');
-    } catch (error) {
-      triggerShareToast('Could not create the Group Cycle');
+    } catch (error: any) {
+      triggerShareToast(error?.message || 'Could not create the Group Cycle');
       console.error(error);
     }
   };
