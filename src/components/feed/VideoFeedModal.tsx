@@ -3,6 +3,7 @@ import { useLalao } from '../../context/LalaoContext';
 import { X, Heart, MessageCircle, Repeat, Bookmark, Share, Volume2, VolumeX, MoreHorizontal } from 'lucide-react';
 import { VideoPlayer } from './VideoPlayer';
 import { Post } from '../../types';
+import { VerificationBadge } from '../common/VerificationBadge';
 
 export const VideoFeedModal: React.FC = () => {
   const { 
@@ -137,7 +138,7 @@ const VideoFeedItem: React.FC<{ post: Post, isActive: boolean, onIntersect: () =
             <img src={post.author.avatar || 'https://via.placeholder.com/150'} alt={post.author.name} className="w-10 h-10 rounded-full object-cover group-hover:opacity-90 transition" />
             <div>
               <h3 className="font-bold text-white text-[15px] leading-tight flex items-center group-hover:underline">
-                {post.author.name}
+                {post.author.name} <VerificationBadge user={post.author} size="xs" className="ml-0.5" />
               </h3>
               <p className="text-white/70 text-sm">@{post.author.username}</p>
             </div>

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
+import { VerificationBadge } from '../common/VerificationBadge';
 
 export const CycleStoryViewerModal: React.FC = () => {
   const {
@@ -950,7 +951,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                           <Avatar src={viewer?.avatar} alt={viewer?.name || 'Viewer'} size="sm" />
                           <div>
                             <p className="text-xs font-bold text-white leading-tight">
-                              {viewer?.name}
+                              {viewer?.name} <VerificationBadge user={viewer} size="xs" className="ml-0.5" />
                             </p>
                             <p className="text-[10px] text-theme-tertiary">{viewer?.viewedAt}</p>
                           </div>
@@ -982,7 +983,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                           <Avatar src={viewer?.avatar} alt={viewer?.name || 'Liker'} size="sm" />
                           <div>
                             <p className="text-xs font-bold text-white leading-tight">
-                              {viewer?.name}
+                              {viewer?.name} <VerificationBadge user={viewer} size="xs" className="ml-0.5" />
                             </p>
                             <p className="text-[10px] text-rose-400 flex items-center gap-1">
                               <span>❤️ Reacted with love</span>
@@ -1014,7 +1015,7 @@ export const CycleStoryViewerModal: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <Avatar src={reply.user?.avatar} alt={reply.user?.name} size="xs" />
                             <span className="text-xs font-bold text-white">
-                              {reply.user?.name}
+                              {reply.user?.name} <VerificationBadge user={reply.user} size="xs" className="ml-0.5" />
                             </span>
                           </div>
                           <span className="text-[10px] text-theme-tertiary">{reply.createdAt}</span>

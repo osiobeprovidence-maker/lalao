@@ -3,6 +3,7 @@ import { v, ConvexError } from "convex/values";
 import { getAuthedUser } from "./social";
 import { requireFeatureFlag } from "./platformSettings";
 import { Id } from "./_generated/dataModel";
+import { resolveUserVerification } from "./social";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    COMMUNITY SUGGESTIONS
@@ -118,6 +119,7 @@ export const listSuggestions = query({
                 id: suggester._id,
                 name: suggester.name ?? "User",
                 username: suggester.username ?? "user",
+                ...resolveUserVerification(suggester),
                 avatar: suggester.avatarUrl || "",
               }
             : null,

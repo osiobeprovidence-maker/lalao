@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Users, MessageSquare, Share2, LogOut, Plus, Shield, Check } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
+import { VerificationBadge } from '../common/VerificationBadge';
 
 export const CycleDetailModal: React.FC = () => {
   const {
@@ -231,7 +232,7 @@ export const CycleDetailModal: React.FC = () => {
                   <Avatar src={member?.avatar} alt={member?.name || 'Member'} size="sm" />
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-xs text-theme-primary">{member?.name}</span>
+                      <span className="font-bold text-xs text-theme-primary">{member?.name} <VerificationBadge user={member} size="xs" className="ml-0.5" /></span>
                       {member.role === 'admin' && (
                         <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-bold uppercase rounded bg-indigo-50 text-[#5E43F3] border border-indigo-100">
                           <Shield className="w-2.5 h-2.5" />

@@ -8,6 +8,8 @@ import {
   Shield,
   Share2,
   Sparkles,
+  Briefcase,
+  BadgeCheck,
   Users,
   Radio,
   ChevronRight,
@@ -15,6 +17,7 @@ import {
   LogOut,
   Building2,
   Upload,
+  Download,
   MessageCircle,
   Heart,
   MessageSquare,
@@ -34,6 +37,7 @@ import { uploadImageToCloudinary } from '../../lib/cloudinary';
 import { useTheme } from '../../context/ThemeContext';
 import { ChangePhoneModal } from './ChangePhoneModal';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
+import { usePWA } from '../../hooks/usePWA';
 
 export const SettingsPageView: React.FC = () => {
   const {
@@ -51,7 +55,11 @@ export const SettingsPageView: React.FC = () => {
     updateUserProfile,
     openCreatorSubscription,
     openCreatorHub,
+    subscription,
+    isCreatorPremiumActive,
   } = useLalao();
+  
+  const { setIsInstallModalOpen } = usePWA();
   
   const generateCloudinarySignatureAction = useAction(api.cloudinary.generateSignature);
   const generateCloudinarySignature = async (folder?: string) => {
@@ -769,56 +777,65 @@ export const SettingsPageView: React.FC = () => {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-teal-500/20 bg-gradient-to-br from-teal-500/[0.04] to-emerald-500/[0.02] p-4 space-y-4">
+          <div className="rounded-2xl border border-[#5E43F3]/20 bg-gradient-to-br from-[#5E43F3]/[0.05] via-theme-surface to-theme-surface p-4 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
-                  <Sparkles className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-full bg-[#5E43F3]/10 text-[#5E43F3] flex items-center justify-center shrink-0">
+                  <BadgeCheck className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-theme-primary">Current Tier:</span>
-                    <span className="text-xs font-extrabold capitalize text-teal-600 dark:text-teal-400">
-                      {currentUser?.verificationTier === 'creator'
-                        ? 'Creator Premium'
-                        : currentUser?.verificationTier === 'priority'
-                        ? 'Priority Verified'
-                        : currentUser?.verificationTier === 'verified'
-                        ? 'Standard Verified'
+                    <span className="text-xs font-bold text-theme-primary">Current Plan:</span>
+                    <span className="text-xs font-extrabold capitalize text-[#5E43F3]">
+                      {subscription.status === 'active'
+                        ? subscription.tier === 'creator' || subscription.tier === 'creator_premium'
+                          ? 'Creator Premium'
+                          : subscription.tier === 'priority'
+                          ? 'Priority Verified'
+                          : 'Standard Verified'
                         : 'Unverified'}
                     </span>
-                    <VerificationBadge user={currentUser} size="xs" />
+                    <VerificationBadge tier={subscription.tier} size="xs" />
                   </div>
                   <p className="text-[11px] text-theme-tertiary mt-0.5">
-                    {currentUser?.verificationTier === 'creator'
-                      ? 'Full Creator Hub, Monetization, Analytics, & Rankings Active'
-                      : currentUser?.verificationTier === 'priority'
-                      ? 'Priority Discovery Weighting & Verified Seal Active'
-                      : currentUser?.verificationTier === 'verified'
-                      ? 'Official Verified Seal Active'
+                    {subscription.status === 'active'
+                      ? subscription.tier === 'creator' || subscription.tier === 'creator_premium'
+                        ? 'Full Creator Hub, Monetization, Analytics, & Rankings Active'
+                        : subscription.tier === 'priority'
+                        ? 'Priority Discovery Weighting & Verified Seal Active'
+                        : 'Official Verified Seal Active'
                       : 'Standard account without verification benefits'}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+            <div className={`grid gap-2 pt-1 ${isCreatorPremiumActive ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
               <button
                 type="button"
-                onClick={() => openCreatorSubscription()}
-                className="w-full rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.99] text-white py-2.5 px-3 text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2"
+                onClick={() => {
+                  setIsEditProfileOpen(false);
+                  openCreatorSubscription();
+                }}
+                className="w-full rounded-xl bg-[#5E43F3] hover:bg-[#4E34E0] active:scale-[0.99] text-white py-2.5 px-3 text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2"
               >
-                <Sparkles className="w-3.5 h-3.5" />
-                {currentUser?.verificationTier ? 'Manage Tier / Upgrade' : 'Get Verified (from ₦800)'}
+                <BadgeCheck className="w-3.5 h-3.5" />
+                {subscription.status === 'active' ? 'Manage Subscription / View Plan' : 'Get Verified (from ₦800)'}
               </button>
 
-              <button
-                type="button"
-                onClick={() => openCreatorHub()}
-                className="w-full rounded-xl border border-teal-500/30 bg-teal-500/5 hover:bg-teal-500/10 active:scale-[0.99] text-teal-700 dark:text-teal-300 py-2.5 px-3 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                Open Creator Hub
-              </button>
+              {isCreatorPremiumActive && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditProfileOpen(false);
+                    openCreatorHub();
+                  }}
+                  className="w-full rounded-xl border border-[#5E43F3]/30 bg-[#5E43F3]/5 hover:bg-[#5E43F3]/10 active:scale-[0.99] text-[#5E43F3] py-2.5 px-3 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <Briefcase className="w-3.5 h-3.5" />
+                  <span>Open Creator Hub</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1006,7 +1023,36 @@ export const SettingsPageView: React.FC = () => {
           </div>
         )}
 
-        {/* 8. Account Actions */}
+        {/* 8. App Preferences */}
+        <div className="space-y-3">
+          <div className="border-b border-theme-divider-light pb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">
+              App & Preferences
+            </h3>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setIsEditProfileOpen(false);
+              setIsInstallModalOpen(true);
+            }}
+            className="w-full rounded-2xl border border-theme-divider bg-theme-surface p-4 flex items-center justify-between hover:bg-theme-base cursor-pointer transition-colors"
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-theme-inverse text-theme-text-inverse">
+                <Download className="w-5 h-5" />
+              </div>
+              <div className="text-left flex flex-col">
+                <span className="text-sm font-bold text-theme-primary">Download App</span>
+                <span className="text-[11px] text-theme-tertiary line-clamp-1">Install the native Lalao app</span>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-theme-tertiary" />
+          </button>
+        </div>
+
+        {/* 9. Account Actions */}
         <div className="space-y-3">
           <div className="border-b border-theme-divider-light pb-2">
             <h3 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">

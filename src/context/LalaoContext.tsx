@@ -32,6 +32,8 @@ import {
   PageMonetization,
   PageAnalytics,
   VerificationTier,
+  UserSubscription,
+  SubscriptionStatus,
 } from '../types';
 
 import { HOK_EVENTS, HOK_SEED_TICKETS, HOK_ORGANIZATION_PAGE } from '../data/honorOfKingsData';
@@ -40,6 +42,8 @@ import {
   getCoordinatesForLocation,
   KNOWN_LOCATION_HUBS,
 } from '../utils/locationUtils';
+import { resolvePostCreationLocation } from '../utils/postLocation';
+import { resolvePostMediaUrl } from '../utils/postMedia';
 
 export type NavTab =
   | 'home'
@@ -56,9 +60,12 @@ export type NavTab =
   | 'liked'
   | 'events'
   | 'location'
-  | 'pages';
+  | 'pages'
+  | 'verification'
+  | 'beta-tester'
+  | 'creator-hub';
 export type FeedTab = 'for_you' | 'following' | 'community' | 'nearby' | (string & {});
-export type CreateOption = 'post' | 'rally' | 'page' | 'cycle' | null;
+export type CreateOption = 'post' | 'rally' | 'page' | 'cycle' | 'group-chat' | 'group-cycle' | null;
 
 interface LalaoContextType {
   currentUser: User;
@@ -212,6 +219,10 @@ interface LalaoContextType {
   setIsCreateSheetOpen: (open: boolean) => void;
   createFlowType: CreateOption;
   setCreateFlowType: (type: CreateOption) => void;
+  isCreateGroupChatOpen: boolean;
+  setIsCreateGroupChatOpen: (open: boolean) => void;
+  isCreateGroupCycleOpen: boolean;
+  setIsCreateGroupCycleOpen: (open: boolean) => void;
   isLocationModalOpen: boolean;
   setIsLocationModalOpen: (open: boolean) => void;
   isNotificationsOpen: boolean;
@@ -303,7 +314,11 @@ interface LalaoContextType {
   topUpWallet: (amount: number, method?: string) => void;
   payWithWallet: (amount: number, description: string, reference?: string) => boolean;
 
-  // Creator Ecosystem
+  // Creator Ecosystem & Subscriptions
+  subscription: UserSubscription;
+  isCreatorPremiumActive: boolean;
+  cancelUserSubscription: () => Promise<void>;
+  subscribeUserToTier: (tier: VerificationTier, paystackRef?: string) => Promise<void>;
   isCreatorHubOpen: boolean;
   setIsCreatorHubOpen: (open: boolean) => void;
   isCreatorSubscriptionOpen: boolean;
@@ -753,6 +768,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Modal States
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [createFlowType, setCreateFlowType] = useState<CreateOption>(null);
+  const [isCreateGroupChatOpen, setIsCreateGroupChatOpen] = useState(false);
+  const [isCreateGroupCycleOpen, setIsCreateGroupCycleOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
@@ -871,18 +888,194 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [shareToast, setShareToast] = useState<string | null>(null);
 
-  // Creator Ecosystem modals
+  // Creator Ecosystem modals & Subscriptions
   const [isCreatorHubOpen, setIsCreatorHubOpen] = useState(false);
   const [isCreatorSubscriptionOpen, setIsCreatorSubscriptionOpen] = useState(false);
   const [creatorSubscriptionInitialTier, setCreatorSubscriptionInitialTier] = useState<VerificationTier | undefined>(undefined);
 
+  const backendSubscription = useQuery(api.creators.getMyCreatorSubscription);
+  const subscribeToTierMutation = useMutation(api.creators.subscribeToTier);
+  const cancelSubscriptionMutation = useMutation(api.creators.cancelSubscription);
+
+  // Local subscription cache
+  const [localSubscriptionState, setLocalSubscriptionState] = useState<UserSubscription | null>(() => {
+    try {
+      const saved = localStorage.getItem('lalao_user_subscription');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  });
+
+  useEffect(() => {
+    if (localSubscriptionState) {
+      try {
+        localStorage.setItem('lalao_user_subscription', JSON.stringify(localSubscriptionState));
+      } catch {}
+    } else {
+      localStorage.removeItem('lalao_user_subscription');
+    }
+  }, [localSubscriptionState]);
+
+  // Reliable single source of truth for subscription
+  const subscription: UserSubscription = useMemo(() => {
+    // 1. If backend reports active subscription
+    if (backendSubscription && backendSubscription.status === 'active') {
+      const tier = (backendSubscription.tier === 'creator' ? 'creator_premium' : backendSubscription.tier) as VerificationTier;
+      const isCreatorTier = tier === 'creator_premium' || tier === 'creator';
+      const defaultPrice = isCreatorTier ? 3500 : tier === 'priority' ? 1700 : 800;
+      const startDate = backendSubscription.subscription?.startedAt || (backendSubscription.expiresAt ? backendSubscription.expiresAt - 30 * 86400000 : Date.now());
+      const nextBillingDate = backendSubscription.subscription?.expiresAt || backendSubscription.expiresAt || (Date.now() + 30 * 86400000);
+      return {
+        status: 'active',
+        tier,
+        startDate,
+        nextBillingDate,
+        price: backendSubscription.subscription?.price || defaultPrice,
+        currency: backendSubscription.subscription?.currency || 'NGN',
+        paymentMethod: backendSubscription.subscription?.paymentMethod || 'paystack',
+        cancelAtPeriodEnd: backendSubscription.cancelAtPeriodEnd ?? false,
+      };
+    }
+
+    // 2. If local explicit active state
+    if (localSubscriptionState && localSubscriptionState.status === 'active') {
+      return localSubscriptionState;
+    }
+
+    // 3. If currentUser has active verification profile
+    if (
+      currentUser?.verificationTier &&
+      currentUser.verificationTier !== 'none' &&
+      currentUser.verificationStatus === 'active' &&
+      (!currentUser.verificationExpiresAt || currentUser.verificationExpiresAt > Date.now())
+    ) {
+      const tier = (currentUser.verificationTier === 'creator' ? 'creator_premium' : currentUser.verificationTier) as VerificationTier;
+      const isCreatorTier = tier === 'creator_premium' || tier === 'creator';
+      const price = isCreatorTier ? 3500 : tier === 'priority' ? 1700 : 800;
+      return {
+        status: 'active',
+        tier,
+        startDate: currentUser.verificationStartedAt || Date.now(),
+        nextBillingDate: currentUser.verificationExpiresAt || (Date.now() + 30 * 86400000),
+        price,
+        currency: 'NGN',
+        paymentMethod: 'paystack',
+        cancelAtPeriodEnd: false,
+      };
+    }
+
+    // 4. If marked cancelled
+    if (localSubscriptionState?.status === 'cancelled' || currentUser?.verificationStatus === 'cancelled') {
+      return {
+        status: 'cancelled',
+        tier: 'none',
+      };
+    }
+
+    return {
+      status: 'inactive',
+      tier: 'none',
+    };
+  }, [backendSubscription, localSubscriptionState, currentUser?.verificationTier, currentUser?.verificationStatus, currentUser?.verificationExpiresAt, currentUser?.verificationStartedAt]);
+
+  const isCreatorPremiumActive = Boolean(
+    subscription.status === 'active' &&
+    (subscription.tier === 'creator' || subscription.tier === 'creator_premium')
+  );
+
+  // Auto-close Creator Hub if subscription is no longer active
+  useEffect(() => {
+    if (!isCreatorPremiumActive && isCreatorHubOpen) {
+      setIsCreatorHubOpen(false);
+    }
+  }, [isCreatorPremiumActive, isCreatorHubOpen]);
+
   const openCreatorSubscription = (initialTier?: VerificationTier) => {
     setCreatorSubscriptionInitialTier(initialTier);
-    setIsCreatorSubscriptionOpen(true);
+    setIsCreatorSubscriptionOpen(false);
+    setActiveTab('verification');
+    const mainEl = document.querySelector('main');
+    if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   const openCreatorHub = () => {
+    if (!isCreatorPremiumActive) {
+      triggerShareToast('Creator Hub is exclusive to Creator Premium subscribers.');
+      return;
+    }
     setIsCreatorHubOpen(true);
+  };
+
+  const cancelUserSubscription = async () => {
+    try {
+      await cancelSubscriptionMutation({});
+    } catch (e: any) {
+      console.warn('[LalaoContext] cancelSubscription error:', e);
+    }
+
+    const cancelledState: UserSubscription = {
+      status: 'cancelled',
+      tier: 'none',
+      cancelAtPeriodEnd: true,
+    };
+
+    setLocalSubscriptionState(cancelledState);
+    setCurrentUser((prev) => ({
+      ...prev,
+      isVerified: false,
+      verificationTier: 'none',
+      verificationStatus: 'cancelled',
+      verificationExpiresAt: undefined,
+      subscription: cancelledState,
+    }));
+    setIsCreatorHubOpen(false);
+    triggerShareToast('Subscription cancelled successfully.');
+  };
+
+  const subscribeUserToTier = async (tier: VerificationTier, paystackRef?: string) => {
+    const backendTier = (tier === 'creator_premium' ? 'creator' : tier) as 'verified' | 'priority' | 'creator';
+    const isCreatorTier = backendTier === 'creator';
+    const price = isCreatorTier ? 3500 : backendTier === 'priority' ? 1700 : 800;
+    const now = Date.now();
+    const expiresAt = now + 30 * 24 * 60 * 60 * 1000;
+
+    try {
+      await subscribeToTierMutation({
+        tier: backendTier,
+        paymentMethod: 'paystack',
+        paystackReference: paystackRef,
+      });
+    } catch (e: any) {
+      console.warn('[LalaoContext] subscribeToTier error:', e);
+    }
+
+    const newSub: UserSubscription = {
+      status: 'active',
+      tier: tier === 'creator' ? 'creator_premium' : tier,
+      startDate: now,
+      nextBillingDate: expiresAt,
+      price,
+      currency: 'NGN',
+      paymentMethod: 'paystack',
+      cancelAtPeriodEnd: false,
+    };
+
+    setLocalSubscriptionState(newSub);
+    setCurrentUser((prev) => ({
+      ...prev,
+      isVerified: true,
+      verificationTier: backendTier,
+      verificationStatus: 'active',
+      verificationStartedAt: now,
+      verificationExpiresAt: expiresAt,
+      subscription: newSub,
+    }));
+
+    triggerShareToast(
+      isCreatorTier
+        ? 'Welcome to Creator Premium! Creator Hub unlocked.'
+        : `Welcome to ${backendTier === 'priority' ? 'Priority' : 'Standard'} Verified! Your badge is active.`
+    );
   };
 
   // Shopping, Cart & Saved Products
@@ -1466,7 +1659,9 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         mediaUrl: args.mediaUrl,
         mediaStorageId: args.mediaStorageId as any,
         mediaType: args.mediaType as 'image' | 'video' | undefined,
-        location: args.location || location.name,
+        location: resolvePostCreationLocation({
+          authorLocationSnapshot: args.location,
+        }),
         audience: args.audience as any,
         replyPermission: args.replyPermission as any,
         gifUrl: args.gifUrl,
@@ -1479,15 +1674,23 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       });
 
       const postIdStr = typeof response === 'object' && response !== null ? response.id : response;
+      const resolvedMediaUrl = resolvePostMediaUrl({
+        mediaUrl: response.mediaUrl ?? args.mediaUrl,
+        mediaStorageId: response.mediaStorageId ?? args.mediaStorageId,
+        getUrl: () => response.mediaUrl,
+      });
 
       // Create a local post object to push to feed instantly
       const newPost: Post = {
         id: postIdStr as string,
         author: currentUser,
         text: args.text,
-        mediaUrl: args.mediaUrl,
+        mediaUrl: resolvedMediaUrl,
+        mediaStorageId: response.mediaStorageId ?? args.mediaStorageId,
         mediaType: args.mediaType as 'image' | 'video' | undefined,
-        location: args.location || location.name,
+        location: response.location ?? resolvePostCreationLocation({
+          authorLocationSnapshot: args.location,
+        }),
         distanceMeters: 0, // User's own posts are 0m from themselves; feed recalculates for others
         createdAt: 'Just now',
         likesCount: 0,
@@ -2424,6 +2627,10 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setIsCreateSheetOpen,
         createFlowType,
         setCreateFlowType,
+        isCreateGroupChatOpen,
+        setIsCreateGroupChatOpen,
+        isCreateGroupCycleOpen,
+        setIsCreateGroupCycleOpen,
         isLocationModalOpen,
         setIsLocationModalOpen,
         isNotificationsOpen,
@@ -2501,6 +2708,10 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setIsWalletModalOpen,
         topUpWallet,
         payWithWallet,
+        subscription,
+        isCreatorPremiumActive,
+        cancelUserSubscription,
+        subscribeUserToTier,
         isCreatorHubOpen,
         setIsCreatorHubOpen,
         isCreatorSubscriptionOpen,

@@ -3,6 +3,7 @@ import { X, MapPin, Calendar, Check, MessageSquare, AlertCircle, Flag } from 'lu
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
 import { useLalao } from '../../../context/LalaoContext';
+import { VerificationBadge } from '../../common/VerificationBadge';
 
 interface ListingDetailModalProps {
   listingId: any;
@@ -159,7 +160,7 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({ listingI
                   className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
                 />
                 <div className="flex-1">
-                  <h5 className="font-bold text-theme-primary">{owner?.name}</h5>
+                  <h5 className="font-bold text-theme-primary">{owner?.name} <VerificationBadge user={owner} size="xs" className="ml-0.5" /></h5>
                   <p className="text-xs text-theme-tertiary">@{owner?.username}</p>
                   
                   {ownerProfile?.bio && (

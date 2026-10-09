@@ -27,16 +27,16 @@ export const AuthPromptModal: React.FC = () => {
           </button>
 
           {settings?.authLogoUrl ? (
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center overflow-hidden">
-              <img src={settings.authLogoUrl} alt="Authentication Logo" className="w-full h-full object-contain" />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#5E43F3]/10">
+              <img src={settings.authLogoUrl} alt="Authentication Logo" className="w-3/5 h-3/5 object-contain" />
             </div>
           ) : settings?.authWordmark ? (
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#5E43F3]/10">
-              <span className="lalao-wordmark text-[24px] text-[#5E43F3] leading-none translate-y-1">{settings.authWordmark}</span>
+              <span className="lalao-wordmark text-[14px] text-[#5E43F3] leading-none translate-y-0.5">{settings.authWordmark}</span>
             </div>
           ) : (
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#5E43F3]/10">
-              <span className="lalao-wordmark text-[32px] text-[#5E43F3] leading-none translate-y-1">lalao</span>
+              <span className="lalao-wordmark text-[18px] text-[#5E43F3] leading-none translate-y-0.5">lalao</span>
             </div>
           )}
 

@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAdmin } from "./admin";
+import { normalizeBrandingSettings } from "./internal/platformSettingsDefaults";
 
 // ─────────────────────────────────────────────────────────────
 // BRANDING SETTINGS
@@ -12,15 +13,9 @@ export const getBrandingSettings = query({
     const record = await ctx.db
       .query("platformSettings")
       .withIndex("by_key", (q) => q.eq("key", "branding"))
-      .unique();
+      .first();
 
-    if (!record) return null;
-
-    try {
-      return JSON.parse(record.value);
-    } catch (e) {
-      return null;
-    }
+    return normalizeBrandingSettings(record?.value);
   },
 });
 
@@ -50,7 +45,7 @@ export const updateBrandingSettings = mutation({
     const record = await ctx.db
       .query("platformSettings")
       .withIndex("by_key", (q) => q.eq("key", "branding"))
-      .unique();
+      .first();
 
     const newValue = JSON.stringify(args.branding);
 
@@ -101,7 +96,7 @@ export const getFeatureFlagsInternal = async (ctx: any) => {
   const record = await ctx.db
     .query("platformSettings")
     .withIndex("by_key", (q: any) => q.eq("key", "featureFlags"))
-    .unique();
+    .first();
 
   const defaultFlags = { communityEnabled: false, roomyEnabled: true };
 
@@ -136,7 +131,7 @@ export const updateFeatureFlags = mutation({
     const record = await ctx.db
       .query("platformSettings")
       .withIndex("by_key", (q) => q.eq("key", "featureFlags"))
-      .unique();
+      .first();
 
     let currentFlags = { communityEnabled: false, roomyEnabled: true };
     if (record) {
@@ -190,7 +185,7 @@ export const requireFeatureFlag = async (ctx: any, feature: string) => {
   const record = await ctx.db
     .query("platformSettings")
     .withIndex("by_key", (q: any) => q.eq("key", "featureFlags"))
-    .unique();
+    .first();
     
   let flags: Record<string, boolean> = { communityEnabled: false, roomyEnabled: true };
   if (record) {
@@ -214,7 +209,7 @@ export const getCreatorSettings = query({
     const record = await ctx.db
       .query("platformSettings")
       .withIndex("by_key", (q) => q.eq("key", "creator_tier_settings"))
-      .unique();
+      .first();
 
     const defaultSettings = {
       tier3Price: 800,
@@ -257,7 +252,7 @@ export const updateCreatorSettings = mutation({
     const record = await ctx.db
       .query("platformSettings")
       .withIndex("by_key", (q) => q.eq("key", "creator_tier_settings"))
-      .unique();
+      .first();
 
     let currentSettings = {
       tier3Price: 800,
@@ -323,3 +318,4 @@ export const updateCreatorSettings = mutation({
     return newSettings;
   },
 });
+

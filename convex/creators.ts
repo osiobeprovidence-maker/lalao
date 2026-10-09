@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { resolveUserVerification } from "./social";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    CREATOR ECOSYSTEM & SUBSCRIPTION TIERS CONFIGURATION
@@ -57,13 +58,8 @@ export const CREATOR_LEVELS = [
    ───────────────────────────────────────────────────────────────────────────── */
 
 export function isUserVerified(user: any): boolean {
-  if (!user || !user.verificationTier || user.verificationTier === "none") {
-    return false;
-  }
-  if (user.verificationExpiresAt && user.verificationExpiresAt < Date.now()) {
-    return false;
-  }
-  return true;
+  // Delegates to the single shared source of truth for current subscription status.
+  return resolveUserVerification(user).isVerified;
 }
 
 export function getActiveVerificationTier(user: any): "none" | "verified" | "priority" | "creator" {
@@ -300,20 +296,32 @@ export const getCreatorHubData = query({
     ];
 
     // 8. Top Performing Content
-    const topPosts = userPosts
-      .map((p) => {
-        // Calculate rough score for sorting
-        return {
-          id: p._id,
-          text: p.text,
-          mediaUrl: p.mediaUrl,
-          mediaType: p.mediaType,
-          createdAt: new Date(p.createdAt).toLocaleDateString(),
-          likesCount: 0, // will be attached
-          commentsCount: 0,
-        };
-      })
-      .slice(0, 5);
+    const postsWithMetrics = await Promise.all(userPosts.map(async (p) => {
+      const postComments = await ctx.db
+        .query("comments")
+        .withIndex("by_post", (q) => q.eq("postId", p._id))
+        .collect();
+      
+      const likesCount = p.likesCount || 0;
+      const commentsCount = postComments.length;
+      const viewsCount = likesCount * 12 + commentsCount * 18 + 45;
+      const score = likesCount * 2 + commentsCount * 3 + viewsCount;
+
+      return {
+        id: p._id,
+        text: p.text,
+        mediaUrl: p.mediaUrl,
+        mediaType: p.mediaType,
+        createdAt: new Date(p.createdAt).toLocaleDateString(),
+        likesCount,
+        commentsCount,
+        viewsCount,
+        score
+      };
+    }));
+
+    postsWithMetrics.sort((a, b) => b.score - a.score);
+    const topPosts = postsWithMetrics.slice(0, 5);
 
     // 9. Wallet & Payout info
     const wallet = await ctx.db
@@ -340,8 +348,8 @@ export const getCreatorHubData = query({
         estimatedTotalViews,
         estimatedRecentViews,
         engagementRate,
-        currentRank: isCreator ? 14 : null, // Calculated in rankings
-        rankMovement: 3, // Up 3 positions
+        currentRank: null,
+        rankMovement: null,
         totalEarnings: user.creatorEarnings ?? 0,
         pendingEarnings: user.creatorPendingEarnings ?? 0,
       },
@@ -731,41 +739,9 @@ export const subscribeToTier = mutation({
     const durationMs = 30 * 24 * 60 * 60 * 1000; // 30 days
     const expiresAt = now + durationMs;
 
-    // 1. If paying via wallet, check balance & deduct
+    // 1. Enforce card-only payments (no Lalao Wallet for verification subscriptions)
     if (args.paymentMethod === "wallet") {
-      let wallet = await ctx.db
-        .query("userWallets")
-        .withIndex("by_user", (q) => q.eq("userId", user._id))
-        .first();
-
-      if (!wallet) {
-        throw new Error("Wallet not initialized. Please top up your wallet or pay via Paystack.");
-      }
-
-      if (wallet.balance < tierInfo.price) {
-        throw new Error(
-          `Insufficient wallet balance (₦${wallet.balance.toLocaleString()}). ` +
-          `Subscription requires ₦${tierInfo.price.toLocaleString()}. Please top up your wallet or use Paystack.`
-        );
-      }
-
-      // Deduct balance
-      await ctx.db.patch(wallet._id, {
-        balance: wallet.balance - tierInfo.price,
-        updatedAt: now,
-      });
-
-      // Record transaction
-      await ctx.db.insert("walletTransactions", {
-        walletId: wallet._id,
-        userId: user._id,
-        type: "subscription_payment",
-        amount: tierInfo.price,
-        description: `Subscription: ${tierInfo.name} (30 days)`,
-        status: "completed",
-        reference: `sub_${args.tier}_${Date.now()}`,
-        createdAt: now,
-      });
+      throw new Error("Lalao Wallet cannot be used for verification subscriptions. Card payment only.");
     }
 
     // 2. Mark any previously active subscription as superseded/cancelled
@@ -855,9 +831,20 @@ export const cancelSubscription = mutation({
       throw new Error("No active creator subscription found");
     }
 
+    const now = Date.now();
     await ctx.db.patch(activeSub._id, {
+      status: "cancelled",
+      cancelledAt: now,
       cancelAtPeriodEnd: true,
-      updatedAt: Date.now(),
+      updatedAt: now,
+    });
+
+    // Revoke user verification status immediately
+    await ctx.db.patch(user._id, {
+      verificationTier: "none",
+      verificationStatus: "cancelled",
+      verificationExpiresAt: undefined,
+      updatedAt: now,
     });
 
     return { success: true };

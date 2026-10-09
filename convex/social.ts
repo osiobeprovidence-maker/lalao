@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { canAccessGroupChat } from "./groupAccess";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    AUTH HELPERS
@@ -94,18 +95,24 @@ function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number)
  * Build the author sub-object for feed / comment payloads.
  * Resolves real isFollowing state from the follows table.
  */
-export function resolveUserVerification(doc: any) {
-  if (!doc) return { isVerified: false, verificationTier: "none" as const };
+/**
+ * SINGLE SOURCE OF TRUTH for a user's CURRENT subscription / verification badge.
+ * Always derived live from the `users` document - never stored on posts/comments.
+ * A badge is shown only if the user has a paid tier, the subscription is not
+ * cancelled/expired/inactive, and it has not passed its expiry date.
+ */
+export function resolveUserVerification(doc: any): { isVerified: boolean; verificationTier: "none" | "verified" | "priority" | "creator" } {
+  if (!doc) return { isVerified: false, verificationTier: "none" };
+  const status = doc.verificationStatus;
   const isVerified = Boolean(
     doc.verificationTier &&
     doc.verificationTier !== "none" &&
+    (!status || status === "active") &&
     (!doc.verificationExpiresAt || doc.verificationExpiresAt > Date.now())
   );
   return {
     isVerified,
     verificationTier: isVerified ? (doc.verificationTier ?? "none") : "none",
-    creatorCategory: doc.creatorCategory,
-    creatorLevel: doc.creatorLevel,
   };
 }
 
@@ -150,7 +157,7 @@ async function resolveAuthor(ctx: any, authorDoc: any, currentUserId: string | n
     followersCount: authorDoc.followersCount ?? 0,
     followingCount: authorDoc.followingCount ?? 0,
     isFollowing,
-    isVerified: false,
+    ...resolveUserVerification(authorDoc),
   };
 }
 
@@ -504,11 +511,14 @@ export const listFeedPosts = query({
         isLiked = !!postLike;
       }
 
+      const mediaUrl = post.mediaUrl || (post.mediaStorageId ? await ctx.storage.getUrl(post.mediaStorageId) : undefined);
+
       results.push({
         id: post._id,
         author,
         text: post.text,
-        mediaUrl: post.mediaUrl,
+        mediaUrl,
+        mediaStorageId: post.mediaStorageId,
         muxUploadId: post.muxUploadId,
         muxAssetId: post.muxAssetId,
         muxPlaybackId: post.muxPlaybackId,
@@ -652,7 +662,7 @@ async function fetchPostsForProfileUser(
     followersCount: targetUser.followersCount ?? 0,
     followingCount: targetUser.followingCount ?? 0,
     isFollowing,
-    isVerified: false,
+    ...resolveUserVerification(targetUser),
   };
 
   const results: any[] = [];
@@ -730,11 +740,14 @@ async function fetchPostsForProfileUser(
       })
     );
 
+    const mediaUrl = post.mediaUrl || (post.mediaStorageId ? await ctx.storage.getUrl(post.mediaStorageId) : undefined);
+
     results.push({
       id: post._id,
       author: authorObj,
       text: post.text,
-      mediaUrl: post.mediaUrl,
+      mediaUrl,
+      mediaStorageId: post.mediaStorageId,
       muxUploadId: post.muxUploadId,
       muxAssetId: post.muxAssetId,
       muxPlaybackId: post.muxPlaybackId,
@@ -846,7 +859,7 @@ export const listUsersForExplore = query({
         followingCount: user.followingCount ?? 0,
         isFollowing: currentUser ? relSets.followingIds.has(user._id) : false,
         relationship: currentUser ? resolveRelationship(user._id, relSets) : "none",
-        isVerified: false,
+        ...resolveUserVerification(user),
       }));
   },
 });
@@ -894,7 +907,7 @@ export const listSuggestedUsers = query({
         followingCount: user.followingCount ?? 0,
         isFollowing: relSets.followingIds.has(user._id),
         relationship: currentUser ? resolveRelationship(user._id, relSets) : "none",
-        isVerified: false,
+        ...resolveUserVerification(user),
       }));
   },
 });
@@ -1040,9 +1053,22 @@ export const listConversations = query({
       convosAsPage.push(...pageConvos);
     }
 
+    const memberGroupChats = await ctx.db.query("groupChats").collect();
+    const groupConversations = await Promise.all(
+      memberGroupChats
+        .filter((groupChat) => groupChat.memberIds.includes(currentUser._id))
+        .map(async (groupChat) => {
+          const conversation = await ctx.db
+            .query("conversations")
+            .withIndex("by_group_chat", (q) => q.eq("groupChatId", groupChat._id))
+            .first();
+          return conversation ?? null;
+        }),
+    );
+
     const allConvosMap = new Map();
-    [...convosAsUserA, ...convosAsUserB, ...convosAsPage].forEach((c) => {
-      allConvosMap.set(c._id, c);
+    [...convosAsUserA, ...convosAsUserB, ...convosAsPage, ...groupConversations.filter(Boolean)].forEach((c) => {
+      if (c) allConvosMap.set(c._id, c);
     });
     
     const conversations = Array.from(allConvosMap.values());
@@ -1051,7 +1077,18 @@ export const listConversations = query({
 
     for (const conversation of conversations) {
       const isPageConvo = !!conversation.pageB;
+      const isGroupChat = !!conversation.groupChatId;
       const amIUserA = conversation.userA === currentUser._id;
+      let groupChat: any = null;
+      let groupMemberIds: readonly string[] = [];
+
+      if (isGroupChat && conversation.groupChatId) {
+        groupChat = await ctx.db.get(conversation.groupChatId);
+        groupMemberIds = groupChat?.memberIds.map((id) => id.toString()) ?? [];
+        if (!groupChat || !canAccessGroupChat(currentUser._id.toString(), groupChat.creatorId.toString(), groupMemberIds)) {
+          continue;
+        }
+      }
       
       let otherParticipant: any = null;
       let isFollowingParticipant = false;
@@ -1077,6 +1114,19 @@ export const listConversations = query({
             participantRelationship = resolveRelationship(otherParticipant._id, relSets);
           }
         }
+      } else if (isGroupChat && groupChat) {
+        otherParticipant = {
+          id: groupChat._id,
+          name: groupChat.name,
+          username: `group-${groupChat._id}`,
+          avatar: groupChat.avatarUrl ?? "",
+          userType: "community",
+          badge: "COMMUNITY",
+          followersCount: groupChat.memberIds.length,
+          followingCount: 0,
+          isFollowing: true,
+          relationship: "friends",
+        };
       } else {
         const otherUserId = amIUserA ? conversation.userB : conversation.userA;
         otherParticipant = await ctx.db.get(otherUserId);
@@ -1211,12 +1261,16 @@ export const listConversations = query({
       result.push({
         id: conversation._id,
         isPageConvo,
+        isGroupChat,
         amIUserA,
+        groupChatId: conversation.groupChatId,
+        groupChat,
         pageId: conversation.pageB,
         participant: {
           id: otherParticipant?._id ?? "",
           name: otherParticipant?.name ?? "Unknown",
           username: otherParticipant?.username ?? "unknown",
+          ...resolveUserVerification(otherParticipant),
           avatar: otherParticipant?.avatarUrl || otherParticipant?.avatar || "",
           userType: otherParticipant?.userType ?? "person",
           followersCount: otherParticipant?.followersCount ?? 0,
@@ -1477,10 +1531,11 @@ export const createPost = mutation({
         followersCount: currentUser.followersCount ?? 0,
         followingCount: currentUser.followingCount ?? 0,
         isFollowing: false,
-        isVerified: false,
+        ...resolveUserVerification(currentUser),
       },
       text: args.text,
-      mediaUrl: args.mediaUrl,
+      mediaUrl: mediaUrl,
+      mediaStorageId: args.mediaStorageId,
       mediaType: args.mediaType,
       mediaWidth: args.mediaWidth,
       mediaHeight: args.mediaHeight,
@@ -1863,7 +1918,7 @@ export const addCommentToPost = mutation({
         followersCount: currentUser.followersCount ?? 0,
         followingCount: currentUser.followingCount ?? 0,
         isFollowing: false,
-        isVerified: false,
+        ...resolveUserVerification(currentUser),
       },
     };
   },
@@ -2069,7 +2124,7 @@ export const getMyFollowers = query({
           isFollowing: myFollowingIds.has(user._id), // do I follow them back?
           followersCount: user.followersCount ?? 0,
           followingCount: user.followingCount ?? 0,
-          isVerified: false,
+          ...resolveUserVerification(user),
           followedAt: f.createdAt,
         };
       })
@@ -2109,7 +2164,7 @@ export const getMyFollowing = query({
           location: user.locationName ?? "",
           followersCount: user.followersCount ?? 0,
           isFollowing: true,
-          isVerified: false,
+          ...resolveUserVerification(user),
           followedAt: f.createdAt,
         };
       })
@@ -2200,7 +2255,7 @@ export const listNotifications = query({
                 followersCount: actor.followersCount ?? 0,
                 followingCount: actor.followingCount ?? 0,
                 isFollowing: false,
-                isVerified: false,
+                ...resolveUserVerification(actor),
               }
             : null,
           targetId: notif.postId ?? null,
@@ -2419,7 +2474,7 @@ export const getMessageContacts = query({
           followingCount: friend.followingCount ?? 0,
           isFollowing: true,
           relationship: "friends",
-          isVerified: false,
+          ...resolveUserVerification(friend),
         });
       }
     }
@@ -2430,6 +2485,92 @@ export const getMessageContacts = query({
 /* ─────────────────────────────────────────────────────────────────────────────
    MESSAGING
    ───────────────────────────────────────────────────────────────────────────── */
+
+export const createGroupChat = mutation({
+  args: {
+    name: v.string(),
+    description: v.optional(v.string()),
+    memberIds: v.array(v.id("users")),
+    avatarUrl: v.optional(v.string()),
+    interests: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const memberIds = Array.from(new Set([currentUser._id, ...args.memberIds]));
+    const groupChatId = await ctx.db.insert("groupChats", {
+      name: args.name,
+      description: args.description,
+      creatorId: currentUser._id,
+      memberIds,
+      avatarUrl: args.avatarUrl,
+      interests: args.interests,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    const conversationId = await ctx.db.insert("conversations", {
+      userA: currentUser._id,
+      groupChatId,
+      updatedAt: Date.now(),
+    });
+
+    return { groupChatId, conversationId };
+  },
+});
+
+export const createGroupCycle = mutation({
+  args: {
+    name: v.string(),
+    description: v.optional(v.string()),
+    memberIds: v.array(v.id("users")),
+    avatarUrl: v.optional(v.string()),
+    interests: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const memberIds = Array.from(new Set([currentUser._id, ...args.memberIds]));
+    const groupCycleId = await ctx.db.insert("groupCycles", {
+      name: args.name,
+      description: args.description,
+      creatorId: currentUser._id,
+      memberIds,
+      avatarUrl: args.avatarUrl,
+      interests: args.interests,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    return groupCycleId;
+  },
+});
+
+export const inviteUserToGroupChat = mutation({
+  args: {
+    groupChatId: v.id("groupChats"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const groupChat = await ctx.db.get(args.groupChatId);
+    if (!groupChat) throw new Error("Group chat not found");
+    if (!canAccessGroupChat(currentUser._id.toString(), groupChat.creatorId.toString(), groupChat.memberIds.map((id) => id.toString()))) {
+      throw new Error("Not authorized to invite members");
+    }
+
+    if (groupChat.memberIds.includes(args.userId)) return groupChat._id;
+    await ctx.db.patch(args.groupChatId, {
+      memberIds: [...groupChat.memberIds, args.userId],
+      updatedAt: Date.now(),
+    });
+    return args.groupChatId;
+  },
+});
 
 export const getOrCreateConversation = mutation({
   args: {
@@ -2545,8 +2686,14 @@ export const sendMessage = mutation({
 
     // Authorization check
     let authorized = false;
-    
-    if (conversation.userA === currentUser._id || conversation.userB === currentUser._id) {
+    if (conversation.groupChatId) {
+      const groupChat = await ctx.db.get(conversation.groupChatId);
+      authorized = !!groupChat && canAccessGroupChat(
+        currentUser._id.toString(),
+        groupChat.creatorId.toString(),
+        groupChat.memberIds.map((id) => id.toString()),
+      );
+    } else if (conversation.userA === currentUser._id || conversation.userB === currentUser._id) {
       authorized = true;
     }
     
@@ -2643,6 +2790,17 @@ export const markConversationRead = mutation({
 
     let amIUserA = conversation.userA === currentUser._id;
     let isPageConvo = !!conversation.pageB;
+    let isGroupChat = !!conversation.groupChatId;
+    let isGroupMember = false;
+
+    if (isGroupChat && conversation.groupChatId) {
+      const groupChat = await ctx.db.get(conversation.groupChatId);
+      isGroupMember = !!groupChat && canAccessGroupChat(
+        currentUser._id.toString(),
+        groupChat.creatorId.toString(),
+        groupChat.memberIds.map((id) => id.toString()),
+      );
+    }
 
     let isManager = false;
     if (isPageConvo && conversation.pageB) {
@@ -2652,7 +2810,7 @@ export const markConversationRead = mutation({
       }
     }
 
-    if (!amIUserA && conversation.userB !== currentUser._id && !isManager) {
+    if (!isGroupMember && !amIUserA && conversation.userB !== currentUser._id && !isManager) {
       throw new Error("Not authorized");
     }
 
@@ -2773,3 +2931,5 @@ export const updateDisappearingMessages = mutation({
     });
   },
 });
+
+

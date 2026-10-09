@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getFeatureFlagsInternal } from "./platformSettings";
+import { resolveUserVerification } from "./social";
 
 export const getMyPages = query({
   args: {},
@@ -711,6 +712,7 @@ export const getPageMembers = query({
           userId: m.userId,
           role: m.role,
           username: user?.username ?? "unknown",
+          ...resolveUserVerification(user),
           name: user?.name ?? "Unknown",
           avatar: (user as any)?.profileImage ?? "",
           createdAt: m.createdAt,

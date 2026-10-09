@@ -1,22 +1,42 @@
 {
+  "id": "/",
   "name": "Lalao",
   "short_name": "Lalao",
-  "description": "Install Lalao on your phone for quick access to your communities, messages, and discoveries.",
-  "start_url": "/",
+  "description": "Your local communities, private group chats, and cycles in one app.",
+  "start_url": "/app",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0d0e12",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "portrait-primary",
+  "background_color": "#0B0F19",
   "theme_color": "#5E43F3",
+  "categories": ["social", "communication"],
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/mascot.png",
+      "src": "/icon-512.png",
+      "sizes": "512x512",
       "type": "image/png",
-      "sizes": "192x192 512x512",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open messages",
+      "short_name": "Messages",
+      "url": "/app/messages",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Open discovery",
+      "short_name": "Discover",
+      "url": "/app/discover",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }

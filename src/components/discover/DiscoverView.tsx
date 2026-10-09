@@ -63,7 +63,7 @@ export const DiscoverView: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'creators' | 'people' | 'pages' | 'shop' | 'events'>('creators');
+  const [activeFilter, setActiveFilter] = useState<'people' | 'pages' | 'shop' | 'events' | 'ranking'>('people');
   const [locationMode, setLocationMode] = useState<'current' | 'selected' | 'global'>('current');
   const [isLocationModeMenuOpen, setIsLocationModeMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -323,7 +323,7 @@ export const DiscoverView: React.FC = () => {
 
         {/* Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-          {['creators', 'people', 'pages', 'shop', 'events'].map((filter) => (
+          {['people', 'pages', 'shop', 'events', 'ranking'].map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter as any)}
@@ -333,7 +333,7 @@ export const DiscoverView: React.FC = () => {
                   : 'bg-theme-surface text-theme-secondary border border-theme-divider/80 hover:bg-theme-base hover:text-theme-primary'
               }`}
             >
-              {filter === 'creators' ? 'Creators' : filter.charAt(0).toUpperCase() + filter.slice(1)}
+              {filter.charAt(0).toUpperCase() + filter.slice(1)}
             </button>
           ))}
         </div>
@@ -423,6 +423,7 @@ export const DiscoverView: React.FC = () => {
                             <div className="min-w-0">
                               <div className="flex items-center gap-1">
                                 <span className="font-bold text-sm text-theme-primary truncate">{user.name}</span>
+                                <VerificationBadge user={user} size="xs" />
                               </div>
                               <div className="flex items-center gap-1.5 text-xs text-theme-tertiary mt-0.5">
                                 <span className="truncate">@{user.username}</span>
@@ -547,6 +548,7 @@ export const DiscoverView: React.FC = () => {
                             <div className="min-w-0">
                               <div className="flex items-center gap-1">
                                 <span className="font-bold text-sm text-theme-primary truncate">{user.name}</span>
+                                <VerificationBadge user={user} size="xs" />
                                 {(user as any).badge && <Badge type={(user as any).badge} />}
                               </div>
                               <div className="flex items-center gap-1.5 text-xs text-theme-tertiary mt-0.5">
@@ -713,9 +715,11 @@ export const DiscoverView: React.FC = () => {
               </section>
             )}
             {activeFilter === 'events' && <EventsView locationMode={locationMode} maxRadiusMeters={maxRadiusMeters} />}
+            {activeFilter === 'ranking' && <CreatorRankingsView />}
           </>
         )}
       </div>
     </div>
   );
 };
+

@@ -354,7 +354,8 @@ export const VideoPlayer = React.memo(
             loop={loop}
             playsInline
             preload="metadata"
-            className={`block w-full h-auto object-contain mx-auto`}
+            style={{ '--media-object-fit': 'cover', '--media-object-position': 'center' } as any}
+            className={`block w-full h-auto max-h-[65vh] md:max-h-[70vh] object-cover object-center mx-auto`}
           />
         );
       }
@@ -369,7 +370,7 @@ export const VideoPlayer = React.memo(
           playsInline
           preload="metadata"
           controls={false}
-          className={`block w-full h-auto object-contain mx-auto`}
+          className={`block w-full h-auto max-h-[65vh] md:max-h-[70vh] object-cover object-center mx-auto`}
         />
       );
     };
@@ -386,7 +387,7 @@ export const VideoPlayer = React.memo(
           <img
             src={posterUrl}
             alt="Video poster"
-            className={`block w-full h-auto object-contain filter blur-sm transition-all duration-300 mx-auto`}
+            className={`block w-full h-auto max-h-[65vh] md:max-h-[70vh] object-cover object-center filter blur-sm transition-all duration-300 mx-auto`}
             loading="lazy"
           />
         ) : (

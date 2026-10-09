@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { getAuthedUser } from "./social";
+import { resolveUserVerification } from "./social";
 
 /**
  * Helper to check admin access
@@ -140,6 +141,7 @@ export const getOnboardingRecommendations = query({
           type: "user",
           name: targetUser.name || "Unknown",
           username: targetUser.username || "unknown",
+          ...resolveUserVerification(targetUser),
           avatar: targetUser.avatarUrl || "",
           description: targetUser.bio || "",
           followersCount: targetUser.followersCount || 0,
@@ -182,6 +184,7 @@ export const getOnboardingRecommendations = query({
           type: "user",
           name: targetUser.name || "Unknown",
           username: targetUser.username || "unknown",
+          ...resolveUserVerification(targetUser),
           avatar: targetUser.avatarUrl || "",
           description: targetUser.bio || "",
           followersCount: targetUser.followersCount || 0,

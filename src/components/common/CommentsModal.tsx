@@ -70,7 +70,10 @@ export const CommentThread = ({
               onClick={() => setActiveUserProfile(comment.author)}
               className="cursor-pointer text-[11px] font-bold text-theme-primary hover:underline"
             >
-              {comment.author.username}
+              {comment.author.name || comment.author.username}
+            </span>
+            <VerificationBadge user={comment.author} size="xs" />
+            <span className="hidden">
             </span>
             {isPostAuthor && <span className="rounded bg-theme-surface-active px-1.5 py-0.2 text-[9px] font-medium text-theme-secondary">Author</span>}
             <span className="text-[10px] text-theme-tertiary">{comment.createdAt}</span>

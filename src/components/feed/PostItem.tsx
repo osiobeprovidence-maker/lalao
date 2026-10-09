@@ -27,6 +27,7 @@ import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
 import { getTopicIcon } from '../../utils/topicIcons';
+import { PostImage } from '../common/PostImage';
 import { VideoPlayer } from './VideoPlayer';
 import { CommentThread } from '../common/CommentsModal';
 import { CommentComposer } from '../common/CommentComposer';
@@ -236,7 +237,13 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                 {author.name}
               </span>
 
-              {author.badge && <Badge type={author.badge} />}
+              {author.badge && (
+                <>
+                  <VerificationBadge user={author} size="xs" />
+                  <Badge type={author.badge} />
+                </>
+              )}
+              {!author.badge && <VerificationBadge user={author} size="xs" />}
             </div>
 
             {/* Sub-header: @username · time · location · distance */}
@@ -469,28 +476,29 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
 
           {/* Media Attachment (for normal post without rally or with independent media) */}
           {((post?.mediaUrl || (post as any)?.muxUploadId) && !linkedRally) && (
-            <div className={`mt-3 w-full rounded-[16px] overflow-hidden border border-theme-divider-light bg-black/5 dark:bg-theme-surface/5 flex items-center justify-center ${compactMedia ? 'max-h-[450px] sm:max-h-[300px]' : 'max-h-[450px] sm:max-h-[500px]'}`}> 
+            <div className="mt-3 w-full"> 
               {post.mediaType === 'video' ? (
-                <VideoPlayer
-                  muxPlaybackId={(post as any).muxPlaybackId}
-                  mediaUrl={post.mediaUrl}
-                  mediaStatus={(post as any).mediaStatus}
-                  mediaWidth={(post as any).mediaWidth}
-                  mediaHeight={(post as any).mediaHeight}
-                  aspect="auto"
-                  autoPlay={true}
-                  className={`w-auto h-auto max-w-full object-contain ${compactMedia ? 'max-h-[450px] sm:max-h-[300px]' : 'max-h-[450px] sm:max-h-[500px]'}`}
-                  onExpandVideo={() => setActiveVideoFeedPostId(post.id)}
-                />
+                <div className={`w-full rounded-[16px] overflow-hidden border border-theme-divider-light bg-black/5 dark:bg-theme-surface/5`}>
+                  <VideoPlayer
+                    muxPlaybackId={(post as any).muxPlaybackId}
+                    mediaUrl={post.mediaUrl}
+                    mediaStatus={(post as any).mediaStatus}
+                    mediaWidth={(post as any).mediaWidth}
+                    mediaHeight={(post as any).mediaHeight}
+                    aspect="auto"
+                    autoPlay={true}
+                    className="w-full h-auto"
+                    onExpandVideo={() => setActiveVideoFeedPostId(post.id)}
+                  />
+                </div>
               ) : (
                 post.mediaUrl && (
-                  <img
+                  <PostImage
                     src={post.mediaUrl}
-                    alt="Post attachment"
-                    referrerPolicy="no-referrer"
-                    className={`w-auto h-auto max-w-full object-contain cursor-pointer ${compactMedia ? 'max-h-[450px] sm:max-h-[300px]' : 'max-h-[450px] sm:max-h-[500px]'}`}
+                    width={(post as any).mediaWidth}
+                    height={(post as any).mediaHeight}
+                    maxHeight={compactMedia ? 300 : 500}
                     onClick={() => externalEvent && setShowEventModal(true)}
-                    loading="lazy"
                   />
                 )
               )}
@@ -529,13 +537,10 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
 
           {/* GIF Attachment */}
           {post?.gifUrl && !linkedRally && (
-            <div className={`mt-3 w-full rounded-[16px] overflow-hidden border border-theme-divider-light bg-black/5 dark:bg-theme-surface/5 flex items-center justify-center ${compactMedia ? 'max-h-[400px] sm:max-h-[250px]' : 'max-h-[400px]'}`}>
-              <img
+            <div className="mt-3 w-full">
+              <PostImage
                 src={post.gifUrl}
                 alt="GIF attachment"
-                referrerPolicy="no-referrer"
-                className={`w-auto h-auto max-w-full object-contain cursor-pointer ${compactMedia ? 'max-h-[400px] sm:max-h-[250px]' : 'max-h-[400px]'}`}
-                loading="lazy"
               />
             </div>
           )}

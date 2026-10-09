@@ -12,6 +12,8 @@ import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { NotificationItem } from '../../types';
 import { SEED_NOTIFICATIONS } from '../../data/seedData';
+import { VerificationBadge } from '../common/VerificationBadge';
+import { SuggestedForYouFeed } from '../recommendations/SuggestedForYouFeed';
 
 export const NotificationsView: React.FC = () => {
   const {
@@ -133,37 +135,8 @@ export const NotificationsView: React.FC = () => {
 
       <div className="px-4 pt-4 space-y-5">
         {/* Suggested For You */}
-        {(activeFilter === 'all' || activeFilter === 'suggested') && visibleSuggested.length > 0 && (
-          <section>
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-theme-primary tracking-tight">Suggested for you</h2>
-              <span className="text-[11px] text-[#707070] dark:text-[#707070]">{visibleSuggested.length}</span>
-            </div>
-
-            <div className="divide-y divide-black/[0.04] dark:divide-white/[0.06]">
-              {visibleSuggested.map((user) => (
-                <div key={user.id} className="flex items-center justify-between gap-3 py-3 px-1 rounded-xl hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <Avatar src={user.avatar} alt={user.name} size="md" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-theme-primary truncate">{user.name}</p>
-                      <p className="text-[11px] text-[#707070] dark:text-[#707070] truncate">@{user.username}</p>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      toggleFollowUser(user.id);
-                    }}
-                    className="px-3.5 py-1.5 rounded-full bg-[#5E43F3] text-[11px] font-bold text-white hover:bg-[#4E34E0] shadow-sm transition-all active:scale-95 cursor-pointer"
-                  >
-                    Follow
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
+        {(activeFilter === 'all' || activeFilter === 'suggested') && (
+          <SuggestedForYouFeed />
         )}
 
         {/* Recent Activity */}
@@ -203,7 +176,7 @@ export const NotificationsView: React.FC = () => {
 
                         <div className="min-w-0 flex-1">
                           <p className="text-xs leading-snug">
-                            <span className="font-bold text-theme-primary">{notif.actor?.name || 'Lalao'}</span>{' '}
+                            <span className="font-bold text-theme-primary">{notif.actor?.name || 'Lalao'} <VerificationBadge user={notif.actor} size="xs" className="ml-0.5" /></span>{' '}
                             <span className="text-theme-secondary">{notif.text}</span>
                           </p>
                           {notif.targetExcerpt && (
@@ -257,7 +230,7 @@ export const NotificationsView: React.FC = () => {
 
                         <div className="min-w-0 flex-1">
                           <p className="text-xs leading-snug">
-                            <span className="font-bold text-theme-primary">{notif.actor?.name || 'Lalao'}</span>{' '}
+                            <span className="font-bold text-theme-primary">{notif.actor?.name || 'Lalao'} <VerificationBadge user={notif.actor} size="xs" className="ml-0.5" /></span>{' '}
                             <span className="text-theme-secondary">{notif.text}</span>
                           </p>
                           {notif.targetExcerpt && (

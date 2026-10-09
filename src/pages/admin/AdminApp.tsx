@@ -40,6 +40,7 @@ import { AdminRecommendations } from './AdminRecommendations';
 import { AdminApiPartners } from './AdminApiPartners';
 import { AdminEventsDistribution } from './AdminEventsDistribution';
 import { AdminLocationRules } from './AdminLocationRules';
+import { AdminBetaTesters } from './AdminBetaTesters';
 import { useAuth } from '../../context/AuthContext';
 import { useLalao } from '../../context/LalaoContext';
 import { useQuery, useMutation } from 'convex/react';
@@ -112,6 +113,7 @@ export const AdminApp: React.FC = () => {
         { path: '/admin/api-partners', label: 'API Partners', icon: Plug },
         { path: '/admin/events-distribution', label: 'Events Analytics', icon: BarChart3 },
         { path: '/admin/location-rules', label: 'Location Rules', icon: MapPin },
+        { path: '/admin/beta-testers', label: 'Beta Testing', icon: Plug },
       ]
     }
   ];
@@ -247,6 +249,7 @@ export const AdminApp: React.FC = () => {
                 <Route path="/api-partners" element={<AdminApiPartners />} />
                 <Route path="/events-distribution" element={<AdminEventsDistribution />} />
                 <Route path="/location-rules" element={<AdminLocationRules />} />
+                <Route path="/beta-testers" element={<AdminBetaTesters />} />
                 <Route path="*" element={<Navigate to="/admin" replace />} />
               </Routes>
             </div>

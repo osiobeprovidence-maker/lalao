@@ -1,6 +1,18 @@
 export type UserType = 'person' | 'business' | 'organization' | 'club' | 'community';
 
-export type VerificationTier = 'none' | 'verified' | 'priority' | 'creator';
+export type VerificationTier = 'none' | 'verified' | 'priority' | 'creator' | 'creator_premium';
+export type SubscriptionStatus = 'active' | 'cancelled' | 'expired' | 'pending_payment' | 'inactive';
+
+export interface UserSubscription {
+  status: SubscriptionStatus;
+  tier: VerificationTier;
+  startDate?: number;
+  nextBillingDate?: number;
+  price?: number;
+  currency?: string;
+  paymentMethod?: string;
+  cancelAtPeriodEnd?: boolean;
+}
 
 export interface User {
   id: string;
@@ -21,6 +33,10 @@ export interface User {
   relationship?: "none" | "following" | "follower" | "friends";
   isVerified?: boolean;
   verificationTier?: VerificationTier;
+  verificationStatus?: SubscriptionStatus;
+  verificationStartedAt?: number;
+  verificationExpiresAt?: number;
+  subscription?: UserSubscription;
   creatorCategory?: string;
   creatorLevel?: number;
   creatorEarnings?: number;
@@ -108,6 +124,7 @@ export interface Post {
   author: User;
   text: string;
   mediaUrl?: string;
+  mediaStorageId?: string;
   mediaType?: 'image' | 'video';
   muxUploadId?: string;
   muxAssetId?: string;

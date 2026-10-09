@@ -17,6 +17,8 @@ import {
   X,
   Download,
   BadgeCheck,
+  Sparkles,
+  Briefcase,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useLalao } from '../../context/LalaoContext';
@@ -41,6 +43,7 @@ export const DesktopSidebar: React.FC = () => {
     setIsShoppingHistoryOpen,
     openCreatorHub,
     openCreatorSubscription,
+    isCreatorPremiumActive,
   } = useLalao();
 
   const isVerified = Boolean(
@@ -348,30 +351,26 @@ export const DesktopSidebar: React.FC = () => {
           })}
         </nav>
 
-        {/* ── VERIFIED STATUS ENTRY ── */}
-        <div className="space-y-1">
-          <button
-            type="button"
-            onClick={() => {
-              if (isVerified) {
-                if (currentUser?.verificationTier === 'creator') {
-                  openCreatorHub();
-                } else {
-                  openCreatorSubscription(currentUser?.verificationTier || 'verified');
-                }
-              } else {
-                openCreatorSubscription();
-              }
-            }}
-            className="flex w-full items-center gap-3 rounded-full px-3 py-2 text-left transition cursor-pointer text-theme-secondary hover:bg-theme-base hover:text-theme-primary"
-            title={isVerified ? 'Verified Account' : 'Get Verified'}
-          >
-            <BadgeCheck className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400 stroke-[2]" />
-            <span className="text-[14px] font-medium">
-              {isVerified ? 'Verified' : 'Get Verified'}
-            </span>
-          </button>
-        </div>
+        {/* ── CREATORS (Active Creator Premium subscribers only) ── */}
+        {isCreatorPremiumActive && (
+          <div className="space-y-1">
+            <div className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-theme-tertiary">
+              Creators
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('creator-hub')}
+              className={`flex w-full items-center gap-3 rounded-full px-3 py-2 text-left transition cursor-pointer ${
+                activeTab === 'creator-hub'
+                  ? 'bg-theme-surface-active text-theme-primary font-semibold'
+                  : 'text-theme-secondary hover:bg-theme-base hover:text-theme-primary'
+              }`}
+            >
+              <Briefcase className={`h-4 w-4 shrink-0 ${activeTab === 'creator-hub' ? 'stroke-[2.2]' : 'stroke-[1.8]'}`} />
+              <span className="text-[14px]">Creator Hub</span>
+            </button>
+          </div>
+        )}
 
         {/* ── MY PAGES ── */}
         <div className="space-y-1">
@@ -399,24 +398,6 @@ export const DesktopSidebar: React.FC = () => {
           ))}
         </div>
 
-        {/* ── APP INSTALL ── */}
-        <div className="space-y-1">
-          <button
-            type="button"
-            onClick={() => setIsInstallModalOpen(true)}
-            className="flex w-full items-center justify-between gap-3 rounded-full px-3 py-2 text-left transition cursor-pointer text-theme-secondary hover:bg-theme-base hover:text-theme-primary"
-          >
-            <div className="flex items-center gap-3">
-              <Download className="h-4 w-4 stroke-[1.8]" />
-              <span className="text-[14px] font-medium">Download App</span>
-            </div>
-            {isInstalled && (
-              <span className="text-[10px] font-bold text-[#5E43F3] bg-[#5E43F3]/10 px-1.5 py-0.5 rounded-full">
-                Installed
-              </span>
-            )}
-          </button>
-        </div>
 
         {/* ── USER FOOTER ── */}
         <div className="mt-auto pt-4 border-t border-black/[0.06] dark:border-white/[0.06]">

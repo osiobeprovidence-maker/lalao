@@ -417,12 +417,12 @@ export const UserProfileModal: React.FC = () => {
                   </p>
                   {activeUserProfile.verificationTier === 'creator' && (
                     <div className="flex items-center gap-1.5 pt-1 flex-wrap">
-                      <span className="px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-                        <Sparkles className="w-2.5 h-2.5 text-teal-600" />
+                      <span className="px-2 py-0.5 rounded-full bg-[#5E43F3]/10 text-[#5E43F3] border border-[#5E43F3]/20 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                        <Sparkles className="w-2.5 h-2.5 text-[#5E43F3]" />
                         {activeUserProfile.creatorCategory || 'Creator'} · Level {activeUserProfile.creatorLevel || 1}
                       </span>
                       <span className="px-2 py-0.5 rounded-full bg-theme-surface text-theme-secondary border border-theme-divider-light text-[10px] font-bold flex items-center gap-1">
-                        <TrendingUp className="w-2.5 h-2.5 text-teal-600" />
+                        <TrendingUp className="w-2.5 h-2.5 text-[#5E43F3]" />
                         Ranked Creator
                       </span>
                     </div>

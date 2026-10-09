@@ -1,14 +1,21 @@
 import React from 'react';
-import { X, Smartphone, Share } from 'lucide-react';
+import { X, Smartphone, Share, CheckCircle2 } from 'lucide-react';
 import { usePWA } from '../../hooks/usePWA';
 
 export const InstallAppModal: React.FC = () => {
-  const { isInstallable, isInstalled, isInstallModalOpen, setIsInstallModalOpen, triggerInstall } = usePWA();
+  const {
+    isInstallable,
+    isInstalled,
+    isStandalone,
+    isIOS,
+    isInstallModalOpen,
+    setIsInstallModalOpen,
+    triggerInstall,
+  } = usePWA();
 
   if (!isInstallModalOpen) return null;
 
-  // Check if iOS
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+  const installed = isInstalled || isStandalone;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
@@ -27,26 +34,27 @@ export const InstallAppModal: React.FC = () => {
             <img src="/mascot.png" alt="Lalao App" className="w-full h-full object-contain" />
           </div>
           <h2 className="text-2xl font-bold text-theme-primary">
-            {isInstalled ? 'Lalao is already installed' : 'Install Lalao'}
+            {installed ? 'Lalao is already installed' : 'Install Lalao'}
           </h2>
           <p className="text-theme-secondary text-center text-sm px-8 mt-2 leading-relaxed">
-            {isInstalled 
-              ? 'You are already using the Lalao app. Enjoy your local communities!' 
+            {installed
+              ? 'You are already using the Lalao app. Enjoy your local communities!'
               : 'Install Lalao on your phone for quick access to your communities, messages, and discoveries.'}
           </p>
         </div>
 
         {/* Content */}
         <div className="px-6 pb-8 pt-4">
-          {isInstalled ? (
-            <button 
+          {installed ? (
+            <button
               onClick={() => setIsInstallModalOpen(false)}
-              className="w-full py-3.5 rounded-full bg-theme-surface text-theme-primary font-bold hover:bg-theme-surface-hover transition-colors"
+              className="w-full py-3.5 rounded-full bg-theme-accent text-white font-bold hover:bg-[#4E35D3] transition-colors flex items-center justify-center gap-2"
             >
+              <CheckCircle2 className="w-5 h-5" />
               Back to App
             </button>
           ) : isInstallable ? (
-            <button 
+            <button
               onClick={triggerInstall}
               className="w-full py-3.5 rounded-full bg-theme-accent text-white font-bold hover:bg-[#4E35D3] transition-colors shadow-lg shadow-theme-accent/25 flex items-center justify-center gap-2"
             >

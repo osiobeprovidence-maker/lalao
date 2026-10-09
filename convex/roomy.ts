@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { ConvexError } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { resolveUserVerification } from "./social";
 
 // ─────────────────────────────────────────────────────────────
 // ROOMY PAGE BOOTSTRAP
@@ -267,6 +268,7 @@ export const getListings = query({
             _id: owner?._id,
             name: owner?.name,
             username: owner?.username,
+            ...resolveUserVerification(owner),
             avatarUrl: owner?.avatarUrl,
             avatarStorageId: owner?.avatarStorageId,
           }
@@ -291,6 +293,7 @@ export const getListing = query({
         _id: owner?._id,
         name: owner?.name,
         username: owner?.username,
+        ...resolveUserVerification(owner),
         avatarUrl: owner?.avatarUrl,
         avatarStorageId: owner?.avatarStorageId,
       },
@@ -364,6 +367,7 @@ export const getSavedListings = query({
             _id: owner?._id,
             name: owner?.name,
             username: owner?.username,
+            ...resolveUserVerification(owner),
             avatarUrl: owner?.avatarUrl,
           }
         };
@@ -472,6 +476,7 @@ export const getMyInspections = query({
           _id: otherUser?._id,
           name: otherUser?.name,
           username: otherUser?.username,
+          ...resolveUserVerification(otherUser),
           avatarUrl: otherUser?.avatarUrl,
         }
       };

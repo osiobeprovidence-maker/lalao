@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Search, Building2, Users, Edit2, Play, Camera, X, Image as ImageIcon } from 'lucide-react';
+import { useLalao } from '../../context/LalaoContext';
+import { uploadImageToCloudinary } from '../../lib/cloudinary';
 
 const TYPE_COLORS: Record<string, string> = {
   business: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -14,6 +16,7 @@ export const AdminPages: React.FC = () => {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
 
+  const { generateCloudinarySignature } = useLalao();
   const pages = useQuery(api.admin.listPages, {
     search: search || undefined,
     type: typeFilter || undefined,
@@ -37,12 +40,16 @@ export const AdminPages: React.FC = () => {
   const [mediaModalPage, setMediaModalPage] = useState<any>(null);
   const [mediaCoverUrl, setMediaCoverUrl] = useState('');
   const [mediaAvatarUrl, setMediaAvatarUrl] = useState('');
+  const [mediaCoverFile, setMediaCoverFile] = useState<File | null>(null);
+  const [mediaAvatarFile, setMediaAvatarFile] = useState<File | null>(null);
   const [savingMedia, setSavingMedia] = useState(false);
 
   const openMediaModal = (p: any) => {
     setMediaModalPage(p);
     setMediaCoverUrl(p.coverImage || '');
     setMediaAvatarUrl(p.avatar || '');
+    setMediaCoverFile(null);
+    setMediaAvatarFile(null);
     setMediaModalOpen(true);
   };
 
@@ -51,10 +58,24 @@ export const AdminPages: React.FC = () => {
     if (!mediaModalPage) return;
     try {
       setSavingMedia(true);
+      
+      let finalCoverImage = mediaCoverUrl;
+      let finalAvatar = mediaAvatarUrl;
+
+      if (mediaCoverFile) {
+        const sigData = await generateCloudinarySignature("pages");
+        finalCoverImage = await uploadImageToCloudinary(mediaCoverFile, sigData);
+      }
+      
+      if (mediaAvatarFile) {
+        const sigData = await generateCloudinarySignature("pages");
+        finalAvatar = await uploadImageToCloudinary(mediaAvatarFile, sigData);
+      }
+
       await updatePageMedia({
         pageId: mediaModalPage._id,
-        coverImage: mediaCoverUrl || undefined,
-        avatar: mediaAvatarUrl || undefined,
+        coverImage: finalCoverImage || undefined,
+        avatar: finalAvatar || undefined,
       });
       alert(`Media updated successfully for @${mediaModalPage.username}`);
       setMediaModalOpen(false);
@@ -426,13 +447,19 @@ export const AdminPages: React.FC = () => {
                     </div>
                   )}
                 </div>
-                <input
-                  type="text"
-                  placeholder="https://... cover image URL"
-                  value={mediaCoverUrl}
-                  onChange={(e) => setMediaCoverUrl(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-theme-base border border-theme-divider text-xs text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3]"
-                />
+                <div className="mt-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setMediaCoverFile(e.target.files[0]);
+                        setMediaCoverUrl(URL.createObjectURL(e.target.files[0]));
+                      }
+                    }}
+                    className="w-full text-xs text-theme-secondary file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#5E43F3] file:text-white hover:file:bg-[#4E34E0] cursor-pointer"
+                  />
+                </div>
               </div>
 
               {/* Profile Avatar Preview & URL */}
@@ -449,13 +476,19 @@ export const AdminPages: React.FC = () => {
                       <span className="text-xs font-bold text-theme-tertiary">Avatar</span>
                     )}
                   </div>
-                  <input
-                    type="text"
-                    placeholder="https://... avatar URL"
-                    value={mediaAvatarUrl}
-                    onChange={(e) => setMediaAvatarUrl(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl bg-theme-base border border-theme-divider text-xs text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3]"
-                  />
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setMediaAvatarFile(e.target.files[0]);
+                          setMediaAvatarUrl(URL.createObjectURL(e.target.files[0]));
+                        }
+                      }}
+                      className="w-full text-xs text-theme-secondary file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#5E43F3] file:text-white hover:file:bg-[#4E34E0] cursor-pointer"
+                    />
+                  </div>
                 </div>
               </div>
 
