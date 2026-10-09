@@ -34,6 +34,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
   const accountItems = [
     { id: 'wallet', label: 'Wallet', icon: Wallet },
     { id: 'orders', label: 'Order History', icon: ShoppingBag },
+    { id: 'install-app', label: 'Install App', icon: Download },
   ] as const;
 
   const myPagesItems = [
@@ -54,6 +55,11 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
 
   const handleOrdersAction = () => {
     setIsShoppingHistoryOpen(true);
+    onClose();
+  };
+
+  const handleInstallAppAction = () => {
+    setIsInstallModalOpen(true);
     onClose();
   };
 
@@ -101,6 +107,10 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
                     }
                     if (id === 'orders') {
                       handleOrdersAction();
+                      return;
+                    }
+                    if (id === 'install-app') {
+                      handleInstallAppAction();
                       return;
                     }
                   }}

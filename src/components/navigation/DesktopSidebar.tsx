@@ -167,6 +167,7 @@ export const DesktopSidebar: React.FC = () => {
   const accountNav = [
     { id: 'wallet', label: 'Wallet', icon: Wallet },
     { id: 'orders', label: 'Order History', icon: ShoppingBag },
+    { id: 'install-app', label: 'Install App', icon: Download },
   ] as const;
 
   const isMenuItemActive = (id: string) =>
@@ -289,6 +290,7 @@ export const DesktopSidebar: React.FC = () => {
                       onClick={() => {
                         if (id === 'wallet') setIsWalletModalOpen(true);
                         if (id === 'orders') setIsShoppingHistoryOpen(true);
+                        if (id === 'install-app') setIsInstallModalOpen(true);
                         setIsMenuOpen(false);
                       }}
                       className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition cursor-pointer text-theme-secondary hover:bg-theme-base hover:text-theme-primary"

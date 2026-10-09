@@ -43,9 +43,11 @@ export const DynamicBranding: React.FC = () => {
     const backgroundColor = settings.backgroundColor || "#ffffff";
 
     const manifestData = {
+      id: `${window.location.origin}/app`,
       name: pwaName,
       short_name: pwaShortName,
-      start_url: "/",
+      start_url: `${window.location.origin}/app`,
+      scope: `${window.location.origin}/`,
       display: "standalone",
       background_color: backgroundColor,
       theme_color: themeColor,
