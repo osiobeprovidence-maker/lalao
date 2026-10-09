@@ -162,32 +162,6 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
               ))}
             </div>
           </div>
-
-          <div>
-            <div className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-theme-tertiary">
-              App
-            </div>
-            <div className="rounded-2xl border border-theme-divider/80 bg-theme-surface/80 p-2 shadow-sm">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsInstallModalOpen(true);
-                  onClose();
-                }}
-                className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition hover:bg-theme-base"
-              >
-                <div className="flex items-center gap-3">
-                  <Download className="h-4 w-4 text-theme-secondary" />
-                  <span className="text-sm font-medium text-theme-secondary">Download App</span>
-                </div>
-                {isInstalled && (
-                  <span className="text-[10px] font-bold text-[#5E43F3] bg-[#5E43F3]/10 px-1.5 py-0.5 rounded-full">
-                    Installed
-                  </span>
-                )}
-              </button>
-            </div>
-          </div>
         </div>
 
       </aside>

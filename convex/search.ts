@@ -1,6 +1,7 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { resolveUserVerification } from "./social";
 
 // Helper to get authed user
 async function getAuthedUser(ctx: any) {
@@ -90,6 +91,7 @@ async function resolvePost(ctx: any, postDoc: any, currentUser: any) {
       id: authorDoc._id,
       name: authorDoc.name || "Unknown",
       username: authorDoc.username || "unknown",
+      ...resolveUserVerification(authorDoc),
       avatar: authorDoc.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
       userType: authorDoc.userType || "person",
       followersCount: authorDoc.followersCount ?? 0,
@@ -179,6 +181,7 @@ export const globalSearch = query({
           id: u._id,
           name: u.name || "Unknown",
           username: u.username || "unknown",
+          ...resolveUserVerification(u),
           avatar: u.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
           userType: u.userType || "person",
           location: u.locationName || "",

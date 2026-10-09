@@ -112,7 +112,7 @@ export const CreatorRankingsView: React.FC<CreatorRankingsViewProps> = ({
                     : 'bg-theme-surface text-theme-secondary border border-theme-divider/80 hover:bg-theme-base hover:text-theme-primary'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-teal-400' : cat.color}`} />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#5E43F3]' : cat.color}`} />
                 <span>{cat.label}</span>
               </button>
             );
@@ -133,7 +133,7 @@ export const CreatorRankingsView: React.FC<CreatorRankingsViewProps> = ({
               onClick={() => setTimePeriod(tp.id as any)}
               className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
                 timePeriod === tp.id
-                  ? 'bg-teal-600 text-white shadow-xs'
+                  ? 'bg-[#5E43F3] text-white shadow-xs'
                   : 'text-theme-secondary hover:text-theme-primary'
               }`}
             >
@@ -146,9 +146,9 @@ export const CreatorRankingsView: React.FC<CreatorRankingsViewProps> = ({
       {/* User Standing Banner */}
       <div className="px-4">
         {rankingsData?.currentUserRank ? (
-          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-teal-500/10 via-cyan-500/10 to-teal-500/5 border border-teal-500/20 flex items-center justify-between gap-3">
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#5E43F3]/10 via-[#7B66F5]/10 to-[#5E43F3]/5 border border-[#5E43F3]/20 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-[#5E43F3] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
                 #{rankingsData.currentUserRank.rank}
               </div>
               <div className="min-w-0">
@@ -185,7 +185,7 @@ export const CreatorRankingsView: React.FC<CreatorRankingsViewProps> = ({
               <button
                 type="button"
                 onClick={onOpenCreatorHub}
-                className="px-3 py-1.5 rounded-xl bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider text-xs font-bold text-teal-600 dark:text-teal-400 shrink-0 transition-colors cursor-pointer flex items-center gap-1"
+                className="px-3 py-1.5 rounded-xl bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider text-xs font-bold text-[#5E43F3] dark:text-[#7B66F5] shrink-0 transition-colors cursor-pointer flex items-center gap-1"
               >
                 <span>Creator Hub</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -193,9 +193,9 @@ export const CreatorRankingsView: React.FC<CreatorRankingsViewProps> = ({
             )}
           </div>
         ) : (
-          <div className="p-3.5 rounded-2xl bg-teal-500/5 border border-teal-500/15 flex items-center justify-between gap-3">
+          <div className="p-3.5 rounded-2xl bg-[#5E43F3]/5 border border-[#5E43F3]/15 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <Sparkles className="w-4 h-4 text-teal-600 shrink-0" />
+              <Sparkles className="w-4 h-4 text-[#5E43F3] shrink-0" />
               <p className="text-xs text-theme-secondary">
                 Get verified with <strong>Creator Premium</strong> to unlock analytics and compete on the leaderboard.
               </p>
@@ -204,7 +204,7 @@ export const CreatorRankingsView: React.FC<CreatorRankingsViewProps> = ({
               <button
                 type="button"
                 onClick={onOpenSubscriptionModal}
-                className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold shrink-0 transition-all cursor-pointer shadow-xs"
+                className="px-3 py-1.5 rounded-xl bg-[#5E43F3] hover:bg-[#4E34E0] text-white text-xs font-bold shrink-0 transition-all cursor-pointer shadow-xs"
               >
                 Get Verified
               </button>
@@ -217,7 +217,7 @@ export const CreatorRankingsView: React.FC<CreatorRankingsViewProps> = ({
       <div className="px-4 space-y-2.5">
         {rankingsData === undefined ? (
           <div className="py-16 text-center">
-            <div className="w-6 h-6 border-2 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto" />
+            <div className="w-6 h-6 border-2 border-[#5E43F3] border-t-transparent rounded-full animate-spin mx-auto" />
             <p className="text-xs text-theme-tertiary mt-2">Calculating live creator rankings...</p>
           </div>
         ) : rankingsData.rankings.length === 0 ? (
@@ -241,7 +241,7 @@ export const CreatorRankingsView: React.FC<CreatorRankingsViewProps> = ({
                 onClick={() => setActiveUserProfile(item.user)}
                 className={`p-3.5 rounded-2xl bg-theme-surface border transition-all cursor-pointer hover:bg-theme-surface-hover/80 flex items-center justify-between gap-3 shadow-xs ${
                   isTop3
-                    ? 'border-teal-500/20 dark:border-teal-500/30'
+                    ? 'border-[#5E43F3]/20 dark:border-[#5E43F3]/30'
                     : 'border-theme-divider-light'
                 }`}
               >
@@ -270,7 +270,7 @@ export const CreatorRankingsView: React.FC<CreatorRankingsViewProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2 text-xs text-theme-tertiary mt-0.5 flex-wrap">
-                      <span className="text-[11px] text-teal-700 dark:text-teal-300 font-bold">
+                      <span className="text-[11px] text-[#5E43F3] dark:text-[#7B66F5] font-bold">
                         {item.user.creatorCategory || 'Creator'}
                       </span>
                       <span>·</span>

@@ -19,6 +19,8 @@ import { LocationRadiusModal } from './components/location/LocationRadiusModal';
 import { PostComposer } from './components/create/PostComposer';
 import { RallyComposerModal } from './components/create/RallyComposerModal';
 import { CreateCycleModal } from './components/cycles/CreateCycleModal';
+import { CreateGroupCycleModal } from './components/cycles/CreateGroupCycleModal';
+import { CreateGroupChatModal } from './components/messages/CreateGroupChatModal';
 import { CycleStoryViewerModal } from './components/cycles/CycleStoryViewerModal';
 import { CycleDetailModal } from './components/cycles/CycleDetailModal';
 import { PageDetailModal } from './components/pages/PageDetailModal';
@@ -42,8 +44,9 @@ import { DigitalTicketModal } from './components/tickets/DigitalTicketModal';
 import { MyTicketsModal } from './components/tickets/MyTicketsModal';
 import { WalletModal } from './components/wallet/WalletModal';
 import { MySubscriptionsModal } from './components/subscriptions/MySubscriptionsModal';
-import { CreatorHubModal } from './components/creators/CreatorHubModal';
-import { CreatorSubscriptionModal } from './components/creators/CreatorSubscriptionModal';
+import { CreatorHubView } from './components/creators/CreatorHubModal';
+import { VerificationPageView } from './components/creators/VerificationPageView';
+import { BetaTesterView } from './components/beta/BetaTesterView';
 import { InstallAppModal } from './components/common/InstallAppModal';
 import { Check, Plus } from 'lucide-react';
 
@@ -109,6 +112,7 @@ import { AdminApp } from './pages/admin/AdminApp';
 const LalaoAppContent: React.FC = () => {
   const {
     activeTab,
+    setActiveTab,
     shareToast,
     isCreateCycleOpen,
     setIsCreateCycleOpen,
@@ -128,11 +132,31 @@ const LalaoAppContent: React.FC = () => {
     setIsCreatorSubscriptionOpen,
     creatorSubscriptionInitialTier,
     openCreatorSubscription,
+    isCreatorPremiumActive,
+    triggerShareToast,
   } = useLalao();
   const mainRef = useRef<HTMLElement>(null);
   
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Protect Creator Hub route: if non-creator-premium user visits, redirect away
+  useEffect(() => {
+    if (location.pathname === '/app/creator-hub' || location.pathname === '/creator-hub') {
+      if (isCreatorPremiumActive) {
+        setActiveTab('creator-hub');
+      } else {
+        triggerShareToast('Creator Hub is exclusive to active Creator Premium subscribers.');
+        navigate('/app', { replace: true });
+      }
+    }
+  }, [location.pathname, isCreatorPremiumActive, navigate]);
+
+  useEffect(() => {
+    if (location.pathname === '/beta-tester' || location.pathname === '/app/beta-tester') {
+      setActiveTab('beta-tester');
+    }
+  }, [location.pathname, setActiveTab]);
 
   useEffect(() => {
     if (location.pathname.startsWith('/app/page/')) {
@@ -298,6 +322,21 @@ const LalaoAppContent: React.FC = () => {
                 <ProfileView />
               </div>
             )}
+            {activeTab === 'verification' && (
+              <div key="tab-verification" className="animate-in fade-in duration-200 w-full bg-transparent">
+                <VerificationPageView />
+              </div>
+            )}
+            {activeTab === 'creator-hub' && (
+              <div key="tab-creator-hub" className="animate-in fade-in duration-200 w-full bg-transparent">
+                <CreatorHubView />
+              </div>
+            )}
+            {activeTab === 'beta-tester' && (
+              <div key="tab-beta-tester" className="animate-in fade-in duration-200 w-full bg-transparent">
+                <BetaTesterView />
+              </div>
+            )}
             {activeTab === 'following' && (
               <div key="tab-following" className="animate-in fade-in duration-200 min-h-full w-full bg-transparent">
                 {/* @ts-ignore */}
@@ -364,6 +403,8 @@ const LalaoAppContent: React.FC = () => {
       <SettingsPageView />
       <RallyComposerModal />
       <CreateCycleModal isOpen={isCreateCycleOpen} onClose={() => setIsCreateCycleOpen(false)} />
+      <CreateGroupChatModal />
+      <CreateGroupCycleModal />
       <CycleDetailModal />
       <UserProfileModal />
       <CommentsModal />
@@ -395,17 +436,7 @@ const LalaoAppContent: React.FC = () => {
       {!['create-post'].includes(activeTab) && <MyTicketsModal />}
       {!['create-post'].includes(activeTab) && <WalletModal />}
       {!['create-post'].includes(activeTab) && <MySubscriptionsModal />}
-      <CreatorHubModal
-        isOpen={isCreatorHubOpen}
-        onClose={() => setIsCreatorHubOpen(false)}
-        onOpenSubscriptionModal={() => openCreatorSubscription('creator')}
-      />
-      <CreatorSubscriptionModal
-        isOpen={isCreatorSubscriptionOpen}
-        onClose={() => setIsCreatorSubscriptionOpen(false)}
-        initialTier={creatorSubscriptionInitialTier}
-      />
-      <AuthPromptModal />
+            <AuthPromptModal />
         <NotificationListener />
 
 
@@ -455,6 +486,8 @@ export default function App() {
       <Route path="/onboarding/recommendations" element={<OnboardingGuard><RecommendationsPage /></OnboardingGuard>} />
       <Route path="/onboarding/complete" element={<OnboardingGuard><CompletePage /></OnboardingGuard>} />
 
+      <Route path="/creator-hub" element={<LalaoApp />} />
+      <Route path="/beta-tester" element={<LalaoApp />} />
       <Route path="/app" element={<LalaoApp />} />
       <Route path="/app/*" element={<LalaoApp />} />
 

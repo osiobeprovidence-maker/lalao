@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Lightbulb,
   Building2,
+  BadgeCheck,
 } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
@@ -44,6 +45,7 @@ export const ProfileView: React.FC = () => {
     unreadNotifsCount,
     setActiveUserProfile,
     toggleFollowUser,
+    subscription,
   } = useLalao();
 
   const [profileTab, setProfileTab] = useState<ProfileTab>('posts');
@@ -170,9 +172,12 @@ export const ProfileView: React.FC = () => {
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0 space-y-1.5">
             <div>
-              <h2 className="text-xl font-bold text-theme-primary leading-tight">
-                {currentUser.name}
-              </h2>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-xl font-bold text-theme-primary leading-tight">
+                  {currentUser.name}
+                </h2>
+                <VerificationBadge user={currentUser} size="sm" />
+              </div>
               <p className="text-xs text-theme-tertiary font-medium">
                 @{currentUser.username}
               </p>
@@ -284,6 +289,46 @@ export const ProfileView: React.FC = () => {
             Share Profile
           </button>
         </div>
+
+        {/* Verification / Subscription entry (Profile → Verification) */}
+        <button
+          id="btn-profile-verification"
+          type="button"
+          onClick={() => {
+            setActiveTab('verification');
+            const mainEl = document.querySelector('main');
+            if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'instant' });
+          }}
+          className="w-full p-3 rounded-2xl border border-theme-divider bg-theme-surface hover:bg-theme-surface-hover flex items-center justify-between gap-3 transition-colors cursor-pointer text-left"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-[#5E43F3]/10 flex items-center justify-center text-[#5E43F3] shrink-0">
+              <BadgeCheck className="w-4 h-4 stroke-[2.2]" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-theme-primary">Verification</span>
+                {subscription.status === 'active' && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-[#5E43F3]/10 text-[#5E43F3]">
+                    Active
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-theme-tertiary truncate">
+                {subscription.status === 'active'
+                  ? `${
+                      subscription.tier === 'creator_premium' || subscription.tier === 'creator'
+                        ? 'Tier 5 — Creator Premium'
+                        : subscription.tier === 'priority'
+                        ? 'Tier 4 — Priority Verified'
+                        : 'Tier 3 — Standard Verified'
+                    } · Manage or cancel`
+                  : 'Get verified, algorithmic priority & creator tools'}
+              </p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-theme-tertiary shrink-0" />
+        </button>
 
       </div>
 

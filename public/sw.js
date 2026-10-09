@@ -1,149 +1,111 @@
-const CACHE_NAME = 'lalao-cache-v1';
-const DYNAMIC_CACHE = 'lalao-dynamic-v1';
-
+const CACHE_NAME = 'lalao-shell-v1';
 const STATIC_ASSETS = [
-  '/',
   '/index.html',
   '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png',
   '/mascot.png',
-  '/favicon.ico'
+  '/favicon.ico',
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    })
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(STATIC_ASSETS))
+      .then(() => self.skipWaiting()),
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME && key !== DYNAMIC_CACHE)
-          .map((key) => caches.delete(key))
-      );
-    })
+    caches.keys().then((keys) => Promise.all(
+      keys
+        .filter((key) => key !== CACHE_NAME)
+        .map((key) => caches.delete(key)),
+    )),
   );
   event.waitUntil(self.clients.claim());
 });
 
 self.addEventListener('fetch', (event) => {
-  const { request } = event;
+  const request = event.request;
   const url = new URL(request.url);
+  const isSameOrigin = url.origin === self.location.origin;
+  const isPrivateRequest = url.hostname.includes('convex.cloud') ||
+    url.hostname.includes('firebase') ||
+    url.hostname.includes('google') ||
+    url.pathname.startsWith('/api/');
 
-  // Skip caching for API requests (Convex, Firebase, etc.)
-  if (url.hostname.includes('convex.cloud') || url.hostname.includes('firebase') || url.hostname.includes('google')) {
-    return;
-  }
+  if (!isSameOrigin || isPrivateRequest || request.method !== 'GET') return;
 
-  // Network first for HTML and navigation
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          return caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, response.clone());
-            return response;
-          });
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy));
+          }
+          return response;
         })
-        .catch(() => caches.match('/index.html'))
+        .catch(() => caches.match('/index.html')),
     );
     return;
   }
 
-  // Stale-while-revalidate for static assets (JS, CSS, Images)
   if (request.destination === 'script' || request.destination === 'style' || request.destination === 'image') {
     event.respondWith(
-      caches.match(request).then((cachedResponse) => {
-        const fetchPromise = fetch(request).then((networkResponse) => {
-          caches.open(DYNAMIC_CACHE).then((cache) => {
-            cache.put(request, networkResponse.clone());
-          });
-          return networkResponse;
-        }).catch(() => null);
-        return cachedResponse || fetchPromise;
-      })
+      caches.match(request).then((cached) => cached || fetch(request).then((response) => {
+        if (response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+        }
+        return response;
+      })),
     );
   }
 });
 
-self.addEventListener('push', function (event) {
-  if (event.data) {
-    event.waitUntil(
-      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-        let isFocused = false;
-        let focusedClient = null;
-        for (let i = 0; i < windowClients.length; i++) {
-          if (windowClients[i].focused) {
-            isFocused = true;
-            focusedClient = windowClients[i];
-            break;
-          }
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+  event.waitUntil(
+    event.data.json().then((data) => {
+      const options = {
+        body: data.body || data.title,
+        icon: data.icon || '/icon-192.png',
+        badge: '/icon-192.png',
+        data: data.data || { url: data.url || '/app' },
+      };
+
+      return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+        const focusedClient = clients.find((client) => client.focused);
+        if (focusedClient) {
+          focusedClient.postMessage({ type: 'PUSH_RECEIVED', payload: data });
+          return;
         }
-
-        try {
-          const data = event.data.json();
-          const options = {
-            body: data.body,
-            icon: data.icon || '/logo192.png',
-            badge: '/logo192.png', // A small monochrome icon is usually preferred for badge
-            data: data.data || { url: data.url }
-          };
-
-          if (isFocused && focusedClient) {
-            // App is open and focused - send message for in-app toast
-            focusedClient.postMessage({
-              type: 'PUSH_RECEIVED',
-              payload: data
-            });
-            return Promise.resolve();
-          }
-
-          return self.registration.showNotification(data.title, options);
-        } catch (err) {
-          console.error('Error parsing push data', err);
-        }
-      })
-    );
-  }
+        return self.registration.showNotification(data.title || 'Lalao', options);
+      });
+    }).catch((error) => console.error('Invalid push payload:', error)),
+  );
 });
 
-self.addEventListener('notificationclick', function (event) {
+self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-
-  const clickData = event.notification.data;
-  let urlToOpen = '/';
-
-  if (clickData && clickData.url) {
-    urlToOpen = clickData.url;
-  } else if (clickData && clickData.conversationId) {
-    urlToOpen = '/app?chat=' + clickData.conversationId;
-  } else if (clickData && clickData.postId) {
-    urlToOpen = '/app?post=' + clickData.postId;
-  }
+  const clickData = event.notification.data || {};
+  const urlToOpen = clickData.url || clickData.conversationId
+    ? `/app?chat=${clickData.conversationId}`
+    : clickData.postId
+      ? `/app?post=${clickData.postId}`
+      : '/app';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Check if there is already a window/tab open with the target URL
-      for (let i = 0; i < windowClients.length; i++) {
-        const client = windowClients[i];
-        if (client.url.includes('/app') && 'focus' in client) {
-          // Send message to the client to navigate to the specific chat/post without full reload
-          client.postMessage({
-            type: 'NAVIGATE',
-            url: urlToOpen,
-            data: clickData
-          });
-          return client.focus();
-        }
+      const existing = windowClients.find((client) => client.url.includes('/app') && 'focus' in client);
+      if (existing) {
+        existing.postMessage({ type: 'NAVIGATE', url: urlToOpen, data: clickData });
+        return existing.focus();
       }
-      // If no window is open, open a new one
-      if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
-      }
-    })
+      if (clients.openWindow) return clients.openWindow(urlToOpen);
+    }),
   );
 });

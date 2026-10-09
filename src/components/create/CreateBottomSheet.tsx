@@ -1,13 +1,23 @@
 // @ts-nocheck
 import React from 'react';
-import { X, PenLine, Hand, Building2, ChevronRight, ArrowLeft, Sparkles } from 'lucide-react';
+import { X, PenLine, Hand, Building2, ChevronRight, ArrowLeft, Sparkles, Users, MessageCircle } from 'lucide-react';
 import { useLalao, CreateOption } from '../../context/LalaoContext';
 import { PostComposerModal } from './PostComposerModal';
 import { RallyComposerModal } from './RallyComposerModal';
 import { CreatePageView } from '../pages/CreatePageView';
+import { DiscoverView } from '../discover/DiscoverView';
 
 export const CreateBottomSheet: React.FC = () => {
-  const { isCreateSheetOpen, setIsCreateSheetOpen, setCreateFlowType, createFlowType, setActiveTab, setIsCreateCycleOpen } = useLalao();
+  const {
+    isCreateSheetOpen,
+    setIsCreateSheetOpen,
+    setCreateFlowType,
+    createFlowType,
+    setActiveTab,
+    setIsCreateCycleOpen,
+    setIsCreateGroupChatOpen,
+    setIsCreateGroupCycleOpen,
+  } = useLalao();
 
   if (!isCreateSheetOpen) return null;
 
@@ -38,6 +48,20 @@ export const CreateBottomSheet: React.FC = () => {
       setIsCreateSheetOpen(false);
       setCreateFlowType(null);
       setActiveTab('create-page');
+      return;
+    }
+
+    if (type === 'group-chat') {
+      setIsCreateSheetOpen(false);
+      setCreateFlowType(null);
+      setIsCreateGroupChatOpen(true);
+      return;
+    }
+
+    if (type === 'group-cycle') {
+      setIsCreateSheetOpen(false);
+      setCreateFlowType(null);
+      setIsCreateGroupCycleOpen(true);
       return;
     }
 
@@ -165,6 +189,40 @@ export const CreateBottomSheet: React.FC = () => {
                   <p className="mt-1 text-xs font-normal leading-relaxed text-theme-secondary">
                     Share a 24-hour photo, video, audio note, or text status to your local cycle.
                   </p>
+                </div>
+              </div>
+            </button>
+
+            <button
+              id="btn-create-option-group-chat"
+              type="button"
+              onClick={() => handleSelect('group-chat')}
+              className="w-full rounded-2xl border border-sky-100 bg-sky-50/60 p-4 text-left transition-all hover:border-sky-300 active:scale-[0.99] cursor-pointer"
+            >
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-500 text-white shadow-xs">
+                  <MessageCircle className="h-6 w-6 stroke-[2]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-base font-bold text-theme-primary">Private Group Chat</span>
+                  <p className="mt-1 text-xs leading-relaxed text-theme-secondary">Invite selected members. Only them and the creator can see this chat.</p>
+                </div>
+              </div>
+            </button>
+
+            <button
+              id="btn-create-option-group-cycle"
+              type="button"
+              onClick={() => handleSelect('group-cycle')}
+              className="w-full rounded-2xl border border-violet-100 bg-violet-50/60 p-4 text-left transition-all hover:border-violet-300 active:scale-[0.99] cursor-pointer"
+            >
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-500 text-white shadow-xs">
+                  <Users className="h-6 w-6 stroke-[2]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-base font-bold text-theme-primary">Group Cycle</span>
+                  <p className="mt-1 text-xs leading-relaxed text-theme-secondary">Create an interest-based cycle for members with shared interests.</p>
                 </div>
               </div>
             </button>
@@ -298,6 +356,36 @@ export const CreateBottomSheet: React.FC = () => {
                 <p className="text-xs text-theme-secondary mt-1 leading-relaxed font-normal">
                   Share a 24-hour photo, video, audio note, or text status to your local cycle.
                 </p>
+              </div>
+            </button>
+
+            <button
+              id="btn-create-option-group-chat"
+              type="button"
+              onClick={() => handleSelect('group-chat')}
+              className="w-full p-4 rounded-2xl bg-sky-50/60 hover:bg-sky-50 active:scale-[0.99] border border-sky-100 transition-all text-left flex items-start gap-4 group cursor-pointer"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-sky-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <MessageCircle className="w-6 h-6 stroke-[2]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="font-bold text-base text-theme-primary">Private Group Chat</span>
+                <p className="text-xs text-theme-secondary mt-1 leading-relaxed">Invite selected members. Only them and the creator can see this chat.</p>
+              </div>
+            </button>
+
+            <button
+              id="btn-create-option-group-cycle"
+              type="button"
+              onClick={() => handleSelect('group-cycle')}
+              className="w-full p-4 rounded-2xl bg-violet-50/60 hover:bg-violet-50 active:scale-[0.99] border border-violet-100 transition-all text-left flex items-start gap-4 group cursor-pointer"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-violet-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Users className="w-6 h-6 stroke-[2]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="font-bold text-base text-theme-primary">Group Cycle</span>
+                <p className="text-xs text-theme-secondary mt-1 leading-relaxed">Create an interest-based cycle for members with shared interests.</p>
               </div>
             </button>
 

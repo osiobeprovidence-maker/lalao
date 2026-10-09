@@ -16,6 +16,7 @@ import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from './Avatar';
 import { NotificationItem } from '../../types';
 import { SEED_NOTIFICATIONS } from '../../data/seedData';
+import { VerificationBadge } from './VerificationBadge';
 
 interface SuggestedAccount {
   id: string;
@@ -303,7 +304,7 @@ export const NotificationsModal: React.FC = () => {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
                             <span className="font-bold text-sm text-theme-primary truncate">
-                              {item.name}
+                              {item.name} <VerificationBadge user={item} size="xs" className="ml-0.5" />
                             </span>
                           </div>
 
@@ -395,7 +396,7 @@ export const NotificationsModal: React.FC = () => {
                         <div className="flex-1 min-w-0">
                           <p className="text-xs leading-snug">
                             <span className="text-theme-primary font-bold">
-                              {notif.actor?.name || 'Lalao'}
+                              {notif.actor?.name || 'Lalao'} <VerificationBadge user={notif.actor} size="xs" className="ml-0.5" />
                             </span>{' '}
                             <span className="text-theme-secondary">{notif.text}</span>
                           </p>
@@ -509,7 +510,7 @@ export const NotificationsModal: React.FC = () => {
                         <div className="flex-1 min-w-0">
                           <p className="text-xs leading-snug">
                             <span className="text-theme-primary font-bold">
-                              {notif.actor?.name || 'Lalao'}
+                              {notif.actor?.name || 'Lalao'} <VerificationBadge user={notif.actor} size="xs" className="ml-0.5" />
                             </span>{' '}
                             <span className="text-theme-secondary">{notif.text}</span>
                           </p>

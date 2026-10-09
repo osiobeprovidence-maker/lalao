@@ -339,11 +339,37 @@ export default defineSchema({
     userA: v.id("users"),
     userB: v.optional(v.id("users")), // Optional if the conversation is with a Page
     pageB: v.optional(v.id("pages")), // Present if the conversation is with a Page
+    groupChatId: v.optional(v.id("groupChats")), // Private group conversations
     updatedAt: v.number(),
   })
     .index("by_user_a", ["userA"])
     .index("by_user_b", ["userB"])
-    .index("by_page_b", ["pageB"]),
+    .index("by_page_b", ["pageB"])
+    .index("by_group_chat", ["groupChatId"]),
+
+  groupChats: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    creatorId: v.id("users"),
+    memberIds: v.array(v.id("users")),
+    avatarUrl: v.optional(v.string()),
+    interests: v.array(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_creator", ["creatorId"]),
+
+  groupCycles: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    creatorId: v.id("users"),
+    memberIds: v.array(v.id("users")),
+    interests: v.array(v.string()),
+    avatarUrl: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_creator", ["creatorId"]),
 
   messages: defineTable({
     conversationId: v.id("conversations"),
@@ -517,6 +543,15 @@ export default defineSchema({
   }).index("by_auction", ["auctionId"]).index("by_user", ["userId"]),
 
   // ---- WALLET SYSTEM ----
+  cryptoWallets: defineTable({
+    userId: v.id("users"),
+    walletAddress: v.string(),
+    provider: v.string(), // e.g. "metamask", "walletconnect"
+    network: v.optional(v.string()), // e.g. "Polygon"
+    isConnected: v.boolean(),
+    lastConnectedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
   userWallets: defineTable({
     userId: v.id("users"),
     balance: v.number(),
@@ -956,6 +991,17 @@ export default defineSchema({
     .index("by_active_priority", ["active", "priority"])
     .index("by_target", ["targetId"]),
 
+  recommendationInteractions: defineTable({
+    userId: v.id("users"),
+    recommendationType: v.string(), // e.g. "person", "post", "page"
+    targetId: v.string(),
+    action: v.union(v.literal("shown"), v.literal("clicked"), v.literal("dismissed"), v.literal("followed"), v.literal("liked"), v.literal("opened")),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_target_action", ["userId", "targetId", "action"])
+    .index("by_target_action", ["targetId", "action"]),
+
   recommendationDismissals: defineTable({
     userId: v.id("users"),
     targetId: v.string(), // ID of the user, page, or community dismissed
@@ -1129,6 +1175,7 @@ export default defineSchema({
 
   cycleStories: defineTable({
     authorId: v.id("users"),
+    groupCycleId: v.optional(v.id("groupCycles")),
     mediaType: v.union(v.literal("image"), v.literal("video"), v.literal("audio"), v.literal("text")),
     mediaUrl: v.optional(v.string()),
     mediaStorageId: v.optional(v.id("_storage")),
@@ -1148,6 +1195,7 @@ export default defineSchema({
     expiresAt: v.number(),
   })
     .index("by_author", ["authorId"])
+    .index("by_group_cycle", ["groupCycleId"])
     .index("by_expires", ["expiresAt"]),
 
   cycleStoryInteractions: defineTable({
@@ -1159,4 +1207,55 @@ export default defineSchema({
   })
     .index("by_story", ["storyId"])
     .index("by_story_user_type", ["storyId", "userId", "type"]),
+
+  // ---- BETA TESTER SYSTEM ----
+  betaTesters: defineTable({
+    userId: v.optional(v.id("users")), // If logged in
+    name: v.string(),
+    email: v.string(),
+    phone: v.string(),
+    lalaoUsername: v.string(),
+    device: v.string(),
+    androidVersion: v.string(),
+    registrationDate: v.number(),
+    status: v.union(v.literal("active"), v.literal("pending"), v.literal("inactive")),
+  })
+    .index("by_email", ["email"])
+    .index("by_user", ["userId"]),
+
+  betaFeedback: defineTable({
+    testerId: v.optional(v.id("betaTesters")), // Reference to beta tester record
+    testerName: v.string(),
+    testerEmail: v.string(),
+    lalaoUsername: v.optional(v.string()),
+    type: v.union(v.literal("bug"), v.literal("suggestion"), v.literal("general")),
+    feature: v.string(),
+    description: v.string(),
+    device: v.string(),
+    priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high"), v.literal("critical")),
+    attachments: v.optional(v.array(v.string())),
+    status: v.union(v.literal("open"), v.literal("in_review"), v.literal("resolved"), v.literal("closed")),
+    date: v.number(),
+    internalNotes: v.optional(v.string()),
+  })
+    .index("by_status", ["status"])
+    .index("by_tester", ["testerEmail"]),
+
+  betaReleases: defineTable({
+    version: v.string(),
+    releaseDate: v.number(),
+    apkUrl: v.string(),
+    fileSize: v.string(), // e.g. "45MB"
+    minAndroidVersion: v.string(), // e.g. "Android 8.0"
+    releaseNotes: v.string(),
+    isCurrent: v.boolean(),
+    status: v.union(v.literal("active"), v.literal("archived")),
+  })
+    .index("by_status", ["status"]),
+
+  betaSettings: defineTable({
+    openLalaoUrl: v.string(),
+    betaCommunityUrl: v.string(),
+    faqs: v.array(v.object({ question: v.string(), answer: v.string() })),
+  }),
 });

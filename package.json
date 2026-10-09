@@ -20,6 +20,7 @@
     "@vitejs/plugin-react": "^5.0.4",
     "convex": "^1.45.0",
     "dotenv": "^17.2.3",
+    "ethers": "^6.17.0",
     "express": "^4.21.2",
     "firebase": "^12.19.0",
     "libphonenumber-js": "^1.13.13",

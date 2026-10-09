@@ -1,15 +1,16 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { 
   ArrowLeft, ArrowUpRight, Copy, Plus, Check, Settings, 
   MoreHorizontal, Wallet, ChevronRight, X, Search, History, 
   Shield, Lock, CreditCard, Banknote, Building, AlertCircle, Receipt,
-  Bitcoin, Smartphone, Wifi, Tv
+  Bitcoin, Smartphone, Wifi, Tv, ExternalLink, Unplug, Link2
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { usePaystackPayment } from 'react-paystack';
+import { useWeb3Wallet, SUPPORTED_CHAINS, DEFAULT_CHAIN_ID } from '../../hooks/useWeb3Wallet';
 
 export interface WithdrawalAccount {
   id: string;
@@ -64,6 +65,8 @@ export const WalletModal: React.FC = () => {
   const wallet = useQuery(api.wallet.getWallet);
   const dbTransactions = useQuery(api.wallet.getTransactions);
   const currentUser = useQuery(api.users.getCurrentUser);
+  const userRole = useQuery(api.admin.getMyRole);
+  const isDevAdmin = userRole === 'super_admin' || userRole === 'admin';
   
   const performTransferCredits = useMutation(api.wallet.transferCredits);
   const performTransferCrypto = useMutation(api.wallet.transferCrypto);
@@ -73,17 +76,54 @@ export const WalletModal: React.FC = () => {
   const performPurchaseService = useMutation(api.market.purchaseService);
   const fetchVariations = useAction(api.market.getVariations);
 
+  // Crypto wallet — real Web3 connection
+  const web3 = useWeb3Wallet();
+  const dbCryptoWallets = useQuery(api.cryptoWallets.getCryptoWallets);
+  const saveCryptoWallet = useMutation(api.cryptoWallets.saveCryptoWallet);
+  const disconnectCryptoWallet = useMutation(api.cryptoWallets.disconnectCryptoWallet);
+  const [addressCopied, setAddressCopied] = useState(false);
+
   const [currentView, setCurrentView] = useState<WalletView>('home');
   const [viewStack, setViewStack] = useState<WalletView[]>(['home']);
   
-  // Dev override for balance testing
+  // Dev override for balance testing (admin-only)
   const [devBalance, setDevBalance] = useState<number | null>(null);
-  const internalBalance = devBalance !== null ? devBalance : (wallet?.balance ?? 0);
+  const internalBalance = (isDevAdmin && devBalance !== null) ? devBalance : (wallet?.balance ?? 0);
   
-  // Crypto Mock State
-  const cryptoBalanceETH = 0.042;
-  const cryptoBalanceUSDC = 125;
-  const isMetaMaskConnected = true;
+  // Real crypto balance derived from hook
+  const cryptoBalanceUSDC = web3.balance ? parseFloat(web3.balance) : 0;
+
+  // Save wallet to DB when connected
+  useEffect(() => {
+    if (web3.status === 'connected' && web3.address && web3.provider) {
+      saveCryptoWallet({
+        walletAddress: web3.address,
+        provider: web3.providerName ?? web3.providerId ?? 'injected',
+        network: web3.chainName ?? undefined,
+      }).catch(() => {});
+    }
+  }, [web3.status, web3.address, web3.provider, web3.providerId, web3.providerName, web3.chainName]);
+
+  const handleCopyAddress = useCallback(() => {
+    if (web3.address) {
+      navigator.clipboard.writeText(web3.address).then(() => {
+        setAddressCopied(true);
+        setTimeout(() => setAddressCopied(false), 2000);
+      });
+    }
+  }, [web3.address]);
+
+  const handleCryptoConnect = useCallback(async (providerId?: string) => {
+    await web3.connect(providerId);
+  }, [web3]);
+
+  const handleCryptoDisconnect = useCallback(async () => {
+    if (web3.address) {
+      await disconnectCryptoWallet({ walletAddress: web3.address }).catch(() => {});
+    }
+    web3.disconnect();
+    goBack();
+  }, [web3, disconnectCryptoWallet]);
 
   // Flow State
   const [flowAssetType, setFlowAssetType] = useState<'LALAO_CREDITS' | 'CRYPTO'>('LALAO_CREDITS');
@@ -458,23 +498,75 @@ export const WalletModal: React.FC = () => {
               {/* CRYPTO WALLET */}
               <div>
                 <h3 className="font-black text-theme-primary px-2 text-xl mb-3">Crypto Wallet</h3>
-                <div className="bg-theme-surface rounded-3xl p-6 border border-theme-divider-light shadow-sm flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
-                      <img src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" alt="MetaMask" className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <div className="font-bold text-theme-primary">MetaMask</div>
-                      <div className="text-xs font-semibold text-theme-secondary flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                        Connected
+                {web3.status === 'connected' && web3.address ? (
+                  <div className="bg-theme-surface rounded-3xl p-6 border border-theme-divider-light shadow-sm flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" alt="MetaMask" className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-theme-primary">{web3.providerName ?? web3.providerId ?? 'Wallet'}</div>
+                        <div className="text-xs font-semibold text-theme-secondary flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                          {web3.shortAddress}
+                        </div>
                       </div>
                     </div>
+                    <button onClick={() => navigateTo('crypto_wallet_view')} className="text-xs font-bold text-theme-primary px-4 py-2 bg-theme-base border border-theme-divider-light rounded-full hover:bg-theme-surface-active transition-colors">
+                      View
+                    </button>
                   </div>
-                  <button onClick={() => navigateTo('crypto_wallet_view')} className="text-xs font-bold text-theme-primary px-4 py-2 bg-theme-base border border-theme-divider-light rounded-full hover:bg-theme-surface-active transition-colors">
-                    View
-                  </button>
-                </div>
+                ) : (
+                  <div className="bg-theme-surface rounded-3xl p-6 border border-theme-divider-light shadow-sm">
+                    <p className="text-sm font-semibold text-theme-secondary mb-4">
+                      Connect an external wallet to manage blockchain-based features.
+                    </p>
+                    {web3.error && (
+                      <div className="flex items-center gap-2 text-red-500 text-xs font-bold bg-red-50 px-3 py-2 rounded-xl mb-4 border border-red-100">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        <span>{web3.error}</span>
+                      </div>
+                    )}
+                    {web3.isUnsupportedNetwork && (
+                      <div className="flex items-center gap-2 text-orange-600 text-xs font-bold bg-orange-50 px-3 py-2 rounded-xl mb-4 border border-orange-100">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        <span>Unsupported network. Please switch to Polygon or another supported chain.</span>
+                      </div>
+                    )}
+                    {web3.availableProviders.length > 0 ? (
+                      <div className="space-y-2 mb-3">
+                        {web3.availableProviders.map((provider) => (
+                          <button
+                            key={provider.id}
+                            type="button"
+                            onClick={() => handleCryptoConnect(provider.id)}
+                            disabled={web3.status === 'connecting'}
+                            className="w-full flex items-center justify-between rounded-xl border border-theme-divider-light bg-theme-base px-4 py-3 text-left hover:border-[#5E43F3]/40 transition-colors disabled:opacity-60"
+                          >
+                            <span className="font-bold text-theme-primary">{provider.name}</span>
+                            <ChevronRight className="w-4 h-4 text-theme-tertiary" />
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs font-semibold text-theme-secondary mb-3">
+                        No EIP-6963 wallet was detected. Install a compatible wallet and refresh this page.
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleCryptoConnect()}
+                      disabled={web3.status === 'connecting' || web3.availableProviders.length === 0}
+                      className="w-full py-3.5 rounded-xl bg-[#5E43F3] text-white font-bold text-sm hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-60 flex items-center justify-center gap-2"
+                    >
+                      {web3.status === 'connecting' ? (
+                        <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span> Connecting…</>
+                      ) : (
+                        <><Link2 className="w-4 h-4" /> Connect Wallet</>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Transactions link */}
@@ -507,13 +599,22 @@ export const WalletModal: React.FC = () => {
               </div>
               <div className="space-y-2">
                 <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-2">Crypto Wallet</div>
-                <button onClick={() => navigateTo('crypto_wallet_view')} className="w-full bg-theme-surface p-4 rounded-xl flex items-center justify-between border border-theme-divider-light hover:bg-theme-surface-hover transition-colors text-left">
-                  <div className="font-bold text-theme-primary">Connected wallets</div>
-                  <div className="text-sm font-semibold text-theme-secondary flex items-center gap-2">MetaMask <ChevronRight className="w-4 h-4" /></div>
-                </button>
-                <button onClick={() => navigateTo('crypto_disconnect')} className="w-full bg-theme-surface p-4 rounded-xl flex items-center justify-between border border-red-100 hover:bg-red-50 transition-colors text-left">
-                  <div className="font-bold text-red-500">Disconnect wallet</div>
-                </button>
+                {web3.status === 'connected' ? (
+                  <>
+                    <button onClick={() => navigateTo('crypto_wallet_view')} className="w-full bg-theme-surface p-4 rounded-xl flex items-center justify-between border border-theme-divider-light hover:bg-theme-surface-hover transition-colors text-left">
+                      <div className="font-bold text-theme-primary">Connected wallets</div>
+                      <div className="text-sm font-semibold text-theme-secondary flex items-center gap-2">{web3.providerName ?? web3.providerId ?? 'Wallet'} <ChevronRight className="w-4 h-4" /></div>
+                    </button>
+                    <button onClick={() => navigateTo('crypto_disconnect')} className="w-full bg-theme-surface p-4 rounded-xl flex items-center justify-between border border-red-100 hover:bg-red-50 transition-colors text-left">
+                      <div className="font-bold text-red-500">Disconnect wallet</div>
+                    </button>
+                  </>
+                ) : (
+                  <button onClick={() => handleCryptoConnect()} disabled={web3.status === 'connecting'} className="w-full bg-theme-surface p-4 rounded-xl flex items-center justify-between border border-theme-divider-light hover:bg-theme-surface-hover transition-colors text-left">
+                    <div className="font-bold text-theme-primary">Connect a wallet</div>
+                    <ChevronRight className="w-4 h-4 text-theme-tertiary" />
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -1325,30 +1426,105 @@ export const WalletModal: React.FC = () => {
           {/* CRYPTO WALLET VIEW */}
           {currentView === 'crypto_wallet_view' && (
              <div className="p-4 flex flex-col h-full space-y-6 pb-12">
-               <div className="bg-theme-surface p-6 rounded-3xl border border-theme-divider-light text-center shadow-sm">
-                 <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center mx-auto mb-4">
-                   <img src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" alt="MetaMask" className="w-8 h-8" />
-                 </div>
-                 <h3 className="font-black text-theme-primary text-2xl mb-1">MetaMask</h3>
-                 <div className="text-[10px] font-bold text-green-500 uppercase tracking-widest mb-6 inline-block bg-green-50 px-2 py-1 rounded-full border border-green-100">Connected</div>
-                 
-                 <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest mb-2 mt-4 text-left">Wallet address</div>
-                 <div className="font-mono font-bold text-theme-primary bg-theme-base p-3 rounded-xl border border-theme-divider-light flex items-center justify-between mb-8">
-                   <span>0x1234...89AB</span>
-                   <button className="text-[#5E43F3] hover:text-indigo-600 font-bold text-sm flex items-center gap-1 transition-colors">
-                     <Copy className="w-4 h-4" /> Copy
+               {web3.status === 'connected' && web3.address ? (
+                 <div className="bg-theme-surface p-6 rounded-3xl border border-theme-divider-light text-center shadow-sm">
+                   <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center mx-auto mb-4">
+                     <img src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" alt="MetaMask" className="w-8 h-8" />
+                   </div>
+                   <h3 className="font-black text-theme-primary text-2xl mb-1">{web3.providerName ?? web3.providerId ?? 'Wallet'}</h3>
+                   <div className="text-[10px] font-bold text-green-500 uppercase tracking-widest mb-4 inline-block bg-green-50 px-2 py-1 rounded-full border border-green-100">Connected</div>
+
+                   {/* Network Info */}
+                   <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest mb-2 mt-2 text-left">Network</div>
+                   <div className={`font-bold text-sm p-3 rounded-xl border mb-4 text-left flex items-center justify-between ${
+                     web3.isUnsupportedNetwork
+                       ? 'bg-orange-50 border-orange-200 text-orange-600'
+                       : 'bg-theme-base border-theme-divider-light text-theme-primary'
+                   }`}>
+                     <span>{web3.chainName || 'Unknown'}</span>
+                     {web3.isUnsupportedNetwork && (
+                       <button
+                         onClick={() => web3.switchNetwork(DEFAULT_CHAIN_ID)}
+                         className="text-xs font-bold text-[#5E43F3] bg-white px-3 py-1 rounded-full border border-[#5E43F3]/30 hover:bg-[#5E43F3]/10 transition-colors"
+                       >
+                         Switch to Polygon
+                       </button>
+                     )}
+                   </div>
+
+                   {/* Balance */}
+                   {web3.balance && !web3.isUnsupportedNetwork && (
+                     <>
+                       <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest mb-2 text-left">Balance</div>
+                       <div className="font-mono font-bold text-theme-primary bg-theme-base p-3 rounded-xl border border-theme-divider-light text-left mb-4">
+                         {web3.balance} {SUPPORTED_CHAINS[web3.chainId!]?.currency ?? 'ETH'}
+                       </div>
+                     </>
+                   )}
+
+                   {/* Wallet Address */}
+                   <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest mb-2 text-left">Wallet address</div>
+                   <div className="font-mono font-bold text-theme-primary bg-theme-base p-3 rounded-xl border border-theme-divider-light flex items-center justify-between mb-6">
+                     <span className="truncate mr-2">{web3.shortAddress}</span>
+                     <button onClick={handleCopyAddress} className="text-[#5E43F3] hover:text-indigo-600 font-bold text-sm flex items-center gap-1 transition-colors shrink-0">
+                       {addressCopied ? <><Check className="w-4 h-4" /> Copied</> : <><Copy className="w-4 h-4" /> Copy</>}
+                     </button>
+                   </div>
+                   
+                   <div className="flex gap-3">
+                     <button onClick={() => navigateTo('crypto_send')} className="flex-1 py-4 bg-theme-surface-hover hover:bg-theme-surface-active rounded-xl font-bold text-theme-primary transition-colors flex items-center justify-center gap-2">
+                       <ArrowUpRight className="w-5 h-5" /> Send
+                     </button>
+                     <button onClick={() => navigateTo('crypto_receive')} className="flex-1 py-4 bg-theme-surface-hover hover:bg-theme-surface-active rounded-xl font-bold text-theme-primary transition-colors flex items-center justify-center gap-2">
+                       <ArrowLeft className="w-5 h-5 rotate-45" /> Receive
+                     </button>
+                   </div>
+
+                   <button
+                     onClick={() => navigateTo('crypto_disconnect')}
+                     className="w-full mt-4 py-3 rounded-xl border border-red-200 text-red-500 font-bold text-sm hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
+                   >
+                     <Unplug className="w-4 h-4" /> Disconnect wallet
                    </button>
                  </div>
-                 
-                 <div className="flex gap-3">
-                   <button onClick={() => navigateTo('crypto_send')} className="flex-1 py-4 bg-theme-surface-hover hover:bg-theme-surface-active rounded-xl font-bold text-theme-primary transition-colors flex items-center justify-center gap-2">
-                     <ArrowUpRight className="w-5 h-5" /> Send
+               ) : (
+                 <div className="flex-1 flex flex-col items-center justify-center text-center">
+                   <div className="w-20 h-20 rounded-full bg-theme-surface-hover flex items-center justify-center mb-6">
+                     <Wallet className="w-10 h-10 text-theme-tertiary" />
+                   </div>
+                   <h3 className="font-black text-theme-primary text-xl mb-2">No wallet connected</h3>
+                   <p className="text-sm font-semibold text-theme-secondary mb-6 max-w-[260px]">
+                     Connect MetaMask or another EVM-compatible wallet to get started.
+                   </p>
+                   {web3.error && (
+                     <div className="flex items-center gap-2 text-red-500 text-xs font-bold bg-red-50 px-4 py-2 rounded-xl mb-4 border border-red-100">
+                       <AlertCircle className="w-4 h-4 shrink-0" /> {web3.error}
+                     </div>
+                   )}
+                   <button
+                     type="button"
+                     onClick={() => handleCryptoConnect()}
+                     disabled={web3.status === 'connecting'}
+                     className="py-3.5 px-8 rounded-xl bg-[#5E43F3] text-white font-bold hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-60 flex items-center justify-center gap-2"
+                   >
+                     {web3.status === 'connecting' ? (
+                       <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span> Connecting…</>
+                     ) : (
+                       <><Link2 className="w-4 h-4" /> Connect Wallet</>
+                     )}
                    </button>
-                   <button onClick={() => navigateTo('crypto_receive')} className="flex-1 py-4 bg-theme-surface-hover hover:bg-theme-surface-active rounded-xl font-bold text-theme-primary transition-colors flex items-center justify-center gap-2">
-                     <ArrowLeft className="w-5 h-5 rotate-45" /> Receive
-                   </button>
+                   {!web3.isMetaMaskInstalled && (
+                     <a
+                       href="https://metamask.io/download/"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       className="flex items-center justify-center gap-1.5 mt-4 text-xs font-bold text-[#5E43F3] hover:underline"
+                     >
+                       <ExternalLink className="w-3.5 h-3.5" /> Install MetaMask
+                     </a>
+                   )}
                  </div>
-               </div>
+               )}
              </div>
           )}
 
@@ -1406,26 +1582,34 @@ export const WalletModal: React.FC = () => {
           {/* CRYPTO RECEIVE */}
           {currentView === 'crypto_receive' && (
              <div className="p-4 flex flex-col h-full text-center pb-12">
-               <div className="flex-1 flex flex-col items-center justify-center pt-4">
-                 <div className="bg-white p-4 rounded-3xl mb-8 border border-theme-divider-light">
-                   <div className="w-48 h-48 bg-gray-100 rounded-xl flex items-center justify-center border border-gray-200">
-                     <span className="text-gray-400 font-bold">QR CODE</span>
+               {web3.status === 'connected' && web3.address ? (
+                 <div className="flex-1 flex flex-col items-center justify-center pt-4">
+                   <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest mb-2">Your wallet address</div>
+                   <div className="font-mono font-bold text-theme-primary text-sm mb-2 bg-theme-surface py-3 px-4 rounded-2xl border border-theme-divider-light w-full break-all">
+                     {web3.address}
+                   </div>
+                   <div className="font-mono font-black text-theme-primary text-xl mb-6">
+                     {web3.shortAddress}
+                   </div>
+                   
+                   <button onClick={handleCopyAddress} className="py-4 px-8 w-full rounded-xl bg-theme-surface-hover hover:bg-theme-surface-active font-bold text-theme-primary transition-colors flex items-center justify-center gap-2 mb-8">
+                     {addressCopied ? <><Check className="w-5 h-5" /> Copied!</> : <><Copy className="w-5 h-5" /> Copy address</>}
+                   </button>
+                   
+                   <div className="bg-theme-surface p-3 rounded-xl text-xs font-bold text-theme-secondary border border-theme-divider-light mb-4">
+                     Network: {web3.chainName}
+                   </div>
+                   
+                   <div className="bg-orange-50 text-orange-600 p-4 rounded-xl text-xs font-bold border border-orange-100 max-w-xs mx-auto">
+                     Only send assets on the same network ({web3.chainName}) to this address.
                    </div>
                  </div>
-                 
-                 <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest mb-2">Your wallet address</div>
-                 <div className="font-mono font-black text-theme-primary text-xl mb-6 bg-theme-surface py-3 px-6 rounded-2xl border border-theme-divider-light">
-                   0x1234...89AB
+               ) : (
+                 <div className="flex-1 flex flex-col items-center justify-center">
+                   <Wallet className="w-12 h-12 text-theme-tertiary mb-4" />
+                   <p className="text-theme-secondary font-semibold">Connect a wallet first to receive crypto.</p>
                  </div>
-                 
-                 <button className="py-4 px-8 w-full rounded-xl bg-theme-surface-hover hover:bg-theme-surface-active font-bold text-theme-primary transition-colors flex items-center justify-center gap-2 mb-8">
-                   <Copy className="w-5 h-5" /> Copy address
-                 </button>
-                 
-                 <div className="bg-orange-50 text-orange-600 p-4 rounded-xl text-xs font-bold border border-orange-100 max-w-xs mx-auto">
-                   Only send assets using a network supported by this wallet.
-                 </div>
-               </div>
+               )}
              </div>
           )}
 
@@ -1434,15 +1618,18 @@ export const WalletModal: React.FC = () => {
              <div className="p-4 flex flex-col h-full text-center pb-12">
                <div className="flex-1 flex flex-col items-center justify-center pt-12">
                  <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mb-6 border border-red-100">
-                   <AlertCircle className="w-12 h-12 text-red-500" />
+                   <Unplug className="w-12 h-12 text-red-500" />
                  </div>
-                 <h3 className="font-black text-theme-primary text-2xl mb-4">Disconnect MetaMask?</h3>
-                 <p className="text-theme-secondary font-semibold text-sm max-w-[280px] mb-8 mx-auto">
-                   You can reconnect this wallet at any time. No Laula account data or creator earnings will be deleted.
+                 <h3 className="font-black text-theme-primary text-2xl mb-4">Disconnect {web3.providerName ?? web3.providerId ?? 'wallet'}?</h3>
+                 <p className="text-theme-secondary font-semibold text-sm max-w-[280px] mb-2 mx-auto">
+                   You can reconnect this wallet at any time. No LaLao account data or creator earnings will be deleted.
                  </p>
+                 {web3.shortAddress && (
+                   <div className="font-mono text-sm text-theme-tertiary mb-8">{web3.shortAddress}</div>
+                 )}
                  
                  <div className="w-full space-y-3">
-                   <button onClick={handleClose} className="w-full py-4 rounded-xl bg-red-500 text-white font-bold text-lg hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20">
+                   <button onClick={handleCryptoDisconnect} className="w-full py-4 rounded-xl bg-red-500 text-white font-bold text-lg hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20">
                      Disconnect
                    </button>
                    <button onClick={goBack} className="w-full py-4 rounded-xl bg-theme-surface-hover text-theme-primary font-bold hover:bg-theme-surface-active transition-colors">
@@ -1784,30 +1971,25 @@ export const WalletModal: React.FC = () => {
         </div>
       </div>
       
-      {/* DEVELOPMENT / DEMO CONTROLS (Only visible in dev) */}
-      {import.meta.env.DEV && (
+      {/* DEVELOPMENT / TESTING CONTROLS — Only for authenticated admins */}
+      {isDevAdmin && import.meta.env.DEV && (
         <div className="fixed bottom-4 left-4 bg-black/90 p-4 rounded-xl border border-theme-divider-light z-[100] max-w-[320px] text-white space-y-3">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-theme-tertiary">Dev Testing Controls</div>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-theme-tertiary">Admin Dev Controls</div>
           
           <div className="space-y-1">
-            <div className="text-xs font-semibold text-theme-secondary mb-1">State Configs</div>
+            <div className="text-xs font-semibold text-theme-secondary mb-1">Withdrawal Accounts</div>
             <div className="flex flex-wrap gap-2">
               <button onClick={() => setWithdrawalAccounts([])} className="text-[10px] px-2 py-1 bg-theme-surface rounded font-bold border border-theme-divider-light hover:bg-theme-surface-hover">A. No accounts</button>
               <button onClick={() => setWithdrawalAccounts([{id: 'dev1', accountName: 'John', bankName: 'First Bank', accountNumber: '11112222', status: 'pending', isDefault: true}])} className="text-[10px] px-2 py-1 bg-theme-surface rounded font-bold border border-theme-divider-light hover:bg-theme-surface-hover">B. 1 Pending</button>
               <button onClick={() => setWithdrawalAccounts([{id: 'dev1', accountName: 'John', bankName: 'First Bank', accountNumber: '11112222', status: 'verified', isDefault: true}])} className="text-[10px] px-2 py-1 bg-theme-surface rounded font-bold border border-theme-divider-light hover:bg-theme-surface-hover">C. 1 Verified</button>
-              <button onClick={() => setWithdrawalAccounts([
-                {id: 'dev1', accountName: 'John', bankName: 'First Bank', accountNumber: '11112222', status: 'verified', isDefault: true},
-                {id: 'dev2', accountName: 'Jane', bankName: 'GTBank', accountNumber: '55556666', status: 'pending', isDefault: false}
-              ])} className="text-[10px] px-2 py-1 bg-theme-surface rounded font-bold border border-theme-divider-light hover:bg-theme-surface-hover">D. Multiple</button>
-              <button onClick={() => setWithdrawalAccounts([{id: 'dev1', accountName: 'John', bankName: 'First Bank', accountNumber: '11112222', status: 'failed', isDefault: true}])} className="text-[10px] px-2 py-1 bg-theme-surface rounded font-bold border border-theme-divider-light hover:bg-theme-surface-hover">E. Failed</button>
             </div>
           </div>
           
           <div className="space-y-1">
             <div className="text-xs font-semibold text-theme-secondary mb-1">Mock Balance</div>
             <div className="flex gap-2">
-              <button onClick={() => setDevBalance(3000)} className="text-[10px] px-2 py-1 bg-theme-surface rounded font-bold border border-theme-divider-light hover:bg-theme-surface-hover">3,000 (Low)</button>
-              <button onClick={() => setDevBalance(10000)} className="text-[10px] px-2 py-1 bg-theme-surface rounded font-bold border border-theme-divider-light hover:bg-theme-surface-hover">10,000 (Ok)</button>
+              <button onClick={() => setDevBalance(3000)} className="text-[10px] px-2 py-1 bg-theme-surface rounded font-bold border border-theme-divider-light hover:bg-theme-surface-hover">3,000</button>
+              <button onClick={() => setDevBalance(10000)} className="text-[10px] px-2 py-1 bg-theme-surface rounded font-bold border border-theme-divider-light hover:bg-theme-surface-hover">10,000</button>
               <button onClick={() => setDevBalance(null)} className="text-[10px] px-2 py-1 bg-theme-surface rounded font-bold border border-theme-divider-light hover:bg-theme-surface-hover text-red-400">Reset</button>
             </div>
           </div>

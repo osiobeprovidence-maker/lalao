@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthedUser } from "./social";
+import { resolveUserVerification } from "./social";
 
 export const createRally = mutation({
   args: {
@@ -115,6 +116,7 @@ export const listActiveRallies = query({
               id: u._id,
               name: u.name || "Unknown",
               username: u.username || "unknown",
+              ...resolveUserVerification(u),
               avatar: u.avatarUrl || "",
               userType: u.userType || "person",
               followersCount: u.followersCount || 0,
@@ -143,6 +145,7 @@ export const listActiveRallies = query({
             id: creator._id,
             name: creator.name || "Unknown",
             username: creator.username || "unknown",
+            ...resolveUserVerification(creator),
             avatar: creator.avatarUrl || "",
             userType: creator.userType || "person",
             followersCount: creator.followersCount || 0,

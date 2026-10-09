@@ -10,13 +10,17 @@
 
 import type * as admin from "../admin.js";
 import type * as apiPartners from "../apiPartners.js";
+import type * as beta from "../beta.js";
+import type * as cleanPages from "../cleanPages.js";
 import type * as cloudinary from "../cloudinary.js";
 import type * as community from "../community.js";
 import type * as creators from "../creators.js";
+import type * as cryptoWallets from "../cryptoWallets.js";
 import type * as cycles from "../cycles.js";
 import type * as debug from "../debug.js";
 import type * as ecommerce from "../ecommerce.js";
 import type * as http from "../http.js";
+import type * as internal_platformSettingsDefaults from "../internal/platformSettingsDefaults.js";
 import type * as market from "../market.js";
 import type * as migrations from "../migrations.js";
 import type * as moderation from "../moderation.js";
@@ -28,6 +32,7 @@ import type * as platformSettings from "../platformSettings.js";
 import type * as push from "../push.js";
 import type * as pushActions from "../pushActions.js";
 import type * as rallies from "../rallies.js";
+import type * as recommendationEngine from "../recommendationEngine.js";
 import type * as recommendations from "../recommendations.js";
 import type * as reports from "../reports.js";
 import type * as roomy from "../roomy.js";
@@ -49,13 +54,17 @@ import type {
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   apiPartners: typeof apiPartners;
+  beta: typeof beta;
+  cleanPages: typeof cleanPages;
   cloudinary: typeof cloudinary;
   community: typeof community;
   creators: typeof creators;
+  cryptoWallets: typeof cryptoWallets;
   cycles: typeof cycles;
   debug: typeof debug;
   ecommerce: typeof ecommerce;
   http: typeof http;
+  "internal/platformSettingsDefaults": typeof internal_platformSettingsDefaults;
   market: typeof market;
   migrations: typeof migrations;
   moderation: typeof moderation;
@@ -67,6 +76,7 @@ declare const fullApi: ApiFromModules<{
   push: typeof push;
   pushActions: typeof pushActions;
   rallies: typeof rallies;
+  recommendationEngine: typeof recommendationEngine;
   recommendations: typeof recommendations;
   reports: typeof reports;
   roomy: typeof roomy;

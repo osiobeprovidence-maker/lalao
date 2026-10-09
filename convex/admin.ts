@@ -527,98 +527,37 @@ export const assignPageOwner = mutation({
   },
 });
 
-export const bootstrapPlatformPages = mutation({
+export const deleteDummyPages = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const admin = await requireAdmin(ctx);
-    const time = Date.now();
-    let createdCount = 0;
-    
-    const adminId = admin._id;
-
-    const SYSTEM_PAGES = [
-      {
-        name: "Lalao",
-        username: "lalao",
-        type: "organization",
-        badge: "ORG",
-      },
-      {
-        name: "Roomy",
-        username: "roomy",
-        type: "organization",
-        badge: "ORG",
-        description: "Roomy is a community organization helping students and young people find suitable accommodation and connect with compatible roommates.",
-        activeTools: ['roomy'],
-      },
-      {
-        name: "This My Invite",
-        username: "thismyinvite",
-        type: "organization",
-        badge: "ORG",
-      },
-      {
-        name: "My Events",
-        username: "my_events",
-        type: "organization",
-        badge: "ORG",
-      }
+    const pagesToDelete = [
+      "lalao",
+      "thismyinvite",
+      "my_events",
+      "test_sub_page",
+      "jointheq"
     ];
 
-    const results = [];
+    const pages = await ctx.db.query("pages").collect();
+    let deleted = 0;
 
-
-    for (const sysPage of SYSTEM_PAGES) {
-      const existing = await ctx.db.query("pages").filter(q => q.eq(q.field("username"), sysPage.username)).first();
-      
-      if (!existing) {
-        await ctx.db.insert("pages", {
-          ownerId: adminId,
-          name: sysPage.name,
-          username: sysPage.username,
-          type: sysPage.type as any,
-          badge: sysPage.badge as any,
-          description: (sysPage as any).description,
-          activeTools: sysPage.activeTools || [],
-          location: "Global",
-          followersCount: 0,
-          createdAt: time,
-          updatedAt: time,
-        });
-        createdCount++;
-        results.push({ name: sysPage.name, status: "created" });
-      } else {
-        results.push({ name: sysPage.name, status: "already exists" });
-        // Patch if needed (e.g. for Roomy tools or type/badge classification)
-        const patchData: any = {};
-        if (existing.type !== sysPage.type) patchData.type = sysPage.type;
-        if (existing.badge !== sysPage.badge) patchData.badge = sysPage.badge;
-        if ((sysPage as any).description && (!existing.description || existing.description.includes("marketplace"))) {
-          patchData.description = (sysPage as any).description;
-        }
-
-        if (sysPage.activeTools) {
-          const currentTools = existing.activeTools || [];
-          let needsUpdate = false;
-          for (const tool of sysPage.activeTools) {
-            if (!currentTools.includes(tool)) {
-              currentTools.push(tool);
-              needsUpdate = true;
-            }
-          }
-          if (needsUpdate) {
-            patchData.activeTools = currentTools;
-          }
-        }
-
-        if (Object.keys(patchData).length > 0) {
-          patchData.updatedAt = time;
-          await ctx.db.patch(existing._id, patchData);
+    for (const p of pages) {
+      const username = p.username?.toLowerCase() || "";
+      if (
+        pagesToDelete.includes(username) || 
+        p.name === "JOINTHEQ" || 
+        p.name === "Test Sub Page" ||
+        p.name === "Lalao" ||
+        p.name === "This My Invite" ||
+        p.name === "My Events"
+      ) {
+        if (username !== "roomy") {
+          await ctx.db.delete(p._id);
+          deleted++;
         }
       }
     }
-
-    return { success: true, createdCount, results };
+    return `Deleted ${deleted} dummy pages.`;
   }
 });
 

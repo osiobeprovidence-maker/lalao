@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { getAuthedUser, getRelationshipSets } from "./social";
+import { resolveUserVerification } from "./social";
 
 export const generateUploadUrl = mutation({
   args: {},
@@ -190,6 +191,7 @@ export const listActiveCycles = query({
           id: author._id,
           name: author.name || "Resident",
           username: author.username || "user",
+          ...resolveUserVerification(author),
           avatar: author.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400",
           location: author.locationName || stories[0].location,
           isFollowing: false,
