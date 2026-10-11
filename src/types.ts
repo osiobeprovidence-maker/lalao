@@ -159,6 +159,7 @@ export interface Post {
   soundId?: string;
   soundTitle?: string;
   soundAuthorName?: string;
+  soundAudioUrl?: string;
   soundStartOffset?: number;
   soundVolume?: number;
   originalAudioVolume?: number;

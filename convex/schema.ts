@@ -206,9 +206,10 @@ export default defineSchema({
     ),
     mediaProcessingError: v.optional(v.string()),
     // Sound & Music attachment fields
-    soundId: v.optional(v.id("sounds")),
+    soundId: v.optional(v.union(v.id("sounds"), v.string())),
     soundTitle: v.optional(v.string()),
     soundAuthorName: v.optional(v.string()),
+    soundAudioUrl: v.optional(v.string()),
     soundStartOffset: v.optional(v.number()),
     soundVolume: v.optional(v.number()),
     originalAudioVolume: v.optional(v.number()),

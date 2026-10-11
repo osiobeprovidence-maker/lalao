@@ -511,7 +511,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
 
           {/* Attached Sound Badge */}
           {post?.soundTitle && (
-            <div className="mt-2.5">
+            <div className="mt-2.5 flex items-center gap-2 flex-wrap">
               <button
                 type="button"
                 onClick={(e) => {
@@ -529,6 +529,30 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                     • {post.soundAuthorName}
                   </span>
                 )}
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  try {
+                    localStorage.setItem('lalao_pending_sound', JSON.stringify({
+                      id: post.soundId || 'sound-' + post.id,
+                      title: post.soundTitle,
+                      creatorName: post.soundAuthorName || post.author.name,
+                      audioUrl: (post as any).soundAudioUrl || post.mediaUrl || '',
+                      duration: (post as any).soundDuration || 15,
+                    }));
+                    setActiveTab('create-post');
+                  } catch {
+                    // ignore
+                  }
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-theme-surface-hover hover:bg-[#5E43F3] hover:text-white border border-theme-divider text-[11px] font-bold text-theme-secondary transition-all cursor-pointer shadow-2xs"
+                title="Create a video with this sound"
+              >
+                <Disc className="w-3 h-3 text-[#5E43F3] group-hover:text-white" />
+                <span>Use Sound</span>
               </button>
             </div>
           )}

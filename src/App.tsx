@@ -13,7 +13,6 @@ import { CreatePageView } from './components/pages/CreatePageView';
 import { ProfileView } from './components/profile/ProfileView';
 import { EventsView } from './components/events/EventsView';
 import { MyPagesView } from './pages/my-pages/MyPagesView';
-import { SoundsLibraryView } from './components/sounds/SoundsLibraryView';
 import { SoundDetailModal } from './components/sounds/SoundDetailModal';
 import { CreateSoundModal } from './components/sounds/CreateSoundModal';
 
@@ -166,12 +165,9 @@ const LalaoAppContent: React.FC = () => {
   useEffect(() => {
     if (location.pathname === '/beta-tester' || location.pathname === '/app/beta-tester') {
       setActiveTab('beta-tester');
-    } else if (location.pathname === '/sounds' || location.pathname === '/app/sounds') {
-      setActiveTab('sounds');
     } else if (location.pathname.startsWith('/sounds/')) {
       const sId = location.pathname.split('/sounds/')[1];
       if (sId) {
-        setActiveTab('sounds');
         setActiveSoundId(sId);
       }
     }
@@ -332,11 +328,6 @@ const LalaoAppContent: React.FC = () => {
             {activeTab === 'discover' && (
               <div key="tab-discover" className="animate-in fade-in duration-200 w-full bg-transparent">
                 <DiscoverView />
-              </div>
-            )}
-            {activeTab === 'sounds' && (
-              <div key="tab-sounds" className="animate-in fade-in duration-200 min-h-full w-full bg-transparent">
-                <SoundsLibraryView />
               </div>
             )}
             {activeTab === 'create-page' && (

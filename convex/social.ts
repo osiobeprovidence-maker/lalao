@@ -573,6 +573,7 @@ export const listFeedPosts = query({
         soundId: post.soundId,
         soundTitle: post.soundTitle,
         soundAuthorName: post.soundAuthorName,
+        soundAudioUrl: post.soundAudioUrl,
         soundStartOffset: post.soundStartOffset,
         soundVolume: post.soundVolume,
         originalAudioVolume: post.originalAudioVolume,
@@ -800,6 +801,13 @@ async function fetchPostsForProfileUser(
         : undefined,
       rallyRefId: post.rallyRefId,
       pageRefId: post.pageRefId,
+      soundId: post.soundId,
+      soundTitle: post.soundTitle,
+      soundAuthorName: post.soundAuthorName,
+      soundAudioUrl: post.soundAudioUrl,
+      soundStartOffset: post.soundStartOffset,
+      soundVolume: post.soundVolume,
+      originalAudioVolume: post.originalAudioVolume,
     });
   }
 
@@ -1354,9 +1362,10 @@ export const createPost = mutation({
       )
     ),
     // Sounds & Music integration
-    soundId: v.optional(v.id("sounds")),
+    soundId: v.optional(v.union(v.id("sounds"), v.string())),
     soundTitle: v.optional(v.string()),
     soundAuthorName: v.optional(v.string()),
+    soundAudioUrl: v.optional(v.string()),
     soundStartOffset: v.optional(v.number()),
     soundVolume: v.optional(v.number()),
     originalAudioVolume: v.optional(v.number()),
@@ -1573,18 +1582,22 @@ export const createPost = mutation({
       soundId: args.soundId,
       soundTitle: args.soundTitle,
       soundAuthorName: args.soundAuthorName,
+      soundAudioUrl: args.soundAudioUrl,
       soundStartOffset: args.soundStartOffset,
       soundVolume: args.soundVolume,
       originalAudioVolume: args.originalAudioVolume,
     });
 
-    // If a sound is attached, increment its usage count
+    // If a registered DB sound is attached, increment its usage count
     if (args.soundId) {
-      const soundDoc = await ctx.db.get(args.soundId);
-      if (soundDoc) {
-        await ctx.db.patch(args.soundId, {
-          usageCount: (soundDoc.usageCount ?? 0) + 1,
-        });
+      const normSoundId = ctx.db.normalizeId("sounds", args.soundId);
+      if (normSoundId) {
+        const soundDoc = await ctx.db.get(normSoundId);
+        if (soundDoc) {
+          await ctx.db.patch(normSoundId, {
+            usageCount: (soundDoc.usageCount ?? 0) + 1,
+          });
+        }
       }
     }
 

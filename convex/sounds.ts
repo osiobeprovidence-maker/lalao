@@ -268,19 +268,29 @@ export const toggleFavouriteSound = mutation({
 export const listSounds = query({
   args: {
     category: v.optional(v.string()), // "all" | "music" | "original" | "effects" | "voice"
-    filter: v.optional(v.string()), // "foryou" | "trending" | "music" | "original" | "effects" | "favorites" | "my_sounds"
+    filter: v.optional(v.string()), // "foryou" | "for_you" | "trending" | "music" | "original" | "effects" | "favorites" | "my_sounds"
     searchQuery: v.optional(v.string()),
-    currentUserId: v.optional(v.id("users")),
+    currentUserId: v.optional(v.string()),
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const limit = args.limit || 50;
     let soundDocs: any[] = [];
 
-    if (args.filter === "favorites" && args.currentUserId) {
+    // Normalize user ID safely
+    let targetUserId: Id<"users"> | null = null;
+    if (args.currentUserId) {
+      targetUserId = ctx.db.normalizeId("users", args.currentUserId);
+    }
+    if (!targetUserId) {
+      const authed = await getAuthedUser(ctx);
+      if (authed) targetUserId = authed._id;
+    }
+
+    if (args.filter === "favorites" && targetUserId) {
       const favorites = await ctx.db
         .query("soundFavourites")
-        .withIndex("by_user", (q) => q.eq("userId", args.currentUserId!))
+        .withIndex("by_user", (q) => q.eq("userId", targetUserId!))
         .order("desc")
         .take(limit);
 
@@ -290,10 +300,10 @@ export const listSounds = query({
           soundDocs.push(sound);
         }
       }
-    } else if (args.filter === "my_sounds" && args.currentUserId) {
+    } else if (args.filter === "my_sounds" && targetUserId) {
       soundDocs = await ctx.db
         .query("sounds")
-        .withIndex("by_creator", (q) => q.eq("creatorId", args.currentUserId!))
+        .withIndex("by_creator", (q) => q.eq("creatorId", targetUserId!))
         .filter((q) => q.neq(q.field("isDeleted"), true))
         .order("desc")
         .take(limit);
@@ -310,10 +320,14 @@ export const listSounds = query({
         )
         .order("desc")
         .take(limit);
-    } else if (args.category && args.category !== "all") {
+    } else if (
+      (args.category && args.category !== "all") ||
+      (args.filter && ["music", "original", "effects", "voice"].includes(args.filter))
+    ) {
+      const cat = args.category && args.category !== "all" ? args.category : args.filter;
       soundDocs = await ctx.db
         .query("sounds")
-        .withIndex("by_category", (q) => q.eq("category", args.category as any))
+        .withIndex("by_category", (q) => q.eq("category", cat as any))
         .filter((q) =>
           q.and(
             q.neq(q.field("isDeleted"), true),

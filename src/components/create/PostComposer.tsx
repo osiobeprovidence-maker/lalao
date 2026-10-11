@@ -17,6 +17,8 @@ import {
   Music,
   Sliders,
   Volume2,
+  VolumeX,
+  RefreshCw,
   Disc,
 } from 'lucide-react';
 import { useAction, useQuery, useMutation } from 'convex/react';
@@ -429,6 +431,7 @@ function PostComposerInner({
         soundId: attachedSound?.soundId as any,
         soundTitle: attachedSound?.title,
         soundAuthorName: attachedSound?.authorName,
+        soundAudioUrl: attachedSound?.audioUrl,
         soundStartOffset: attachedSound ? soundStartOffset : undefined,
         soundVolume: attachedSound ? soundVolume : undefined,
         originalAudioVolume: attachedSound ? originalAudioVolume : undefined,
@@ -843,7 +846,19 @@ function PostComposerInner({
           {mediaUrl && (
             <div className="relative mt-3 overflow-hidden rounded-[16px] border border-theme-divider bg-theme-surface-hover">
               {mediaType === 'video' ? (
-                <video src={mediaUrl} controls className="max-h-[360px] w-full object-cover" />
+                <div className="relative">
+                  <video src={mediaUrl} controls className="max-h-[360px] w-full object-cover" />
+                  {/* Floating Add Sound button on video */}
+                  <button
+                    type="button"
+                    onClick={() => setShowSoundPicker(true)}
+                    className="absolute top-3 left-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/70 hover:bg-black/90 backdrop-blur-md text-white text-xs font-bold border border-white/20 shadow-lg cursor-pointer transition-all active:scale-95"
+                    title={attachedSound ? 'Change attached audio' : 'Add sound to video'}
+                  >
+                    <Music className="w-3.5 h-3.5 text-[#5E43F3]" />
+                    <span className="truncate max-w-[160px] sm:max-w-xs">{attachedSound ? attachedSound.title : 'Add Sound'}</span>
+                  </button>
+                </div>
               ) : (
                 <img src={mediaUrl} alt="Post attachment" className="max-h-[360px] w-full object-cover" />
               )}
@@ -854,7 +869,7 @@ function PostComposerInner({
                   setMediaUrl('');
                   setSelectedFile(null);
                 }}
-                className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white"
+                className="absolute right-2.5 top-2.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
                 aria-label="Remove media"
               >
                 <X className="h-4 w-4" />
@@ -867,7 +882,7 @@ function PostComposerInner({
             <div className="mt-3 p-3 rounded-2xl border border-[#5E43F3]/30 bg-[#5E43F3]/10 space-y-2.5 animate-in fade-in">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-full bg-[#5E43F3] text-white flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-[#5E43F3] text-white flex items-center justify-center shrink-0 shadow-sm">
                     <Disc className="w-4 h-4 animate-spin [animation-duration:4s]" />
                   </div>
                   <div className="min-w-0">
@@ -883,8 +898,17 @@ function PostComposerInner({
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     type="button"
+                    onClick={() => setShowSoundPicker(true)}
+                    className="p-1.5 rounded-lg bg-theme-surface hover:bg-theme-surface-hover text-theme-primary text-xs flex items-center gap-1 border border-theme-divider transition-colors"
+                    title="Replace with another sound"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 text-[#5E43F3]" />
+                    <span className="text-[11px] font-semibold hidden sm:inline">Replace</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setShowSoundSettings(!showSoundSettings)}
-                    className="p-1.5 rounded-lg bg-theme-surface hover:bg-theme-surface-hover text-theme-primary text-xs flex items-center gap-1 border border-theme-divider"
+                    className="p-1.5 rounded-lg bg-theme-surface hover:bg-theme-surface-hover text-theme-primary text-xs flex items-center gap-1 border border-theme-divider transition-colors"
                     title="Audio Settings"
                   >
                     <Sliders className="w-3.5 h-3.5 text-[#5E43F3]" />
@@ -951,6 +975,21 @@ function PostComposerInner({
                         className="w-full accent-[#5E43F3]"
                       />
                     </div>
+                  </div>
+
+                  <div className="pt-1 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => setOriginalAudioVolume((prev) => prev > 0 ? 0 : 1.0)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
+                        originalAudioVolume === 0
+                          ? 'bg-rose-500/10 border-rose-500/30 text-rose-500'
+                          : 'bg-theme-surface border-theme-divider text-theme-secondary hover:text-theme-primary'
+                      }`}
+                    >
+                      {originalAudioVolume === 0 ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                      <span>{originalAudioVolume === 0 ? 'Video Audio Muted' : 'Mute Video Audio'}</span>
+                    </button>
                   </div>
                 </div>
               )}

@@ -26,10 +26,9 @@ export const CreateBottomSheet: React.FC = () => {
 
   const handleSelect = (type: CreateOption) => {
     if (type === 'post') {
+      setIsCreateSheetOpen(false);
       setCreateFlowType(null);
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('lalao:navigate-create-post'));
-      }
+      setActiveTab('create-post');
       return;
     }
 
