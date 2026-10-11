@@ -533,11 +533,11 @@ const FeedSkeleton: React.FC = () => {
             <div className="divide-y divide-neutral-100 pb-8">
               {filteredPosts.map((post, index) => (
                 <React.Fragment key={post.id}>
-                  <PostItem post={post} />
+                  <PostItem post={post} showLocation={feedTab === 'nearby'} />
                   {/* Inject an event card every 4 posts if there are active events */
                   index === 1 && activeEvents.length > 0 && feedTab === 'for_you' && (
                     <div className="pt-6 pb-2 px-2 sm:px-0">
-                      <EventFeedCard event={activeEvents[Math.floor(Math.random() * activeEvents.length)]} />
+                      <EventFeedCard event={activeEvents[Math.floor(Math.random() * activeEvents.length)]} showLocation={feedTab === 'nearby'} />
                     </div>
                   )}
                 </React.Fragment>

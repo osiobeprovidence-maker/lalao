@@ -6,7 +6,7 @@ import { calculateDistanceMeters } from '../../utils/locationUtils';
 import { PostItem } from '../feed/PostItem';
 import { Post } from '../../types';
 
-export const EventFeedCard: React.FC<{ event: ExternalEvent }> = ({ event }) => {
+export const EventFeedCard: React.FC<{ event: ExternalEvent; showLocation?: boolean }> = ({ event, showLocation }) => {
   const { trackImpression } = useEventDistribution();
   const { location } = useLalao();
 
@@ -44,5 +44,5 @@ export const EventFeedCard: React.FC<{ event: ExternalEvent }> = ({ event }) => 
     audience: 'everyone',
   };
 
-  return <PostItem post={mockPost} externalEvent={event} />;
+  return <PostItem post={mockPost} externalEvent={event} showLocation={showLocation} />;
 };

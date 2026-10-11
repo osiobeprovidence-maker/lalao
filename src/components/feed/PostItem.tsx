@@ -43,9 +43,10 @@ export interface PostItemProps {
   externalEvent?: ExternalEvent;
   onSelectAuthor?: () => void;
   compactMedia?: boolean;
+  showLocation?: boolean;
 }
 
-export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, externalEvent, onSelectAuthor, compactMedia }) => {
+export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, externalEvent, onSelectAuthor, compactMedia, showLocation }) => {
   const {
     currentUser,
     openSoundDetail,
@@ -108,7 +109,8 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
 
   const isAuthor = currentUser?.id === author.id;
 
-  // Location & Proximity: only render when valid metadata exists, never inventing fallbacks
+  // Location & Proximity: only render when valid metadata exists and enabled for this view context
+  const shouldShowLocation = showLocation !== undefined ? showLocation : true;
   const locationText = (post?.location || linkedRally?.location || '').trim();
   const hasValidDistance = typeof distanceMeters === 'number' && !isNaN(distanceMeters) && distanceMeters >= 0;
   const formattedDistance = hasValidDistance ? formatDistance(distanceMeters, locationPrivacy?.approximateDistance) : '';
@@ -253,7 +255,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
               <span className="text-theme-tertiary">@{author.username}</span>
               <span>·</span>
               <span>{timeText}</span>
-              {locationText && (
+              {shouldShowLocation && locationText && (
                 <>
                   <span>·</span>
                   {hasValidDistance && formattedDistance ? (
