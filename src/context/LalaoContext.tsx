@@ -125,6 +125,14 @@ interface LalaoContextType {
     pageRefId?: string; 
     groupRefId?: string; 
     contentTopics?: string[];
+    // Sounds & Music integration
+    soundId?: string;
+    soundTitle?: string;
+    soundAuthorName?: string;
+    soundAudioUrl?: string;
+    soundStartOffset?: number;
+    soundVolume?: number;
+    originalAudioVolume?: number;
     rallyData?: {
       type: 'ASK' | 'HELP' | 'JOIN';
       title: string;
@@ -1682,6 +1690,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     soundId?: string;
     soundTitle?: string;
     soundAuthorName?: string;
+    soundAudioUrl?: string;
     soundStartOffset?: number;
     soundVolume?: number;
     originalAudioVolume?: number;
@@ -1727,6 +1736,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         soundId: args.soundId as any,
         soundTitle: args.soundTitle,
         soundAuthorName: args.soundAuthorName,
+        soundAudioUrl: args.soundAudioUrl,
         soundStartOffset: args.soundStartOffset,
         soundVolume: args.soundVolume,
         originalAudioVolume: args.originalAudioVolume,

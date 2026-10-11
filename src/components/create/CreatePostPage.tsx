@@ -17,6 +17,7 @@ import { useLalao } from '../../context/LalaoContext';
 import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { compressImage } from '../../lib/imageCompression';
+import { getCoordinatesForLocation } from '../../utils/locationUtils';
 
 type PostType = 'normal' | 'rally';
 type MediaKind = 'image' | 'video';

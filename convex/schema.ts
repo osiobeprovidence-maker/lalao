@@ -158,6 +158,7 @@ export default defineSchema({
         v.literal("everyone"),
         v.literal("closeFriends"),
         v.literal("community"),
+        v.literal("group"),
         v.literal("page"),
         v.literal("nearby"),
         v.literal("anime"),

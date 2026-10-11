@@ -1,7 +1,6 @@
 import React from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { Zap } from 'lucide-react';
 
 interface AppIconProps {
   className?: string;
@@ -9,22 +8,17 @@ interface AppIconProps {
 }
 
 export const AppIcon: React.FC<AppIconProps> = ({ 
-  className = "w-5 h-5", 
-  fallbackClassName = "text-white fill-white" 
+  className = "w-8 h-8", 
+  fallbackClassName = "" 
 }) => {
   const settings = useQuery(api.platformSettings.getBrandingSettings);
+  const iconSrc = settings?.appIconUrl || '/mascot.png';
 
-  // If loading or if there's no appIconUrl, show the fallback icon
-  if (settings === undefined || !settings?.appIconUrl) {
-    return <Zap className={`${className} ${fallbackClassName}`} />;
-  }
-
-  // Render the custom configured icon
   return (
     <img 
-      src={settings.appIconUrl} 
-      alt="Lalao App Icon" 
-      className={`object-contain ${className}`}
+      src={iconSrc} 
+      alt="Lalao Mascot" 
+      className={`rounded-full overflow-hidden object-cover shrink-0 ${className}`}
     />
   );
 };

@@ -231,7 +231,7 @@ export const getGroupMembers = query({
 
     const results = [];
     for (const rawUserId of group.memberIds) {
-      const userDoc = await ctx.db.get(rawUserId);
+      const userDoc: any = await ctx.db.get(rawUserId);
       if (!userDoc) continue;
 
       const explicitMem = memberMap.get(rawUserId.toString());
@@ -278,7 +278,7 @@ export const getGroupJoinRequests = query({
 
     return Promise.all(
       requests.map(async (r: any) => {
-        const user = await ctx.db.get(r.userId);
+        const user: any = await ctx.db.get(r.userId);
         return {
           id: r._id,
           userId: r.userId,
@@ -354,7 +354,7 @@ export const getGroupAnalytics = query({
     if (conversation) {
       const messages = await ctx.db
         .query("messages")
-        .withIndex("by_conversation_created", (q: any) =>
+        .withIndex("by_conversation", (q: any) =>
           q.eq("conversationId", conversation._id)
         )
         .collect();
@@ -495,7 +495,7 @@ export const getGroupPosts = query({
 
     return Promise.all(
       posts.map(async (p: any) => {
-        const author = await ctx.db.get(p.authorId);
+        const author: any = await ctx.db.get(p.authorId);
         return {
           ...p,
           id: p._id,

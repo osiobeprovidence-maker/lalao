@@ -365,7 +365,7 @@ export const listSounds = query({
     }
 
     const enriched = await Promise.all(
-      soundDocs.map((s) => enrichSoundWithCreator(ctx, s, args.currentUserId))
+      soundDocs.map((s) => enrichSoundWithCreator(ctx, s, targetUserId))
     );
 
     return enriched;

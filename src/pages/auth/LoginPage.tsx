@@ -71,10 +71,8 @@ export const LoginPage: React.FC = () => {
         <div className="absolute top-1/2 left-1/3 w-[200px] h-[200px] rounded-full bg-theme-surface/4 blur-2xl" />
 
         {/* Logo */}
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-theme-surface/15 backdrop-blur flex items-center justify-center border border-white/20">
-            <AppIcon className="w-5 h-5" fallbackClassName="text-white fill-white" />
-          </div>
+        <div className="relative z-10 flex items-center gap-2.5">
+          <AppIcon className="w-8 h-8 rounded-full overflow-hidden object-cover shrink-0" fallbackClassName="text-white fill-white" />
           <span className="lalao-wordmark text-white text-2xl">lalao</span>
         </div>
 
@@ -120,10 +118,8 @@ export const LoginPage: React.FC = () => {
       {/* Right Panel — Form */}
       <div className="flex-1 flex flex-col justify-center items-center px-6 py-12 sm:px-12 bg-theme-surface">
         {/* Mobile logo */}
-        <div className="lg:hidden flex items-center gap-3 mb-10">
-          <div className="w-10 h-10 rounded-2xl bg-[#5E43F3] flex items-center justify-center shadow-sm">
-            <AppIcon className="w-5 h-5" fallbackClassName="text-white fill-white" />
-          </div>
+        <div className="lg:hidden flex items-center gap-2.5 mb-10">
+          <AppIcon className="w-8 h-8 rounded-full overflow-hidden object-cover shrink-0" fallbackClassName="text-[#5E43F3] fill-[#5E43F3]" />
           <span className="lalao-wordmark text-2xl text-theme-primary">lalao</span>
         </div>
 

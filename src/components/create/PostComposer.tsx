@@ -20,6 +20,7 @@ import {
   VolumeX,
   RefreshCw,
   Disc,
+  Briefcase,
 } from 'lucide-react';
 import { useAction, useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
@@ -30,6 +31,7 @@ import { Popover } from '../common/Popover';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { uploadImageToCloudinary } from '../../lib/cloudinary';
 import { compressImage } from '../../lib/imageCompression';
+import { getCoordinatesForLocation } from '../../utils/locationUtils';
 import { GifPickerPopover } from './GifPickerPopover';
 import { EmojiPickerPopover } from './EmojiPickerPopover';
 
@@ -41,6 +43,7 @@ interface PostComposerProps {
   initialAudience?: string;
   initialPageRefId?: string;
   initialGroupRefId?: string;
+  groupRefId?: string;
   placeholder?: string;
   initialText?: string;
   onSuccess?: () => void;
@@ -52,10 +55,12 @@ function PostComposerInner({
   initialAudience = 'everyone',
   initialPageRefId,
   initialGroupRefId,
+  groupRefId,
   placeholder,
   initialText = '',
   onSuccess,
 }: PostComposerProps) {
+  const effectiveGroupRefId = initialGroupRefId || groupRefId;
   const {
     currentUser,
     pages,
@@ -91,12 +96,12 @@ function PostComposerInner({
 
   // New features states
   const [audience, setAudience] = useState(
-    initialGroupRefId ? 'group' : initialPageRefId ? 'page' : initialAudience
+    effectiveGroupRefId ? 'group' : initialPageRefId ? 'page' : initialAudience
   );
   const [showAudienceDropdown, setShowAudienceDropdown] = useState(false);
   const [audienceStep, setAudienceStep] = useState<'main' | 'communities' | 'pages' | 'topics'>('main');
   const [selectedPageRefId, setSelectedPageRefId] = useState<string | null>(initialPageRefId || null);
-  const [selectedGroupRefId, setSelectedGroupRefId] = useState<string | null>(initialGroupRefId || null);
+  const [selectedGroupRefId, setSelectedGroupRefId] = useState<string | null>(effectiveGroupRefId || null);
   const [selectedTopicSlugs, setSelectedTopicSlugs] = useState<string[]>([]);
   const [replyPermission, setReplyPermission] = useState('everyone');
   const [showReplyDropdown, setShowReplyDropdown] = useState(false);

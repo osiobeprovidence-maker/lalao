@@ -185,7 +185,7 @@ export const SoundDetailModal: React.FC<SoundDetailModalProps> = ({
 
   if (!soundId) return null;
 
-  const isOwner = currentUser && sound && (sound.creatorId === currentUser.id || currentUser.userType === 'admin');
+  const isOwner = currentUser && sound && (sound.creatorId === currentUser.id || (currentUser as any).userType === 'admin');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">

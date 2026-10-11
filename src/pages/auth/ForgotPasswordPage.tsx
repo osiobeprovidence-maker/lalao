@@ -31,10 +31,8 @@ export const ForgotPasswordPage: React.FC = () => {
 
       <div className="w-full max-w-sm space-y-8">
         {/* Logo */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-[#5E43F3] flex items-center justify-center shadow-sm">
-            <AppIcon className="w-5 h-5" fallbackClassName="text-white fill-white" />
-          </div>
+        <div className="flex items-center gap-2.5">
+          <AppIcon className="w-8 h-8 rounded-full overflow-hidden object-cover shrink-0" fallbackClassName="text-[#5E43F3] fill-[#5E43F3]" />
           <span className="lalao-wordmark text-2xl text-theme-primary">lalao</span>
         </div>
 

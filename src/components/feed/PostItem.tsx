@@ -17,6 +17,7 @@ import {
   Check,
   Calendar,
   Music,
+  Disc,
 } from 'lucide-react';
 import { Post, Rally, User } from '../../types';
 import { Avatar } from '../common/Avatar';
@@ -69,6 +70,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
     addComment,
     cycles,
     openCycleStory,
+    setActiveTab,
   } = useLalao();
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -108,6 +110,9 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
   });
 
   const isAuthor = currentUser?.id === author.id;
+
+  // Distance from post metadata or rally
+  const distanceMeters = post?.distanceMeters;
 
   // Location & Proximity: only render when valid metadata exists and enabled for this view context
   const shouldShowLocation = showLocation !== undefined ? showLocation : true;
