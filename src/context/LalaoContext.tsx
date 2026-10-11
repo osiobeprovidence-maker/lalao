@@ -63,7 +63,8 @@ export type NavTab =
   | 'pages'
   | 'verification'
   | 'beta-tester'
-  | 'creator-hub';
+  | 'creator-hub'
+  | 'sounds';
 export type FeedTab = 'for_you' | 'following' | 'community' | 'nearby' | (string & {});
 export type CreateOption = 'post' | 'rally' | 'page' | 'cycle' | 'group-chat' | 'group-cycle' | null;
 
@@ -112,7 +113,9 @@ interface LalaoContextType {
     mediaType?: 'image' | 'video'; 
     mediaWidth?: number; 
     mediaHeight?: number; 
-    location: string; 
+    location?: string; 
+    latitude?: number;
+    longitude?: number;
     audience?: string; 
     replyPermission?: string; 
     gifUrl?: string; 
@@ -120,6 +123,7 @@ interface LalaoContextType {
     pollOptions?: string[]; 
     rallyRefId?: string; 
     pageRefId?: string; 
+    groupRefId?: string; 
     contentTopics?: string[];
     rallyData?: {
       type: 'ASK' | 'HELP' | 'JOIN';
@@ -236,6 +240,10 @@ interface LalaoContextType {
   setActiveCycleId: (id: string | null) => void;
   activePageId: string | null;
   setActivePageId: (id: string | null) => void;
+  activeGroupId: string | null;
+  setActiveGroupId: (id: string | null) => void;
+  isManageGroupOpen: boolean;
+  setIsManageGroupOpen: (open: boolean) => void;
   activeUserProfile: User | null;
   setActiveUserProfile: (user: User | null) => void;
   toggleFollowUser: (userId: string) => void;
@@ -243,6 +251,14 @@ interface LalaoContextType {
   setComposerInitialText: (text: string) => void;
   activeCommentsPostId: string | null;
   setActiveCommentsPostId: (id: string | null) => void;
+
+  // Sounds & Music Library
+  activeSoundId: string | null;
+  setActiveSoundId: (id: string | null) => void;
+  isCreateSoundOpen: boolean;
+  setIsCreateSoundOpen: (open: boolean) => void;
+  openSoundDetail: (soundId: string) => void;
+  openCreateSound: () => void;
 
   // Shopping & Cart
   cart: CartItem[];
@@ -556,6 +572,17 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [currentUser]);
 
   const [activeTab, setRawActiveTab] = useState<NavTab>('home');
+  const [activeSoundId, setActiveSoundId] = useState<string | null>(null);
+  const [isCreateSoundOpen, setIsCreateSoundOpen] = useState(false);
+
+  const openSoundDetail = (soundId: string) => {
+    setActiveSoundId(soundId);
+  };
+
+  const openCreateSound = () => {
+    setIsCreateSoundOpen(true);
+  };
+
   const { isAuthenticated } = useAuth();
 
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
@@ -882,6 +909,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isCreateCycleOpen, setIsCreateCycleOpen] = useState(false);
   const [activeVideoFeedPostId, setActiveVideoFeedPostId] = useState<string | null>(null);
   const [activePageId, setActivePageId] = useState<string | null>(null);
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const [isManageGroupOpen, setIsManageGroupOpen] = useState(false);
   const [activeUserProfile, setActiveUserProfile] = useState<User | null>(null);
   const [composerInitialText, setComposerInitialText] = useState<string>('');
   const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null);
@@ -1490,19 +1519,22 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Recompute distance to all items dynamically whenever user location changes
   useEffect(() => {
-    const userCoords = {
-      lat: location.latitude ?? getCoordinatesForLocation(location.name).lat,
-      lng: location.longitude ?? getCoordinatesForLocation(location.name).lng,
-    };
+    const hasUserCoords = typeof location.latitude === 'number' && typeof location.longitude === 'number';
+    const userCoords = hasUserCoords ? {
+      lat: location.latitude!,
+      lng: location.longitude!,
+    } : null;
 
     setPosts((prev) =>
       prev.map((post) => {
-        const coords =
-          post.latitude && post.longitude
-            ? { lat: post.latitude, lng: post.longitude }
-            : getCoordinatesForLocation(post.location);
-        const dist = calculateDistanceMeters(userCoords.lat, userCoords.lng, coords.lat, coords.lng);
-        return { ...post, distanceMeters: dist };
+        if (!userCoords) {
+          return { ...post, distanceMeters: undefined };
+        }
+        if (typeof post.latitude === 'number' && typeof post.longitude === 'number') {
+          const dist = calculateDistanceMeters(userCoords.lat, userCoords.lng, post.latitude, post.longitude);
+          return { ...post, distanceMeters: dist };
+        }
+        return { ...post, distanceMeters: undefined };
       })
     );
 
@@ -1510,10 +1542,12 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     setPages((prev) =>
       prev.map((page) => {
+        if (!userCoords) return { ...page, distanceMeters: undefined };
         const coords =
-          page.latitude && page.longitude
+          typeof page.latitude === 'number' && typeof page.longitude === 'number'
             ? { lat: page.latitude, lng: page.longitude }
-            : getCoordinatesForLocation(page.location);
+            : (page.location ? getCoordinatesForLocation(page.location) : null);
+        if (!coords) return { ...page, distanceMeters: undefined };
         const dist = calculateDistanceMeters(userCoords.lat, userCoords.lng, coords.lat, coords.lng);
         return { ...page, distanceMeters: dist };
       })
@@ -1521,10 +1555,12 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     setCycles((prev) =>
       prev.map((cycle) => {
+        if (!userCoords) return { ...cycle, distanceMeters: undefined };
         const coords =
-          cycle.latitude && cycle.longitude
+          typeof cycle.latitude === 'number' && typeof cycle.longitude === 'number'
             ? { lat: cycle.latitude, lng: cycle.longitude }
-            : getCoordinatesForLocation(cycle.location);
+            : (cycle.location ? getCoordinatesForLocation(cycle.location) : null);
+        if (!coords) return { ...cycle, distanceMeters: undefined };
         const dist = calculateDistanceMeters(userCoords.lat, userCoords.lng, coords.lat, coords.lng);
         return { ...cycle, distanceMeters: dist };
       })
@@ -1627,7 +1663,11 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     mediaUrl?: string;
     mediaStorageId?: string;
     mediaType?: 'image' | 'video';
-    location: string;
+    mediaWidth?: number;
+    mediaHeight?: number;
+    location?: string;
+    latitude?: number;
+    longitude?: number;
     audience?: string;
     replyPermission?: string;
     gifUrl?: string;
@@ -1635,8 +1675,16 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     pollOptions?: string[];
     rallyRefId?: string;
     pageRefId?: string;
+    groupRefId?: string;
     visibility?: string;
     contentTopics?: string[];
+    // Sounds & Music integration
+    soundId?: string;
+    soundTitle?: string;
+    soundAuthorName?: string;
+    soundStartOffset?: number;
+    soundVolume?: number;
+    originalAudioVolume?: number;
     rallyData?: {
       type: 'ASK' | 'HELP' | 'JOIN';
       title: string;
@@ -1654,14 +1702,18 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return;
     }
     try {
+      const resolvedLocation = resolvePostCreationLocation({
+        authorLocationSnapshot: args.location,
+      });
+
       const response = await createPostMutation({
         text: args.text,
         mediaUrl: args.mediaUrl,
         mediaStorageId: args.mediaStorageId as any,
         mediaType: args.mediaType as 'image' | 'video' | undefined,
-        location: resolvePostCreationLocation({
-          authorLocationSnapshot: args.location,
-        }),
+        location: resolvedLocation,
+        latitude: args.latitude,
+        longitude: args.longitude,
         audience: args.audience as any,
         replyPermission: args.replyPermission as any,
         gifUrl: args.gifUrl,
@@ -1669,8 +1721,15 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         pollOptions: args.pollOptions,
         rallyRefId: args.rallyRefId,
         pageRefId: args.pageRefId,
+        groupRefId: args.groupRefId,
         contentTopics: args.contentTopics,
         rallyData: args.rallyData,
+        soundId: args.soundId as any,
+        soundTitle: args.soundTitle,
+        soundAuthorName: args.soundAuthorName,
+        soundStartOffset: args.soundStartOffset,
+        soundVolume: args.soundVolume,
+        originalAudioVolume: args.originalAudioVolume,
       });
 
       const postIdStr = typeof response === 'object' && response !== null ? response.id : response;
@@ -1688,9 +1747,9 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         mediaUrl: resolvedMediaUrl,
         mediaStorageId: response.mediaStorageId ?? args.mediaStorageId,
         mediaType: args.mediaType as 'image' | 'video' | undefined,
-        location: response.location ?? resolvePostCreationLocation({
-          authorLocationSnapshot: args.location,
-        }),
+        location: response.location ?? resolvedLocation,
+        latitude: response.latitude ?? args.latitude,
+        longitude: response.longitude ?? args.longitude,
         distanceMeters: 0, // User's own posts are 0m from themselves; feed recalculates for others
         createdAt: 'Just now',
         likesCount: 0,
@@ -2642,6 +2701,10 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setActiveCycleId,
         activePageId,
         setActivePageId,
+        activeGroupId,
+        setActiveGroupId,
+        isManageGroupOpen,
+        setIsManageGroupOpen,
         activeUserProfile,
         setActiveUserProfile,
         toggleFollowUser,
@@ -2725,6 +2788,12 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updateUserProfile,
         generateCloudinarySignature,
         featureFlags,
+        activeSoundId,
+        setActiveSoundId,
+        isCreateSoundOpen,
+        setIsCreateSoundOpen,
+        openSoundDetail,
+        openCreateSound,
       }}
     >
       {children}

@@ -13,11 +13,15 @@ import {
   BarChart2,
   Calendar,
   Hash,
-  Briefcase,
-  FileText
+  FileText,
+  Music,
+  Sliders,
+  Volume2,
+  Disc,
 } from 'lucide-react';
 import { useAction, useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import { SoundPickerModal, SelectedSoundData } from '../sounds/SoundPickerModal';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { Popover } from '../common/Popover';
@@ -34,11 +38,22 @@ interface PostComposerProps {
   onClose?: () => void;
   initialAudience?: string;
   initialPageRefId?: string;
+  initialGroupRefId?: string;
+  placeholder?: string;
   initialText?: string;
   onSuccess?: () => void;
 }
 
-function PostComposerInner({ embedded = false, onClose, initialAudience = 'everyone', initialPageRefId, initialText = '', onSuccess }: PostComposerProps) {
+function PostComposerInner({
+  embedded = false,
+  onClose,
+  initialAudience = 'everyone',
+  initialPageRefId,
+  initialGroupRefId,
+  placeholder,
+  initialText = '',
+  onSuccess,
+}: PostComposerProps) {
   const {
     currentUser,
     pages,
@@ -69,14 +84,17 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
-  const [attachedLocation, setAttachedLocation] = useState<string | null>(location.name || null);
+  const [attachedLocation, setAttachedLocation] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // New features states
-  const [audience, setAudience] = useState(initialPageRefId ? 'page' : initialAudience);
+  const [audience, setAudience] = useState(
+    initialGroupRefId ? 'group' : initialPageRefId ? 'page' : initialAudience
+  );
   const [showAudienceDropdown, setShowAudienceDropdown] = useState(false);
   const [audienceStep, setAudienceStep] = useState<'main' | 'communities' | 'pages' | 'topics'>('main');
   const [selectedPageRefId, setSelectedPageRefId] = useState<string | null>(initialPageRefId || null);
+  const [selectedGroupRefId, setSelectedGroupRefId] = useState<string | null>(initialGroupRefId || null);
   const [selectedTopicSlugs, setSelectedTopicSlugs] = useState<string[]>([]);
   const [replyPermission, setReplyPermission] = useState('everyone');
   const [showReplyDropdown, setShowReplyDropdown] = useState(false);
@@ -100,11 +118,36 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
   const [rallyCompensationType, setRallyCompensationType] = useState<'free' | 'paying' | 'charging' | 'other' | ''>('');
   const [rallyCompensationAmount, setRallyCompensationAmount] = useState('');
 
+  // Sounds & Music Integration
+  const [attachedSound, setAttachedSound] = useState<SelectedSoundData | null>(null);
+  const [showSoundPicker, setShowSoundPicker] = useState(false);
+  const [soundStartOffset, setSoundStartOffset] = useState<number>(0);
+  const [soundVolume, setSoundVolume] = useState<number>(0.8);
+  const [originalAudioVolume, setOriginalAudioVolume] = useState<number>(1.0);
+  const [showSoundSettings, setShowSoundSettings] = useState(false);
+
+  // Load pending sound if user clicked "Use this Sound" from Sound Details
   useEffect(() => {
-    if (location.name && !attachedLocation) {
-      setAttachedLocation(location.name);
+    try {
+      const saved = localStorage.getItem('lalao_pending_sound');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.id) {
+          setAttachedSound({
+            soundId: parsed.id,
+            title: parsed.title,
+            authorName: parsed.creatorName || 'Original',
+            audioUrl: parsed.audioUrl,
+            duration: parsed.duration || 15,
+          });
+          setMediaType('video');
+          localStorage.removeItem('lalao_pending_sound');
+        }
+      }
+    } catch {
+      // ignore
     }
-  }, [location.name]);
+  }, []);
 
   // Data for audience
   const topicsData = useQuery(api.topics.listActiveTopics, currentUser ? {} : ('skip' as any));
@@ -153,7 +196,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
     setSelectedFile(null);
     setMediaUrl('');
     setMediaType('image');
-    setAttachedLocation(location.name || null);
+    setAttachedLocation(null);
     setAudience(initialPageRefId ? 'page' : 'everyone');
     setSelectedPageRefId(initialPageRefId || null);
     setSelectedTopicSlugs([]);
@@ -354,6 +397,17 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
         };
       }
 
+      const postLocationName = rallyLocation.trim() || attachedLocation || '';
+      let postCoords: { lat?: number; lng?: number } = {};
+      if (postLocationName) {
+        if (attachedLocation && location.name === attachedLocation && typeof location.latitude === 'number' && typeof location.longitude === 'number') {
+          postCoords = { lat: location.latitude, lng: location.longitude };
+        } else {
+          const resolved = getCoordinatesForLocation(postLocationName);
+          postCoords = { lat: resolved.lat, lng: resolved.lng };
+        }
+      }
+
       const created = await createPost({
         text: text.trim(),
         mediaUrl: finalMediaUrl || undefined,
@@ -361,7 +415,9 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
         mediaType,
         mediaWidth: finalMediaWidth,
         mediaHeight: finalMediaHeight,
-        location: attachedLocation || location.name || 'Local',
+        location: postLocationName || undefined,
+        latitude: postCoords.lat,
+        longitude: postCoords.lng,
         audience,
         replyPermission,
         pollQuestion: showPoll ? pollQuestion.trim() : undefined,
@@ -369,6 +425,13 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
         pageRefId: selectedPageRefId || undefined,
         contentTopics: selectedTopicSlugs.length > 0 ? selectedTopicSlugs : undefined,
         rallyData: rallyData as any,
+        // Sound attachment
+        soundId: attachedSound?.soundId as any,
+        soundTitle: attachedSound?.title,
+        soundAuthorName: attachedSound?.authorName,
+        soundStartOffset: attachedSound ? soundStartOffset : undefined,
+        soundVolume: attachedSound ? soundVolume : undefined,
+        originalAudioVolume: attachedSound ? originalAudioVolume : undefined,
       });
 
       if (finalMuxUploadId && created?.id) {
@@ -377,6 +440,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
 
       triggerShareToast('Post published!');
       resetComposer();
+      onSuccess?.();
     } catch (err: any) {
       console.error('Post submit failed:', err);
       triggerShareToast(err?.message || 'Failed to publish post. Please try again.');
@@ -583,7 +647,7 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={4}
-            placeholder="What’s on your mind?"
+            placeholder={placeholder || "What’s on your mind?"}
             className="w-full resize-none bg-transparent text-[16px] leading-relaxed text-theme-primary placeholder:text-theme-tertiary focus:outline-none"
             autoFocus
           />
@@ -797,6 +861,101 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
               </button>
             </div>
           )}
+
+          {/* Attached Sound Pill & Audio Controls */}
+          {attachedSound && (
+            <div className="mt-3 p-3 rounded-2xl border border-[#5E43F3]/30 bg-[#5E43F3]/10 space-y-2.5 animate-in fade-in">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-[#5E43F3] text-white flex items-center justify-center shrink-0">
+                    <Disc className="w-4 h-4 animate-spin [animation-duration:4s]" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-theme-primary truncate">
+                      {attachedSound.title}
+                    </div>
+                    <div className="text-[10px] text-theme-secondary truncate">
+                      by {attachedSound.authorName} • {attachedSound.duration}s
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowSoundSettings(!showSoundSettings)}
+                    className="p-1.5 rounded-lg bg-theme-surface hover:bg-theme-surface-hover text-theme-primary text-xs flex items-center gap-1 border border-theme-divider"
+                    title="Audio Settings"
+                  >
+                    <Sliders className="w-3.5 h-3.5 text-[#5E43F3]" />
+                    <span className="text-[11px] font-semibold hidden sm:inline">Mix Audio</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAttachedSound(null)}
+                    className="p-1.5 rounded-lg text-theme-tertiary hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    title="Remove sound"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Collapsible Audio Mixer & Offset Trimming */}
+              {showSoundSettings && (
+                <div className="pt-2 border-t border-[#5E43F3]/20 space-y-2.5 text-xs">
+                  <div>
+                    <div className="flex justify-between text-[11px] text-theme-secondary mb-1">
+                      <span>Sound Start Offset: {soundStartOffset.toFixed(1)}s</span>
+                      <span className="text-[#5E43F3] font-mono">Max {attachedSound.duration}s</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={Math.max(0, attachedSound.duration - 1)}
+                      step={0.5}
+                      value={soundStartOffset}
+                      onChange={(e) => setSoundStartOffset(parseFloat(e.target.value))}
+                      className="w-full accent-[#5E43F3]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <div className="flex justify-between text-[11px] text-theme-secondary mb-1">
+                        <span>Sound Volume</span>
+                        <span>{Math.round(soundVolume * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={soundVolume}
+                        onChange={(e) => setSoundVolume(parseFloat(e.target.value))}
+                        className="w-full accent-[#5E43F3]"
+                      />
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-[11px] text-theme-secondary mb-1">
+                        <span>Video Audio</span>
+                        <span>{Math.round(originalAudioVolume * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={originalAudioVolume}
+                        onChange={(e) => setOriginalAudioVolume(parseFloat(e.target.value))}
+                        className="w-full accent-[#5E43F3]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* WHO CAN REPLY */}
@@ -843,6 +1002,18 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
               title="Video"
             >
               <Video className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowSoundPicker(true)}
+              className={`flex h-9 w-9 items-center justify-center rounded-full transition ${
+                attachedSound
+                  ? 'bg-[#5E43F3] text-white shadow-md shadow-[#5E43F3]/30'
+                  : 'text-[#5E43F3] hover:bg-[#5E43F3]/10'
+              }`}
+              title="Add Music / Sound"
+            >
+              <Music className="h-5 w-5" />
             </button>
             <Popover
               isOpen={showGifPicker}
@@ -987,6 +1158,15 @@ function PostComposerInner({ embedded = false, onClose, initialAudience = 'every
           </div>
         </div>
       )}
+      {/* Sound Picker Modal */}
+      <SoundPickerModal
+        isOpen={showSoundPicker}
+        onClose={() => setShowSoundPicker(false)}
+        onSelectSound={(sound) => {
+          setAttachedSound(sound);
+          setMediaType('video');
+        }}
+      />
     </div>
   );
 }

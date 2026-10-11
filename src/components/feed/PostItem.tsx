@@ -16,6 +16,7 @@ import {
   Users,
   Check,
   Calendar,
+  Music,
 } from 'lucide-react';
 import { Post, Rally, User } from '../../types';
 import { Avatar } from '../common/Avatar';
@@ -47,6 +48,7 @@ export interface PostItemProps {
 export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, externalEvent, onSelectAuthor, compactMedia }) => {
   const {
     currentUser,
+    openSoundDetail,
     toggleLikePost,
     toggleRepostPost,
     setActiveCommentsPostId,
@@ -106,11 +108,11 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
 
   const isAuthor = currentUser?.id === author.id;
 
-  // Location & Proximity
-  const locationText = post ? post.location : (linkedRally ? linkedRally.location : 'Delta State');
-  const distanceMeters = post ? post.distanceMeters : (linkedRally ? linkedRally.distanceMeters : undefined);
-  const formattedDistance = distanceMeters !== undefined ? formatDistance(distanceMeters, locationPrivacy?.approximateDistance) : '';
-  const proximity = distanceMeters !== undefined ? getProximityCategory(distanceMeters) : { label: '', color: '', dotColor: '' };
+  // Location & Proximity: only render when valid metadata exists, never inventing fallbacks
+  const locationText = (post?.location || linkedRally?.location || '').trim();
+  const hasValidDistance = typeof distanceMeters === 'number' && !isNaN(distanceMeters) && distanceMeters >= 0;
+  const formattedDistance = hasValidDistance ? formatDistance(distanceMeters, locationPrivacy?.approximateDistance) : '';
+  const proximity = hasValidDistance ? getProximityCategory(distanceMeters) : { label: '', color: '', dotColor: '' };
 
   // Timestamp
   const timeText = post ? post.createdAt : (linkedRally ? linkedRally.timeDate : (externalEvent ? '2h' : 'Just now'));
@@ -254,7 +256,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
               {locationText && (
                 <>
                   <span>·</span>
-                  {distanceMeters !== undefined ? (
+                  {hasValidDistance && formattedDistance ? (
                     <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-theme-surface-hover text-theme-secondary text-[11px] font-medium">
                       <span className={`w-1.5 h-1.5 rounded-full ${proximity.dotColor}`} />
                       <MapPin className="w-2.5 h-2.5 text-[#5E43F3]" />
@@ -502,6 +504,30 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                   />
                 )
               )}
+            </div>
+          )}
+
+          {/* Attached Sound Badge */}
+          {post?.soundTitle && (
+            <div className="mt-2.5">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (post.soundId) {
+                    openSoundDetail(post.soundId);
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#5E43F3]/10 hover:bg-[#5E43F3]/20 border border-[#5E43F3]/25 text-[#5E43F3] text-xs font-semibold transition-colors cursor-pointer group"
+              >
+                <Music className="w-3.5 h-3.5 animate-pulse" />
+                <span className="truncate max-w-[200px] sm:max-w-xs">{post.soundTitle}</span>
+                {post.soundAuthorName && (
+                  <span className="text-theme-tertiary text-[11px] font-normal truncate">
+                    • {post.soundAuthorName}
+                  </span>
+                )}
+              </button>
             </div>
           )}
 

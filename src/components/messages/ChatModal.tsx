@@ -411,6 +411,7 @@ export const ChatModal: React.FC = () => {
   const {
     activeChatId,
     setActiveChatId,
+    setActiveGroupId,
     conversations,
     sendDirectMessage,
     triggerShareToast,
@@ -806,6 +807,16 @@ export const ChatModal: React.FC = () => {
   };
 
   const handleViewCommunity = () => {
+    const targetGroupId =
+      (conv as any).groupChat?._id ||
+      (conv as any).groupChatId ||
+      ((conv as any).isGroupChat ? conv.participant.id : null);
+
+    if (targetGroupId) {
+      setActiveGroupId(targetGroupId);
+      setActiveChatId(null);
+      return;
+    }
     setActiveUserProfile(conv.participant);
     setActiveChatId(null);
   };

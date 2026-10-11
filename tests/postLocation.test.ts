@@ -26,3 +26,19 @@ test("uses a clean post creation snapshot and never substitutes a viewer locatio
     "Warri",
   );
 });
+
+test("returns empty string when no location was attached, never inventing a fallback", () => {
+  assert.equal(
+    resolvePostCreationLocation({
+      authorLocationSnapshot: "",
+      viewerLocation: "Udu",
+    }),
+    "",
+  );
+  assert.equal(
+    resolvePostCreationLocation({
+      authorLocationSnapshot: undefined,
+    }),
+    "",
+  );
+});

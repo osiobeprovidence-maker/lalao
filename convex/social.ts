@@ -540,22 +540,15 @@ export const listFeedPosts = query({
         latitude: post.latitude,
         longitude: post.longitude,
         distanceMeters: (() => {
-          if (userLat && userLng && post.latitude && post.longitude) {
-            const R = 6371e3;
-            const f1 = (userLat * Math.PI) / 180;
-            const f2 = (post.latitude * Math.PI) / 180;
-            const df = ((post.latitude - userLat) * Math.PI) / 180;
-            const dl = ((post.longitude - userLng) * Math.PI) / 180;
-            const a = Math.sin(df / 2) ** 2 + Math.cos(f1) * Math.cos(f2) * Math.sin(dl / 2) ** 2;
-            return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+          if (
+            typeof userLat === 'number' &&
+            typeof userLng === 'number' &&
+            typeof post.latitude === 'number' &&
+            typeof post.longitude === 'number'
+          ) {
+            return haversineMeters(userLat, userLng, post.latitude, post.longitude);
           }
-          if (post.location && cleanLocationName) {
-            const postLocLower = post.location.toLowerCase().trim();
-            if (postLocLower.includes(cleanLocationName) || cleanLocationName.includes(postLocLower)) {
-              return 250;
-            }
-          }
-          return 0;
+          return undefined;
         })(),
         createdAt: formatRelativeTime(post.createdAt),
         likesCount: post.likesCount ?? 0,
@@ -577,6 +570,12 @@ export const listFeedPosts = query({
           : undefined,
         rallyRefId: post.rallyRefId,
         pageRefId: post.pageRefId,
+        soundId: post.soundId,
+        soundTitle: post.soundTitle,
+        soundAuthorName: post.soundAuthorName,
+        soundStartOffset: post.soundStartOffset,
+        soundVolume: post.soundVolume,
+        originalAudioVolume: post.originalAudioVolume,
       });
     }
 
@@ -769,27 +768,18 @@ async function fetchPostsForProfileUser(
       latitude: post.latitude,
       longitude: post.longitude,
       distanceMeters: (() => {
-        // Compute distance from viewer to post location
+        // Compute distance from viewer to post location only with verified coordinates
         const vLat = currentUser?.latitude;
         const vLng = currentUser?.longitude;
-        if (vLat && vLng && post.latitude && post.longitude) {
-          const R = 6371e3;
-          const f1 = (vLat * Math.PI) / 180;
-          const f2 = (post.latitude * Math.PI) / 180;
-          const df = ((post.latitude - vLat) * Math.PI) / 180;
-          const dl = ((post.longitude - vLng) * Math.PI) / 180;
-          const a = Math.sin(df / 2) ** 2 + Math.cos(f1) * Math.cos(f2) * Math.sin(dl / 2) ** 2;
-          return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+        if (
+          typeof vLat === 'number' &&
+          typeof vLng === 'number' &&
+          typeof post.latitude === 'number' &&
+          typeof post.longitude === 'number'
+        ) {
+          return haversineMeters(vLat, vLng, post.latitude, post.longitude);
         }
-        // Location name overlap → treat as same area
-        const viewerLoc = (currentUser?.locationName ?? "").toLowerCase().trim();
-        if (post.location && viewerLoc) {
-          const postLocLower = post.location.toLowerCase().trim();
-          if (postLocLower.includes(viewerLoc) || viewerLoc.includes(postLocLower)) {
-            return 250;
-          }
-        }
-        return 0;
+        return undefined;
       })(),
       createdAt: formatRelativeTime(post.createdAt),
       likesCount: post.likesCount ?? 0,
@@ -1323,6 +1313,7 @@ export const createPost = mutation({
         v.literal("everyone"),
         v.literal("closeFriends"),
         v.literal("community"),
+        v.literal("group"),
         v.literal("page"),
         v.literal("nearby"),
         v.literal("anime"),
@@ -1345,6 +1336,7 @@ export const createPost = mutation({
     pollOptions: v.optional(v.array(v.string())),
     rallyRefId: v.optional(v.string()),
     pageRefId: v.optional(v.string()),
+    groupRefId: v.optional(v.string()),
     contentTopics: v.optional(v.array(v.string())),
     authorUserId: v.optional(v.string()),
     authorUsername: v.optional(v.string()),
@@ -1361,6 +1353,13 @@ export const createPost = mutation({
         v.literal("failed")
       )
     ),
+    // Sounds & Music integration
+    soundId: v.optional(v.id("sounds")),
+    soundTitle: v.optional(v.string()),
+    soundAuthorName: v.optional(v.string()),
+    soundStartOffset: v.optional(v.number()),
+    soundVolume: v.optional(v.number()),
+    originalAudioVolume: v.optional(v.number()),
     rallyData: v.optional(
       v.object({
         type: v.union(v.literal("ASK"), v.literal("HELP"), v.literal("JOIN")),
@@ -1428,6 +1427,47 @@ export const createPost = mutation({
     }
 
     // Authorization checks for destinations
+    if (args.audience === "group" || args.groupRefId) {
+      if (!args.groupRefId) throw new Error("Missing groupRefId for group destination");
+      const normGroupId = ctx.db.normalizeId("groupChats", args.groupRefId);
+      if (!normGroupId) throw new Error("Invalid group ID");
+      const group = await ctx.db.get(normGroupId);
+      if (!group) throw new Error("Group not found");
+
+      if (group.communityEnabled === false) {
+        throw new Error("Community features are not enabled for this group");
+      }
+      if (group.communityFeatures && group.communityFeatures.posts === false) {
+        throw new Error("Posting is disabled for this group");
+      }
+
+      if ((args.mediaUrl || args.mediaStorageId || args.muxUploadId) && group.communityFeatures?.media === false) {
+        throw new Error("Media uploads are disabled for this group");
+      }
+
+      const isCreator = group.creatorId === currentUser._id;
+      const mem = await ctx.db
+        .query("groupMembers")
+        .withIndex("by_group_user", (q: any) => q.eq("groupId", normGroupId).eq("userId", currentUser._id))
+        .first();
+      const isMember = isCreator || !!mem || (group.memberIds && group.memberIds.includes(currentUser._id));
+      const isAdmin = isCreator || mem?.role === "owner" || mem?.role === "admin";
+
+      if (!isMember) {
+        throw new Error("You must be a member of this group to publish content to it");
+      }
+
+      if (group.publishingPermissions?.canPost === "admins_only" && !isAdmin) {
+        throw new Error("Only group administrators can publish posts in this group");
+      }
+      if ((args.mediaUrl || args.mediaStorageId || args.muxUploadId) && group.publishingPermissions?.canUploadMedia === "admins_only" && !isAdmin) {
+        throw new Error("Only group administrators can upload media in this group");
+      }
+      if (args.rallyData && group.publishingPermissions?.canCreateRallies === "admins_only" && !isAdmin) {
+        throw new Error("Only group administrators can create rallies in this group");
+      }
+    }
+
     if (args.audience === "page" || args.audience === "community") {
       if (!args.pageRefId) throw new Error("Missing pageRefId for destination");
       const normalizedId = ctx.db.normalizeId("pages", args.pageRefId);
@@ -1448,7 +1488,7 @@ export const createPost = mutation({
             )
             .first();
           if (!isMember) {
-            throw new Error("You must join this community to save drafts to it");
+            throw new Error("You must join this community to publish content to it");
           }
         }
       }
@@ -1486,6 +1526,7 @@ export const createPost = mutation({
         peopleNeeded: args.rallyData.peopleNeeded,
         compensationType: args.rallyData.compensationType,
         compensationAmount: args.rallyData.compensationAmount,
+        groupRefId: args.groupRefId,
         status: "active",
         participantCount: 1, // creator is a participant
         createdAt: now,
@@ -1520,6 +1561,7 @@ export const createPost = mutation({
       pollOptions: args.pollOptions,
       rallyRefId: finalRallyRefId,
       pageRefId: args.pageRefId,
+      groupRefId: args.groupRefId,
       contentTopics: extractedTopics.length > 0 ? extractedTopics : undefined,
       muxUploadId: args.muxUploadId,
       muxAssetId: args.muxAssetId,
@@ -1527,7 +1569,24 @@ export const createPost = mutation({
       mediaWidth: args.mediaWidth,
       mediaHeight: args.mediaHeight,
       mediaStatus: initialMediaStatus,
+      // Sound fields
+      soundId: args.soundId,
+      soundTitle: args.soundTitle,
+      soundAuthorName: args.soundAuthorName,
+      soundStartOffset: args.soundStartOffset,
+      soundVolume: args.soundVolume,
+      originalAudioVolume: args.originalAudioVolume,
     });
+
+    // If a sound is attached, increment its usage count
+    if (args.soundId) {
+      const soundDoc = await ctx.db.get(args.soundId);
+      if (soundDoc) {
+        await ctx.db.patch(args.soundId, {
+          usageCount: (soundDoc.usageCount ?? 0) + 1,
+        });
+      }
+    }
 
     if (args.rallyData && finalRallyRefId) {
       await ctx.db.patch(finalRallyRefId as any, { postId });
@@ -1841,6 +1900,33 @@ export const addCommentToPost = mutation({
         const isAuthor = post.authorId === currentUser._id;
         const isMentioned = post.text.includes(`@${currentUser.username}`) || (currentUser.name && post.text.includes(`@${currentUser.name}`));
         if (!isAuthor && !isMentioned) throw new Error("Only mentioned users can reply to this post");
+      }
+    }
+
+    if ((post as any).groupRefId) {
+      const normGroupId = ctx.db.normalizeId("groupChats", (post as any).groupRefId);
+      if (normGroupId) {
+        const group = await ctx.db.get(normGroupId);
+        if (group) {
+          if (group.communityEnabled === false || group.communityFeatures?.replies === false) {
+            throw new Error("Replies are disabled for this group");
+          }
+          const isCreator = group.creatorId === currentUser._id;
+          const mem = await ctx.db
+            .query("groupMembers")
+            .withIndex("by_group_user", (q: any) => q.eq("groupId", normGroupId).eq("userId", currentUser._id))
+            .first();
+          const isMember = isCreator || !!mem || (group.memberIds && group.memberIds.includes(currentUser._id));
+          const isAdmin = isCreator || mem?.role === "owner" || mem?.role === "admin";
+          const visibility = group.visibility ?? "private_discoverable";
+
+          if (visibility !== "public" && !isMember) {
+            throw new Error("You must be a member of this group to reply to posts");
+          }
+          if (group.publishingPermissions?.canReply === "admins_only" && !isAdmin) {
+            throw new Error("Only group administrators can reply to posts in this group");
+          }
+        }
       }
     }
 
@@ -2536,6 +2622,24 @@ export const createGroupChat = mutation({
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
+
+    // Populate groupMembers table
+    await ctx.db.insert("groupMembers", {
+      groupId: groupChatId,
+      userId: currentUser._id,
+      role: "owner",
+      joinedAt: Date.now(),
+    });
+    for (const memberId of validMemberIds) {
+      if (memberId !== currentUser._id) {
+        await ctx.db.insert("groupMembers", {
+          groupId: groupChatId,
+          userId: memberId,
+          role: "member",
+          joinedAt: Date.now(),
+        });
+      }
+    }
 
     const conversationId = await ctx.db.insert("conversations", {
       userA: currentUser._id,

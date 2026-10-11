@@ -16,9 +16,9 @@ import {
   ShoppingBag,
   X,
   Download,
-  BadgeCheck,
   Sparkles,
   Briefcase,
+  Music,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useLalao } from '../../context/LalaoContext';
@@ -113,6 +113,18 @@ export const DesktopSidebar: React.FC = () => {
         if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'instant' });
       },
       isActive: activeTab === 'discover',
+      badge: undefined as number | undefined,
+    },
+    {
+      id: 'sounds',
+      label: 'Sounds',
+      icon: Music,
+      action: () => {
+        setActiveTab('sounds');
+        const mainEl = document.querySelector('main');
+        if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'instant' });
+      },
+      isActive: activeTab === 'sounds',
       badge: undefined as number | undefined,
     },
     {

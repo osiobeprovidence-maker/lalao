@@ -134,12 +134,25 @@ export const CreatePostPage: React.FC = () => {
         finalStorageId = data.storageId;
       }
 
+      const postLocationName = locationText?.trim() || '';
+      let postCoords: { lat?: number; lng?: number } = {};
+      if (postLocationName) {
+        if (location.name === postLocationName && typeof location.latitude === 'number' && typeof location.longitude === 'number') {
+          postCoords = { lat: location.latitude, lng: location.longitude };
+        } else {
+          const resolved = getCoordinatesForLocation(postLocationName);
+          postCoords = { lat: resolved.lat, lng: resolved.lng };
+        }
+      }
+
       await createPost({
         text: caption.trim(),
         mediaUrl: finalStorageId ? undefined : (mediaUrl || undefined),
         mediaStorageId: finalStorageId,
         mediaType,
-        location: locationText || location.name,
+        location: postLocationName || undefined,
+        latitude: postCoords.lat,
+        longitude: postCoords.lng,
         audience: audience.toLowerCase(),
       });
       setCaption('');

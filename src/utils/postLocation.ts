@@ -6,5 +6,5 @@ export interface PostCreationLocationContext {
 export function resolvePostCreationLocation({
   authorLocationSnapshot,
 }: PostCreationLocationContext): string {
-  return authorLocationSnapshot?.trim() || "Local";
+  return authorLocationSnapshot?.trim() || "";
 }

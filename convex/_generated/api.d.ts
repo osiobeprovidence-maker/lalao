@@ -20,6 +20,7 @@ import type * as cycles from "../cycles.js";
 import type * as debug from "../debug.js";
 import type * as ecommerce from "../ecommerce.js";
 import type * as groupAccess from "../groupAccess.js";
+import type * as groups from "../groups.js";
 import type * as http from "../http.js";
 import type * as internal_platformSettingsDefaults from "../internal/platformSettingsDefaults.js";
 import type * as market from "../market.js";
@@ -65,6 +66,7 @@ declare const fullApi: ApiFromModules<{
   debug: typeof debug;
   ecommerce: typeof ecommerce;
   groupAccess: typeof groupAccess;
+  groups: typeof groups;
   http: typeof http;
   "internal/platformSettingsDefaults": typeof internal_platformSettingsDefaults;
   market: typeof market;

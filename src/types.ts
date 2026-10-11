@@ -136,7 +136,7 @@ export interface Post {
   visibility?: 'public' | 'followers';
   latitude?: number;
   longitude?: number;
-  distanceMeters: number; // in meters, e.g. 21 -> 21m, 1200 -> 1.2 km
+  distanceMeters?: number; // in meters, e.g. 21 -> 21m, 1200 -> 1.2 km
   createdAt: string;
   likesCount: number;
   commentsCount: number;
@@ -155,6 +155,50 @@ export interface Post {
   };
   rallyRefId?: string; // If this post is linked to or broadcasting a Rally
   pageRefId?: string;
+  // Sound attachment fields
+  soundId?: string;
+  soundTitle?: string;
+  soundAuthorName?: string;
+  soundStartOffset?: number;
+  soundVolume?: number;
+  originalAudioVolume?: number;
+}
+
+export type SoundCategory = 'music' | 'original' | 'effects' | 'voice';
+
+export interface SoundCreator {
+  id: string;
+  name: string;
+  username: string;
+  avatar?: string;
+  isVerified?: boolean;
+}
+
+export interface SoundItem {
+  _id?: string;
+  id: string;
+  creatorId: string;
+  creator?: SoundCreator;
+  title: string;
+  description?: string;
+  category: SoundCategory;
+  genre?: string;
+  tags?: string[];
+  duration: number; // in seconds
+  audioUrl: string;
+  audioStorageId?: string;
+  coverUrl?: string;
+  waveform?: number[];
+  visibility: 'public' | 'private';
+  isOfficial?: boolean;
+  usageCount: number;
+  favoritesCount: number;
+  isFavorited?: boolean;
+  license?: string;
+  moderationStatus?: 'safe' | 'flagged' | 'removed';
+  isDeleted?: boolean;
+  createdAt: number;
+  updatedAt?: number;
 }
 
 export interface Rally {
@@ -291,6 +335,74 @@ export interface PageAnalytics {
   ticketSalesRevenue: number;
   ticketsSold: number;
   productSalesRevenue?: number;
+}
+
+export type GroupVisibility = 'public' | 'private_discoverable' | 'private_hidden';
+export type GroupRole = 'owner' | 'admin' | 'moderator' | 'member';
+
+export interface GroupCommunityFeatures {
+  posts: boolean;
+  replies: boolean;
+  media: boolean;
+  rallies: boolean;
+}
+
+export interface GroupPublishingPermissions {
+  canPost: string;
+  canReply: string;
+  canUploadMedia: string;
+  canCreateRallies: string;
+}
+
+export interface Group {
+  id: string;
+  name: string;
+  username: string;
+  description: string;
+  avatarUrl: string;
+  coverImage: string;
+  rules: string[];
+  category: string;
+  interests?: string[];
+  visibility: GroupVisibility;
+  communityEnabled: boolean;
+  communityFeatures: GroupCommunityFeatures;
+  publishingPermissions: GroupPublishingPermissions;
+  memberCount: number;
+  followersCount: number;
+  isMember: boolean;
+  isFollower: boolean;
+  isPendingRequest?: boolean;
+  isOwner: boolean;
+  isAdmin: boolean;
+  isModerator: boolean;
+  role: GroupRole | null;
+  conversationId: string | null;
+  isRestrictedPreview?: boolean;
+  createdAt: number;
+}
+
+export interface GroupMember {
+  id: string;
+  name: string;
+  username: string;
+  avatar: string;
+  role: GroupRole;
+  isCreator: boolean;
+  joinedAt: number;
+  isVerified?: boolean;
+  verificationTier?: string;
+}
+
+export interface GroupAnalytics {
+  totalMembers: number;
+  pendingRequestsCount: number;
+  totalPosts: number;
+  totalReplies: number;
+  mediaCount: number;
+  totalRallies: number;
+  totalMessages: number;
+  followersCount: number;
 }
 
 export interface Page {

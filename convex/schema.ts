@@ -179,6 +179,7 @@ export default defineSchema({
     pollQuestion: v.optional(v.string()),
     pollOptions: v.optional(v.array(v.string())),
     pageRefId: v.optional(v.string()),
+    groupRefId: v.optional(v.string()),
     rallyRefId: v.optional(v.string()),
     mediaWidth: v.optional(v.number()),
     mediaHeight: v.optional(v.number()),
@@ -204,9 +205,18 @@ export default defineSchema({
       )
     ),
     mediaProcessingError: v.optional(v.string()),
+    // Sound & Music attachment fields
+    soundId: v.optional(v.id("sounds")),
+    soundTitle: v.optional(v.string()),
+    soundAuthorName: v.optional(v.string()),
+    soundStartOffset: v.optional(v.number()),
+    soundVolume: v.optional(v.number()),
+    originalAudioVolume: v.optional(v.number()),
   })
     .index("by_author", ["authorId"])
     .index("by_created", ["createdAt"])
+    .index("by_group_ref", ["groupRefId"])
+    .index("by_sound", ["soundId"])
     .searchIndex("search_text", { searchField: "text" }),
 
   comments: defineTable({
@@ -349,15 +359,103 @@ export default defineSchema({
 
   groupChats: defineTable({
     name: v.string(),
+    username: v.optional(v.string()),
     description: v.optional(v.string()),
     creatorId: v.id("users"),
     memberIds: v.array(v.id("users")),
     avatarUrl: v.optional(v.string()),
+    coverImage: v.optional(v.string()),
+    category: v.optional(v.string()),
+    rules: v.optional(v.array(v.string())),
     interests: v.array(v.string()),
+    visibility: v.optional(
+      v.union(
+        v.literal("public"),
+        v.literal("private_discoverable"),
+        v.literal("private_hidden")
+      )
+    ),
+    communityEnabled: v.optional(v.boolean()),
+    communityFeatures: v.optional(
+      v.object({
+        posts: v.boolean(),
+        replies: v.boolean(),
+        media: v.boolean(),
+        rallies: v.boolean(),
+      })
+    ),
+    publishingPermissions: v.optional(
+      v.object({
+        canPost: v.string(),
+        canReply: v.string(),
+        canUploadMedia: v.string(),
+        canCreateRallies: v.string(),
+      })
+    ),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
-    .index("by_creator", ["creatorId"]),
+    .index("by_creator", ["creatorId"])
+    .index("by_username", ["username"])
+    .index("by_visibility", ["visibility"]),
+
+  groupMembers: defineTable({
+    groupId: v.id("groupChats"),
+    userId: v.id("users"),
+    role: v.union(
+      v.literal("owner"),
+      v.literal("admin"),
+      v.literal("moderator"),
+      v.literal("member")
+    ),
+    joinedAt: v.number(),
+  })
+    .index("by_group", ["groupId"])
+    .index("by_user", ["userId"])
+    .index("by_group_user", ["groupId", "userId"])
+    .index("by_group_role", ["groupId", "role"]),
+
+  groupJoinRequests: defineTable({
+    groupId: v.id("groupChats"),
+    userId: v.id("users"),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected")
+    ),
+    message: v.optional(v.string()),
+    createdAt: v.number(),
+    reviewedAt: v.optional(v.number()),
+    reviewedBy: v.optional(v.id("users")),
+  })
+    .index("by_group_status", ["groupId", "status"])
+    .index("by_user_status", ["userId", "status"])
+    .index("by_group_user", ["groupId", "userId"]),
+
+  groupInvitations: defineTable({
+    groupId: v.id("groupChats"),
+    inviterId: v.id("users"),
+    invitedUserId: v.id("users"),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("accepted"),
+      v.literal("rejected")
+    ),
+    createdAt: v.number(),
+    respondedAt: v.optional(v.number()),
+  })
+    .index("by_group_status", ["groupId", "status"])
+    .index("by_invited_user_status", ["invitedUserId", "status"])
+    .index("by_group_invited_user", ["groupId", "invitedUserId"]),
+
+  groupFollowers: defineTable({
+    groupId: v.id("groupChats"),
+    userId: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_group_user", ["groupId", "userId"])
+    .index("by_user", ["userId"])
+    .index("by_group", ["groupId"]),
 
   groupCycles: defineTable({
     name: v.string(),
@@ -1043,12 +1141,14 @@ export default defineSchema({
     participantCount: v.optional(v.number()),
     urgency: v.optional(v.union(v.literal("normal"), v.literal("urgent"))),
     tags: v.optional(v.array(v.string())),
+    groupRefId: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
   })
     .index("by_creator", ["creatorId"])
     .index("by_post", ["postId"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .index("by_group_ref", ["groupRefId"]),
 
   rallyParticipants: defineTable({
     userId: v.id("users"),
@@ -1258,4 +1358,55 @@ export default defineSchema({
     betaCommunityUrl: v.string(),
     faqs: v.array(v.object({ question: v.string(), answer: v.string() })),
   }),
+
+  // ---- SOUNDS & MUSIC LIBRARY ----
+  sounds: defineTable({
+    creatorId: v.id("users"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    category: v.union(
+      v.literal("music"),
+      v.literal("original"),
+      v.literal("effects"),
+      v.literal("voice")
+    ),
+    genre: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    duration: v.number(), // in seconds
+    audioUrl: v.string(),
+    audioStorageId: v.optional(v.id("_storage")),
+    coverUrl: v.optional(v.string()),
+    waveform: v.optional(v.array(v.number())), // normalized 0..1 peak points
+    visibility: v.union(v.literal("public"), v.literal("private")),
+    isOfficial: v.optional(v.boolean()),
+    usageCount: v.number(),
+    favoritesCount: v.number(),
+    license: v.optional(v.string()),
+    moderationStatus: v.optional(
+      v.union(v.literal("safe"), v.literal("flagged"), v.literal("removed"))
+    ),
+    isDeleted: v.optional(v.boolean()), // Soft-deletion preserves existing videos
+    deletedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_creator", ["creatorId"])
+    .index("by_category", ["category"])
+    .index("by_usage", ["usageCount"])
+    .index("by_created", ["createdAt"])
+    .index("by_visibility", ["visibility"])
+    .searchIndex("search_sound", {
+      searchField: "title",
+      filterFields: ["category", "visibility"],
+    }),
+
+  soundFavourites: defineTable({
+    userId: v.id("users"),
+    soundId: v.id("sounds"),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_sound", ["soundId"])
+    .index("by_user_sound", ["userId", "soundId"]),
 });
+

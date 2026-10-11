@@ -15,6 +15,8 @@ import {
   Lightbulb,
   Building2,
   BadgeCheck,
+  Compass,
+  TrendingUp,
 } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
@@ -170,38 +172,60 @@ export const ProfileView: React.FC = () => {
       {/* Main Profile Info Card */}
       <div className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0 space-y-1.5">
+          <div className="flex-1 min-w-0 space-y-2">
+            {/* 1. Full name and verification badge */}
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-xl font-bold text-theme-primary leading-tight">
                   {currentUser.name}
                 </h2>
                 <VerificationBadge user={currentUser} size="sm" />
+                {currentUser.badge && <Badge type={currentUser.badge} />}
               </div>
-              <p className="text-xs text-theme-tertiary font-medium">
+              {/* 2. Username */}
+              <p className="text-xs text-theme-tertiary font-medium mt-0.5">
                 @{currentUser.username}
               </p>
             </div>
 
-            {/* Bio */}
+            {/* 3. Bio or description */}
             <p className="text-xs text-theme-primary leading-relaxed">
               {currentUser.bio || 'No bio yet. Add a few details to introduce yourself.'}
             </p>
 
-            {/* Location & Metadata */}
-            <div className="flex flex-wrap items-center gap-3 text-xs text-theme-tertiary pt-0.5">
-              <div className="flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-[#5E43F3]" />
-                <span>{currentUser.location || 'Location not added yet'}</span>
-              </div>
-              <span>·</span>
-              <div className="flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-theme-tertiary" />
-                <span>Profile ready</span>
-              </div>
+            {/* 4. Profile location */}
+            {currentUser.location && (() => {
+              const cleanLoc = currentUser.location.replace(/\s*\(Detected\)\s*/i, '').replace(/^GPS Detected$/i, '').trim();
+              return cleanLoc ? (
+                <div className="flex items-center gap-1.5 text-xs text-theme-secondary font-medium">
+                  <MapPin className="w-3.5 h-3.5 text-[#5E43F3] shrink-0" />
+                  <span className="truncate">{cleanLoc}</span>
+                </div>
+              ) : null;
+            })()}
+
+            {/* 5. Connected community information (On one line with graceful mobile wrap/truncation) */}
+            <div className="flex items-center gap-1.5 text-xs text-theme-tertiary min-w-0 whitespace-nowrap overflow-hidden text-ellipsis">
+              <Compass className="w-3.5 h-3.5 text-[#5E43F3] shrink-0" />
+              <span className="truncate">
+                Connected via {currentUser.communityName || currentUser.connectedCommunity || 'Lalao West Africa Community'}
+              </span>
             </div>
 
-            {/* Follower Stats & Total Likes */}
+            {/* 6. Creator Level and Ranked Creator badges */}
+            {currentUser.verificationTier === 'creator' && (
+              <div className="flex items-center gap-1.5 pt-0.5 flex-wrap">
+                <span className="px-2.5 py-0.5 rounded-full bg-[#5E43F3]/10 text-[#5E43F3] border border-[#5E43F3]/20 text-[10px] font-black uppercase tracking-wider inline-flex items-center">
+                  {currentUser.creatorCategory || 'CREATOR'} · LEVEL {currentUser.creatorLevel || 1}
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-theme-surface text-theme-secondary border border-theme-divider-light text-[10px] font-bold inline-flex items-center gap-1">
+                  <TrendingUp className="w-2.5 h-2.5 text-[#5E43F3]" />
+                  Ranked Creator
+                </span>
+              </div>
+            )}
+
+            {/* 7. Followers and likes counts */}
             <div className="flex items-center gap-4 text-xs pt-0.5">
               <button
                 id="btn-profile-open-followers"

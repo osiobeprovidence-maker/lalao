@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLalao } from '../../context/LalaoContext';
-import { X, Heart, MessageCircle, Repeat, Bookmark, Share, Volume2, VolumeX, MoreHorizontal } from 'lucide-react';
+import { X, Heart, MessageCircle, Repeat, Bookmark, Share, Volume2, VolumeX, MoreHorizontal, Music, Disc } from 'lucide-react';
 import { VideoPlayer } from './VideoPlayer';
 import { Post } from '../../types';
 import { VerificationBadge } from '../common/VerificationBadge';
@@ -103,7 +103,7 @@ const VideoFeedItem: React.FC<{ post: Post, isActive: boolean, onIntersect: () =
     return () => observer.disconnect();
   }, [onIntersect]);
 
-  const { toggleLikePost, toggleSavePost, setActiveCommentsPostId } = useLalao();
+  const { toggleLikePost, toggleSavePost, setActiveCommentsPostId, openSoundDetail, setActiveVideoFeedPostId } = useLalao();
 
   return (
     <div ref={itemRef} className="relative w-full h-full flex items-center justify-center bg-theme-inverse overflow-hidden py-16 md:py-20 px-4">
@@ -145,9 +145,30 @@ const VideoFeedItem: React.FC<{ post: Post, isActive: boolean, onIntersect: () =
           </div>
 
           {post.text && (
-            <p className="text-white text-[15px] line-clamp-3 break-words mb-5 leading-snug">
+            <p className="text-white text-[15px] line-clamp-3 break-words mb-3 leading-snug">
               {post.text}
             </p>
+          )}
+
+          {/* Sound badge */}
+          {post.soundTitle && (
+            <div className="mb-4">
+              <button
+                onClick={() => {
+                  if (post.soundId) {
+                    setActiveVideoFeedPostId(null);
+                    openSoundDetail?.(post.soundId);
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-semibold backdrop-blur-sm transition-colors cursor-pointer group"
+              >
+                <Disc className="w-3.5 h-3.5 text-[#5E43F3] animate-spin [animation-duration:3s]" />
+                <span className="truncate max-w-[200px]">{post.soundTitle}</span>
+                {post.soundAuthorName && (
+                  <span className="text-white/60 text-[11px] truncate">• {post.soundAuthorName}</span>
+                )}
+              </button>
+            </div>
           )}
 
           <div className="flex items-center justify-between text-white/80">

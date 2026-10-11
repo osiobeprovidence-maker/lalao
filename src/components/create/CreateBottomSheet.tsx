@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React from 'react';
-import { X, PenLine, Hand, Building2, ChevronRight, ArrowLeft, Sparkles, Users, MessageCircle } from 'lucide-react';
+import { X, PenLine, Hand, Building2, ChevronRight, ArrowLeft, Sparkles, Users, MessageCircle, Music } from 'lucide-react';
 import { useLalao, CreateOption } from '../../context/LalaoContext';
 import { PostComposerModal } from './PostComposerModal';
 import { RallyComposerModal } from './RallyComposerModal';
@@ -17,6 +17,7 @@ export const CreateBottomSheet: React.FC = () => {
     setIsCreateCycleOpen,
     setIsCreateGroupChatOpen,
     setIsCreateGroupCycleOpen,
+    openCreateSound,
   } = useLalao();
 
   if (!isCreateSheetOpen) return null;
@@ -55,6 +56,13 @@ export const CreateBottomSheet: React.FC = () => {
       setIsCreateSheetOpen(false);
       setCreateFlowType(null);
       setIsCreateGroupChatOpen(true);
+      return;
+    }
+
+    if (type === 'sound') {
+      setIsCreateSheetOpen(false);
+      setCreateFlowType(null);
+      openCreateSound();
       return;
     }
 
@@ -134,6 +142,33 @@ export const CreateBottomSheet: React.FC = () => {
                   </div>
                   <p className="mt-1 text-xs leading-relaxed text-theme-secondary">
                     Share a photo, video or thought with your community.
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            <button
+              id="btn-create-option-sound"
+              type="button"
+              onClick={() => handleSelect('sound')}
+              className="w-full rounded-2xl border border-theme-divider bg-theme-surface p-4 text-left transition-all hover:border-[#5E43F3]/30 hover:bg-[#5E43F3]/5 active:scale-[0.99] cursor-pointer"
+            >
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#5E43F3]/10 text-[#5E43F3] shadow-xs">
+                  <Music className="h-6 w-6 stroke-[2.2]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-base font-bold text-theme-primary">Original Sound</span>
+                      <span className="rounded bg-[#5E43F3]/20 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-[#5E43F3]">
+                        Audio
+                      </span>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-theme-tertiary" />
+                  </div>
+                  <p className="mt-1 text-xs leading-relaxed text-theme-secondary">
+                    Record voice, synthesize beats, or upload audio to share in the LaLao Sounds library.
                   </p>
                 </div>
               </div>

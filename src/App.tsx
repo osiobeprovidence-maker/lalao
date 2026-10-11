@@ -13,6 +13,9 @@ import { CreatePageView } from './components/pages/CreatePageView';
 import { ProfileView } from './components/profile/ProfileView';
 import { EventsView } from './components/events/EventsView';
 import { MyPagesView } from './pages/my-pages/MyPagesView';
+import { SoundsLibraryView } from './components/sounds/SoundsLibraryView';
+import { SoundDetailModal } from './components/sounds/SoundDetailModal';
+import { CreateSoundModal } from './components/sounds/CreateSoundModal';
 
 // Modals, Sheets, and Full-Page Subviews
 import { LocationRadiusModal } from './components/location/LocationRadiusModal';
@@ -24,6 +27,8 @@ import { CreateGroupChatModal } from './components/messages/CreateGroupChatModal
 import { CycleStoryViewerModal } from './components/cycles/CycleStoryViewerModal';
 import { CycleDetailModal } from './components/cycles/CycleDetailModal';
 import { PageDetailModal } from './components/pages/PageDetailModal';
+import { GroupProfileView } from './components/groups/GroupProfileView';
+import { ManageGroupModal } from './components/groups/ManageGroupModal';
 import { EventDistributionProvider } from './services/events/EventDistributionContext';
 import { KlyroWalletProvider } from './services/wallet/KlyroWalletContext';
 import { UserProfileModal } from './components/profile/UserProfileModal';
@@ -126,6 +131,8 @@ const LalaoAppContent: React.FC = () => {
     currentUser,
     activePageId,
     setActivePageId,
+    activeGroupId,
+    setActiveGroupId,
     isCreatorHubOpen,
     setIsCreatorHubOpen,
     isCreatorSubscriptionOpen,
@@ -134,6 +141,10 @@ const LalaoAppContent: React.FC = () => {
     openCreatorSubscription,
     isCreatorPremiumActive,
     triggerShareToast,
+    activeSoundId,
+    setActiveSoundId,
+    isCreateSoundOpen,
+    setIsCreateSoundOpen,
   } = useLalao();
   const mainRef = useRef<HTMLElement>(null);
   
@@ -155,8 +166,16 @@ const LalaoAppContent: React.FC = () => {
   useEffect(() => {
     if (location.pathname === '/beta-tester' || location.pathname === '/app/beta-tester') {
       setActiveTab('beta-tester');
+    } else if (location.pathname === '/sounds' || location.pathname === '/app/sounds') {
+      setActiveTab('sounds');
+    } else if (location.pathname.startsWith('/sounds/')) {
+      const sId = location.pathname.split('/sounds/')[1];
+      if (sId) {
+        setActiveTab('sounds');
+        setActiveSoundId(sId);
+      }
     }
-  }, [location.pathname, setActiveTab]);
+  }, [location.pathname, setActiveTab, setActiveSoundId]);
 
   useEffect(() => {
     if (location.pathname.startsWith('/app/page/')) {
@@ -166,6 +185,17 @@ const LalaoAppContent: React.FC = () => {
       }
     } else if (activePageId) {
       setActivePageId(null);
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/app/group/')) {
+      const groupId = location.pathname.split('/app/group/')[1]?.split('/')[0];
+      if (groupId && activeGroupId !== groupId) {
+        setActiveGroupId(groupId);
+      }
+    } else if (activeGroupId && !location.pathname.startsWith('/app/group/')) {
+      setActiveGroupId(null);
     }
   }, [location.pathname]);
 
@@ -196,6 +226,14 @@ const LalaoAppContent: React.FC = () => {
       navigate('/app');
     }
   }, [activePageId]);
+
+  useEffect(() => {
+    if (activeGroupId && !location.pathname.startsWith(`/app/group/${activeGroupId}`)) {
+      navigate(`/app/group/${activeGroupId}`);
+    } else if (!activeGroupId && location.pathname.startsWith('/app/group/')) {
+      navigate('/app');
+    }
+  }, [activeGroupId]);
 
   const followingPosts = posts.filter(
     (post) => post.author.isFollowing || post.author.id === currentUser.id || (post.pageRefId && pages.some((page) => page.id === post.pageRefId && page.isFollowing))
@@ -275,7 +313,11 @@ const LalaoAppContent: React.FC = () => {
             className="relative flex-1 overflow-y-auto bg-theme-base pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0 lg:min-h-0"
           >
             <div className="mx-auto w-full max-w-[600px] min-h-full">
-              {!activePageId ? (
+              {activeGroupId ? (
+                <div key="tab-group-detail" className="animate-in fade-in duration-200 min-h-full w-full bg-transparent">
+                  <GroupProfileView />
+                </div>
+              ) : !activePageId ? (
                 <>
             {activeTab === 'create-post' && (
               <div key="tab-create-post" className="animate-in fade-in duration-200 min-h-full w-full bg-theme-base">
@@ -290,6 +332,11 @@ const LalaoAppContent: React.FC = () => {
             {activeTab === 'discover' && (
               <div key="tab-discover" className="animate-in fade-in duration-200 w-full bg-transparent">
                 <DiscoverView />
+              </div>
+            )}
+            {activeTab === 'sounds' && (
+              <div key="tab-sounds" className="animate-in fade-in duration-200 min-h-full w-full bg-transparent">
+                <SoundsLibraryView />
               </div>
             )}
             {activeTab === 'create-page' && (
@@ -404,6 +451,7 @@ const LalaoAppContent: React.FC = () => {
       <RallyComposerModal />
       <CreateCycleModal isOpen={isCreateCycleOpen} onClose={() => setIsCreateCycleOpen(false)} />
       <CreateGroupChatModal />
+      <ManageGroupModal />
       <CreateGroupCycleModal />
       <CycleDetailModal />
       <UserProfileModal />
@@ -436,8 +484,18 @@ const LalaoAppContent: React.FC = () => {
       {!['create-post'].includes(activeTab) && <MyTicketsModal />}
       {!['create-post'].includes(activeTab) && <WalletModal />}
       {!['create-post'].includes(activeTab) && <MySubscriptionsModal />}
-            <AuthPromptModal />
-        <NotificationListener />
+      <AuthPromptModal />
+      <NotificationListener />
+
+      {/* Global Sound Modals */}
+      <SoundDetailModal
+        soundId={activeSoundId}
+        onClose={() => setActiveSoundId(null)}
+      />
+      <CreateSoundModal
+        isOpen={isCreateSoundOpen}
+        onClose={() => setIsCreateSoundOpen(false)}
+      />
 
 
       {shareToast && (
@@ -488,6 +546,8 @@ export default function App() {
 
       <Route path="/creator-hub" element={<LalaoApp />} />
       <Route path="/beta-tester" element={<LalaoApp />} />
+      <Route path="/sounds" element={<LalaoApp />} />
+      <Route path="/sounds/:soundId" element={<LalaoApp />} />
       <Route path="/app" element={<LalaoApp />} />
       <Route path="/app/*" element={<LalaoApp />} />
 
