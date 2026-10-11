@@ -12,11 +12,21 @@ export async function resolveGroupContext(
   rawGroupId: string,
   currentUser: any
 ) {
-  const normId = ctx.db.normalizeId("groupChats", rawGroupId);
-  if (!normId) return null;
+  if (!rawGroupId) return null;
+  const cleanId = rawGroupId.trim();
+  const normId = ctx.db.normalizeId("groupChats", cleanId);
+  let group = normId ? await ctx.db.get(normId) : null;
 
-  const group = await ctx.db.get(normId);
+  if (!group) {
+    const cleanUsername = cleanId.replace(/^@/, "").toLowerCase();
+    group = await ctx.db
+      .query("groupChats")
+      .withIndex("by_username", (q: any) => q.eq("username", cleanUsername))
+      .first();
+  }
+
   if (!group) return null;
+  const effectiveId = group._id;
 
   let role: "owner" | "admin" | "moderator" | "member" | null = null;
   let isMember = false;
@@ -29,7 +39,7 @@ export async function resolveGroupContext(
       const membership = await ctx.db
         .query("groupMembers")
         .withIndex("by_group_user", (q: any) =>
-          q.eq("groupId", normId).eq("userId", currentUser._id)
+          q.eq("groupId", effectiveId).eq("userId", currentUser._id)
         )
         .first();
 
@@ -52,7 +62,7 @@ export async function resolveGroupContext(
     const follow = await ctx.db
       .query("groupFollowers")
       .withIndex("by_group_user", (q: any) =>
-        q.eq("groupId", normId).eq("userId", currentUser._id)
+        q.eq("groupId", effectiveId).eq("userId", currentUser._id)
       )
       .first();
     isFollower = !!follow;
@@ -63,7 +73,7 @@ export async function resolveGroupContext(
     const req = await ctx.db
       .query("groupJoinRequests")
       .withIndex("by_group_user", (q: any) =>
-        q.eq("groupId", normId).eq("userId", currentUser._id)
+        q.eq("groupId", effectiveId).eq("userId", currentUser._id)
       )
       .first();
     pendingRequest = req?.status === "pending";
@@ -71,7 +81,7 @@ export async function resolveGroupContext(
 
   return {
     group,
-    groupId: normId,
+    groupId: effectiveId,
     role,
     isMember,
     isOwner,
@@ -92,16 +102,22 @@ export async function resolveGroupContext(
 export const getGroup = query({
   args: { groupId: v.string() },
   handler: async (ctx, args) => {
-    const currentUser = await getAuthedUser(ctx);
+    let currentUser: any = null;
+    try {
+      currentUser = await getAuthedUser(ctx);
+    } catch {
+      currentUser = null;
+    }
+
     const resolved = await resolveGroupContext(ctx, args.groupId, currentUser);
-    if (!resolved) throw new ConvexError("Group not found");
+    if (!resolved) return null;
 
     const { group, isMember, isOwner, isAdmin, isModerator, isFollower, role, pendingRequest } = resolved;
     const visibility = group.visibility ?? "private_discoverable";
 
     // 1. Private and hidden: non-members cannot even view basic metadata
     if (visibility === "private_hidden" && !isMember) {
-      throw new ConvexError("Group not found or access restricted");
+      return null;
     }
 
     // Resolve member count and follower count

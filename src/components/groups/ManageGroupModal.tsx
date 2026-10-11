@@ -46,10 +46,10 @@ export const ManageGroupModal: React.FC<ManageGroupModalProps> = ({
   const [activeTab, setActiveTab] = useState<ManageTab>('profile');
 
   // Queries
-  const group = useQuery(api.groups.getGroup, { groupId });
-  const members = useQuery(api.groups.getGroupMembers, { groupId }) || [];
-  const joinRequests = useQuery(api.groups.getGroupJoinRequests, { groupId }) || [];
-  const analytics = useQuery(api.groups.getGroupAnalytics, { groupId });
+  const group = useQuery(api.groups.getGroup, isOpen && groupId ? { groupId } : 'skip');
+  const members = useQuery(api.groups.getGroupMembers, isOpen && groupId ? { groupId } : 'skip') || [];
+  const joinRequests = useQuery(api.groups.getGroupJoinRequests, isOpen && groupId ? { groupId } : 'skip') || [];
+  const analytics = useQuery(api.groups.getGroupAnalytics, isOpen && groupId ? { groupId } : 'skip');
 
   // Mutations
   const updateProfileMutation = useMutation(api.groups.updateGroupProfile);
@@ -226,6 +226,8 @@ export const ManageGroupModal: React.FC<ManageGroupModalProps> = ({
       }
     }
   };
+
+  if (!isOpen || !group) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
