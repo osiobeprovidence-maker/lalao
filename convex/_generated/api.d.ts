@@ -19,6 +19,7 @@ import type * as cryptoWallets from "../cryptoWallets.js";
 import type * as cycles from "../cycles.js";
 import type * as debug from "../debug.js";
 import type * as ecommerce from "../ecommerce.js";
+import type * as emails from "../emails.js";
 import type * as groupAccess from "../groupAccess.js";
 import type * as groups from "../groups.js";
 import type * as http from "../http.js";
@@ -66,6 +67,7 @@ declare const fullApi: ApiFromModules<{
   cycles: typeof cycles;
   debug: typeof debug;
   ecommerce: typeof ecommerce;
+  emails: typeof emails;
   groupAccess: typeof groupAccess;
   groups: typeof groups;
   http: typeof http;

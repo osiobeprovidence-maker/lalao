@@ -2,9 +2,14 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Loader2, CheckCircle2, Mail } from 'lucide-react';
 import { AppIcon } from '../../components/common/AppIcon';
+import { useAction } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { sendPasswordResetEmail as firebaseSendPasswordReset } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
 
 export const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate();
+  const sendResendResetEmail = useAction(api.emails.sendPasswordResetEmail);
   const [identifier, setIdentifier] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -12,12 +17,37 @@ export const ForgotPasswordPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!identifier) { setError('Please enter your email or phone.'); return; }
+    const cleanId = identifier.trim();
+    if (!cleanId) { setError('Please enter your email or phone.'); return; }
     setError('');
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setIsLoading(false);
-    setSent(true);
+    try {
+      const resetLink = `${window.location.origin}/reset-password?email=${encodeURIComponent(cleanId)}`;
+
+      if (cleanId.includes('@')) {
+        // Trigger Firebase auth reset if registered
+        try {
+          await firebaseSendPasswordReset(auth, cleanId);
+        } catch (fbErr) {
+          console.warn('[Auth] Firebase password reset notice:', fbErr);
+        }
+
+        // Send branded password reset email via Resend
+        await sendResendResetEmail({
+          to: cleanId,
+          resetLink,
+        });
+      } else {
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+
+      setSent(true);
+    } catch (err: any) {
+      console.error('[Auth] Password reset error:', err);
+      setSent(true);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

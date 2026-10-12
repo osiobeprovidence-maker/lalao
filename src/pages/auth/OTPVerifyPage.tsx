@@ -2,11 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { ArrowLeft, Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { AppIcon } from '../../components/common/AppIcon';
+import { useAction } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 const OTP_LENGTH = 6;
 
 export const OTPVerifyPage: React.FC = () => {
   const navigate = useNavigate();
+  const sendResendOtp = useAction(api.emails.sendOtpEmail);
   const { state } = useLocation();
   const email = (state as any)?.email || 'your email';
 
@@ -67,11 +70,24 @@ export const OTPVerifyPage: React.FC = () => {
     setTimeout(() => navigate('/app'), 1500);
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (resendCooldown > 0) return;
     setResendCooldown(59);
     setOtp(Array(OTP_LENGTH).fill(''));
     inputRefs.current[0]?.focus();
+
+    if (email && email.includes('@')) {
+      const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      try {
+        await sendResendOtp({
+          to: email,
+          otp: generatedOtp,
+          purpose: 'verify your account',
+        });
+      } catch (err) {
+        console.error('[Auth] Failed to dispatch OTP email:', err);
+      }
+    }
   };
 
   const maskedEmail = email.includes('@')
