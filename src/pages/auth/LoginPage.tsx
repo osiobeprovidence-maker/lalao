@@ -64,55 +64,63 @@ export const LoginPage: React.FC = () => {
   return (
     <div className="min-h-screen flex bg-theme-surface">
       {/* Left Panel — Branding */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-[#5E43F3] flex-col justify-between p-12">
-        {/* Animated orbs */}
-        <div className="absolute top-[-80px] left-[-80px] w-[400px] h-[400px] rounded-full bg-theme-surface/5 blur-3xl" />
-        <div className="absolute bottom-[-60px] right-[-60px] w-[300px] h-[300px] rounded-full bg-[#3B28C2]/60 blur-2xl" />
-        <div className="absolute top-1/2 left-1/3 w-[200px] h-[200px] rounded-full bg-theme-surface/4 blur-2xl" />
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-b from-[#1148eb] via-[#0f45eb] to-[#0c2bd7] flex-col justify-between p-10 xl:p-14">
+        {/* 3D Community Hero Artwork Layer */}
+        <div className="absolute top-0 inset-x-0 pointer-events-none select-none z-10 flex flex-col items-center">
+          <img 
+            src="/login-hero-artwork-fade.webp" 
+            alt="Lalao 3D Community" 
+            className="w-full max-w-[660px] h-auto object-contain"
+          />
+        </div>
 
         {/* Logo */}
-        <div className="relative z-10 flex items-center gap-2.5">
-          <AppIcon className="w-8 h-8 rounded-full overflow-hidden object-cover shrink-0" fallbackClassName="text-white fill-white" />
-          <span className="lalao-wordmark text-white text-2xl">lalao</span>
+        <div className="relative z-20 flex items-center gap-2.5">
+          <AppIcon className="w-8 h-8 rounded-full overflow-hidden object-cover shrink-0 shadow-md" fallbackClassName="text-white fill-white" />
+          <span className="lalao-wordmark text-white text-2xl tracking-wide drop-shadow-sm">lalao</span>
         </div>
 
         {/* Hero copy */}
-        <div className="relative z-10 space-y-6">
+        <div className="relative z-20 space-y-6 max-w-lg mt-auto pb-4">
           <div className="space-y-3">
-            <h1 className="text-5xl font-black text-white leading-[1.1] tracking-tight">
+            <h1 className="text-4xl xl:text-[46px] font-black text-white leading-[1.12] tracking-tight drop-shadow-md">
               Your community,<br />
-              <span className="text-white/70">closer than ever.</span>
+              <span className="text-white drop-shadow-md">closer than ever.</span>
             </h1>
-            <p className="text-lg text-white/60 leading-relaxed max-w-xs">
+            <p className="text-base xl:text-lg text-white/85 leading-relaxed drop-shadow-sm max-w-md">
               Connect with people around you, join rallies, discover local events and grow together.
             </p>
           </div>
 
           {/* Social proof row */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3.5 pt-1">
             <div className="flex -space-x-2">
               {[
-                'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&auto=format&fit=crop&q=80',
-                'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80',
                 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=80',
               ].map((src, i) => (
                 <img
                   key={i}
                   src={src}
                   alt="user"
-                  className="w-9 h-9 rounded-full border-2 border-[#5E43F3] object-cover"
+                  className="w-9 h-9 rounded-full border-2 border-white/60 object-cover shadow-sm"
                 />
               ))}
+              <div className="w-9 h-9 rounded-full border-2 border-white/60 bg-white/20 backdrop-blur-sm flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                +
+              </div>
             </div>
             <div>
-              <p className="text-white font-bold text-sm">12,400+ members</p>
-              <p className="text-white/50 text-xs">across Delta State & beyond</p>
+              <p className="text-white font-bold text-sm leading-tight drop-shadow-sm">12,400+ members</p>
+              <p className="text-white/75 text-xs leading-tight">across Delta State &amp; beyond</p>
             </div>
           </div>
         </div>
 
         {/* Bottom tag */}
-        <p className="relative z-10 text-white/30 text-xs">© 2026 Lalao · Udu, Delta State</p>
+        <p className="relative z-20 text-white/50 text-xs">© 2026 Lalao · Udu, Delta State</p>
       </div>
 
       {/* Right Panel — Form */}

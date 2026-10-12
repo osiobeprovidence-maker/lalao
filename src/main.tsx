@@ -28,15 +28,34 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 );
 
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then(
-      (registration) => {
-        console.log('ServiceWorker registration successful with scope: ', registration.scope);
-      },
-      (err) => {
-        console.log('ServiceWorker registration failed: ', err);
+if ('serviceWorker' in navigator) {
+  if (import.meta.env.PROD) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').then(
+        (registration) => {
+          console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        },
+        (err) => {
+          console.log('ServiceWorker registration failed: ', err);
+        }
+      );
+    });
+  } else {
+    // In development, ensure any previously registered service workers and caches are purged
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      if (registrations.length > 0) {
+        Promise.all(registrations.map((r) => r.unregister())).then(() => {
+          if ('caches' in window) {
+            caches.keys().then((keys) => {
+              Promise.all(keys.map((k) => caches.delete(k))).then(() => {
+                window.location.reload();
+              });
+            });
+          } else {
+            window.location.reload();
+          }
+        });
       }
-    );
-  });
+    });
+  }
 }

@@ -37,6 +37,7 @@ self.addEventListener('fetch', (event) => {
     url.pathname.startsWith('/api/');
 
   if (!isSameOrigin || isPrivateRequest || request.method !== 'GET') return;
+  if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') return;
 
   if (request.mode === 'navigate') {
     event.respondWith(
