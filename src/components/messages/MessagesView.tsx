@@ -22,6 +22,7 @@ import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
 import { VerificationBadge } from '../common/VerificationBadge';
+import { getPublicIdentityLabel } from '../common/UserIdentity';
 import { ChatModal } from './ChatModal';
 
 export const MessagesView: React.FC = () => {
@@ -511,7 +512,7 @@ export const MessagesView: React.FC = () => {
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="font-bold text-sm text-theme-primary truncate">
-                        {conv.participant?.name}
+                        {getPublicIdentityLabel(conv.participant)}
                       </span>
                       {conv.participant?.badge && <Badge type={conv.participant.badge} />}
                       <VerificationBadge user={conv.participant} size="xs" />
@@ -577,7 +578,7 @@ export const MessagesView: React.FC = () => {
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className="font-bold text-sm text-theme-primary truncate">
-                      {contact.name}
+                      {getPublicIdentityLabel(contact)}
                     </span>
                     {contact.badge && <Badge type={contact.badge} />}
                     <VerificationBadge user={contact} size="xs" />

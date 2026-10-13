@@ -83,6 +83,21 @@ export default defineSchema({
     disappearingMode: v.optional(v.string()),
     disappearingCustomValue: v.optional(v.number()),
     disappearingCustomUnit: v.optional(v.string()),
+
+    // Public Identity Display Preference: "display_name", "username", or "both"
+    publicIdentityType: v.optional(
+      v.union(v.literal("display_name"), v.literal("username"), v.literal("both"))
+    ),
+
+    // Date of Birth & Visibility
+    dateOfBirth: v.optional(v.string()), // Format: YYYY-MM-DD
+    birthDateVisibility: v.optional(
+      v.union(
+        v.literal("public"),      // Show full birthday / age
+        v.literal("age_only"),    // Show only age (e.g. 24 yrs)
+        v.literal("private")      // Only visible to the user in settings
+      )
+    ),
       notificationPrefs: v.optional(v.object({
         messages: v.optional(v.boolean()),
         cycles: v.optional(v.boolean()),
@@ -117,11 +132,15 @@ export default defineSchema({
     creatorPendingEarnings: v.optional(v.number()),
     creatorAchievements: v.optional(v.array(v.string())),
     creatorPriorityWeight: v.optional(v.number()),
+
+    // Administrative test/demo account marker
+    is_test_account: v.optional(v.boolean()),
   })
     .index("by_token", ["tokenIdentifier"])
     .index("by_email", ["email"])
     .index("by_username", ["username"])
     .index("by_role", ["role"])
+    .index("by_test_account", ["is_test_account"])
     .searchIndex("search_username", { searchField: "username" })
     .searchIndex("search_name", { searchField: "name" })
     .searchIndex("search_email", { searchField: "email" })
@@ -214,11 +233,23 @@ export default defineSchema({
     soundStartOffset: v.optional(v.number()),
     soundVolume: v.optional(v.number()),
     originalAudioVolume: v.optional(v.number()),
+    // Location snapshot fields (captured at post publication)
+    locationAccuracy: v.optional(v.number()),
+    locationCapturedAt: v.optional(v.number()),
+    locationCountry: v.optional(v.string()),
+    locationState: v.optional(v.string()),
+    locationCity: v.optional(v.string()),
+    locationNeighborhood: v.optional(v.string()),
+    locationStatus: v.optional(
+      v.union(v.literal("verified"), v.literal("approximate"), v.literal("unverified"))
+    ),
+    nearbyEnabled: v.optional(v.boolean()),
   })
     .index("by_author", ["authorId"])
     .index("by_created", ["createdAt"])
     .index("by_group_ref", ["groupRefId"])
     .index("by_sound", ["soundId"])
+    .index("by_nearby_created", ["nearbyEnabled", "createdAt"])
     .searchIndex("search_text", { searchField: "text" }),
 
   comments: defineTable({
@@ -514,6 +545,10 @@ export default defineSchema({
       v.literal("rally_join"),
       v.literal("system_alert"),
       v.literal("message"),
+      v.literal("subscription_joined"),
+      v.literal("subscription_renewal"),
+      v.literal("subscription_cancelled"),
+      v.literal("subscription_payment_failed"),
     ),
     postId: v.optional(v.id("posts")),
     commentId: v.optional(v.id("comments")),
@@ -694,7 +729,8 @@ export default defineSchema({
   })
     .index("by_wallet", ["walletId"])
     .index("by_user", ["userId"])
-    .index("by_created", ["createdAt"]),
+    .index("by_created", ["createdAt"])
+    .index("by_reference", ["reference"]),
 
   // ---- MARKET TRANSACTIONS ----
   marketTransactions: defineTable({
@@ -773,6 +809,10 @@ export default defineSchema({
     providerTag: v.optional(v.string()), // Private
     privateNotes: v.optional(v.string()), // Private
     memberInstructions: v.optional(v.string()),
+    eligibilityRules: v.optional(v.string()),
+    cancellationPolicy: v.optional(v.string()),
+    renewalRules: v.optional(v.string()),
+    gracePeriodDays: v.optional(v.number()),
     benefits: v.array(v.string()),
     active: v.boolean(),
     createdAt: v.number(),
@@ -783,8 +823,10 @@ export default defineSchema({
     subscriptionId: v.id("subscriptionListings"),
     pageId: v.id("pages"),
     slotNumber: v.number(),
-    status: v.union(v.literal("available"), v.literal("occupied"), v.literal("paused")),
+    status: v.union(v.literal("available"), v.literal("reserved"), v.literal("occupied"), v.literal("paused")),
     currentMemberId: v.optional(v.id("users")),
+    reservedForUserId: v.optional(v.id("users")),
+    reservationExpiresAt: v.optional(v.number()),
     priceOverride: v.optional(v.number()), // if allowDifferentSlotPrices is true
     role: v.optional(v.union(v.literal("Head of Family"), v.literal("Member"))), // defined by business
     createdAt: v.number(),
@@ -793,6 +835,24 @@ export default defineSchema({
     .index("by_subscription", ["subscriptionId"])
     .index("by_page", ["pageId"])
     .index("by_subscription_status", ["subscriptionId", "status"]),
+
+  subscriptionReservations: defineTable({
+    subscriptionId: v.id("subscriptionListings"),
+    slotId: v.id("subscriptionSlots"),
+    userId: v.id("users"),
+    amount: v.number(),
+    currency: v.string(),
+    status: v.union(v.literal("pending"), v.literal("completed"), v.literal("expired"), v.literal("cancelled")),
+    paymentMethod: v.union(v.literal("wallet"), v.literal("paystack")),
+    paystackReference: v.optional(v.string()),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_slot", ["slotId"])
+    .index("by_reference", ["paystackReference"])
+    .index("by_status", ["status"]),
 
   subscriptionMemberships: defineTable({
     userId: v.id("users"),
@@ -804,12 +864,20 @@ export default defineSchema({
       v.literal("pending"),
       v.literal("active"),
       v.literal("cancelled"),
-      v.literal("past_due")
+      v.literal("past_due"),
+      v.literal("expired")
     ),
+    amount: v.optional(v.number()),
+    currency: v.optional(v.string()),
+    paymentMethod: v.optional(v.union(v.literal("wallet"), v.literal("paystack"))),
+    lastPaymentReference: v.optional(v.string()),
+    lastPaymentStatus: v.optional(v.string()),
     startedAt: v.optional(v.number()),
     currentPeriodStart: v.optional(v.number()),
     currentPeriodEnd: v.optional(v.number()),
+    nextRenewalDate: v.optional(v.number()),
     cancelAtPeriodEnd: v.boolean(),
+    autoRenew: v.optional(v.boolean()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -817,7 +885,21 @@ export default defineSchema({
     .index("by_page", ["pageId"])
     .index("by_subscription", ["subscriptionId"])
     .index("by_slot", ["slotId"])
-    .index("by_user_subscription", ["userId", "subscriptionId"]),
+    .index("by_user_subscription", ["userId", "subscriptionId"])
+    .index("by_status", ["status"]),
+
+  subscriptionAuditLogs: defineTable({
+    pageId: v.id("pages"),
+    subscriptionId: v.optional(v.id("subscriptionListings")),
+    performedByUserId: v.id("users"),
+    action: v.string(), // e.g. "CREATE_LISTING", "UPDATE_PRICE", "MANUAL_RECONCILE", "CANCEL_MEMBERSHIP"
+    details: v.string(),
+    metadata: v.optional(v.any()),
+    createdAt: v.number(),
+  })
+    .index("by_page", ["pageId"])
+    .index("by_subscription", ["subscriptionId"])
+    .index("by_user", ["performedByUserId"]),
 
   creatorSubscriptions: defineTable({
     userId: v.id("users"),
@@ -994,17 +1076,25 @@ export default defineSchema({
     slug: v.string(),
     displayName: v.string(),
     description: v.string(),
+    category: v.optional(v.string()), // e.g. "Identity & Community", "Entertainment", "Tech & Science"
     displayOrder: v.number(),
     defaultEnabled: v.boolean(),
     userSelectable: v.boolean(),
     homeEnabled: v.boolean(),
     icon: v.optional(v.string()),
+    isSensitive: v.optional(v.boolean()), // true for LGBTQ+, religion, politics etc. requiring safeguards
+    requiresExplicitOptIn: v.optional(v.boolean()), // Proactive discovery recommendations require viewer opt-in
+    requiresCreatorConfirmation: v.optional(v.boolean()), // Creator must confirm categorization
+    allowAutoSuggestion: v.optional(v.boolean()), // May not be automatically guessed or assumed
+    allowPublicAnalytics: v.optional(v.boolean()), // Keep private from public analytics
     active: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_slug", ["slug"])
-    .index("by_active_order", ["active", "displayOrder"]),
+    .index("by_active_order", ["active", "displayOrder"])
+    .index("by_active", ["active"])
+    .index("by_sensitive", ["isSensitive"]),
 
   // ---- ROOMY HOUSING MARKETPLACE ----
   roomyProfiles: defineTable({
@@ -1410,5 +1500,138 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_sound", ["soundId"])
     .index("by_user_sound", ["userId", "soundId"]),
+
+  // ──── PLUM DATING PLATFORM TABLES ────
+  plumProfiles: defineTable({
+    userId: v.id("users"),
+    displayName: v.string(),
+    age: v.number(), // Publicly rendered age (e.g. 24)
+    gender: v.string(), // "man" | "woman" | "nonbinary" | "queer_man" | "queer_woman" | etc.
+    datingPreferences: v.array(v.string()), // genders user is interested in meeting
+    bio: v.string(),
+    interests: v.array(v.string()),
+    datingIntentions: v.string(), // "long-term" | "dating" | "casual" | "friends" | "open"
+    datingGoal: v.optional(v.union(
+      v.literal("long_term"),
+      v.literal("marriage"),
+      v.literal("casual"),
+      v.literal("short_term"),
+      v.literal("friendship_first"),
+      v.literal("open")
+    )),
+    additionalDatingInfo: v.optional(v.string()),
+    
+    // Broad location display (safe label)
+    broadLocation: v.string(), // e.g. "Warri, Delta State"
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
+
+    // Photos
+    mainPhoto: v.optional(v.string()), // Main dating profile photo
+    publicPhotos: v.array(v.string()), // URLs of public photos
+    privatePhotos: v.array(v.string()), // URLs of private photos (access controlled)
+
+    // Visibility & Privacy controls
+    isAgeConfirmed: v.boolean(),
+    ageConfirmedAt: v.number(),
+    showOnMap: v.boolean(),
+    profileVisibility: v.union(v.literal("active"), v.literal("hidden"), v.literal("deactivated")),
+
+    flashesReceivedCount: v.optional(v.number()),
+    giftsReceivedCount: v.optional(v.number()),
+
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_visibility", ["profileVisibility"])
+    .index("by_gender", ["gender"])
+    .index("by_updated", ["updatedAt"]),
+
+  plumPrivatePhotoAccess: defineTable({
+    ownerId: v.id("users"), // Profile owner granting access
+    viewerId: v.id("users"), // Target member granted access
+    grantedAt: v.number(),
+    status: v.union(v.literal("granted"), v.literal("revoked")),
+  })
+    .index("by_owner", ["ownerId"])
+    .index("by_viewer", ["viewerId"])
+    .index("by_owner_viewer", ["ownerId", "viewerId"]),
+
+  plumFlashes: defineTable({
+    senderId: v.id("users"),
+    receiverId: v.id("users"),
+    note: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_sender", ["senderId"])
+    .index("by_receiver", ["receiverId"])
+    .index("by_sender_receiver", ["senderId", "receiverId"]),
+
+  plumGifts: defineTable({
+    senderId: v.id("users"),
+    receiverId: v.id("users"),
+    giftId: v.string(), // e.g. "rose", "champagne", "diamond", "teddy"
+    giftName: v.string(),
+    giftIcon: v.string(),
+    amountLC: v.number(), // Amount in LaLao Credits (wallet balance)
+    message: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_sender", ["senderId"])
+    .index("by_receiver", ["receiverId"]),
+
+  plumReports: defineTable({
+    reporterId: v.id("users"),
+    reportedUserId: v.id("users"),
+    reason: v.string(),
+    details: v.optional(v.string()),
+    createdAt: v.number(),
+    status: v.union(v.literal("pending"), v.literal("reviewed"), v.literal("dismissed")),
+  })
+    .index("by_reporter", ["reporterId"])
+    .index("by_reported", ["reportedUserId"]),
+
+  plumFavorites: defineTable({
+    userId: v.id("users"), // Member who saved/pinned the profile
+    targetUserId: v.id("users"), // Target member saved
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_target", ["targetUserId"])
+    .index("by_user_target", ["userId", "targetUserId"]),
+
+  plumInterests: defineTable({
+    senderId: v.id("users"), // Member who expressed interest (heart)
+    receiverId: v.id("users"), // Target member
+    createdAt: v.number(),
+  })
+    .index("by_sender", ["senderId"])
+    .index("by_receiver", ["receiverId"])
+    .index("by_sender_receiver", ["senderId", "receiverId"]),
+
+  userTopicPreferences: defineTable({
+    userId: v.id("users"),
+    topicSlug: v.string(),
+    preference: v.union(
+      v.literal("interested"), // Boost recommendations
+      v.literal("reduced"),    // See less often
+      v.literal("excluded")    // Exclude completely from recommendations
+    ),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_topic", ["userId", "topicSlug"])
+    .index("by_user_preference", ["userId", "preference"]),
+
+  // Discovery Page Preferences (e.g., "I'm not interested" / hidden pages)
+  userPagePreferences: defineTable({
+    userId: v.id("users"),
+    pageSlugOrId: v.string(), // e.g. "plum" or specific pageId
+    hiddenFromRecommendations: v.boolean(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_page", ["userId", "pageSlugOrId"]),
 });
 

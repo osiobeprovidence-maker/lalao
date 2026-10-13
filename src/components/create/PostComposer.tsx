@@ -21,6 +21,7 @@ import {
   RefreshCw,
   Disc,
   Briefcase,
+  Tag,
 } from 'lucide-react';
 import { useAction, useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
@@ -65,6 +66,7 @@ function PostComposerInner({
     currentUser,
     pages,
     location,
+    detectGpsLocation,
     createPost,
     saveDraft,
     getDrafts,
@@ -103,6 +105,8 @@ function PostComposerInner({
   const [selectedPageRefId, setSelectedPageRefId] = useState<string | null>(initialPageRefId || null);
   const [selectedGroupRefId, setSelectedGroupRefId] = useState<string | null>(effectiveGroupRefId || null);
   const [selectedTopicSlugs, setSelectedTopicSlugs] = useState<string[]>([]);
+  const [showTopicSelector, setShowTopicSelector] = useState(false);
+  const [topicSearchQuery, setTopicSearchQuery] = useState('');
   const [replyPermission, setReplyPermission] = useState('everyone');
   const [showReplyDropdown, setShowReplyDropdown] = useState(false);
   const [pollQuestion, setPollQuestion] = useState('');
@@ -404,14 +408,61 @@ function PostComposerInner({
         };
       }
 
-      const postLocationName = rallyLocation.trim() || attachedLocation || '';
-      let postCoords: { lat?: number; lng?: number } = {};
-      if (postLocationName) {
-        if (attachedLocation && location.name === attachedLocation && typeof location.latitude === 'number' && typeof location.longitude === 'number') {
-          postCoords = { lat: location.latitude, lng: location.longitude };
-        } else {
-          const resolved = getCoordinatesForLocation(postLocationName);
-          postCoords = { lat: resolved.lat, lng: resolved.lng };
+      const postLocationName = rallyLocation.trim() || attachedLocation || location.name || '';
+      let postCoords: {
+        lat?: number;
+        lng?: number;
+        accuracy?: number;
+        capturedAt?: number;
+        country?: string;
+        state?: string;
+        city?: string;
+        neighborhood?: string;
+      } = {};
+
+      const isNearbyPost = audience === 'nearby';
+
+      // 1. If audience is Nearby, require verified device GPS reading
+      if (isNearbyPost) {
+        if (
+          !location.isGpsDetected ||
+          typeof location.latitude !== 'number' ||
+          typeof location.longitude !== 'number' ||
+          (location.accuracy && location.accuracy > 100)
+        ) {
+          triggerShareToast('Acquiring fresh device GPS for Nearby distribution...');
+          const gpsResult = await detectGpsLocation();
+          if (!gpsResult.success) {
+            triggerShareToast(gpsResult.error || 'Verified GPS location required for Nearby');
+            setIsSubmitting(false);
+            return;
+          }
+        }
+
+        // Use the confirmed device GPS coordinates
+        postCoords = {
+          lat: location.latitude,
+          lng: location.longitude,
+          accuracy: location.accuracy,
+          capturedAt: location.capturedAt || Date.now(),
+          country: location.country,
+          state: location.state,
+          city: location.city,
+          neighborhood: location.neighborhood,
+        };
+      } else if (postLocationName) {
+        // For general posts, use attached location or GPS if active
+        if (location.isGpsDetected && typeof location.latitude === 'number' && typeof location.longitude === 'number') {
+          postCoords = {
+            lat: location.latitude,
+            lng: location.longitude,
+            accuracy: location.accuracy,
+            capturedAt: location.capturedAt || Date.now(),
+            country: location.country,
+            state: location.state,
+            city: location.city,
+            neighborhood: location.neighborhood,
+          };
         }
       }
 
@@ -425,6 +476,13 @@ function PostComposerInner({
         location: postLocationName || undefined,
         latitude: postCoords.lat,
         longitude: postCoords.lng,
+        locationAccuracy: postCoords.accuracy,
+        locationCapturedAt: postCoords.capturedAt,
+        locationCountry: postCoords.country,
+        locationState: postCoords.state,
+        locationCity: postCoords.city,
+        locationNeighborhood: postCoords.neighborhood,
+        nearbyEnabled: isNearbyPost,
         audience,
         replyPermission,
         pollQuestion: showPoll ? pollQuestion.trim() : undefined,
@@ -699,18 +757,101 @@ function PostComposerInner({
             </div>
           )}
 
-          {attachedLocation && (
-            <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[#5E43F3]/20 bg-[#5E43F3]/5 px-2.5 py-1 text-[11px] font-semibold text-[#5E43F3]">
-              <MapPin className="h-3 w-3 text-[#5E43F3]" />
-              <span>{attachedLocation}</span>
-              <button
-                type="button"
-                onClick={() => setAttachedLocation(null)}
-                className="text-[#5E43F3] hover:text-[#4E34E0]"
-                aria-label="Remove location"
-              >
-                <X className="h-3 w-3" />
-              </button>
+          {/* SELECTED TOPICS CHIPS (Requirement 4) */}
+          {selectedTopicSlugs.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              {selectedTopicSlugs.map((slug) => {
+                const topic = topicsData?.find((t: any) => t.slug === slug);
+                const label = topic?.displayName || slug.replace('_', ' ');
+                return (
+                  <span
+                    key={slug}
+                    className="inline-flex items-center gap-1 rounded-full border border-[#5E43F3]/30 bg-[#5E43F3]/10 px-2.5 py-1 text-[11px] font-semibold text-[#5E43F3]"
+                  >
+                    <span>{topic?.icon || '#'}</span>
+                    <span>{label}</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTopicSlugs(selectedTopicSlugs.filter((s) => s !== slug))}
+                      className="ml-0.5 text-[#5E43F3] hover:text-rose-500 transition-colors"
+                      title="Remove topic"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
+          {/* TOPIC PICKER MODAL/DRAWER (Requirement 4: Creator topic selection & search) */}
+          {showTopicSelector && (
+            <div className="mt-3 p-3 rounded-2xl border border-[#5E43F3]/30 bg-theme-surface shadow-md space-y-2.5 animate-in fade-in duration-150">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-theme-primary flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5 text-[#5E43F3]" /> Select Post Topics (Optional)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowTopicSelector(false)}
+                  className="p-1 rounded-full hover:bg-theme-surface-hover text-theme-tertiary hover:text-theme-primary"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <input
+                type="text"
+                value={topicSearchQuery}
+                onChange={(e) => setTopicSearchQuery(e.target.value)}
+                placeholder="Search topics (e.g. Gaming, LGBTQ+, Tech, Anime)..."
+                className="w-full px-3 py-1.5 rounded-xl bg-theme-base border border-theme-divider-light text-theme-primary text-xs focus:outline-none focus:border-[#5E43F3]"
+              />
+
+              <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto pt-1">
+                {(topicsData || [])
+                  .filter((t: any) =>
+                    !topicSearchQuery.trim() ||
+                    t.displayName.toLowerCase().includes(topicSearchQuery.toLowerCase()) ||
+                    t.slug.toLowerCase().includes(topicSearchQuery.toLowerCase())
+                  )
+                  .map((t: any) => {
+                    const isSelected = selectedTopicSlugs.includes(t.slug);
+                    return (
+                      <button
+                        key={t.slug}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedTopicSlugs(selectedTopicSlugs.filter((s) => s !== t.slug));
+                          } else {
+                            if (selectedTopicSlugs.length >= 4) {
+                              triggerShareToast('You can select up to 4 topics per post');
+                              return;
+                            }
+                            setSelectedTopicSlugs([...selectedTopicSlugs, t.slug]);
+                          }
+                        }}
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer flex items-center gap-1 ${
+                          isSelected
+                            ? 'border-[#5E43F3] bg-[#5E43F3] text-white shadow-xs font-semibold'
+                            : 'border-theme-divider-light bg-theme-base text-theme-secondary hover:text-theme-primary hover:border-[#5E43F3]/40'
+                        }`}
+                      >
+                        <span>{t.icon || '#'}</span>
+                        <span>{t.displayName}</span>
+                        {t.isSensitive && (
+                          <span className="text-[9px] px-1 py-0.2 rounded bg-black/20 text-white font-bold">
+                            Opt-in
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+              </div>
+              <p className="text-[10px] text-theme-tertiary">
+                Tagging helps distribute content to interested viewers. For sensitive topics, proactive recommendations are only sent to viewers who opted in.
+              </p>
             </div>
           )}
 
@@ -1122,6 +1263,18 @@ function PostComposerInner({
               title="Location"
             >
               <MapPin className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowTopicSelector(!showTopicSelector)}
+              className={`flex h-9 w-9 items-center justify-center rounded-full transition ${
+                showTopicSelector || selectedTopicSlugs.length > 0
+                  ? 'bg-[#5E43F3] text-white shadow-md shadow-[#5E43F3]/20'
+                  : 'text-[#5E43F3] hover:bg-[#5E43F3]/10'
+              }`}
+              title="Topics & Tags"
+            >
+              <Tag className="h-5 w-5" />
             </button>
             <button
               type="button"

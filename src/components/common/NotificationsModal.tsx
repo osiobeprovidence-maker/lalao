@@ -288,17 +288,13 @@ export const NotificationsModal: React.FC = () => {
                       key={item.id}
                       className="px-4 py-2 hover:bg-theme-base/80 transition-colors flex items-center justify-between gap-2.5"
                     >
-                      {/* Left: Avatar with optional ring */}
+                      {/* Left: Avatar with fallback support */}
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="relative shrink-0">
-                          <img
-                            src={item.avatar}
-                            alt={item.name}
-                            className={`w-11 h-11 rounded-full object-cover ${
-                              item.ringColor ? item.ringColor : 'ring-1 ring-black/5'
-                            }`}
-                          />
-                        </div>
+                        <Avatar
+                          src={item.avatar}
+                          alt={item.name}
+                          size="md"
+                        />
 
                         {/* Middle: User info */}
                         <div className="min-w-0 flex-1">

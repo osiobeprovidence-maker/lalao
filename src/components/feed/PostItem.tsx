@@ -23,6 +23,7 @@ import { Post, Rally, User } from '../../types';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
 import { VerificationBadge } from '../common/VerificationBadge';
+import { UserIdentity, getPublicIdentityLabel } from '../common/UserIdentity';
 import { useLalao } from '../../context/LalaoContext';
 import { formatDistance, getProximityCategory } from '../../utils/locationUtils';
 import { useQuery } from 'convex/react';
@@ -71,6 +72,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
     cycles,
     openCycleStory,
     setActiveTab,
+    toggleFollowUser,
   } = useLalao();
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -207,11 +209,16 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
       id={`feed-item-${itemId}`}
       className="p-4 bg-transparent border-b border-theme-divider/70 hover:bg-theme-surface-hover/30 transition-colors"
     >
-      {/* 1. Header Row */}
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={handleAvatarClick}>
-          {/* Avatar with Cycle Beacon */}
-          <div className="relative group">
+      {/* 1. Instagram-Style Post Header */}
+      <div className="flex items-start justify-between gap-3 mb-2.5">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {/* Left: Avatar with Cycle Beacon */}
+          <div
+            className="relative shrink-0 cursor-pointer group"
+            onClick={handleAvatarClick}
+            role="button"
+            aria-label="View user avatar or cycle"
+          >
             <div
               className={`rounded-full transition-all duration-200 ${
                 hasActiveCycle
@@ -230,39 +237,126 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
               </div>
             </div>
             {hasActiveCycle && authorCycle?.hasUnseen && (
-               <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#5E43F3] rounded-full border-2 border-white ring-1 ring-[#5E43F3]/30" />
+              <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#5E43F3] rounded-full border-2 border-white ring-1 ring-[#5E43F3]/30" />
             )}
           </div>
 
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleAuthorClick();
-                }}
-                className="font-bold text-[15px] text-theme-primary hover:underline cursor-pointer tracking-tight"
-              >
-                {author.name}
-              </span>
+          {/* Middle: Identity & Timestamp */}
+          <div className="flex flex-col min-w-0 flex-1 justify-center py-0.5">
+            {/* Identity line(s) */}
+            {author.publicIdentityType === 'both' ? (
+              <>
+                {/* First line: Display Name + Badges + Optional Follow button */}
+                <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAuthorClick();
+                    }}
+                    className="font-bold text-[14.5px] text-theme-primary hover:underline cursor-pointer truncate tracking-tight"
+                  >
+                    {(author.name || '').trim() || (author.username || '').replace(/^@+/, '') || 'User'}
+                  </span>
 
-              {author.badge && (
-                <>
                   <VerificationBadge user={author} size="xs" />
-                  <Badge type={author.badge} />
-                </>
-              )}
-              {!author.badge && <VerificationBadge user={author} size="xs" />}
-            </div>
+                  {author.badge && <Badge type={author.badge} />}
 
-            {/* Sub-header: @username · time · location · distance */}
+                  {/* Inline Follow Button */}
+                  {!isAuthor && !author.isFollowing && author.id !== 'unknown' && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFollowUser(author.id);
+                      }}
+                      className="ml-1 text-[13px] font-semibold text-[#5E43F3] hover:text-[#4931D3] dark:text-[#7A62F8] dark:hover:text-[#917DF9] transition-colors cursor-pointer select-none"
+                    >
+                      • Follow
+                    </button>
+                  )}
+                </div>
+
+                {/* Second line: Username */}
+                <div className="flex items-center gap-1 min-w-0">
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAuthorClick();
+                    }}
+                    className="text-xs text-theme-secondary hover:underline cursor-pointer truncate font-medium"
+                  >
+                    @{ (author.username || '').replace(/^@+/, '') || 'user' }
+                  </span>
+                </div>
+              </>
+            ) : author.publicIdentityType === 'username' ? (
+              /* Username only */
+              <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAuthorClick();
+                  }}
+                  className="font-bold text-[14.5px] text-theme-primary hover:underline cursor-pointer truncate tracking-tight"
+                >
+                  @{ (author.username || '').replace(/^@+/, '') || (author.name || '').trim() || 'user' }
+                </span>
+
+                <VerificationBadge user={author} size="xs" />
+                {author.badge && <Badge type={author.badge} />}
+
+                {/* Inline Follow Button */}
+                {!isAuthor && !author.isFollowing && author.id !== 'unknown' && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFollowUser(author.id);
+                    }}
+                    className="ml-1 text-[13px] font-semibold text-[#5E43F3] hover:text-[#4931D3] dark:text-[#7A62F8] dark:hover:text-[#917DF9] transition-colors cursor-pointer select-none"
+                  >
+                    • Follow
+                  </button>
+                )}
+              </div>
+            ) : (
+              /* Display Name only (Default) */
+              <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAuthorClick();
+                  }}
+                  className="font-bold text-[14.5px] text-theme-primary hover:underline cursor-pointer truncate tracking-tight"
+                >
+                  {(author.name || '').trim() || (author.username || '').replace(/^@+/, '') || 'User'}
+                </span>
+
+                <VerificationBadge user={author} size="xs" />
+                {author.badge && <Badge type={author.badge} />}
+
+                {/* Inline Follow Button */}
+                {!isAuthor && !author.isFollowing && author.id !== 'unknown' && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFollowUser(author.id);
+                    }}
+                    className="ml-1 text-[13px] font-semibold text-[#5E43F3] hover:text-[#4931D3] dark:text-[#7A62F8] dark:hover:text-[#917DF9] transition-colors cursor-pointer select-none"
+                  >
+                    • Follow
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Line beneath identity: Timestamp & optional location/proximity */}
             <div className="flex items-center gap-1.5 text-xs text-theme-tertiary mt-0.5 flex-wrap">
-              <span className="text-theme-tertiary">@{author.username}</span>
-              <span>·</span>
-              <span>{timeText}</span>
+              <span className="font-normal">{timeText}</span>
               {shouldShowLocation && locationText && (
                 <>
-                  <span>·</span>
+                  <span className="text-theme-tertiary/60">·</span>
                   {hasValidDistance && formattedDistance ? (
                     <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-theme-surface-hover text-theme-secondary text-[11px] font-medium">
                       <span className={`w-1.5 h-1.5 rounded-full ${proximity.dotColor}`} />
@@ -283,8 +377,8 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
           </div>
         </div>
 
-        {/* Top-Right Badges & Kebab Options */}
-        <div className="flex items-center gap-1.5">
+        {/* Right: Badges & Three-dot menu */}
+        <div className="flex items-center gap-1 shrink-0 pt-0.5">
               {/* Rally Badges if applicable */}
               {linkedRally && (
                 <>

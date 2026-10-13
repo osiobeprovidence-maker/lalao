@@ -22,6 +22,7 @@ import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { VerificationBadge } from '../common/VerificationBadge';
+import { getPublicIdentityLabel } from '../common/UserIdentity';
 import { DirectMessage } from '../../types';
 import { compressImage } from '../../lib/imageCompression';
 
@@ -961,18 +962,18 @@ export const ChatModal: React.FC = () => {
                 title="View profile"
               >
                 <div className="shrink-0">
-                  <Avatar src={conv.participant.avatar || undefined} alt={conv.participant.name} size="sm" className="w-9 h-9" />
+                  <Avatar src={conv.participant.avatar || undefined} alt={getPublicIdentityLabel(conv.participant)} size="sm" className="w-9 h-9" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="truncate text-sm font-bold text-theme-primary">{conv.participant.name}</span>
+                    <span className="truncate text-sm font-bold text-theme-primary">{getPublicIdentityLabel(conv.participant)}</span>
                     <VerificationBadge user={conv.participant} size="xs" />
                   </div>
-                  <span className="block truncate text-[11px] text-theme-tertiary">
-                    {(conv as any).isGroupChat
-                      ? `${conv.participant.followersCount || 1} members • Private Group`
-                      : `@${conv.participant.username}`}
-                  </span>
+                  {(conv as any).isGroupChat && (
+                    <span className="block truncate text-[11px] text-theme-tertiary">
+                      {`${conv.participant.followersCount || 1} members • Private Group`}
+                    </span>
+                  )}
                 </div>
               </button>
             </div>

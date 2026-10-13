@@ -89,6 +89,17 @@ export const getSuggestedForYou = query({
     const recentUsers = await ctx.db.query("users").order("desc").take(50);
     for (const u of recentUsers) {
       if (!user || (u._id !== user._id && !followedUserIds.has(u._id) && !dismissedIds.has(u._id) && !u.suspended)) {
+        let userAvatar = u.avatarUrl || "";
+        if (!userAvatar && (u as any).avatarStorageId) {
+          try {
+            const signed = await ctx.storage.getUrl((u as any).avatarStorageId);
+            if (signed) userAvatar = signed;
+          } catch (_) {}
+        }
+        if (!userAvatar && (u as any).avatar) {
+          userAvatar = (u as any).avatar;
+        }
+
         recommendations.push({
           type: "person",
           targetId: u._id,
@@ -99,7 +110,7 @@ export const getSuggestedForYou = query({
             name: u.name || "Unknown",
             username: u.username || "unknown",
             ...resolveUserVerification(u),
-            avatar: u.avatarUrl || "",
+            avatar: userAvatar,
             description: u.bio || "",
             followersCount: u.followersCount || 0,
             isFollowing: false,
@@ -116,6 +127,14 @@ export const getSuggestedForYou = query({
       if (user && p.authorId === user._id) continue;
       if (p.audience && p.audience !== "everyone" && p.audience !== "nearby") continue; // simplified access check
 
+      let postMedia = p.mediaUrl;
+      if (!postMedia && p.mediaStorageId) {
+        try {
+          const signed = await ctx.storage.getUrl(p.mediaStorageId);
+          if (signed) postMedia = signed;
+        } catch (_) {}
+      }
+
       recommendations.push({
         type: "post",
         targetId: p._id,
@@ -125,7 +144,7 @@ export const getSuggestedForYou = query({
           id: p._id,
           authorId: p.authorId,
           text: p.text,
-          mediaUrl: p.mediaUrl,
+          mediaUrl: postMedia,
           mediaType: p.mediaType,
           likesCount: p.likesCount,
           commentsCount: p.commentsCount,

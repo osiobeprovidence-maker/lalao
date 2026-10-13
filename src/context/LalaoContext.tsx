@@ -64,7 +64,8 @@ export type NavTab =
   | 'verification'
   | 'beta-tester'
   | 'creator-hub'
-  | 'sounds';
+  | 'sounds'
+  | 'plum';
 export type FeedTab = 'for_you' | 'following' | 'community' | 'nearby' | (string & {});
 export type CreateOption = 'post' | 'rally' | 'page' | 'cycle' | 'group-chat' | 'group-cycle' | null;
 
@@ -116,6 +117,13 @@ interface LalaoContextType {
     location?: string; 
     latitude?: number;
     longitude?: number;
+    locationAccuracy?: number;
+    locationCapturedAt?: number;
+    locationCountry?: string;
+    locationState?: string;
+    locationCity?: string;
+    locationNeighborhood?: string;
+    nearbyEnabled?: boolean;
     audience?: string; 
     replyPermission?: string; 
     gifUrl?: string; 
@@ -423,6 +431,9 @@ const normalizeConvexUser = (user: Record<string, any> | null | undefined): User
     isVerified: typeof user.isVerified === 'boolean' ? user.isVerified : false,
     phoneSetupCompleted: user.phoneSetupCompleted,
     accessStatus: user.accessStatus,
+    publicIdentityType: (user.publicIdentityType as "display_name" | "username") ?? "display_name",
+    dateOfBirth: user.dateOfBirth ?? undefined,
+    birthDateVisibility: (user.birthDateVisibility as "public" | "age_only" | "private") ?? "private",
   };
 };
 
@@ -456,7 +467,17 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // ---- Profile Update ----
   const updateUserProfileMutation = useMutation(api.users.updateUserProfile);
-  const updateUserProfile = async (args: { name?: string; username?: string; bio?: string; locationName?: string; avatarUrl?: string; avatarStorageId?: any }) => {
+  const updateUserProfile = async (args: {
+    name?: string;
+    username?: string;
+    bio?: string;
+    locationName?: string;
+    avatarUrl?: string;
+    avatarStorageId?: any;
+    publicIdentityType?: "display_name" | "username";
+    dateOfBirth?: string;
+    birthDateVisibility?: "public" | "age_only" | "private";
+  }) => {
     return await updateUserProfileMutation(args);
   };
 
@@ -1445,10 +1466,24 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return new Promise((resolve) => {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
-          const { latitude, longitude } = position.coords;
+          const { latitude, longitude, accuracy } = position.coords;
+
+          // Reject inaccurate readings (>100m threshold)
+          if (typeof accuracy === 'number' && accuracy > 100) {
+            setIsDetectingGps(false);
+            resolve({
+              success: false,
+              error: `Location accuracy (${Math.round(accuracy)}m) is insufficient (must be within 100m). Please retry or move outdoors.`,
+            });
+            return;
+          }
 
           let locName = 'Current Location';
           let subArea = '';
+          let country = '';
+          let state = '';
+          let city = '';
+          let neighborhood = '';
 
           try {
             // Real reverse geocode via OpenStreetMap Nominatim (free, no key)
@@ -1458,7 +1493,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             );
             const data = await res.json();
             const addr = data.address || {};
-            const area =
+            neighborhood =
               addr.neighbourhood ||
               addr.suburb ||
               addr.village ||
@@ -1466,10 +1501,12 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               addr.county ||
               addr.city_district ||
               '';
-            const city = addr.city || addr.town || addr.municipality || addr.county || '';
-            const state = addr.state || addr.region || '';
-            if (area) {
-              locName = area;
+            city = addr.city || addr.town || addr.municipality || addr.county || '';
+            state = addr.state || addr.region || '';
+            country = addr.country || '';
+
+            if (neighborhood) {
+              locName = neighborhood;
               subArea = [city || state].filter(Boolean).join(', ') || state;
             } else if (city) {
               locName = city;
@@ -1502,6 +1539,12 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             radiusKm: location.radiusKm || 5,
             latitude,
             longitude,
+            accuracy: accuracy ?? undefined,
+            capturedAt: Date.now(),
+            country: country || undefined,
+            state: state || undefined,
+            city: city || undefined,
+            neighborhood: neighborhood || undefined,
             isGpsDetected: true,
           };
           setLocation(newLoc);
@@ -1676,6 +1719,13 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     location?: string;
     latitude?: number;
     longitude?: number;
+    locationAccuracy?: number;
+    locationCapturedAt?: number;
+    locationCountry?: string;
+    locationState?: string;
+    locationCity?: string;
+    locationNeighborhood?: string;
+    nearbyEnabled?: boolean;
     audience?: string;
     replyPermission?: string;
     gifUrl?: string;
@@ -1723,6 +1773,13 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         location: resolvedLocation,
         latitude: args.latitude,
         longitude: args.longitude,
+        locationAccuracy: args.locationAccuracy,
+        locationCapturedAt: args.locationCapturedAt,
+        locationCountry: args.locationCountry,
+        locationState: args.locationState,
+        locationCity: args.locationCity,
+        locationNeighborhood: args.locationNeighborhood,
+        nearbyEnabled: args.nearbyEnabled,
         audience: args.audience as any,
         replyPermission: args.replyPermission as any,
         gifUrl: args.gifUrl,

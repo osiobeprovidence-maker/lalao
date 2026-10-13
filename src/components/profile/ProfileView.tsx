@@ -24,6 +24,7 @@ import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
 import { VerificationBadge } from '../common/VerificationBadge';
+import { getPublicIdentityLabel } from '../common/UserIdentity';
 import { PostItem } from '../feed/PostItem';
 import { User } from '../../types';
 import { SuggestCommunityModal } from './SuggestCommunityModal';
@@ -173,19 +174,15 @@ export const ProfileView: React.FC = () => {
       <div className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0 space-y-2">
-            {/* 1. Full name and verification badge */}
+            {/* 1. Public identity label (Name OR Username) and verification badge */}
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-xl font-bold text-theme-primary leading-tight">
-                  {currentUser.name}
+                  {getPublicIdentityLabel(currentUser)}
                 </h2>
                 <VerificationBadge user={currentUser} size="sm" />
                 {currentUser.badge && <Badge type={currentUser.badge} />}
               </div>
-              {/* 2. Username */}
-              <p className="text-xs text-theme-tertiary font-medium mt-0.5">
-                @{currentUser.username}
-              </p>
             </div>
 
             {/* 3. Bio or description */}
@@ -202,6 +199,35 @@ export const ProfileView: React.FC = () => {
                   <span className="truncate">{cleanLoc}</span>
                 </div>
               ) : null;
+            })()}
+
+            {/* Birthday / Age if visible */}
+            {currentUser.dateOfBirth && currentUser.birthDateVisibility && currentUser.birthDateVisibility !== 'private' && (() => {
+              try {
+                const birth = new Date(currentUser.dateOfBirth);
+                const now = new Date();
+                let age = now.getFullYear() - birth.getFullYear();
+                const m = now.getMonth() - birth.getMonth();
+                if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+
+                let label = '';
+                if (currentUser.birthDateVisibility === 'public') {
+                  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                  label = `Born ${months[birth.getMonth()]} ${birth.getDate()}`;
+                  if (!isNaN(age) && age >= 0) label += ` (${age} yrs)`;
+                } else if (currentUser.birthDateVisibility === 'age_only') {
+                  label = !isNaN(age) && age >= 0 ? `${age} years old` : '';
+                }
+
+                return label ? (
+                  <div className="flex items-center gap-1.5 text-xs text-theme-secondary font-medium">
+                    <Calendar className="w-3.5 h-3.5 text-[#5E43F3] shrink-0" />
+                    <span>{label}</span>
+                  </div>
+                ) : null;
+              } catch {
+                return null;
+              }
             })()}
 
             {/* 5. Connected community information (On one line with graceful mobile wrap/truncation) */}

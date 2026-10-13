@@ -4,6 +4,7 @@ import { X, Heart, MessageCircle, Repeat, Bookmark, Share, Volume2, VolumeX, Mor
 import { VideoPlayer } from './VideoPlayer';
 import { Post } from '../../types';
 import { VerificationBadge } from '../common/VerificationBadge';
+import { getPublicIdentityLabel } from '../common/UserIdentity';
 
 export const VideoFeedModal: React.FC = () => {
   const { 
@@ -135,12 +136,11 @@ const VideoFeedItem: React.FC<{ post: Post, isActive: boolean, onIntersect: () =
         <div className="w-full shrink-0 flex flex-col px-1 pb-4">
           
           <div className="flex items-center space-x-3 mb-3 cursor-pointer group">
-            <img src={post.author.avatar || 'https://via.placeholder.com/150'} alt={post.author.name} className="w-10 h-10 rounded-full object-cover group-hover:opacity-90 transition" />
+            <img src={post.author.avatar || 'https://via.placeholder.com/150'} alt={getPublicIdentityLabel(post.author)} className="w-10 h-10 rounded-full object-cover group-hover:opacity-90 transition" />
             <div>
               <h3 className="font-bold text-white text-[15px] leading-tight flex items-center group-hover:underline">
-                {post.author.name} <VerificationBadge user={post.author} size="xs" className="ml-0.5" />
+                {getPublicIdentityLabel(post.author)} <VerificationBadge user={post.author} size="xs" className="ml-0.5" />
               </h3>
-              <p className="text-white/70 text-sm">@{post.author.username}</p>
             </div>
           </div>
 

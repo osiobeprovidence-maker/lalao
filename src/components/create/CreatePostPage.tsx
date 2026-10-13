@@ -135,15 +135,32 @@ export const CreatePostPage: React.FC = () => {
         finalStorageId = data.storageId;
       }
 
-      const postLocationName = locationText?.trim() || '';
-      let postCoords: { lat?: number; lng?: number } = {};
-      if (postLocationName) {
-        if (location.name === postLocationName && typeof location.latitude === 'number' && typeof location.longitude === 'number') {
-          postCoords = { lat: location.latitude, lng: location.longitude };
-        } else {
-          const resolved = getCoordinatesForLocation(postLocationName);
-          postCoords = { lat: resolved.lat, lng: resolved.lng };
-        }
+      const postLocationName = locationText?.trim() || location.name || '';
+      let postCoords: {
+        lat?: number;
+        lng?: number;
+        accuracy?: number;
+        capturedAt?: number;
+        country?: string;
+        state?: string;
+        city?: string;
+        neighborhood?: string;
+      } = {};
+
+      const lowerAudience = audience.toLowerCase();
+      const isNearbyPost = lowerAudience === 'nearby';
+
+      if (location.isGpsDetected && typeof location.latitude === 'number' && typeof location.longitude === 'number') {
+        postCoords = {
+          lat: location.latitude,
+          lng: location.longitude,
+          accuracy: location.accuracy,
+          capturedAt: location.capturedAt || Date.now(),
+          country: location.country,
+          state: location.state,
+          city: location.city,
+          neighborhood: location.neighborhood,
+        };
       }
 
       await createPost({
@@ -154,7 +171,14 @@ export const CreatePostPage: React.FC = () => {
         location: postLocationName || undefined,
         latitude: postCoords.lat,
         longitude: postCoords.lng,
-        audience: audience.toLowerCase(),
+        locationAccuracy: postCoords.accuracy,
+        locationCapturedAt: postCoords.capturedAt,
+        locationCountry: postCoords.country,
+        locationState: postCoords.state,
+        locationCity: postCoords.city,
+        locationNeighborhood: postCoords.neighborhood,
+        nearbyEnabled: isNearbyPost,
+        audience: lowerAudience,
       });
       setCaption('');
       setSelectedFile(null);

@@ -377,6 +377,7 @@ export const listUsers = query({
   args: {
     search: v.optional(v.string()),
     role: v.optional(v.string()),
+    isTestAccount: v.optional(v.boolean()),
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -390,12 +391,17 @@ export const listUsers = query({
         (u: any) =>
           u.name?.toLowerCase().includes(s) ||
           u.email?.toLowerCase().includes(s) ||
-          u.username?.toLowerCase().includes(s)
+          u.username?.toLowerCase().includes(s) ||
+          u._id.toLowerCase().includes(s)
       );
     }
 
     if (args.role) {
       users = users.filter((u: any) => (u.role ?? "user") === args.role);
+    }
+
+    if (args.isTestAccount !== undefined) {
+      users = users.filter((u: any) => Boolean(u.is_test_account) === args.isTestAccount);
     }
 
     // Attach page count
@@ -483,6 +489,365 @@ export const restoreUser = mutation({
   },
 });
 
+/**
+ * Mark or unmark an account as a test/demo account.
+ * Requires super_admin.
+ */
+export const setTestAccountStatus = mutation({
+  args: {
+    userId: v.id("users"),
+    isTestAccount: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const actor = await requireSuperAdmin(ctx);
+    const target = await ctx.db.get(args.userId);
+    if (!target) throw new Error("Target user not found");
+
+    if (target.role === "super_admin") {
+      throw new Error("Super Admin accounts cannot be marked as test accounts.");
+    }
+
+    const before = Boolean(target.is_test_account);
+    await ctx.db.patch(args.userId, {
+      is_test_account: args.isTestAccount,
+      updatedAt: Date.now(),
+    });
+
+    await writeAudit(ctx, actor._id, "set_test_account_status", {
+      target: `user:${args.userId} (${target.name ?? target.email ?? target.username})`,
+      before: String(before),
+      after: String(args.isTestAccount),
+    });
+
+    return { success: true, isTestAccount: args.isTestAccount };
+  },
+});
+
+/**
+ * Preview / dry-run impact of deleting one or more test accounts.
+ * Reports counts of related resources before any deletion takes place.
+ */
+export const getTestAccountImpact = query({
+  args: {
+    userIds: v.array(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    if (!args.userIds || args.userIds.length === 0) {
+      return [];
+    }
+
+    try {
+      await requireAdmin(ctx, ["super_admin", "admin"]);
+    } catch {
+      return [];
+    }
+
+    const summaries: any[] = [];
+
+    for (const userId of args.userIds) {
+      try {
+        const user = await ctx.db.get(userId);
+        if (!user) continue;
+
+        let postsCount = 0;
+        try {
+          const posts = await ctx.db
+            .query("posts")
+            .withIndex("by_author", (q) => q.eq("authorId", userId))
+            .collect();
+          postsCount = posts.length;
+        } catch {}
+
+        let commentsCount = 0;
+        try {
+          const comments = await ctx.db
+            .query("comments")
+            .withIndex("by_author", (q) => q.eq("authorId", userId))
+            .collect();
+          commentsCount = comments.length;
+        } catch {}
+
+        let pagesCount = 0;
+        try {
+          const pages = await ctx.db
+            .query("pages")
+            .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+            .collect();
+          pagesCount = pages.length;
+        } catch {}
+
+        let followsGivenCount = 0;
+        try {
+          const followsGiven = await ctx.db
+            .query("follows")
+            .withIndex("by_follower", (q) => q.eq("followerId", userId))
+            .collect();
+          followsGivenCount = followsGiven.length;
+        } catch {}
+
+        let followsReceivedCount = 0;
+        try {
+          const followsReceived = await ctx.db
+            .query("follows")
+            .withIndex("by_following", (q) => q.eq("followingId", userId))
+            .collect();
+          followsReceivedCount = followsReceived.length;
+        } catch {}
+
+        let notificationsCount = 0;
+        try {
+          const notifications = await ctx.db
+            .query("notifications")
+            .withIndex("by_recipient", (q) => q.eq("recipientId", userId))
+            .collect();
+          notificationsCount = notifications.length;
+        } catch {}
+
+        let walletsCount = 0;
+        try {
+          const wallets = await ctx.db
+            .query("userWallets")
+            .withIndex("by_user", (q) => q.eq("userId", userId))
+            .collect();
+          walletsCount = wallets.length;
+        } catch {}
+
+        let transactionsCount = 0;
+        try {
+          const transactions = await ctx.db
+            .query("walletTransactions")
+            .withIndex("by_user", (q) => q.eq("userId", userId))
+            .collect();
+          transactionsCount = transactions.length;
+        } catch {}
+
+        summaries.push({
+          userId,
+          name: user.name || "Unknown",
+          username: user.username || "unknown",
+          email: user.email || "",
+          role: user.role || "user",
+          is_test_account: Boolean(user.is_test_account),
+          counts: {
+            posts: postsCount,
+            comments: commentsCount,
+            pages: pagesCount,
+            followsGiven: followsGivenCount,
+            followsReceived: followsReceivedCount,
+            notifications: notificationsCount,
+            wallets: walletsCount,
+            transactions: transactionsCount,
+          },
+        });
+      } catch {
+        continue;
+      }
+    }
+
+    return summaries;
+  },
+});
+
+/**
+ * Permanently delete confirmed test accounts and safely clean up related data.
+ * - Server enforces caller is super_admin.
+ * - Cannot delete own account or super_admin accounts.
+ * - Target accounts MUST have is_test_account === true in the database.
+ * - Financial/wallet records are retained for auditing (or transaction references unlinked, not erased).
+ * - Records action in auditLog with deleted user IDs, metadata, and results.
+ */
+export const deleteTestAccounts = mutation({
+  args: {
+    userIds: v.array(v.id("users")),
+    dryRun: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const actor = await requireSuperAdmin(ctx);
+
+    const results: {
+      userId: string;
+      status: "deleted" | "dry_run" | "skipped_not_test" | "skipped_protected" | "error";
+      reason?: string;
+    }[] = [];
+
+    const deletedIds: string[] = [];
+
+    for (const userId of args.userIds) {
+      if (userId === actor._id) {
+        results.push({
+          userId,
+          status: "skipped_protected",
+          reason: "Cannot delete your own account.",
+        });
+        continue;
+      }
+
+      const user = await ctx.db.get(userId);
+      if (!user) {
+        results.push({
+          userId,
+          status: "error",
+          reason: "Account does not exist.",
+        });
+        continue;
+      }
+
+      if (user.role === "super_admin") {
+        results.push({
+          userId,
+          status: "skipped_protected",
+          reason: "Super Admin accounts are protected from deletion.",
+        });
+        continue;
+      }
+
+      if (user.email && INITIAL_SUPER_ADMINS.includes(user.email)) {
+        results.push({
+          userId,
+          status: "skipped_protected",
+          reason: "Designated Super Admin email is protected from deletion.",
+        });
+        continue;
+      }
+
+      // Enforce server-side verification of test account status
+      if (!user.is_test_account) {
+        results.push({
+          userId,
+          status: "skipped_not_test",
+          reason: "Account is not marked as a confirmed test account.",
+        });
+        continue;
+      }
+
+      if (args.dryRun) {
+        results.push({
+          userId,
+          status: "dry_run",
+          reason: "Previewed for deletion.",
+        });
+        continue;
+      }
+
+      try {
+        // 1. Delete associated posts and comments
+        const posts = await ctx.db
+          .query("posts")
+          .withIndex("by_author", (q) => q.eq("authorId", userId))
+          .collect();
+        for (const p of posts) {
+          // Delete comments on post
+          const postComments = await ctx.db
+            .query("comments")
+            .withIndex("by_post", (q) => q.eq("postId", p._id))
+            .collect();
+          for (const c of postComments) {
+            await ctx.db.delete(c._id);
+          }
+          await ctx.db.delete(p._id);
+        }
+
+        const comments = await ctx.db
+          .query("comments")
+          .withIndex("by_author", (q) => q.eq("authorId", userId))
+          .collect();
+        for (const c of comments) {
+          await ctx.db.delete(c._id);
+        }
+
+        // 2. Delete follows (both directions)
+        const followsGiven = await ctx.db
+          .query("follows")
+          .withIndex("by_follower", (q) => q.eq("followerId", userId))
+          .collect();
+        for (const f of followsGiven) {
+          await ctx.db.delete(f._id);
+        }
+
+        const followsReceived = await ctx.db
+          .query("follows")
+          .withIndex("by_following", (q) => q.eq("followingId", userId))
+          .collect();
+        for (const f of followsReceived) {
+          await ctx.db.delete(f._id);
+        }
+
+        // 3. Delete notifications (sent and received)
+        const notifsReceived = await ctx.db
+          .query("notifications")
+          .withIndex("by_recipient", (q) => q.eq("recipientId", userId))
+          .collect();
+        for (const n of notifsReceived) {
+          await ctx.db.delete(n._id);
+        }
+
+        const notifsSent = await ctx.db
+          .query("notifications")
+          .withIndex("by_recipient", (q) => q)
+          .filter((q) => q.eq(q.field("actorId"), userId))
+          .collect();
+        for (const n of notifsSent) {
+          await ctx.db.delete(n._id);
+        }
+
+        // 4. Recommendation interactions and dismissals
+        const recInteractions = await ctx.db
+          .query("recommendationInteractions")
+          .withIndex("by_user", (q) => q.eq("userId", userId))
+          .collect();
+        for (const r of recInteractions) {
+          await ctx.db.delete(r._id);
+        }
+
+        const recDismissals = await ctx.db
+          .query("recommendationDismissals")
+          .withIndex("by_user", (q) => q.eq("userId", userId))
+          .collect();
+        for (const d of recDismissals) {
+          await ctx.db.delete(d._id);
+        }
+
+        // 5. Plum profile cleanup if existing
+        const plumProfiles = await ctx.db
+          .query("plumProfiles")
+          .withIndex("by_user", (q) => q.eq("userId", userId))
+          .collect();
+        for (const pp of plumProfiles) {
+          await ctx.db.delete(pp._id);
+        }
+
+        // 6. Delete the user record
+        await ctx.db.delete(userId);
+
+        deletedIds.push(userId);
+        results.push({
+          userId,
+          status: "deleted",
+        });
+      } catch (err: any) {
+        results.push({
+          userId,
+          status: "error",
+          reason: err.message || "Failed during deletion step.",
+        });
+      }
+    }
+
+    if (deletedIds.length > 0) {
+      await writeAudit(ctx, actor._id, "delete_test_accounts", {
+        target: `test_accounts_count:${deletedIds.length}`,
+        after: JSON.stringify({ deletedIds, totalRequested: args.userIds.length }),
+      });
+    }
+
+    return {
+      totalRequested: args.userIds.length,
+      deletedCount: deletedIds.length,
+      results,
+    };
+  },
+});
+
 // ─────────────────────────────────────────────────────────────
 // PAGES ADMIN
 // ─────────────────────────────────────────────────────────────
@@ -534,8 +899,7 @@ export const deleteDummyPages = internalMutation({
       "lalao",
       "thismyinvite",
       "my_events",
-      "test_sub_page",
-      "jointheq"
+      "test_sub_page"
     ];
 
     const pages = await ctx.db.query("pages").collect();
@@ -545,13 +909,12 @@ export const deleteDummyPages = internalMutation({
       const username = p.username?.toLowerCase() || "";
       if (
         pagesToDelete.includes(username) || 
-        p.name === "JOINTHEQ" || 
         p.name === "Test Sub Page" ||
         p.name === "Lalao" ||
         p.name === "This My Invite" ||
         p.name === "My Events"
       ) {
-        if (username !== "roomy") {
+        if (username !== "roomy" && username !== "jointheq") {
           await ctx.db.delete(p._id);
           deleted++;
         }

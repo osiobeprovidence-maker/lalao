@@ -39,6 +39,10 @@ export const HomeFeed: React.FC = () => {
     triggerShareToast,
     featureFlags,
     isFeedLoading,
+    permissions,
+    setActivePermissionPrompt,
+    detectGpsLocation,
+    isDetectingGps,
   } = useLalao();
 
 const FeedSkeleton: React.FC = () => {
@@ -550,30 +554,58 @@ const FeedSkeleton: React.FC = () => {
                 <div className="w-11 h-11 rounded-full bg-theme-surface-hover text-theme-tertiary flex items-center justify-center">
                   <Compass className="w-5 h-5" />
                 </div>
-                <h3 className="font-bold text-theme-primary text-sm leading-snug">
-                  No posts found within {location.radiusKm} km of {location.name}
-                </h3>
-                <p className="text-[11px] text-theme-tertiary leading-relaxed">
-                  Try expanding your discovery radius to 10 km or 25 km, or share the first update from this neighborhood.
-                </p>
-                <div className="pt-1 flex flex-wrap items-center justify-center gap-2">
-                  <button
-                    onClick={() => updateRadius(Math.min(50, (location.radiusKm || 5) * 2))}
-                    className="px-3.5 py-2 rounded-full border border-theme-divider-strong text-[11px] font-semibold text-theme-secondary hover:bg-theme-surface-hover cursor-pointer"
-                  >
-                    Expand Radius ({Math.min(50, (location.radiusKm || 5) * 2)} km)
-                  </button>
-                  <button
-                    onClick={() => {
-                      setCreateFlowType(null);
-                      setIsCreateSheetOpen(false);
-                      setActiveTab('create-post');
-                    }}
-                    className="px-3.5 py-2 rounded-full bg-[#5E43F3] text-[11px] font-bold text-white hover:bg-[#4E34E0] cursor-pointer"
-                  >
-                    Create Post
-                  </button>
-                </div>
+                {feedTab === 'nearby' && (!location.isGpsDetected || permissions.location !== 'granted') ? (
+                  <>
+                    <h3 className="font-bold text-theme-primary text-sm leading-snug">
+                      Enable GPS to Browse Nearby
+                    </h3>
+                    <p className="text-[11px] text-theme-tertiary leading-relaxed">
+                      Nearby discovery requires your physical device location to find authentic updates in your immediate radius.
+                    </p>
+                    <div className="pt-2 flex flex-col items-center gap-2">
+                      <button
+                        onClick={async () => {
+                          if (permissions.location !== 'granted') {
+                            setActivePermissionPrompt('location');
+                          } else {
+                            await detectGpsLocation();
+                          }
+                        }}
+                        disabled={isDetectingGps}
+                        className="px-4 py-2 rounded-full bg-[#5E43F3] text-[12px] font-bold text-white hover:bg-[#4E34E0] cursor-pointer shadow-md shadow-[#5E43F3]/25 transition"
+                      >
+                        {isDetectingGps ? 'Detecting GPS...' : 'Enable Device Location'}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="font-bold text-theme-primary text-sm leading-snug">
+                      No posts found within {location.radiusKm} km of {location.name}
+                    </h3>
+                    <p className="text-[11px] text-theme-tertiary leading-relaxed">
+                      Try expanding your discovery radius to 10 km or 25 km, or share the first update from this neighborhood.
+                    </p>
+                    <div className="pt-1 flex flex-wrap items-center justify-center gap-2">
+                      <button
+                        onClick={() => updateRadius(Math.min(50, (location.radiusKm || 5) * 2))}
+                        className="px-3.5 py-2 rounded-full border border-theme-divider-strong text-[11px] font-semibold text-theme-secondary hover:bg-theme-surface-hover cursor-pointer"
+                      >
+                        Expand Radius ({Math.min(50, (location.radiusKm || 5) * 2)} km)
+                      </button>
+                      <button
+                        onClick={() => {
+                          setCreateFlowType(null);
+                          setIsCreateSheetOpen(false);
+                          setActiveTab('create-post');
+                        }}
+                        className="px-3.5 py-2 rounded-full bg-[#5E43F3] text-[11px] font-bold text-white hover:bg-[#4E34E0] cursor-pointer"
+                      >
+                        Create Post
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}

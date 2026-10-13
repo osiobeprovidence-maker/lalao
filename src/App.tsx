@@ -13,6 +13,7 @@ import { CreatePageView } from './components/pages/CreatePageView';
 import { ProfileView } from './components/profile/ProfileView';
 import { EventsView } from './components/events/EventsView';
 import { MyPagesView } from './pages/my-pages/MyPagesView';
+import { PlumView } from './components/plum/PlumView';
 import { SoundDetailModal } from './components/sounds/SoundDetailModal';
 import { CreateSoundModal } from './components/sounds/CreateSoundModal';
 
@@ -338,6 +339,11 @@ const LalaoAppContent: React.FC = () => {
             {activeTab === 'my-pages' && (
               <div key="tab-my-pages" className="animate-in fade-in duration-200 w-full bg-transparent pb-24">
                 <MyPagesView />
+              </div>
+            )}
+            {activeTab === 'plum' && (
+              <div key="tab-plum" className="animate-in fade-in duration-200 min-h-full w-full bg-transparent">
+                <PlumView />
               </div>
             )}
             {activeTab === 'messages' && (

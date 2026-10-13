@@ -106,11 +106,6 @@ export const LocationRadiusModal: React.FC = () => {
       setAppActiveTab('home');
     }
     triggerShareToast(`Discovery area set to ${finalLoc.name} · ${finalLoc.radiusKm} km`);
-
-    // Persist to Convex so the profile always shows the correct location
-    updateUserProfile({
-      locationName: finalName,
-    }).catch(console.error);
   };
 
   const handleGpsDetect = async () => {

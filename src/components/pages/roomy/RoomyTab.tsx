@@ -9,6 +9,7 @@ import { CreateListingModal } from './CreateListingModal';
 import { ListingDetailModal } from './ListingDetailModal';
 import { InspectionsDashboard } from './InspectionsDashboard';
 import { VerificationBadge } from '../../common/VerificationBadge';
+import { getPublicIdentityLabel } from '../../common/UserIdentity';
 
 interface RoomyTabProps {
   page: Page;
@@ -211,7 +212,7 @@ export const RoomyTab: React.FC<RoomyTabProps> = ({ page }) => {
                 <div className="mt-auto flex items-center justify-between pt-3 border-t border-theme-divider-light">
                   <div className="flex items-center gap-2">
                     <img src={listing.owner?.avatarUrl || '/placeholder.png'} className="w-6 h-6 rounded-full object-cover border border-theme-divider bg-theme-surface-hover" alt="Owner" />
-                    <span className="text-xs font-semibold text-theme-secondary hover:text-[#5E43F3] transition-colors">{listing.owner?.name} <VerificationBadge user={listing.owner} size="xs" className="ml-0.5" /></span>
+                    <span className="text-xs font-semibold text-theme-secondary hover:text-[#5E43F3] transition-colors">{getPublicIdentityLabel(listing.owner)} <VerificationBadge user={listing.owner} size="xs" className="ml-0.5" /></span>
                   </div>
                 </div>
               </div>

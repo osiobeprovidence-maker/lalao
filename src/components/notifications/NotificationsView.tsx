@@ -13,6 +13,7 @@ import { Avatar } from '../common/Avatar';
 import { NotificationItem } from '../../types';
 import { SEED_NOTIFICATIONS } from '../../data/seedData';
 import { VerificationBadge } from '../common/VerificationBadge';
+import { getPublicIdentityLabel } from '../common/UserIdentity';
 import { SuggestedForYouFeed } from '../recommendations/SuggestedForYouFeed';
 
 export const NotificationsView: React.FC = () => {
@@ -176,7 +177,7 @@ export const NotificationsView: React.FC = () => {
 
                         <div className="min-w-0 flex-1">
                           <p className="text-xs leading-snug">
-                            <span className="font-bold text-theme-primary">{notif.actor?.name || 'Lalao'} <VerificationBadge user={notif.actor} size="xs" className="ml-0.5" /></span>{' '}
+                            <span className="font-bold text-theme-primary">{notif.actor ? getPublicIdentityLabel(notif.actor) : 'Lalao'} <VerificationBadge user={notif.actor} size="xs" className="ml-0.5" asSpan /></span>{' '}
                             <span className="text-theme-secondary">{notif.text}</span>
                           </p>
                           {notif.targetExcerpt && (
@@ -230,7 +231,7 @@ export const NotificationsView: React.FC = () => {
 
                         <div className="min-w-0 flex-1">
                           <p className="text-xs leading-snug">
-                            <span className="font-bold text-theme-primary">{notif.actor?.name || 'Lalao'} <VerificationBadge user={notif.actor} size="xs" className="ml-0.5" /></span>{' '}
+                            <span className="font-bold text-theme-primary">{notif.actor ? getPublicIdentityLabel(notif.actor) : 'Lalao'} <VerificationBadge user={notif.actor} size="xs" className="ml-0.5" asSpan /></span>{' '}
                             <span className="text-theme-secondary">{notif.text}</span>
                           </p>
                           {notif.targetExcerpt && (

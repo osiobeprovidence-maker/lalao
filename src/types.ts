@@ -47,6 +47,9 @@ export interface User {
   mutualInfo?: string;
   phoneSetupCompleted?: boolean;
   accessStatus?: "available" | "country_restricted" | "waitlisted";
+  publicIdentityType?: "display_name" | "username" | "both";
+  dateOfBirth?: string;
+  birthDateVisibility?: "public" | "age_only" | "private";
   [key: string]: any;
 }
 
@@ -736,6 +739,12 @@ export interface LocationConfig {
   radiusKm: number; // e.g., 5
   latitude?: number;
   longitude?: number;
+  accuracy?: number;
+  capturedAt?: number;
+  country?: string;
+  state?: string;
+  city?: string;
+  neighborhood?: string;
   isGpsDetected?: boolean;
 }
 

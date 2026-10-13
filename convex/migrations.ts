@@ -35,3 +35,42 @@ export const migratePageOwnersToMembers = internalMutation({
     return { success: true, migratedCount, totalPages: pages.length };
   },
 });
+
+
+/**
+ * Migration to safely audit historical posts for Nearby eligibility.
+ * Historical posts without trustworthy, verified coordinates are marked nearbyEnabled: false
+ * to prevent legacy posts or profile-location inferences from polluting the Nearby feed.
+ * Posts with explicit coordinates and valid coordinates retain their status safely.
+ */
+export const migrateHistoricalPostsNearbyStatus = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const posts = await ctx.db.query("posts").collect();
+    let updatedCount = 0;
+
+    for (const post of posts) {
+      // If nearbyEnabled is already explicitly set, skip
+      if (post.nearbyEnabled !== undefined) continue;
+
+      const hasCoords =
+        typeof post.latitude === "number" &&
+        typeof post.longitude === "number" &&
+        !isNaN(post.latitude) &&
+        !isNaN(post.longitude) &&
+        (post.latitude !== 0 || post.longitude !== 0);
+
+      // Only qualify if the audience was explicitly nearby or had legitimate coordinates
+      const isNearbyAudience = post.audience === "nearby";
+      const shouldEnableNearby = hasCoords && isNearbyAudience;
+
+      await ctx.db.patch(post._id, {
+        nearbyEnabled: shouldEnableNearby,
+        locationStatus: hasCoords ? (isNearbyAudience ? "verified" : "approximate") : "unverified",
+      });
+      updatedCount++;
+    }
+
+    return { success: true, updatedCount, totalPosts: posts.length };
+  },
+});

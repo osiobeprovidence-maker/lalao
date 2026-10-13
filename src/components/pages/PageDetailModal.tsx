@@ -71,6 +71,7 @@ import { EventAttendeesModal } from './EventAttendeesModal';
 import { PageManageProductsModal } from './PageManageProductsModal';
 import { PostComposer } from '../create/PostComposer';
 import { RoomyTab } from './roomy/RoomyTab';
+import { JointheQTab } from './jointheq/JointheQTab';
 import { PageManagementView } from './PageManagementView';
 
 type PageTab = 'posts' | 'shop' | 'auctions' | 'subscriptions' | 'media' | 'events' | 'about' | 'roomy' | 'locations';
@@ -141,6 +142,7 @@ export const PageDetailModal: React.FC = () => {
   const myMemberships = useQuery(api.subscriptions.getMyMemberships) || [];
   const pageLocations = useQuery(api.pages.getPageLocations, resolvedPageId && !isVirtualPage ? { pageId: resolvedPageId as any } : 'skip') || [];
   const ensureRoomyOrg = useMutation((api.roomy as any)?.ensureRoomyOrganization);
+  const ensureJointheQ = useMutation(api.subscriptions.ensureJointheQPage);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -164,7 +166,11 @@ export const PageDetailModal: React.FC = () => {
     if (activePageId) {
       containerRef.current?.scrollTo({ top: 0, behavior: 'instant' });
       window.scrollTo({ top: 0, behavior: 'instant' });
-      setActiveTab('posts');
+      if (activePageId === 'jointheq' || currentPage?.username?.toLowerCase() === 'jointheq') {
+        setActiveTab('subscriptions');
+      } else {
+        setActiveTab('posts');
+      }
       setSelectedCategory('All');
       setSelectedProduct(null);
       setIsMenuOpen(false);
@@ -175,7 +181,10 @@ export const PageDetailModal: React.FC = () => {
     if ((activePageId === 'roomy' || currentPage?.username === 'roomy') && ensureRoomyOrg) {
       ensureRoomyOrg().catch(() => {});
     }
-  }, [activePageId, currentPage?.username, ensureRoomyOrg]);
+    if ((activePageId === 'jointheq' || currentPage?.username?.toLowerCase() === 'jointheq') && ensureJointheQ) {
+      ensureJointheQ().catch(() => {});
+    }
+  }, [activePageId, currentPage?.username, ensureRoomyOrg, ensureJointheQ]);
 
   if (!activePageId) return null;
 
@@ -1184,19 +1193,23 @@ export const PageDetailModal: React.FC = () => {
           {/* TAB: SUBSCRIPTIONS */}
           {activeTab === 'subscriptions' && (
             <div id="page-subscriptions-section" className="p-3 sm:p-4 space-y-4">
-              <div className="bg-theme-base rounded-2xl p-4 border border-theme-divider-light mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#5E43F3]/10 flex items-center justify-center text-[#5E43F3]">
-                    <Crown className="w-5 h-5" />
+              {page.username?.toLowerCase() === 'jointheq' || page.name?.toLowerCase() === 'jointheq' ? (
+                <JointheQTab page={page} />
+              ) : (
+                <>
+                  <div className="bg-theme-base rounded-2xl p-4 border border-theme-divider-light mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#5E43F3]/10 flex items-center justify-center text-[#5E43F3]">
+                        <Crown className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-theme-primary">Premium Memberships</h3>
+                        <p className="text-[11px] text-theme-tertiary max-w-sm">
+                          Support {page.name} and get exclusive perks, private content, and VIP slots.
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-black text-theme-primary">Premium Memberships</h3>
-                    <p className="text-[11px] text-theme-tertiary max-w-sm">
-                      Support {page.name} and get exclusive perks, private content, and VIP slots.
-                    </p>
-                  </div>
-                </div>
-              </div>
 
               {pageSubscriptionPlans && pageSubscriptionPlans.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1261,8 +1274,10 @@ export const PageDetailModal: React.FC = () => {
                   )}
                 </div>
               )}
-            </div>
+            </>
           )}
+        </div>
+      )}
 
           {/* TAB: EVENTS */}
           {activeTab === 'events' && (

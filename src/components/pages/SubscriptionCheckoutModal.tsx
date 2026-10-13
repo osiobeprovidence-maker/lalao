@@ -1,48 +1,128 @@
-import React, { useState } from 'react';
-import { X, Crown, Check, AlertCircle, Loader2, Info } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, Crown, Check, AlertCircle, Loader2, CreditCard, Wallet, ShieldCheck, Clock, Calendar } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
-import { useMutation, useQuery } from 'convex/react';
+import { useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useAuth } from '../../context/AuthContext';
+import { usePaystackPayment } from 'react-paystack';
 
 export const SubscriptionCheckoutModal: React.FC = () => {
   const { 
     isSubscriptionCheckoutOpen, 
     setIsSubscriptionCheckoutOpen, 
     selectedSubscriptionPlan,
+    setIsWalletModalOpen,
     triggerShareToast
   } = useLalao();
 
   const { user } = useAuth();
 
-  const joinSlot = useMutation(api.subscriptions.joinSlot);
-  // Get wallet balance for the user
+  const reserveSlot = useMutation(api.subscriptions.reserveSlot);
+  const joinViaWallet = useMutation(api.subscriptions.joinViaWallet);
+  const verifyAndJoinPaystack = useAction(api.subscriptions.verifyAndJoinPaystack);
+
+  // Authoritative Lalao wallet balance
   const wallet = useQuery(api.wallet.getWallet);
   const userBalance = wallet?.balance ?? 0;
 
+  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'paystack'>('wallet');
   const [isProcessing, setIsProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  if (!isSubscriptionCheckoutOpen || !selectedSubscriptionPlan || !user) return null;
+  const [successData, setSuccessData] = useState<any>(null);
 
   const plan = selectedSubscriptionPlan;
-  const price = plan.defaultSlotPrice || 0;
-  
-  const handleSubscribe = async () => {
+  const price = plan?.defaultSlotPrice || 0;
+  const hasEnoughWalletFunds = userBalance >= price;
+
+  // Paystack configuration
+  const paystackReference = useMemo(() => {
+    return `JQ-PSK-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+  }, [isSubscriptionCheckoutOpen, plan?._id]);
+
+  const paystackConfig = {
+    reference: paystackReference,
+    email: user?.email || 'member@lalao.app',
+    amount: price * 100, // Kobo
+    publicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_1e3e4134a6324bd82248c28828b24f8a835e9f0f',
+  };
+
+  const initializePaystack = usePaystackPayment(paystackConfig as any);
+
+  if (!isSubscriptionCheckoutOpen || !plan || !user) return null;
+
+  const handleWalletCheckout = async () => {
     try {
       setError(null);
       setIsProcessing(true);
-      
-      // Attempt to join a slot atomically via Convex
-      await joinSlot({ subscriptionId: plan._id as any, role: 'Member' });
-      
+
+      // 1. Reserve slot
+      const reservation = await reserveSlot({
+        subscriptionId: plan._id as any,
+        paymentMethod: 'wallet',
+      });
+
+      // 2. Settle with Lalao Wallet balance
+      const res = await joinViaWallet({
+        subscriptionId: plan._id as any,
+        reservationId: reservation.reservationId,
+      });
+
+      setSuccessData(res);
       setSuccess(true);
+      triggerShareToast(`Joined ${plan.name} successfully!`);
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Error subscribing to slot.');
-      triggerShareToast('Failed to join slot. Please check your balance or try again.');
+      setError(err.message || 'Error subscribing to group.');
     } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handlePaystackSuccess = async (response: any) => {
+    setIsProcessing(true);
+    try {
+      const verified = await verifyAndJoinPaystack({
+        reference: response.reference || paystackReference,
+      });
+
+      if (verified.success) {
+        setSuccessData(verified);
+        setSuccess(true);
+        triggerShareToast(`Payment verified! Welcome to ${plan.name}.`);
+      } else {
+        setError(verified.message || 'Paystack payment verification failed.');
+      }
+    } catch (e: any) {
+      console.error('Paystack join verification error:', e);
+      setError(e.message || 'Error confirming Paystack transaction.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handlePaystackCheckout = async () => {
+    try {
+      setError(null);
+      setIsProcessing(true);
+
+      // 1. Create temporary slot reservation before opening checkout
+      await reserveSlot({
+        subscriptionId: plan._id as any,
+        paymentMethod: 'paystack',
+        paystackReference: paystackReference,
+      });
+
+      // 2. Open Paystack popup
+      initializePaystack({
+        onSuccess: handlePaystackSuccess,
+        onClose: () => {
+          setIsProcessing(false);
+        },
+      } as any);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Failed to initialize payment.');
       setIsProcessing(false);
     }
   };
@@ -53,14 +133,22 @@ export const SubscriptionCheckoutModal: React.FC = () => {
       setSuccess(false);
       setIsProcessing(false);
       setError(null);
+      setSuccessData(null);
+      setPaymentMethod('wallet');
     }, 300);
   };
 
-  const hasEnoughFunds = userBalance >= price;
-
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-theme-surface rounded-2xl w-full max-w-md overflow-hidden shadow-2xl relative">
+    <div 
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose();
+      }}
+    >
+      <div 
+        className="bg-theme-surface rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl relative border border-theme-divider-light flex flex-col max-h-[92vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
           onClick={handleClose}
           className="absolute top-4 right-4 p-2 rounded-full bg-theme-surface-hover text-theme-tertiary hover:bg-theme-surface-active transition-colors z-10"
@@ -69,103 +157,227 @@ export const SubscriptionCheckoutModal: React.FC = () => {
         </button>
 
         {success ? (
-          <div className="p-8 text-center space-y-4">
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-2">
+          <div className="p-8 text-center space-y-4 overflow-y-auto">
+            <div className="w-16 h-16 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-2 shadow-inner">
               <Check className="w-8 h-8 stroke-[3]" />
             </div>
-            <h2 className="text-xl font-black text-theme-primary">Subscription Active!</h2>
-            <p className="text-sm text-theme-tertiary">
-              You have successfully claimed a slot for {plan.name}. Your wallet has been charged ₦{price.toLocaleString()}.
+            <h2 className="text-2xl font-black text-theme-primary">Membership Active!</h2>
+            <p className="text-sm text-theme-secondary max-w-md mx-auto">
+              You've officially joined <strong className="text-theme-primary">{plan.name}</strong>.
             </p>
+
+            <div className="bg-theme-base p-4 rounded-2xl border border-theme-divider-light text-left space-y-3 mt-4">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-theme-tertiary font-bold uppercase tracking-wider">Amount Paid</span>
+                <span className="font-black text-theme-primary">₦{price.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-theme-tertiary font-bold uppercase tracking-wider">Payment Method</span>
+                <span className="font-bold text-theme-primary capitalize">{paymentMethod}</span>
+              </div>
+              {successData?.reference && (
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-theme-tertiary font-bold uppercase tracking-wider">Reference</span>
+                  <span className="font-mono font-bold text-theme-secondary text-[11px]">{successData.reference}</span>
+                </div>
+              )}
+              {successData?.nextRenewalDate && (
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-theme-tertiary font-bold uppercase tracking-wider">Next Renewal</span>
+                  <span className="font-bold text-[#5E43F3]">{new Date(successData.nextRenewalDate).toLocaleDateString()}</span>
+                </div>
+              )}
+            </div>
+
+            {plan.memberInstructions && (
+              <div className="bg-[#5E43F3]/5 p-4 rounded-2xl border border-[#5E43F3]/20 text-left">
+                <div className="text-xs font-bold text-[#5E43F3] uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4" /> Access Instructions
+                </div>
+                <p className="text-xs text-theme-secondary leading-relaxed">{plan.memberInstructions}</p>
+              </div>
+            )}
+
             <button
               onClick={handleClose}
-              className="w-full mt-4 py-3 bg-[#5E43F3] text-white rounded-xl font-bold hover:bg-[#4E34E0] transition-colors"
+              className="w-full mt-4 py-3.5 bg-[#5E43F3] text-white rounded-xl font-bold hover:bg-[#4E34E0] transition-colors shadow-lg shadow-[#5E43F3]/20 cursor-pointer"
             >
-              Start Enjoying
+              Done
             </button>
           </div>
         ) : (
-          <div>
+          <div className="flex flex-col h-full overflow-hidden">
             {/* Header */}
-            <div className="bg-[#5E43F3]/5 p-6 border-b border-[#5E43F3]/10">
-              <div className="flex items-center gap-2 mb-3">
+            <div className="bg-[#5E43F3]/5 p-6 border-b border-[#5E43F3]/10 shrink-0">
+              <div className="flex items-center gap-2 mb-2">
                 {plan.platformLogo ? (
-                   <img src={plan.platformLogo} alt="Logo" className="w-5 h-5 rounded" />
+                   <img src={plan.platformLogo} alt="Logo" className="w-5 h-5 rounded-md object-contain" />
                 ) : (
                    <Crown className="w-5 h-5 text-[#5E43F3]" />
                 )}
                 <span className="text-xs font-black uppercase tracking-wider text-[#5E43F3]">
-                  Subscription Slot
+                  JointheQ Subscription Group
                 </span>
               </div>
               <h2 className="text-xl sm:text-2xl font-black text-theme-primary mb-1">{plan.name}</h2>
-              <p className="text-sm text-theme-secondary">{plan.description}</p>
+              <p className="text-xs sm:text-sm text-theme-secondary line-clamp-2">{plan.description}</p>
             </div>
 
-            {/* Content */}
-            <div className="p-6">
-              <div className="flex justify-between items-end mb-6">
+            {/* Content Body */}
+            <div className="p-6 space-y-5 overflow-y-auto flex-1">
+              {/* Pricing Box */}
+              <div className="flex justify-between items-end bg-theme-base p-4 rounded-2xl border border-theme-divider-light">
                 <div>
-                  <p className="text-xs font-bold text-theme-tertiary uppercase tracking-wide mb-1">Price Per Cycle</p>
+                  <p className="text-[10px] font-bold text-theme-tertiary uppercase tracking-wider mb-1">Monthly Slot Price</p>
                   <div className="flex items-baseline gap-1">
                     <span className="text-2xl sm:text-3xl font-black text-theme-primary">
                       ₦{price.toLocaleString()}
                     </span>
+                    <span className="text-xs text-theme-tertiary font-bold">/ {plan.billingCycle || 'month'}</span>
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs font-bold text-theme-tertiary bg-theme-surface-hover px-2 py-1 rounded-md uppercase">
-                    / {plan.billingCycle}
+                  <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100 flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5" /> Verified Group
                   </span>
                 </div>
               </div>
 
-              {/* Wallet Balance Check */}
-              <div className={`p-4 rounded-xl border mb-6 flex justify-between items-center ${hasEnoughFunds ? 'bg-theme-base border-theme-divider' : 'bg-red-50 border-red-200'}`}>
-                <div>
-                  <p className="text-xs font-bold text-theme-tertiary mb-1">Your Wallet Balance</p>
-                  <p className={`text-sm font-black ${hasEnoughFunds ? 'text-theme-primary' : 'text-red-600'}`}>₦{userBalance.toLocaleString()}</p>
-                </div>
-                {!hasEnoughFunds && (
-                  <button className="text-xs font-bold bg-theme-inverse text-theme-text-inverse px-3 py-1.5 rounded-lg">
-                    Top Up
+              {/* Payment Method Selector */}
+              <div>
+                <label className="text-[11px] font-bold text-theme-tertiary uppercase tracking-wider block mb-2 px-1">
+                  Select Payment Method
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Option 1: Lalao Wallet */}
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('wallet')}
+                    className={`p-3.5 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-2 cursor-pointer ${
+                      paymentMethod === 'wallet'
+                        ? 'border-[#5E43F3] bg-[#5E43F3]/5 ring-2 ring-[#5E43F3]/20'
+                        : 'border-theme-divider-light bg-theme-base hover:bg-theme-surface-hover'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-[#5E43F3]/10 text-[#5E43F3] flex items-center justify-center">
+                          <Wallet className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="text-xs font-bold text-theme-primary">LaLao Wallet</span>
+                      </div>
+                      {paymentMethod === 'wallet' && (
+                        <div className="w-4 h-4 rounded-full bg-[#5E43F3] text-white flex items-center justify-center text-[10px]">✓</div>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-theme-secondary">
+                      Bal: <strong className={hasEnoughWalletFunds ? 'text-theme-primary' : 'text-red-500'}>₦{userBalance.toLocaleString()}</strong>
+                    </div>
                   </button>
+
+                  {/* Option 2: Paystack (Card / Bank) */}
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('paystack')}
+                    className={`p-3.5 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-2 cursor-pointer ${
+                      paymentMethod === 'paystack'
+                        ? 'border-[#0BA4DB] bg-[#0BA4DB]/5 ring-2 ring-[#0BA4DB]/20'
+                        : 'border-theme-divider-light bg-theme-base hover:bg-theme-surface-hover'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-[#0BA4DB]/10 text-[#0BA4DB] flex items-center justify-center">
+                          <CreditCard className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="text-xs font-bold text-theme-primary">Paystack</span>
+                      </div>
+                      {paymentMethod === 'paystack' && (
+                        <div className="w-4 h-4 rounded-full bg-[#0BA4DB] text-white flex items-center justify-center text-[10px]">✓</div>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-theme-secondary">
+                      Debit Card / Bank Transfer
+                    </div>
+                  </button>
+                </div>
+
+                {/* Top Up hint if wallet selected but insufficient */}
+                {paymentMethod === 'wallet' && !hasEnoughWalletFunds && (
+                  <div className="mt-2.5 p-3 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-between text-xs">
+                    <span className="text-orange-700 font-medium">Insufficient wallet balance for ₦{price.toLocaleString()}.</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleClose();
+                        setIsWalletModalOpen(true);
+                      }}
+                      className="px-3 py-1 bg-orange-600 text-white rounded-lg font-bold hover:bg-orange-700 transition-colors"
+                    >
+                      Top Up Wallet
+                    </button>
+                  </div>
                 )}
               </div>
 
-              <div className="bg-theme-base rounded-xl p-4 border border-theme-divider-light mb-6">
-                <h4 className="text-xs font-bold text-theme-primary uppercase tracking-wider mb-3">What's Included</h4>
-                <div className="space-y-2.5">
-                  {plan.benefits?.map((benefit: string, idx: number) => (
-                    <div key={idx} className="flex items-start gap-2 text-sm text-theme-secondary">
-                      <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                      <span>{benefit}</span>
-                    </div>
-                  ))}
+              {/* Benefits */}
+              {plan.benefits && plan.benefits.length > 0 && (
+                <div className="bg-theme-base rounded-2xl p-4 border border-theme-divider-light">
+                  <h4 className="text-[10px] font-bold text-theme-tertiary uppercase tracking-wider mb-2.5">
+                    What's Included
+                  </h4>
+                  <div className="space-y-2">
+                    {plan.benefits.map((benefit: string, idx: number) => (
+                      <div key={idx} className="flex items-start gap-2 text-xs text-theme-secondary">
+                        <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                        <span>{benefit}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Policies info */}
+              <div className="space-y-1.5 text-[11px] text-theme-tertiary px-1">
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 shrink-0 text-theme-tertiary" />
+                  <span>Slots are reserved for 15 minutes during checkout.</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 shrink-0 text-theme-tertiary" />
+                  <span>Monthly recurring subscription. Cancel anytime from My Subscriptions.</span>
                 </div>
               </div>
 
               {error && (
-                <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-100 rounded-xl text-red-800 text-xs mb-6">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+                <div className="flex items-start gap-2.5 p-3.5 bg-red-50 border border-red-100 rounded-xl text-red-700 text-xs">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-500" />
                   <p>{error}</p>
                 </div>
               )}
+            </div>
 
+            {/* Bottom Actions */}
+            <div className="p-4 bg-theme-base border-t border-theme-divider-light shrink-0">
               <button
-                onClick={handleSubscribe}
-                disabled={isProcessing || !hasEnoughFunds}
-                className="w-full py-3.5 bg-[#5E43F3] text-white rounded-xl font-black shadow-lg shadow-[#5E43F3]/20 hover:bg-[#4E34E0] active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                type="button"
+                onClick={paymentMethod === 'wallet' ? handleWalletCheckout : handlePaystackCheckout}
+                disabled={isProcessing || (paymentMethod === 'wallet' && !hasEnoughWalletFunds)}
+                className={`w-full py-4 rounded-xl font-black text-white shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  paymentMethod === 'wallet'
+                    ? 'bg-[#5E43F3] hover:bg-[#4E34E0] shadow-[#5E43F3]/25'
+                    : 'bg-[#0BA4DB] hover:bg-[#098bbd] shadow-[#0BA4DB]/25'
+                } disabled:opacity-60 disabled:cursor-not-allowed`}
               >
                 {isProcessing ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Processing...
+                    <span>Processing Payment...</span>
                   </>
-                ) : !hasEnoughFunds ? (
-                  <>Insufficient Funds</>
                 ) : (
-                  <>Pay ₦{price.toLocaleString()} & Join</>
+                  <span>
+                    Pay ₦{price.toLocaleString()} via {paymentMethod === 'wallet' ? 'Wallet' : 'Paystack'} & Join
+                  </span>
                 )}
               </button>
             </div>

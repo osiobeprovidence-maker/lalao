@@ -18,12 +18,14 @@ import {
   Download,
   Sparkles,
   Briefcase,
+  Flame,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../common/Avatar';
 import { VerificationBadge } from '../common/VerificationBadge';
+import { getPublicIdentityLabel } from '../common/UserIdentity';
 import { usePWA } from '../../hooks/usePWA';
 
 export const DesktopSidebar: React.FC = () => {
@@ -414,13 +416,12 @@ export const DesktopSidebar: React.FC = () => {
                   }}
                   className="flex min-w-0 flex-1 items-center gap-2.5 text-left cursor-pointer"
                 >
-                  <Avatar src={currentUser?.avatar} alt={currentUser?.name} size="sm" />
+                  <Avatar src={currentUser?.avatar} alt={getPublicIdentityLabel(currentUser)} size="sm" />
                   <div className="min-w-0">
                     <div className="truncate text-[12px] font-bold text-theme-primary flex items-center gap-1.5">
-                      <span className="truncate">{currentUser?.name}</span>
-                      <VerificationBadge user={currentUser} size="xs" />
+                      <span className="truncate">{getPublicIdentityLabel(currentUser)}</span>
+                      <VerificationBadge user={currentUser} size="xs" asSpan />
                     </div>
-                    <div className="truncate text-[11px] text-theme-tertiary">@{currentUser?.username}</div>
                   </div>
                 </button>
 

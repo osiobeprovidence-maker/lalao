@@ -71,8 +71,6 @@ async function resolvePost(ctx: any, postDoc: any, currentUser: any) {
     mediaUrl: postDoc.mediaUrl,
     mediaType: postDoc.mediaType,
     location: postDoc.location,
-    latitude: postDoc.latitude,
-    longitude: postDoc.longitude,
     createdAt: formatRelativeTime(postDoc.createdAt),
     likesCount: postDoc.likesCount ?? 0,
     commentsCount: postDoc.commentsCount ?? 0,
@@ -191,6 +189,7 @@ export const globalSearch = query({
           followersCount: u.followersCount ?? 0,
           followingCount: u.followingCount ?? 0,
           isFollowing,
+          publicIdentityType: (u.publicIdentityType as "display_name" | "username") ?? "display_name",
           // Intentionally omitting email and phone for privacy
         });
       }

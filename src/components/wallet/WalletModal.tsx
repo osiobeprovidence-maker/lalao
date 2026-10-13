@@ -34,7 +34,9 @@ type WalletView =
   | 'fund_amount'
   | 'fund_method'
   | 'fund_review'
+  | 'fund_pending'
   | 'fund_success'
+  | 'fund_failed'
   | 'withdraw_amount'
   | 'withdraw_review'
   | 'withdraw_pin'
@@ -71,9 +73,9 @@ export const WalletModal: React.FC = () => {
   const performTransferCredits = useMutation(api.wallet.transferCredits);
   const performTransferCrypto = useMutation(api.wallet.transferCrypto);
   const performTopUp = useMutation(api.wallet.topUp);
-  const performInitializeFunding = useMutation(api.wallet.initializeFunding);
+  const performInitializeFunding = useAction(api.wallet.initializeFunding);
   const performVerifyFunding = useAction(api.wallet.verifyPaystackFunding);
-  const performPurchaseService = useMutation(api.market.purchaseService);
+  const performPurchaseService = useAction(api.market.purchaseService);
   const fetchVariations = useAction(api.market.getVariations);
 
   // Crypto wallet — real Web3 connection
@@ -86,9 +88,10 @@ export const WalletModal: React.FC = () => {
   const [currentView, setCurrentView] = useState<WalletView>('home');
   const [viewStack, setViewStack] = useState<WalletView[]>(['home']);
   
-  // Dev override for balance testing (admin-only)
+  // Dev override for testing — restricted to explicit test mode flag
   const [devBalance, setDevBalance] = useState<number | null>(null);
-  const internalBalance = (isDevAdmin && devBalance !== null) ? devBalance : (wallet?.balance ?? 0);
+  const isTestModeEnabled = isDevAdmin && import.meta.env.DEV && import.meta.env.VITE_ENABLE_WALLET_TEST_MODE === 'true';
+  const internalBalance = (isTestModeEnabled && devBalance !== null) ? devBalance : (wallet?.balance ?? 0);
   
   // Real crypto balance derived from hook
   const cryptoBalanceUSDC = web3.balance ? parseFloat(web3.balance) : 0;
@@ -136,6 +139,9 @@ export const WalletModal: React.FC = () => {
   const [selectedTx, setSelectedTx] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [withdrawError, setWithdrawError] = useState('');
+  const [fundingError, setFundingError] = useState('');
+  const [fundingStatusMessage, setFundingStatusMessage] = useState('');
+  const [activePaymentRef, setActivePaymentRef] = useState<string>('');
 
   // Withdrawal Mock State
   const [withdrawalAccounts, setWithdrawalAccounts] = useState<WithdrawalAccount[]>([
@@ -164,13 +170,13 @@ export const WalletModal: React.FC = () => {
 
   // Generate a stable reference for the current flow
   const currentPaystackReference = useMemo(() => {
-    return `LALAO_FUND_${new Date().getTime()}_${Math.random().toString(36).substring(7)}`;
-  }, [currentView === 'fund_review']); // Regenerate only when entering review step
+    return activePaymentRef || `LAL_FUND_${Date.now()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+  }, [activePaymentRef, currentView === 'fund_review']);
 
   const paystackConfig = {
-    reference: currentPaystackReference,
+    reference: currentPaystackReference, userId: currentUser?.id,
     email: currentUser?.email || 'user@lalao.app',
-    amount: (parseFloat(flowAmount) || 0) * 100, // Paystack amount is in kobo
+    amount: Math.round((parseFloat(flowAmount) || 0) * 100), // Paystack amount is in kobo (1 NGN = 100 kobo)
     publicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_1e3e4134a6324bd82248c28828b24f8a835e9f0f',
   };
 
@@ -178,26 +184,32 @@ export const WalletModal: React.FC = () => {
 
   const handlePaystackSuccess = async (response: any) => {
     setIsProcessing(true);
+    setFundingStatusMessage('Verifying payment with Paystack...');
+    navigateTo('fund_pending');
     try {
+      const verifiedRef = response?.reference || currentPaystackReference;
       const result = await performVerifyFunding({
-        reference: response.reference || currentPaystackReference
+        reference: verifiedRef
       });
       
       if (result.success) {
         navigateTo('fund_success');
       } else {
-        // Payment failed verification
-        console.error("Verification failed:", result);
+        setFundingError(result.message || 'Payment verification could not be confirmed. If you were debited, your wallet will credit automatically once the provider settles.');
+        navigateTo('fund_failed');
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Error verifying payment:", e);
+      setFundingError(e.message || 'Payment verification encountered a network error. Checking transactions...');
+      navigateTo('fund_failed');
     } finally {
       setIsProcessing(false);
     }
   };
 
   const handlePaystackClose = () => {
-    // Modal closed
+    setIsProcessing(false);
+    setFundingStatusMessage('Payment window was closed before completion.');
   };
 
   const navigateTo = (view: WalletView) => {
@@ -368,8 +380,16 @@ export const WalletModal: React.FC = () => {
 
   return (
     <>
-      <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 sm:p-4 animate-in fade-in duration-200">
-      <div className="w-full sm:max-w-md bg-theme-base sm:rounded-[32px] rounded-t-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] min-h-[70vh]">
+      <div 
+        className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 sm:p-4 animate-in fade-in duration-200"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) handleClose();
+        }}
+      >
+        <div 
+          className="w-full sm:max-w-md bg-theme-base sm:rounded-[32px] rounded-t-[32px] shadow-2xl overflow-hidden flex flex-col h-[90vh] sm:h-[85vh] max-h-[92vh]"
+          onClick={(e) => e.stopPropagation()}
+        >
         
         {/* Header */}
         <div className="flex items-center justify-between p-4 bg-theme-surface shrink-0 sticky top-0 z-10 border-b border-theme-divider-light">
@@ -1031,32 +1051,91 @@ export const WalletModal: React.FC = () => {
           {/* FUND FLOW */}
           {currentView === 'fund_amount' && (
              <div className="p-4 flex flex-col h-full">
-                <div className="flex-1 flex flex-col items-center justify-center pt-8 pb-12">
-                   <h3 className="font-black text-theme-primary text-2xl mb-8">Fund Credits</h3>
-                   <div className="flex items-center text-theme-primary mb-4">
-                     <input 
-                       type="text"
-                       inputMode="decimal"
-                       value={flowAmount}
-                       onChange={e => {
-                         const val = e.target.value;
-                         if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) setFlowAmount(val);
-                       }}
-                       placeholder="0"
-                       className="w-auto min-w-[80px] max-w-[200px] text-center bg-transparent text-6xl font-black focus:outline-none placeholder:text-theme-tertiary/30"
-                       autoFocus
-                     />
-                     <span className="text-3xl font-black ml-2 text-theme-secondary">LC</span>
+                <div className="flex-1 flex flex-col items-center justify-center pt-4 pb-8 space-y-6">
+                   <div className="text-center">
+                     <h3 className="font-black text-theme-primary text-2xl mb-1">Fund Credits</h3>
+                     <p className="text-xs text-theme-secondary font-medium">
+                       Exchange rate: <span className="font-bold text-theme-primary">₦1 = 1 LC</span> • No deposit fees
+                     </p>
                    </div>
-                   <div className="text-sm font-semibold text-theme-secondary">
-                     Current balance: {internalBalance.toLocaleString()} LC
+
+                   {/* Primary Input in Nigerian Naira (₦) */}
+                   <div className="flex flex-col items-center justify-center">
+                     <span className="text-xs font-bold text-theme-tertiary uppercase tracking-widest mb-1">Enter Amount in Naira</span>
+                     <div className="flex items-center text-theme-primary mb-2">
+                       <span className="text-4xl font-black mr-1 text-theme-secondary">₦</span>
+                       <input 
+                         type="text"
+                         inputMode="numeric"
+                         value={flowAmount}
+                         onChange={e => {
+                           const val = e.target.value.replace(/[^0-9]/g, '');
+                           setFlowAmount(val);
+                           if (fundingError) setFundingError('');
+                         }}
+                         placeholder="1,000"
+                         className="w-auto min-w-[120px] max-w-[260px] text-center bg-transparent text-5xl font-black focus:outline-none placeholder:text-theme-tertiary/30"
+                         autoFocus
+                       />
+                     </div>
+
+                     {/* Instant Credits (LC) Conversion Display */}
+                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#5E43F3]/10 border border-[#5E43F3]/20 text-[#5E43F3] text-sm font-bold">
+                       <span>You will receive:</span>
+                       <span className="font-black text-base">
+                         {flowAmount && !isNaN(parseFloat(flowAmount)) ? parseFloat(flowAmount).toLocaleString() : '0'} LC
+                       </span>
+                     </div>
+                   </div>
+
+                   {/* Quick preset amount chips */}
+                   <div className="flex flex-wrap items-center justify-center gap-2 max-w-[320px]">
+                     {[500, 1000, 2000, 5000, 10000].map((preset) => (
+                       <button
+                         key={preset}
+                         type="button"
+                         onClick={() => {
+                           setFlowAmount(preset.toString());
+                           if (fundingError) setFundingError('');
+                         }}
+                         className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                           flowAmount === preset.toString()
+                             ? 'bg-[#5E43F3] text-white shadow-sm'
+                             : 'bg-theme-surface border border-theme-divider-light text-theme-primary hover:bg-theme-surface-hover'
+                         }`}
+                       >
+                         +₦{preset.toLocaleString()}
+                       </button>
+                     ))}
+                   </div>
+
+                   {/* Validation / Limits message */}
+                   <div className="text-center space-y-1">
+                     <div className="text-xs font-semibold text-theme-secondary">
+                       Current balance: <span className="font-bold text-theme-primary">{internalBalance.toLocaleString()} LC</span>
+                     </div>
+                     <div className="text-[11px] text-theme-tertiary font-medium">
+                       Min: ₦100 • Max: ₦500,000 per transaction
+                     </div>
+                     {flowAmount && (parseFloat(flowAmount) < 100 || parseFloat(flowAmount) > 500000) && (
+                       <div className="text-xs font-bold text-red-500 bg-red-50 dark:bg-red-950/30 px-3 py-1.5 rounded-xl border border-red-200 dark:border-red-900/40">
+                         {parseFloat(flowAmount) < 100 
+                           ? 'Minimum funding amount is ₦100 (100 LC).' 
+                           : 'Maximum funding amount is ₦500,000 (500,000 LC).'}
+                       </div>
+                     )}
                    </div>
                 </div>
+
                 <div className="shrink-0 pt-4 border-t border-theme-divider-light">
                    <button 
-                     onClick={() => navigateTo('fund_review')}
-                     disabled={!flowAmount || parseFloat(flowAmount) <= 0}
-                     className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-lg hover:bg-indigo-600 transition-colors disabled:opacity-50"
+                     onClick={() => {
+                       const num = parseFloat(flowAmount);
+                       if (isNaN(num) || num < 100 || num > 500000) return;
+                       navigateTo('fund_review');
+                     }}
+                     disabled={!flowAmount || parseFloat(flowAmount) < 100 || parseFloat(flowAmount) > 500000}
+                     className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-lg hover:bg-indigo-600 transition-colors disabled:opacity-50 cursor-pointer shadow-lg shadow-[#5E43F3]/20"
                    >
                      Continue
                    </button>
@@ -1066,62 +1145,161 @@ export const WalletModal: React.FC = () => {
 
           {currentView === 'fund_review' && (
              <div className="p-4 flex flex-col h-full">
-                <h3 className="font-black text-theme-primary text-2xl mb-6">Review funding</h3>
+                <h3 className="font-black text-theme-primary text-2xl mb-6">Review Funding</h3>
                 <div className="flex-1 space-y-4">
                   <div className="bg-theme-surface rounded-2xl p-5 border border-theme-divider-light space-y-4">
                     <div className="flex justify-between items-center">
-                      <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Amount</div>
-                      <div className="font-black text-theme-primary text-xl">{parseFloat(flowAmount).toLocaleString()} LC</div>
+                      <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Amount to Pay</div>
+                      <div className="font-black text-theme-primary text-xl">₦{parseFloat(flowAmount || '0').toLocaleString()}</div>
                     </div>
                     <div className="border-t border-theme-divider-light"></div>
                     <div className="flex justify-between items-center">
-                      <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Payment method</div>
-                      <div className="font-bold text-theme-primary">Paystack (Card/Bank)</div>
+                      <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Credits to Receive</div>
+                      <div className="font-black text-[#5E43F3] text-xl">{parseFloat(flowAmount || '0').toLocaleString()} LC</div>
                     </div>
+                    <div className="border-t border-theme-divider-light"></div>
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Estimated Fee</div>
+                      <div className="font-bold text-emerald-600">₦0.00 (Free)</div>
+                    </div>
+                    <div className="border-t border-theme-divider-light"></div>
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Payment Method</div>
+                      <div className="font-bold text-theme-primary">Paystack (Card, Bank, USSD, Transfer)</div>
+                    </div>
+                    <div className="border-t border-theme-divider-light"></div>
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Payment Reference</div>
+                      <div className="font-mono text-xs text-theme-secondary truncate max-w-[180px]">{currentPaystackReference}</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-amber-50 dark:bg-amber-950/20 p-3.5 rounded-2xl border border-amber-200 dark:border-amber-900/30 flex items-start gap-2.5">
+                    <Shield className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-800 dark:text-amber-300 font-medium">
+                      Every payment is verified on the backend before crediting your balance. No secret keys or card credentials touch the client.
+                    </p>
                   </div>
                 </div>
 
                 <div className="shrink-0 pt-4 flex gap-3">
-                   <button onClick={goBack} className="flex-1 py-4 rounded-xl bg-theme-surface-hover text-theme-primary font-bold hover:bg-theme-surface-active transition-colors">Cancel</button>
+                   <button onClick={goBack} disabled={isProcessing} className="flex-1 py-4 rounded-xl bg-theme-surface-hover text-theme-primary font-bold hover:bg-theme-surface-active transition-colors">
+                     Cancel
+                   </button>
                    <button 
                      onClick={async () => {
                        setIsProcessing(true);
+                       setFundingStatusMessage('Initializing payment with backend...');
                        try {
-                         await performInitializeFunding({
+                         const initRes = await performInitializeFunding({
                            amount: parseFloat(flowAmount),
-                           reference: currentPaystackReference
+                           reference: currentPaystackReference, userId: currentUser?.id
                          });
+
+                         if (initRes && initRes.reference) {
+                           setActivePaymentRef(initRes.reference);
+                         }
+
+                         // Open Paystack checkout popup
                          initializePayment({ onSuccess: handlePaystackSuccess, onClose: handlePaystackClose } as any);
-                       } catch (e) {
+                       } catch (e: any) {
                          console.error("Failed to initialize funding:", e);
+                         setFundingError(e.message || "Failed to initialize payment.");
+                         navigateTo('fund_failed');
                        } finally {
                          setIsProcessing(false);
                        }
                      }}
                      disabled={isProcessing}
-                     className="flex-[2] py-4 rounded-xl bg-[#0BA4DB] text-white font-bold hover:bg-[#098bbd] transition-colors shadow-lg disabled:opacity-50"
+                     className="flex-[2] py-4 rounded-xl bg-[#0BA4DB] text-white font-bold hover:bg-[#098bbd] transition-colors shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
                    >
-                     {isProcessing ? 'Processing...' : 'Pay with Paystack'}
+                     {isProcessing ? (
+                       <>
+                         <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                         Initializing...
+                       </>
+                     ) : (
+                       'Pay with Paystack'
+                     )}
                    </button>
                 </div>
              </div>
           )}
 
+          {/* FUND PENDING VERIFICATION */}
+          {currentView === 'fund_pending' && (
+             <div className="p-4 flex flex-col h-full text-center pb-12">
+               <div className="flex-1 flex flex-col items-center justify-center pt-8">
+                 <div className="w-20 h-20 bg-[#5E43F3]/10 rounded-full flex items-center justify-center mb-6">
+                   <div className="w-10 h-10 border-4 border-[#5E43F3]/30 border-t-[#5E43F3] rounded-full animate-spin"></div>
+                 </div>
+                 <h3 className="font-black text-theme-primary text-2xl mb-2">Verifying Payment</h3>
+                 <p className="text-theme-secondary font-medium text-sm max-w-[280px] mb-4 mx-auto">
+                   {fundingStatusMessage || 'Please hold on while we verify your transaction with Paystack.'}
+                 </p>
+                 <div className="font-mono text-xs text-theme-tertiary bg-theme-surface px-3 py-1.5 rounded-full border border-theme-divider-light">
+                   Ref: {currentPaystackReference}
+                 </div>
+               </div>
+             </div>
+          )}
+
+          {/* FUND SUCCESS */}
           {currentView === 'fund_success' && (
              <div className="p-4 flex flex-col h-full text-center pb-12">
-               <div className="flex-1 flex flex-col items-center justify-center pt-12">
-                 <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mb-6 border border-green-100">
-                   <Check className="w-12 h-12 text-green-500" />
+               <div className="flex-1 flex flex-col items-center justify-center pt-8">
+                 <div className="w-24 h-24 bg-green-50 dark:bg-green-950/30 rounded-full flex items-center justify-center mb-6 border border-green-200 dark:border-green-800">
+                   <Check className="w-12 h-12 text-emerald-500" />
                  </div>
-                 <h3 className="font-black text-theme-primary text-2xl mb-4">Funding successful</h3>
-                 <div className="font-black text-4xl text-theme-primary mb-6">{parseFloat(flowAmount).toLocaleString()} LC</div>
-                 <p className="text-theme-secondary font-semibold text-sm max-w-[280px] mb-8 mx-auto">
-                   Your wallet has been credited successfully.
+                 <h3 className="font-black text-theme-primary text-2xl mb-2">Funding Successful!</h3>
+                 <div className="font-black text-4xl text-[#5E43F3] mb-4">+{parseFloat(flowAmount || '0').toLocaleString()} LC</div>
+                 <p className="text-theme-secondary font-medium text-sm max-w-[280px] mb-4 mx-auto">
+                   Your payment of ₦{parseFloat(flowAmount || '0').toLocaleString()} has been verified and added to your balance.
                  </p>
+                 <div className="bg-theme-surface p-4 rounded-2xl border border-theme-divider-light w-full max-w-[320px] mb-8 text-left space-y-2">
+                   <div className="flex justify-between text-xs">
+                     <span className="text-theme-tertiary">New Balance</span>
+                     <span className="font-black text-theme-primary">{(internalBalance).toLocaleString()} LC</span>
+                   </div>
+                   <div className="flex justify-between text-xs">
+                     <span className="text-theme-tertiary">Reference</span>
+                     <span className="font-mono text-theme-secondary truncate max-w-[160px]">{currentPaystackReference}</span>
+                   </div>
+                 </div>
                  
                  <div className="w-full">
-                   <button onClick={handleClose} className="w-full py-4 rounded-xl bg-theme-surface-hover text-theme-primary font-bold hover:bg-theme-surface-active transition-colors">
+                   <button onClick={handleClose} className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold hover:bg-indigo-600 transition-colors shadow-lg shadow-[#5E43F3]/20">
                      Done
+                   </button>
+                 </div>
+               </div>
+             </div>
+          )}
+
+          {/* FUND FAILED */}
+          {currentView === 'fund_failed' && (
+             <div className="p-4 flex flex-col h-full text-center pb-12">
+               <div className="flex-1 flex flex-col items-center justify-center pt-8">
+                 <div className="w-24 h-24 bg-red-50 dark:bg-red-950/30 rounded-full flex items-center justify-center mb-6 border border-red-200 dark:border-red-800">
+                   <AlertCircle className="w-12 h-12 text-red-500" />
+                 </div>
+                 <h3 className="font-black text-theme-primary text-2xl mb-2">Payment Incomplete</h3>
+                 <p className="text-theme-secondary font-medium text-sm max-w-[300px] mb-6 mx-auto">
+                   {fundingError || 'Your payment was not confirmed or was cancelled. Your wallet was not credited.'}
+                 </p>
+
+                 <div className="w-full space-y-3">
+                   <button 
+                     onClick={() => navigateTo('fund_review')} 
+                     className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold hover:bg-indigo-600 transition-colors shadow-lg"
+                   >
+                     Try Again
+                   </button>
+                   <button 
+                     onClick={handleClose} 
+                     className="w-full py-4 rounded-xl bg-theme-surface-hover text-theme-primary font-bold hover:bg-theme-surface-active transition-colors"
+                   >
+                     Close
                    </button>
                  </div>
                </div>
@@ -1971,10 +2149,10 @@ export const WalletModal: React.FC = () => {
         </div>
       </div>
       
-      {/* DEVELOPMENT / TESTING CONTROLS — Only for authenticated admins */}
-      {isDevAdmin && import.meta.env.DEV && (
-        <div className="fixed bottom-4 left-4 bg-black/90 p-4 rounded-xl border border-theme-divider-light z-[100] max-w-[320px] text-white space-y-3">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-theme-tertiary">Admin Dev Controls</div>
+      {/* DEVELOPMENT / TESTING CONTROLS — Only visible when explicitly enabled in local dev test mode */}
+      {isTestModeEnabled && (
+        <div className="fixed bottom-4 left-4 bg-black/90 p-4 rounded-xl border border-theme-divider-light z-[100] max-w-[320px] text-white space-y-3 shadow-2xl">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-theme-tertiary">Admin Dev Controls (Test Mode)</div>
           
           <div className="space-y-1">
             <div className="text-xs font-semibold text-theme-secondary mb-1">Withdrawal Accounts</div>

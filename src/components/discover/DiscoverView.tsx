@@ -19,12 +19,17 @@ import {
   Plus,
   Home,
   ChevronRight,
+  MoreVertical,
+  ShieldAlert,
+  Sparkles,
+  Crown,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { EventsView } from '../events/EventsView';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
 import { VerificationBadge } from '../common/VerificationBadge';
+import { getPublicIdentityLabel } from '../common/UserIdentity';
 import { CreatorRankingsView } from '../creators/CreatorRankingsView';
 import { PostItem } from '../feed/PostItem';
 import {
@@ -34,7 +39,7 @@ import {
   getProximityCategory,
 } from '../../utils/locationUtils';
 import { User } from '../../types';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
 export const DiscoverView: React.FC = () => {
@@ -66,7 +71,14 @@ export const DiscoverView: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<'people' | 'pages' | 'shop' | 'events' | 'ranking'>('people');
   const [locationMode, setLocationMode] = useState<'current' | 'selected' | 'global'>('current');
   const [isLocationModeMenuOpen, setIsLocationModeMenuOpen] = useState(false);
+  const [isPlumMenuOpen, setIsPlumMenuOpen] = useState(false);
   const navigate = useNavigate();
+
+  // Plum Page Discovery Preference ("I'm not interested" / "Hide this page")
+  const plumHiddenPref = useQuery(api.plum.getPageDiscoveryPreference, { pageSlugOrId: 'plum' });
+  const setPageDiscoveryPref = useMutation(api.plum.setPageDiscoveryPreference);
+  const [localPlumHidden, setLocalPlumHidden] = useState<boolean | null>(null);
+  const isPlumHidden = localPlumHidden !== null ? localPlumHidden : !!plumHiddenPref?.isHidden;
 
   // Debounce search query
   useEffect(() => {
@@ -378,6 +390,40 @@ export const DiscoverView: React.FC = () => {
         </div>
       )}
 
+      {/* JointheQ Subscriptions Banner */}
+      {!isSearching && (
+        <div className="px-4 mt-3">
+          <div 
+            onClick={() => {
+              navigate('/app/page/jointheq');
+            }}
+            className="bg-gradient-to-br from-[#1E1B4B] via-[#312E81] to-[#4338CA] rounded-2xl p-5 cursor-pointer hover:shadow-lg hover:shadow-indigo-900/30 transition-all flex items-center justify-between group overflow-hidden relative border border-indigo-500/20"
+          >
+            {/* Background decoration */}
+            <div className="absolute -right-6 -top-6 w-32 h-32 bg-[#818CF8] opacity-15 rounded-full blur-2xl group-hover:scale-110 transition-transform"></div>
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
+                  Shared Subscriptions
+                </span>
+              </div>
+              <h3 className="text-white font-black text-xl mb-1 flex items-center gap-2">
+                <Crown className="w-5 h-5 text-amber-400" />
+                JointheQ
+              </h3>
+              <p className="text-indigo-200 text-xs max-w-[220px] leading-relaxed">
+                Spotify, Netflix & Apple Music groups at group rates.
+              </p>
+            </div>
+            
+            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0 backdrop-blur-sm group-hover:bg-white/20 transition-colors relative z-10">
+              <ChevronRight className="w-5 h-5 text-white" />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Area */}
       <div className="space-y-6 pt-3">
         {/* =========================================
@@ -419,21 +465,17 @@ export const DiscoverView: React.FC = () => {
                             onClick={() => setActiveUserProfile(user)}
                             className="flex items-center gap-2.5 min-w-0 cursor-pointer"
                           >
-                            <Avatar src={user?.avatar} alt={user?.name || 'User'} size="md" />
+                            <Avatar src={user?.avatar} alt={getPublicIdentityLabel(user)} size="md" />
                             <div className="min-w-0">
                               <div className="flex items-center gap-1">
-                                <span className="font-bold text-sm text-theme-primary truncate">{user.name}</span>
+                                <span className="font-bold text-sm text-theme-primary truncate">{getPublicIdentityLabel(user)}</span>
                                 <VerificationBadge user={user} size="xs" />
                               </div>
-                              <div className="flex items-center gap-1.5 text-xs text-theme-tertiary mt-0.5">
-                                <span className="truncate">@{user.username}</span>
-                                {user.location && (
-                                  <>
-                                    <span>·</span>
-                                    <span>{user.location}</span>
-                                  </>
-                                )}
-                              </div>
+                              {user.location && (
+                                <div className="flex items-center gap-1.5 text-xs text-theme-tertiary mt-0.5">
+                                  <span>{user.location}</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                           <button
@@ -476,6 +518,40 @@ export const DiscoverView: React.FC = () => {
                       <h2 className="text-sm font-bold text-theme-primary tracking-tight">Pages & Businesses</h2>
                     </div>
                     <div className="divide-y divide-neutral-200/80">
+                      {/* Explicit Search Match for Plum */}
+                      {'plum'.includes(debouncedQuery.toLowerCase()) || 'dating'.includes(debouncedQuery.toLowerCase()) ? (
+                        <div 
+                          className="py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-theme-base/50 transition-colors"
+                          onClick={() => setActiveTab('plum')}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#7B1FA2] via-[#C2185B] to-[#FF4081] flex items-center justify-center text-white shrink-0 shadow-sm">
+                              <Flame className="w-5 h-5 stroke-[2.2]" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <h3 className="font-bold text-sm text-theme-primary truncate">Plum</h3>
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-pink-500/10 text-pink-500 border border-pink-500/20">
+                                  18+ DATING
+                                </span>
+                              </div>
+                              <p className="text-xs text-theme-tertiary truncate">@plum</p>
+                              <p className="text-[11px] text-[#5E43F3] mt-0.5">Dating & Connections</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveTab('plum');
+                            }}
+                            className="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer bg-[#5E43F3] text-white hover:bg-[#4E34E0]"
+                          >
+                            Enter
+                          </button>
+                        </div>
+                      ) : null}
+
                       {searchResults.pages.map((page: any) => (
                         <div 
                           key={page.id} 
@@ -544,16 +620,14 @@ export const DiscoverView: React.FC = () => {
                             onClick={() => setActiveUserProfile(user)}
                             className="flex items-center gap-2.5 min-w-0 cursor-pointer"
                           >
-                            <Avatar src={user?.avatar} alt={user?.name || 'User'} size="md" />
+                            <Avatar src={user?.avatar} alt={getPublicIdentityLabel(user)} size="md" />
                             <div className="min-w-0">
                               <div className="flex items-center gap-1">
-                                <span className="font-bold text-sm text-theme-primary truncate">{user.name}</span>
+                                <span className="font-bold text-sm text-theme-primary truncate">{getPublicIdentityLabel(user)}</span>
                                 <VerificationBadge user={user} size="xs" />
                                 {(user as any).badge && <Badge type={(user as any).badge} />}
                               </div>
                               <div className="flex items-center gap-1.5 text-xs text-theme-tertiary mt-0.5">
-                                <span className="truncate">@{user.username}</span>
-                                <span>·</span>
                                 <span className="inline-flex items-center gap-1 text-theme-secondary font-semibold text-[11px]">
                                   <span className={`w-1.5 h-1.5 rounded-full ${prox.dotColor}`} />
                                   {distFormatted}
@@ -621,12 +695,113 @@ export const DiscoverView: React.FC = () => {
                       {activeFilter === 'pages' ? 'Local Pages' : 'Local Shops & Businesses'}
                     </h2>
                     <span className="text-xs text-theme-tertiary">
-                      ({activeFilter === 'pages' ? filteredPages.length : filteredShop.length})
+                      ({activeFilter === 'pages' ? (filteredPages.length + (isPlumHidden ? 0 : 1)) : filteredShop.length})
                     </span>
                   </div>
                 </div>
 
-                {(activeFilter === 'pages' ? filteredPages : filteredShop).length > 0 ? (
+                {/* FEATURED / RECOMMENDATION: PLUM DATING PAGE (when activeFilter is 'pages' and not hidden) */}
+                {activeFilter === 'pages' && !isPlumHidden && (
+                  <div className="mb-4 overflow-hidden rounded-2xl border border-pink-500/25 bg-gradient-to-br from-[#2a0845]/15 via-theme-surface to-theme-surface shadow-md hover:border-pink-500/40 transition-all">
+                    {/* Plum Card Banner */}
+                    <div 
+                      onClick={() => setActiveTab('plum')}
+                      className="relative h-28 sm:h-32 w-full cursor-pointer bg-gradient-to-r from-[#8E24AA] via-[#E91E63] to-[#FF4081] overflow-hidden"
+                    >
+                      <img
+                        src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&auto=format&fit=crop&q=80"
+                        alt="Plum Dating Cover"
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover opacity-80 hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+
+                      <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-10">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-black/60 backdrop-blur-md text-pink-400 border border-pink-500/30">
+                          <Flame className="w-3 h-3 text-pink-400" /> 18+ Dating
+                        </span>
+
+                        {/* Three dot context menu for "I'm not interested" */}
+                        <div className="relative">
+                          <button
+                            id="btn-plum-card-more-menu"
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsPlumMenuOpen((prev) => !prev);
+                            }}
+                            className="p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-md shadow-sm transition-all cursor-pointer"
+                            title="Page options"
+                            aria-label="Plum options"
+                          >
+                            <MoreVertical className="w-3.5 h-3.5" />
+                          </button>
+
+                          {isPlumMenuOpen && (
+                            <div 
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute right-0 top-8 z-30 w-44 rounded-xl border border-theme-divider bg-theme-surface p-1 shadow-xl animate-in fade-in zoom-in-95"
+                            >
+                              <button
+                                id="btn-plum-not-interested"
+                                type="button"
+                                onClick={async () => {
+                                  setIsPlumMenuOpen(false);
+                                  setLocalPlumHidden(true);
+                                  try {
+                                    await setPageDiscoveryPref({ pageSlugOrId: 'plum', hidden: true });
+                                  } catch (e) {
+                                    console.error('Failed to hide Plum from recommendations', e);
+                                  }
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer text-left"
+                              >
+                                <EyeOff className="w-3.5 h-3.5" />
+                                <span>I'm not interested</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Plum Card Info */}
+                    <div 
+                      onClick={() => setActiveTab('plum')}
+                      className="p-3.5 sm:p-4 flex items-center justify-between gap-3 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#7B1FA2] via-[#C2185B] to-[#FF4081] flex items-center justify-center text-white shadow-md shadow-pink-500/20 shrink-0 ring-2 ring-pink-500/20">
+                          <Flame className="w-6 h-6 stroke-[2.2]" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <h3 className="font-black text-sm text-theme-primary truncate">Plum</h3>
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-pink-500/10 text-pink-500 border border-pink-500/20">
+                              PAGE
+                            </span>
+                          </div>
+                          <p className="text-xs text-theme-secondary line-clamp-1 mt-0.5">
+                            Meet genuine connections, date, and discover compatible partners in LaLao.
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveTab('plum');
+                        }}
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-[#8E24AA] via-[#E91E63] to-[#FF4081] shadow-md shadow-pink-500/20 hover:opacity-95 active:scale-95 transition-all cursor-pointer shrink-0"
+                      >
+                        Enter Plum
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {(filteredPages.length > 0 || (activeFilter === 'pages' && !isPlumHidden)) ? (
                   <div className="divide-y divide-neutral-200/80">
                     {(activeFilter === 'pages' ? filteredPages : filteredShop).map((page) => {
                       const distFormatted =

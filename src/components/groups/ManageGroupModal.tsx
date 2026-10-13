@@ -27,6 +27,7 @@ import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { VerificationBadge } from '../common/VerificationBadge';
+import { getPublicIdentityLabel } from '../common/UserIdentity';
 
 interface ManageGroupModalProps {
   groupId: string;
@@ -622,13 +623,12 @@ export const ManageGroupModal: React.FC<ManageGroupModalProps> = ({
                       className="p-3 rounded-2xl bg-theme-surface border border-theme-divider flex items-center justify-between gap-3"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <Avatar src={member.avatar} alt={member.name} size="sm" />
+                        <Avatar src={member.avatar} alt={getPublicIdentityLabel(member)} size="sm" />
                         <div className="min-w-0">
                           <div className="flex items-center gap-1">
-                            <span className="text-xs font-bold text-theme-primary truncate">{member.name}</span>
+                            <span className="text-xs font-bold text-theme-primary truncate">{getPublicIdentityLabel(member)}</span>
                             <VerificationBadge user={member} size="xs" />
                           </div>
-                          <span className="text-[10px] text-theme-tertiary">@{member.username}</span>
                         </div>
                       </div>
 
@@ -692,10 +692,9 @@ export const ManageGroupModal: React.FC<ManageGroupModalProps> = ({
                       className="p-3.5 rounded-2xl bg-theme-surface border border-theme-divider flex items-center justify-between gap-3"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <Avatar src={req.user?.avatar} alt={req.user?.name} size="sm" />
+                        <Avatar src={req.user?.avatar} alt={req.user ? getPublicIdentityLabel(req.user) : 'User'} size="sm" />
                         <div className="min-w-0">
-                          <span className="text-xs font-bold text-theme-primary block truncate">{req.user?.name || 'User'}</span>
-                          <span className="text-[10px] text-theme-tertiary">@{req.user?.username || 'user'}</span>
+                          <span className="text-xs font-bold text-theme-primary block truncate">{req.user ? getPublicIdentityLabel(req.user) : 'User'}</span>
                         </div>
                       </div>
 

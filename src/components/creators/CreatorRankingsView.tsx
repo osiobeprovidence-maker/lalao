@@ -18,6 +18,7 @@ import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { VerificationBadge } from '../common/VerificationBadge';
+import { getPublicIdentityLabel } from '../common/UserIdentity';
 import { Avatar } from '../common/Avatar';
 import { CreatorRankingItem } from '../../types';
 
@@ -254,14 +255,14 @@ export const CreatorRankingsView: React.FC<CreatorRankingsViewProps> = ({
 
                   {/* Avatar */}
                   <div className="relative shrink-0">
-                    <Avatar src={item.user.avatar} alt={item.user.name} size="md" />
+                    <Avatar src={item.user.avatar} alt={getPublicIdentityLabel(item.user)} size="md" />
                   </div>
 
                   {/* Name, Badge, Category, Metric */}
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-black text-sm text-theme-primary truncate hover:underline">
-                        {item.user.name}
+                        {getPublicIdentityLabel(item.user)}
                       </span>
                       <VerificationBadge
                         tier={item.user.verificationTier || 'creator'}

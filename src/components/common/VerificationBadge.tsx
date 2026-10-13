@@ -7,6 +7,8 @@ export interface VerificationBadgeProps {
   size?: 'xs' | 'sm' | 'md' | 'lg';
   showTooltip?: boolean;
   className?: string;
+  asSpan?: boolean;
+  interactive?: boolean;
 }
 
 const SIZE_MAP = {
@@ -49,6 +51,8 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
   size = 'sm',
   showTooltip = true,
   className = '',
+  asSpan = false,
+  interactive = true,
 }) => {
   // Resolve tier: explicit propTier takes precedence, otherwise derive from user's CURRENT status
   const tier: VerificationTier = propTier || getActiveSubscriptionTier(user);
@@ -70,39 +74,63 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
 
   const badgeColor = isCreator ? '#1DA1F2' : '#0F1419';
 
+  const svgIcon = (
+    <svg
+      viewBox="0 0 24 24"
+      width={px}
+      height={px}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="w-full h-full drop-shadow-xs"
+    >
+      <path
+        d="M12 1.5L15.3 4.2L19.5 4.5L20.8 8.6L23.5 12L20.8 15.4L19.5 19.5L15.3 19.8L12 22.5L8.7 19.8L4.5 19.5L3.2 15.4L0.5 12L3.2 8.6L4.5 4.5L8.7 4.2L12 1.5Z"
+        fill={badgeColor}
+      />
+      <path
+        d="M7.5 12.25L10.5 15.25L16.5 9.25"
+        stroke="#FFFFFF"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+
+  if (asSpan || !interactive) {
+    return (
+      <span
+        title={showTooltip ? tooltipText : undefined}
+        className={`inline-flex items-center justify-center shrink-0 align-middle ${box} ${className}`}
+        aria-label={isCreator ? 'Creator Verified' : 'Verified'}
+      >
+        {svgIcon}
+      </span>
+    );
+  }
+
   return (
-    <button
-      type="button"
+    <span
+      role="button"
+      tabIndex={0}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
         alert(tooltipText);
       }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          alert(tooltipText);
+        }
+      }}
       title={showTooltip ? tooltipText : undefined}
       className={`inline-flex items-center justify-center shrink-0 align-middle transition-transform hover:scale-110 cursor-pointer ${box} ${className}`}
       aria-label={isCreator ? 'Creator Verified' : 'Verified'}
     >
-      <svg
-        viewBox="0 0 24 24"
-        width={px}
-        height={px}
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="w-full h-full drop-shadow-xs"
-      >
-        <path
-          d="M12 1.5L15.3 4.2L19.5 4.5L20.8 8.6L23.5 12L20.8 15.4L19.5 19.5L15.3 19.8L12 22.5L8.7 19.8L4.5 19.5L3.2 15.4L0.5 12L3.2 8.6L4.5 4.5L8.7 4.2L12 1.5Z"
-          fill={badgeColor}
-        />
-        <path
-          d="M7.5 12.25L10.5 15.25L16.5 9.25"
-          stroke="#FFFFFF"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </button>
+      {svgIcon}
+    </span>
   );
 };
 

@@ -32,6 +32,7 @@ import type * as muxInternal from "../muxInternal.js";
 import type * as pageEvents from "../pageEvents.js";
 import type * as pages from "../pages.js";
 import type * as platformSettings from "../platformSettings.js";
+import type * as plum from "../plum.js";
 import type * as push from "../push.js";
 import type * as pushActions from "../pushActions.js";
 import type * as rallies from "../rallies.js";
@@ -80,6 +81,7 @@ declare const fullApi: ApiFromModules<{
   pageEvents: typeof pageEvents;
   pages: typeof pages;
   platformSettings: typeof platformSettings;
+  plum: typeof plum;
   push: typeof push;
   pushActions: typeof pushActions;
   rallies: typeof rallies;

@@ -281,6 +281,9 @@ export const updateUserProfile = mutation({
     locationName: v.optional(v.string()),
     avatarUrl:    v.optional(v.string()),
     avatarStorageId: v.optional(v.union(v.id("_storage"), v.null())),
+    publicIdentityType: v.optional(v.union(v.literal("display_name"), v.literal("username"), v.literal("both"))),
+    dateOfBirth: v.optional(v.string()),
+    birthDateVisibility: v.optional(v.union(v.literal("public"), v.literal("age_only"), v.literal("private"))),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -301,6 +304,9 @@ export const updateUserProfile = mutation({
     if (args.username !== undefined) updates.username = args.username;
     if (args.bio !== undefined) updates.bio = args.bio;
     if (args.locationName !== undefined) updates.locationName = args.locationName;
+    if (args.publicIdentityType !== undefined) updates.publicIdentityType = args.publicIdentityType;
+    if (args.dateOfBirth !== undefined) updates.dateOfBirth = args.dateOfBirth;
+    if (args.birthDateVisibility !== undefined) updates.birthDateVisibility = args.birthDateVisibility;
     
     // Resolve Convex Storage ID if provided
     const existingUser = await ctx.db.get(userId);

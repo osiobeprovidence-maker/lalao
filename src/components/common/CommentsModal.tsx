@@ -5,6 +5,7 @@ import { CommentComposer } from './CommentComposer';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from './Avatar';
 import { VerificationBadge } from './VerificationBadge';
+import { getPublicIdentityLabel } from './UserIdentity';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { VideoPlayer } from '../feed/VideoPlayer';
@@ -70,7 +71,7 @@ export const CommentThread = ({
               onClick={() => setActiveUserProfile(comment.author)}
               className="cursor-pointer text-[11px] font-bold text-theme-primary hover:underline"
             >
-              {comment.author.name || comment.author.username}
+              {getPublicIdentityLabel(comment.author)}
             </span>
             <VerificationBadge user={comment.author} size="xs" />
             <span className="hidden">
@@ -235,10 +236,10 @@ export const CommentsModal: React.FC = () => {
             </div>
 
             <div className="flex items-start gap-2.5 border-b border-theme-divider-light bg-theme-base/80 px-4 py-2.5 shrink-0">
-              <Avatar src={post.author.avatar} alt={post.author.name} size="xs" />
+              <Avatar src={post.author.avatar} alt={getPublicIdentityLabel(post.author)} size="xs" />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-xs font-semibold text-theme-primary">{post.author.username}</span>
+                  <span className="text-xs font-semibold text-theme-primary">{getPublicIdentityLabel(post.author)}</span>
                   <span className="text-[10px] text-theme-tertiary">· {post.createdAt}</span>
                 </div>
                 <p className="mt-0.5 line-clamp-2 text-xs text-theme-secondary leading-normal">{post.text}</p>

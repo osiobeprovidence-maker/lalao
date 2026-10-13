@@ -3,6 +3,7 @@ import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { canAccessGroupChat } from "./groupAccess";
+import { isPostMatchingTopic, getKeywordsForTopic } from "./topicKeywords";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    AUTH HELPERS
@@ -157,6 +158,7 @@ async function resolveAuthor(ctx: any, authorDoc: any, currentUserId: string | n
     followersCount: authorDoc.followersCount ?? 0,
     followingCount: authorDoc.followingCount ?? 0,
     isFollowing,
+    publicIdentityType: (authorDoc.publicIdentityType as "display_name" | "username") ?? "display_name",
     ...resolveUserVerification(authorDoc),
   };
 }
@@ -289,6 +291,12 @@ export const listFeedPosts = query({
 
     /* ─── TAB 2: NEARBY ─── */
     else if (feedType === 'nearby') {
+      // Must have valid viewer coordinates to browse Nearby
+      if (typeof userLat !== 'number' || typeof userLng !== 'number' || isNaN(userLat) || isNaN(userLng)) {
+        return [];
+      }
+
+      // Query posts with by_created or by_nearby_created
       const recentPosts = await ctx.db
         .query("posts")
         .withIndex("by_created")
@@ -298,34 +306,36 @@ export const listFeedPosts = query({
       const candidatePosts = recentPosts.filter((post: any) => {
         if (post.moderationStatus === "removed") return false;
 
-        // 1. Precise GPS calculation if coordinates exist
-        if (
-          userLat !== undefined &&
-          userLng !== undefined &&
-          post.latitude !== undefined &&
-          post.longitude !== undefined
-        ) {
-          const dist = haversineMeters(userLat, userLng, post.latitude, post.longitude);
-          if (dist <= maxRadiusMeters) {
-            post._computedDistance = dist;
-            return true;
-          }
+        // Private posts / restricted access: privacy restrictions override proximity
+        if (post.audience === "closeFriends" && post.authorId !== currentUserId) {
           return false;
         }
 
-        // 2. City / Neighborhood substring matching fallback
-        if (cleanLocationName && post.location) {
-          const postLoc = post.location.toLowerCase();
-          if (
-            postLoc.includes(cleanLocationName) ||
-            cleanLocationName.includes(postLoc)
-          ) {
-            post._computedDistance = Math.min(maxRadiusMeters * 0.4, 600);
-            return true;
-          }
+        // Must have valid publication location coordinates
+        if (
+          typeof post.latitude !== "number" ||
+          typeof post.longitude !== "number" ||
+          isNaN(post.latitude) ||
+          isNaN(post.longitude)
+        ) {
+          return false;
         }
 
-        // 3. If neither GPS nor location string matches, exclude from nearby
+        // If post has an explicit nearbyEnabled flag and it is false, exclude it
+        if (post.nearbyEnabled === false) {
+          return false;
+        }
+
+        // Calculate accurate distance
+        const dist = haversineMeters(userLat, userLng, post.latitude, post.longitude);
+
+        // Strict distance threshold (default 5km or viewer radiusKm)
+        // Matching state names or city names alone DOES NOT grant eligibility
+        if (dist <= maxRadiusMeters) {
+          post._computedDistance = dist;
+          return true;
+        }
+
         return false;
       });
 
@@ -341,7 +351,7 @@ export const listFeedPosts = query({
       const topicSlug = feedType.toLowerCase().trim();
       const topicDoc = await ctx.db
         .query("topics")
-        .filter((q) => q.eq(q.field("slug"), topicSlug))
+        .withIndex("by_slug", (q) => q.eq("slug", topicSlug))
         .first();
 
       const topicDisplayName = topicDoc?.displayName?.toLowerCase() || topicSlug;
@@ -355,22 +365,8 @@ export const listFeedPosts = query({
       const candidatePosts = allPosts.filter((p: any) => {
         if (p.moderationStatus === "removed") return false;
 
-        // 1. Direct contentTopics array match
-        if (p.contentTopics && Array.isArray(p.contentTopics)) {
-          const lowerTopics = p.contentTopics.map((t: string) => t.toLowerCase());
-          if (lowerTopics.includes(topicSlug) || lowerTopics.includes(topicDisplayName)) {
-            return true;
-          }
-        }
-
-        // 2. Hashtags in text (e.g. #anime, #gaming, #stem, #drama)
-        const textLower = (p.text || "").toLowerCase();
-        if (textLower.includes(`#${topicSlug}`) || textLower.includes(`#${topicDisplayName}`)) {
-          return true;
-        }
-
-        // 3. Keyword / topic word match in text
-        if (textLower.includes(topicSlug) || textLower.includes(topicDisplayName)) {
+        // 1. Check maintainable keyword matching, contentTopics, and hashtags
+        if (isPostMatchingTopic(p, topicSlug) || isPostMatchingTopic(p, topicDisplayName)) {
           return true;
         }
 
@@ -403,65 +399,104 @@ export const listFeedPosts = query({
         .collect();
       const seedIds = new Set(activeSeeds.map(s => s.targetId));
 
-      let activeInterests = [...(currentUser?.interests || [])];
+      // Retrieve User Content Topic Preferences
+      const interestedTopics = new Set<string>();
+      const reducedTopics = new Set<string>();
+      const excludedTopics = new Set<string>();
 
       if (currentUserId) {
-        // Add categories from followed communities as active interests for algorithmic discovery
-        const followedPages = await ctx.db
-          .query("pageFollowers")
-          .withIndex("by_page_user")
-          .filter((q) => q.eq(q.field("userId"), currentUserId))
+        const userPrefs = await ctx.db
+          .query("userTopicPreferences")
+          .withIndex("by_user", (q) => q.eq("userId", currentUserId))
           .collect();
-        const followedPageIds = new Set(followedPages.map((f: any) => f.pageId));
-        
-        for (const pageId of followedPageIds) {
-           const page: any = await ctx.db.get(pageId);
-           if (page && page.type === "community" && page.category) {
-              const catSlug = page.category.toLowerCase().trim();
-              if (!activeInterests.includes(catSlug)) {
-                activeInterests.push(catSlug);
-              }
-           }
+
+        for (const up of userPrefs) {
+          const s = up.topicSlug.toLowerCase();
+          if (up.preference === "interested") interestedTopics.add(s);
+          else if (up.preference === "reduced") reducedTopics.add(s);
+          else if (up.preference === "excluded") excludedTopics.add(s);
         }
+      }
+
+      // Query sensitive topics that require explicit opt-in
+      const sensitiveTopicsDocs = await ctx.db
+        .query("topics")
+        .withIndex("by_sensitive", (q) => q.eq("isSensitive", true))
+        .collect();
+
+      const sensitiveOptInSlugs = new Set<string>();
+      for (const st of sensitiveTopicsDocs) {
+        if (st.requiresExplicitOptIn) {
+          sensitiveOptInSlugs.add(st.slug.toLowerCase());
+          sensitiveOptInSlugs.add(st.displayName.toLowerCase());
+        }
+      }
+
+      // Also support legacy onboarding interests
+      for (const oi of currentUser?.interests || []) {
+        interestedTopics.add(oi.toLowerCase());
       }
 
       // Algorithmic discovery score: recency blended with engagement and interest matching
       const scoredPosts = recentPosts
-        .filter((p) => p.moderationStatus !== "removed")
+        .filter((p) => {
+          if (p.moderationStatus === "removed") return false;
+
+          // Audience check: closeFriends posts only visible to author or allowed
+          if (p.audience === "closeFriends" && p.authorId !== currentUserId) {
+            return false;
+          }
+
+          // Extract post topic identifiers
+          const postTopics: string[] = [];
+          if (p.contentTopics && Array.isArray(p.contentTopics)) {
+            for (const t of p.contentTopics) postTopics.push(t.toLowerCase());
+          }
+          if (p.text) {
+            const textLower = p.text.toLowerCase();
+            const hashMatches = textLower.match(/#(\w+)/g);
+            if (hashMatches) {
+              for (const hm of hashMatches) postTopics.push(hm.substring(1).toLowerCase());
+            }
+          }
+
+          // Check keyword and topic matches for sensitive topics
+          const isPostSensitive = Array.from(sensitiveOptInSlugs).some((st) => isPostMatchingTopic(p, st));
+          if (isPostSensitive) {
+            const hasViewerOptedIn = Array.from(interestedTopics).some((it) => isPostMatchingTopic(p, it));
+            // If viewer has not explicitly opted into this sensitive topic, exclude from proactive For You feed
+            if (!hasViewerOptedIn && p.authorId !== currentUserId) {
+              return false;
+            }
+          }
+
+          // 2. EXCLUDED TOPICS: Completely exclude posts categorized or matching topics user chose to exclude
+          const isExcluded = Array.from(excludedTopics).some((et) => isPostMatchingTopic(p, et));
+          if (isExcluded && p.authorId !== currentUserId) {
+            return false;
+          }
+
+          return true;
+        })
         .map((p) => {
           const engagement =
             (p.likesCount || 0) * 3 +
             (p.commentsCount || 0) * 4 +
             (p.repostsCount || 0) * 5;
           const ageHours = Math.max(0.1, (Date.now() - p.createdAt) / (1000 * 60 * 60));
-          
-          let interestBoost = 1;
-          
-          if (activeInterests.length > 0) {
-            let isMatch = false;
-            
-            // 1. Check contentTopics array
-            if (p.contentTopics && Array.isArray(p.contentTopics)) {
-              const lowerTopics = p.contentTopics.map((t: string) => t.toLowerCase());
-              if (activeInterests.some((interest: string) => lowerTopics.includes(interest.toLowerCase()))) {
-                isMatch = true;
-              }
-            }
-            
-            // 2. Check hashtags and keywords in text
-            if (!isMatch && p.text) {
-              const textLower = p.text.toLowerCase();
-              if (activeInterests.some((interest: string) => 
-                textLower.includes(`#${interest.toLowerCase()}`) || 
-                textLower.includes(interest.toLowerCase())
-              )) {
-                isMatch = true;
-              }
-            }
-            
-            if (isMatch) {
-              interestBoost = 3; // Significant boost for matching interests
-            }
+
+          let topicMultiplier = 1;
+
+          // Interested: significant boost via keywords and topic metadata
+          const isInterested = Array.from(interestedTopics).some((it) => isPostMatchingTopic(p, it));
+          if (isInterested) {
+            topicMultiplier *= 3.5;
+          }
+
+          // Reduced: see less often (0.25x weight)
+          const isReduced = Array.from(reducedTopics).some((rt) => isPostMatchingTopic(p, rt));
+          if (isReduced) {
+            topicMultiplier *= 0.25;
           }
 
           let seedBoost = 1;
@@ -470,7 +505,7 @@ export const listFeedPosts = query({
             seedBoost = 5; // Heavy boost for seed accounts to solve cold start
           }
 
-          const score = ((engagement + 1) * interestBoost * seedBoost) / Math.pow(ageHours + 2, 1.2);
+          const score = ((engagement + 1) * topicMultiplier * seedBoost) / Math.pow(ageHours + 2, 1.2);
           return { post: p, score };
         });
 
@@ -537,8 +572,6 @@ export const listFeedPosts = query({
         muxPlaybackId: post.muxPlaybackId,
         mediaType: post.mediaType,
         location: post.location,
-        latitude: post.latitude,
-        longitude: post.longitude,
         distanceMeters: (() => {
           if (
             typeof userLat === 'number' &&
@@ -766,8 +799,6 @@ async function fetchPostsForProfileUser(
       muxPlaybackId: post.muxPlaybackId,
       mediaType: post.mediaType,
       location: post.location,
-      latitude: post.latitude,
-      longitude: post.longitude,
       distanceMeters: (() => {
         // Compute distance from viewer to post location only with verified coordinates
         const vLat = currentUser?.latitude;
@@ -1369,6 +1400,13 @@ export const createPost = mutation({
     soundStartOffset: v.optional(v.number()),
     soundVolume: v.optional(v.number()),
     originalAudioVolume: v.optional(v.number()),
+    locationAccuracy: v.optional(v.number()),
+    locationCapturedAt: v.optional(v.number()),
+    locationCountry: v.optional(v.string()),
+    locationState: v.optional(v.string()),
+    locationCity: v.optional(v.string()),
+    locationNeighborhood: v.optional(v.string()),
+    nearbyEnabled: v.optional(v.boolean()),
     rallyData: v.optional(
       v.object({
         type: v.union(v.literal("ASK"), v.literal("HELP"), v.literal("JOIN")),
@@ -1550,6 +1588,46 @@ export const createPost = mutation({
       });
     }
 
+    // Validate and build publication location snapshot
+    const hasCoords =
+      typeof args.latitude === "number" &&
+      typeof args.longitude === "number" &&
+      !isNaN(args.latitude) &&
+      !isNaN(args.longitude) &&
+      args.latitude >= -90 &&
+      args.latitude <= 90 &&
+      args.longitude >= -180 &&
+      args.longitude <= 180;
+
+    const isNearbyAudience = args.audience === "nearby";
+    const explicitNearbyEnabled = args.nearbyEnabled !== undefined ? args.nearbyEnabled : isNearbyAudience;
+
+    // Check accuracy & recency thresholds for Nearby posts
+    let locationStatus: "verified" | "approximate" | "unverified" = "unverified";
+    let isNearbyEligible = false;
+
+    if (hasCoords) {
+      const accuracy = args.locationAccuracy;
+      const isAccurate = accuracy === undefined || accuracy <= 100; // 100m threshold
+      const isFresh =
+        args.locationCapturedAt === undefined ||
+        now - args.locationCapturedAt <= 10 * 60 * 1000; // 10 min
+
+      if (isAccurate && isFresh) {
+        locationStatus = "verified";
+        isNearbyEligible = explicitNearbyEnabled;
+      } else {
+        locationStatus = "approximate";
+        // If user explicitly asked for Nearby but accuracy/staleness failed, reject Nearby distribution
+        isNearbyEligible = false;
+      }
+    } else if (isNearbyAudience) {
+      // Cannot publish to Nearby without valid device coordinates
+      throw new Error(
+        "Location coordinates are required to publish to Nearby. Please enable location or publish to Everyone."
+      );
+    }
+
     const postId = await ctx.db.insert("posts", {
       authorId: currentUser._id,
       text: args.text,
@@ -1557,8 +1635,16 @@ export const createPost = mutation({
       mediaStorageId: args.mediaStorageId,
       mediaType: args.mediaType,
       location: args.location,
-      latitude: args.latitude,
-      longitude: args.longitude,
+      latitude: hasCoords ? args.latitude : undefined,
+      longitude: hasCoords ? args.longitude : undefined,
+      locationAccuracy: args.locationAccuracy,
+      locationCapturedAt: args.locationCapturedAt ?? (hasCoords ? now : undefined),
+      locationCountry: args.locationCountry,
+      locationState: args.locationState,
+      locationCity: args.locationCity,
+      locationNeighborhood: args.locationNeighborhood,
+      locationStatus,
+      nearbyEnabled: isNearbyEligible,
       createdAt: now,
       likesCount: 0,
       commentsCount: 0,
@@ -2353,6 +2439,20 @@ export const listNotifications = query({
     return await Promise.all(
       notifs.map(async (notif: any) => {
         const actor = notif.actorId ? (await ctx.db.get(notif.actorId)) as any : null;
+        let actorAvatar = "";
+        if (actor) {
+          actorAvatar = actor.avatarUrl || "";
+          if (!actorAvatar && actor.avatarStorageId) {
+            try {
+              const signed = await ctx.storage.getUrl(actor.avatarStorageId);
+              if (signed) actorAvatar = signed;
+            } catch (_) {}
+          }
+          if (!actorAvatar && actor.avatar) {
+            actorAvatar = actor.avatar;
+          }
+        }
+
         return {
           id: notif._id,
           type: notif.type as string,
@@ -2362,7 +2462,7 @@ export const listNotifications = query({
                 id: actor._id,
                 name: actor.name ?? "User",
                 username: actor.username ?? "user",
-                avatar: actor.avatarUrl ?? "",
+                avatar: actorAvatar,
                 userType: actor.userType ?? "person",
                 followersCount: actor.followersCount ?? 0,
                 followingCount: actor.followingCount ?? 0,
