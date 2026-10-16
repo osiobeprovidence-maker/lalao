@@ -80,7 +80,22 @@ class MockCallDatabase {
       throw new Error("You cannot call yourself");
     }
 
-    // Check if recipient is busy
+    const now = Date.now();
+
+    // Clean up any stale ringing calls for recipient or caller (> 45s timeout)
+    for (const c of this.calls.values()) {
+      if (
+        (c.recipientId === params.recipientId || c.callerId === params.callerId) &&
+        c.status === "ringing" &&
+        now - c.startedAt > 45000
+      ) {
+        c.status = "missed";
+        c.endedAt = now;
+        c.endReason = "timeout_no_answer";
+      }
+    }
+
+    // Check if recipient is busy in an active ringing or connected call
     const recipientActive = Array.from(this.calls.values()).find(
       (c) =>
         (c.recipientId === params.recipientId || c.callerId === params.recipientId) &&
@@ -100,7 +115,6 @@ class MockCallDatabase {
       return { success: false, reason: "already_in_call", message: "You are already on a call" };
     }
 
-    const now = Date.now();
     const callerUid = Math.floor(100000 + Math.random() * 899999);
     let recipientUid = Math.floor(100000 + Math.random() * 899999);
     if (recipientUid === callerUid) recipientUid += 1;
@@ -297,6 +311,33 @@ class MockCallDatabase {
     }
     return false;
   }
+
+  public getActiveCall(currentUserId: string, currentTime = Date.now()) {
+    const all = Array.from(this.calls.values());
+    // 1. Incoming ringing call
+    const incoming = all.find((c) => c.recipientId === currentUserId && c.status === "ringing" && currentTime - c.startedAt <= 45000);
+    if (incoming) return { ...incoming, isCaller: false, myUid: incoming.recipientUid, targetUid: incoming.callerUid };
+
+    // 2. Connected call as recipient
+    const connectedAsRecipient = all.find((c) => c.recipientId === currentUserId && c.status === "connected");
+    if (connectedAsRecipient) return { ...connectedAsRecipient, isCaller: false, myUid: connectedAsRecipient.recipientUid, targetUid: connectedAsRecipient.callerUid };
+
+    // 3. Outgoing ringing call
+    const outgoingRinging = all.find((c) => c.callerId === currentUserId && c.status === "ringing" && currentTime - c.startedAt <= 45000);
+    if (outgoingRinging) return { ...outgoingRinging, isCaller: true, myUid: outgoingRinging.callerUid, targetUid: outgoingRinging.recipientUid };
+
+    // 4. Outgoing connected call
+    const outgoingConnected = all.find((c) => c.callerId === currentUserId && c.status === "connected");
+    if (outgoingConnected) return { ...outgoingConnected, isCaller: true, myUid: outgoingConnected.callerUid, targetUid: outgoingConnected.recipientUid };
+
+    // 5. Recently ended call (< 3.5s) for terminal state transition
+    const recent = all
+      .filter((c) => (c.callerId === currentUserId || c.recipientId === currentUserId) && c.endedAt && c.endedAt <= currentTime && currentTime - c.endedAt < 3500 && ["declined", "canceled", "completed", "missed"].includes(c.status))
+      .sort((a, b) => ((b.endedAt || 0) - (a.endedAt || 0)) || (b.startedAt - a.startedAt))[0];
+    if (recent) return { ...recent, isCaller: recent.callerId === currentUserId, myUid: recent.callerId === currentUserId ? recent.callerUid : recent.recipientUid, targetUid: recent.callerId === currentUserId ? recent.recipientUid : recent.callerUid };
+
+    return null;
+  }
 }
 
 // ─── Test Runner ────────────────────────────────────────────────────────────
@@ -480,6 +521,80 @@ function runAllTests() {
     db.messages.some((m) => m.type === "text" && m.text === "Hello Bob, are you available?"),
     "Normal text messages coexist and persist alongside call records in conversation"
   );
+
+  // Test 13: Real-Time Incoming Call Delivery via getActiveCall
+  const liveCall = db.initiateCall({
+    callerId: userA,
+    recipientId: userB,
+    type: "voice",
+    conversationId: convId,
+  });
+  const recipientActiveCall = db.getActiveCall(userB);
+  assert(recipientActiveCall !== null, "User B's reactive query successfully receives incoming call event");
+  assert(recipientActiveCall?.isCaller === false, "User B is designated as call recipient");
+  assert(recipientActiveCall?.status === "ringing", "Call status is delivered as 'ringing'");
+  assert(recipientActiveCall?.callerId === userA, "Caller ID in received payload matches User A");
+
+  // Test 14: Caller Active Call State
+  const callerActiveCall = db.getActiveCall(userA);
+  assert(callerActiveCall !== null, "User A's query receives active call state");
+  assert(callerActiveCall?.isCaller === true, "User A is designated as caller");
+  assert(callerActiveCall?.targetUid === recipientActiveCall?.myUid, "Caller's target UID matches recipient's UID");
+
+  // Test 15: Per-UID Agora Token Generation (Zero UID Collision)
+  const callerToken = RtcTokenBuilder.buildTokenWithUid(
+    dummyAppId,
+    dummyAppCert,
+    liveCall.channelName!,
+    liveCall.callerUid!,
+    RtcRole.PUBLISHER,
+    3600,
+    3600
+  );
+  const recipientToken = RtcTokenBuilder.buildTokenWithUid(
+    dummyAppId,
+    dummyAppCert,
+    liveCall.channelName!,
+    liveCall.recipientUid!,
+    RtcRole.PUBLISHER,
+    3600,
+    3600
+  );
+  assert(callerToken !== recipientToken, "Caller and Recipient receive distinct, non-colliding Agora RTC tokens");
+  assert(liveCall.callerUid !== liveCall.recipientUid, "Caller UID and Recipient UID are distinct 32-bit positive integers");
+
+  // Test 16: Stale Ringing Call Auto-Cleanup on New Call
+  // Simulate a stale call left ringing from 60 seconds ago
+  const staleCallId = "call_stale_abandoned";
+  db.calls.set(staleCallId, {
+    _id: staleCallId,
+    callerId: userC,
+    recipientId: userB,
+    type: "voice",
+    status: "ringing",
+    channelName: "lalao_call_stale",
+    callerUid: 444555,
+    recipientUid: 666777,
+    startedAt: Date.now() - 60000,
+  });
+  // End current live call
+  db.endCall(liveCall.callId!, userA);
+  // Now User A calls User B again: stale call must NOT block User B as "busy"
+  const newCallAfterStale = db.initiateCall({
+    callerId: userA,
+    recipientId: userB,
+    type: "video",
+    conversationId: convId,
+  });
+  assert(newCallAfterStale.success === true, "Stale ringing call (>45s) is automatically cleared so recipient is never stuck in busy state");
+  assert(db.calls.get(staleCallId)?.status === "missed", "Stale call status transitioned to 'missed'");
+
+  // Test 17: Terminal State Broadcast for UI Transition
+  db.declineCall(newCallAfterStale.callId!, userB);
+  const callerTerminalState = db.getActiveCall(userA);
+  console.log("DEBUG callerTerminalState:", callerTerminalState?._id, callerTerminalState?.status);
+  assert(callerTerminalState !== null, "Caller receives terminal state query update within transition window");
+  assert(callerTerminalState?.status === "declined", "Terminal status 'declined' delivered to caller before dismissal");
 
   console.log(`\n📊 Test Summary: ${passed} passed, ${failed} failed.`);
   if (failed > 0) {

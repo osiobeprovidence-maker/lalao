@@ -4,6 +4,7 @@ import { api } from '../../convex/_generated/api';
 import { CallSession, User } from '../types';
 import { agoraRtcService } from '../services/agora/agoraRtcService';
 import { callRingtoneService } from '../services/audio/callRingtone';
+import { useLalao } from './LalaoContext';
 import { IAgoraRTCRemoteUser } from 'agora-rtc-sdk-ng';
 
 interface CallContextType {
@@ -39,8 +40,11 @@ interface CallContextType {
 const CallContext = createContext<CallContextType | undefined>(undefined);
 
 export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { currentUser } = useLalao();
+  const userId = currentUser?.id && currentUser.id !== 'local-user' ? currentUser.id : undefined;
+
   // Reactive query from Convex backend for the current user's call session
-  const activeCallData = useQuery(api.calls.getActiveCall);
+  const activeCallData = useQuery(api.calls.getActiveCall, { userId });
 
   const initiateCallMutation = useMutation(api.calls.initiateCall);
   const acceptCallMutation = useMutation(api.calls.acceptCall);
@@ -98,10 +102,10 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         callRingtoneService.startIncomingRingtone();
       }
 
-      // Check for timeout every 5 seconds
+      // Check for timeout every 4 seconds
       const timeoutCheck = setInterval(() => {
         checkTimeoutMutation({ callId: activeCall._id as any }).catch(() => {});
-      }, 5000);
+      }, 4000);
 
       return () => {
         clearInterval(timeoutCheck);
@@ -114,7 +118,6 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Start duration timer
       if (!durationTimerRef.current) {
-        // Calculate initial elapsed seconds if connectedAt is present
         const startSecs = activeCall.connectedAt
           ? Math.max(0, Math.floor((Date.now() - activeCall.connectedAt) / 1000))
           : 0;
@@ -133,7 +136,10 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (['completed', 'declined', 'canceled', 'missed', 'failed'].includes(activeCall.status)) {
       callRingtoneService.playCallEndTone();
-      handleCleanupLocal();
+      const endTimer = setTimeout(() => {
+        handleCleanupLocal();
+      }, 2500);
+      return () => clearTimeout(endTimer);
     }
   }, [activeCall?.status, activeCall?._id]);
 
@@ -144,8 +150,13 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMediaError(null);
 
     try {
-      // 1. Fetch short-lived token and credentials from backend
-      const tokenResult: any = await generateTokenAction({ callId: call._id as any });
+      const myUid = call.myUid || (call.isCaller ? call.callerUid : call.recipientUid);
+
+      // 1. Fetch short-lived token and credentials from backend for this specific UID
+      const tokenResult: any = await generateTokenAction({
+        callId: call._id as any,
+        uid: myUid,
+      });
 
       const appId = tokenResult.appId || (import.meta.env.VITE_AGORA_APP_ID as string) || '';
       setIsAgoraConfigured(!!appId && appId !== 'replace_with_your_app_id');
@@ -183,7 +194,6 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       // 3. Join channel with user's assigned UID
-      const myUid = call.myUid || (call.isCaller ? call.callerUid : call.recipientUid);
       const { localVideoTrack } = await agoraRtcService.joinChannel({
         appId,
         channelName: tokenResult.channelName || call.channelName,
@@ -260,6 +270,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         recipientId: params.recipient.id as any,
         type: params.type,
         conversationId: params.conversationId as any,
+        callerUserId: userId,
       });
 
       if (!result.success) {
@@ -278,7 +289,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!activeCall) return;
     callRingtoneService.stop();
     try {
-      await acceptCallMutation({ callId: activeCall._id as any });
+      await acceptCallMutation({ callId: activeCall._id as any, userId });
     } catch (err: any) {
       console.error('Failed to accept call:', err);
       setMediaError(err.message || 'Could not accept call');
@@ -290,7 +301,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!activeCall) return;
     callRingtoneService.stop();
     try {
-      await declineCallMutation({ callId: activeCall._id as any });
+      await declineCallMutation({ callId: activeCall._id as any, userId });
       handleCleanupLocal();
     } catch (err) {
       console.error('Failed to decline call:', err);
@@ -304,9 +315,9 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     callRingtoneService.stop();
     try {
       if (activeCall.status === 'ringing' && activeCall.isCaller) {
-        await cancelCallMutation({ callId: activeCall._id as any });
+        await cancelCallMutation({ callId: activeCall._id as any, userId });
       } else {
-        await endCallMutation({ callId: activeCall._id as any, reason: 'user_hung_up' });
+        await endCallMutation({ callId: activeCall._id as any, reason: 'user_hung_up', userId });
       }
     } catch (err) {
       console.error('Failed to end call:', err);

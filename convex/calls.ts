@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthedUser } from "./social";
 
@@ -12,46 +12,107 @@ export function formatCallDuration(seconds?: number): string {
 }
 
 /**
+ * Internal query for actions to safely retrieve a call session.
+ */
+export const getCallInternal = internalQuery({
+  args: {
+    callId: v.id("calls"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.callId);
+  },
+});
+
+/**
  * Initiate an outgoing voice or video call.
  */
 export const initiateCall = mutation({
   args: {
-    recipientId: v.id("users"),
+    recipientId: v.union(v.id("users"), v.string()),
     type: v.union(v.literal("voice"), v.literal("video")),
     conversationId: v.optional(v.id("conversations")),
+    callerUserId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const currentUser = await getAuthedUser(ctx);
+    let currentUser = await getAuthedUser(ctx);
+    if (!currentUser && args.callerUserId) {
+      const normCaller = ctx.db.normalizeId("users", args.callerUserId);
+      if (normCaller) {
+        currentUser = await ctx.db.get(normCaller);
+      }
+    }
     if (!currentUser) throw new Error("Not authenticated");
 
-    if (currentUser._id === args.recipientId) {
+    const normRecipientId = ctx.db.normalizeId("users", args.recipientId);
+    if (!normRecipientId) {
+      throw new Error("Invalid recipient ID");
+    }
+
+    if (currentUser._id === normRecipientId) {
       throw new Error("You cannot call yourself");
     }
 
-    const recipient = await ctx.db.get(args.recipientId);
+    const recipient = await ctx.db.get(normRecipientId);
     if (!recipient) {
       throw new Error("Recipient not found");
     }
 
-    // Check if recipient is already in an active call
+    const now = Date.now();
+
+    // Clean up any stale ringing calls for recipient or caller (> 45s timeout)
+    const staleCalls = await ctx.db
+      .query("calls")
+      .withIndex("by_recipient_status", (q) =>
+        q.eq("recipientId", normRecipientId).eq("status", "ringing")
+      )
+      .collect();
+
+    for (const call of staleCalls) {
+      if (now - call.startedAt > 45000) {
+        await ctx.db.patch(call._id, {
+          status: "missed",
+          endedAt: now,
+          endReason: "timeout_no_answer",
+        });
+      }
+    }
+
+    const callerStaleCalls = await ctx.db
+      .query("calls")
+      .withIndex("by_caller_status", (q) =>
+        q.eq("callerId", currentUser._id).eq("status", "ringing")
+      )
+      .collect();
+
+    for (const call of callerStaleCalls) {
+      if (now - call.startedAt > 45000) {
+        await ctx.db.patch(call._id, {
+          status: "canceled",
+          endedAt: now,
+          endReason: "timeout_canceled",
+        });
+      }
+    }
+
+    // Check if recipient is in an active call
     const recipientActiveIncoming = await ctx.db
       .query("calls")
       .withIndex("by_recipient_status", (q) =>
-        q.eq("recipientId", args.recipientId).eq("status", "ringing")
+        q.eq("recipientId", normRecipientId).eq("status", "ringing")
       )
       .first();
 
     const recipientActiveConnected = await ctx.db
       .query("calls")
       .withIndex("by_recipient_status", (q) =>
-        q.eq("recipientId", args.recipientId).eq("status", "connected")
+        q.eq("recipientId", normRecipientId).eq("status", "connected")
       )
       .first();
 
     const recipientActiveOutgoing = await ctx.db
       .query("calls")
       .withIndex("by_caller_status", (q) =>
-        q.eq("callerId", args.recipientId).eq("status", "connected")
+        q.eq("callerId", normRecipientId).eq("status", "connected")
       )
       .first();
 
@@ -59,7 +120,7 @@ export const initiateCall = mutation({
       return { success: false, reason: "busy", message: "User is currently in another call" };
     }
 
-    // Check if caller is already in an active call
+    // Check if caller is already in an active connected call
     const callerActive = await ctx.db
       .query("calls")
       .withIndex("by_caller_status", (q) =>
@@ -71,7 +132,6 @@ export const initiateCall = mutation({
     }
 
     // Generate unique channel name and numeric UIDs (within safe 32-bit positive integer range)
-    const now = Date.now();
     const callerUid = Math.floor(100000 + Math.random() * 899999);
     let recipientUid = Math.floor(100000 + Math.random() * 899999);
     if (recipientUid === callerUid) recipientUid += 1;
@@ -80,7 +140,7 @@ export const initiateCall = mutation({
 
     const callId = await ctx.db.insert("calls", {
       callerId: currentUser._id,
-      recipientId: args.recipientId,
+      recipientId: normRecipientId,
       conversationId: args.conversationId,
       type: args.type,
       status: "ringing",
@@ -92,7 +152,7 @@ export const initiateCall = mutation({
 
     // Notify recipient of incoming call
     await ctx.db.insert("notifications", {
-      recipientId: args.recipientId,
+      recipientId: normRecipientId,
       actorId: currentUser._id,
       type: "incoming_call",
       conversationId: args.conversationId,
@@ -117,9 +177,14 @@ export const initiateCall = mutation({
 export const acceptCall = mutation({
   args: {
     callId: v.id("calls"),
+    userId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const currentUser = await getAuthedUser(ctx);
+    let currentUser = await getAuthedUser(ctx);
+    if (!currentUser && args.userId) {
+      const norm = ctx.db.normalizeId("users", args.userId);
+      if (norm) currentUser = await ctx.db.get(norm);
+    }
     if (!currentUser) throw new Error("Not authenticated");
 
     const call = await ctx.db.get(args.callId);
@@ -149,9 +214,14 @@ export const acceptCall = mutation({
 export const declineCall = mutation({
   args: {
     callId: v.id("calls"),
+    userId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const currentUser = await getAuthedUser(ctx);
+    let currentUser = await getAuthedUser(ctx);
+    if (!currentUser && args.userId) {
+      const norm = ctx.db.normalizeId("users", args.userId);
+      if (norm) currentUser = await ctx.db.get(norm);
+    }
     if (!currentUser) throw new Error("Not authenticated");
 
     const call = await ctx.db.get(args.callId);
@@ -202,9 +272,14 @@ export const declineCall = mutation({
 export const cancelCall = mutation({
   args: {
     callId: v.id("calls"),
+    userId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const currentUser = await getAuthedUser(ctx);
+    let currentUser = await getAuthedUser(ctx);
+    if (!currentUser && args.userId) {
+      const norm = ctx.db.normalizeId("users", args.userId);
+      if (norm) currentUser = await ctx.db.get(norm);
+    }
     if (!currentUser) throw new Error("Not authenticated");
 
     const call = await ctx.db.get(args.callId);
@@ -268,9 +343,14 @@ export const endCall = mutation({
   args: {
     callId: v.id("calls"),
     reason: v.optional(v.string()),
+    userId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const currentUser = await getAuthedUser(ctx);
+    let currentUser = await getAuthedUser(ctx);
+    if (!currentUser && args.userId) {
+      const norm = ctx.db.normalizeId("users", args.userId);
+      if (norm) currentUser = await ctx.db.get(norm);
+    }
     if (!currentUser) throw new Error("Not authenticated");
 
     const call = await ctx.db.get(args.callId);
@@ -386,21 +466,39 @@ export const checkCallTimeout = mutation({
  * Used for real-time signaling, incoming call alerts, and active call overlays.
  */
 export const getActiveCall = query({
-  args: {},
-  handler: async (ctx) => {
-    const currentUser = await getAuthedUser(ctx);
+  args: {
+    userId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    let currentUser = await getAuthedUser(ctx);
+    if (!currentUser && args.userId) {
+      const normUser = ctx.db.normalizeId("users", args.userId);
+      if (normUser) {
+        currentUser = await ctx.db.get(normUser);
+      }
+    }
     if (!currentUser) return null;
 
-    // Look for incoming call
-    const incoming = await ctx.db
+    const now = Date.now();
+
+    // 1. Look for incoming call that is actively ringing (< 45s)
+    const incomingCalls = await ctx.db
       .query("calls")
       .withIndex("by_recipient_status", (q) =>
         q.eq("recipientId", currentUser._id).eq("status", "ringing")
       )
       .order("desc")
-      .first();
+      .take(5);
 
-    // Look for active connected call as recipient
+    let incoming = null;
+    for (const call of incomingCalls) {
+      if (now - call.startedAt <= 45000) {
+        incoming = call;
+        break;
+      }
+    }
+
+    // 2. Look for active connected call as recipient
     const connectedAsRecipient = await ctx.db
       .query("calls")
       .withIndex("by_recipient_status", (q) =>
@@ -409,15 +507,24 @@ export const getActiveCall = query({
       .order("desc")
       .first();
 
-    // Look for outgoing call as caller (ringing or connected)
-    const outgoingRinging = await ctx.db
+    // 3. Look for outgoing call as caller (actively ringing < 45s)
+    const outgoingRingingCalls = await ctx.db
       .query("calls")
       .withIndex("by_caller_status", (q) =>
         q.eq("callerId", currentUser._id).eq("status", "ringing")
       )
       .order("desc")
-      .first();
+      .take(5);
 
+    let outgoingRinging = null;
+    for (const call of outgoingRingingCalls) {
+      if (now - call.startedAt <= 45000) {
+        outgoingRinging = call;
+        break;
+      }
+    }
+
+    // 4. Look for outgoing connected call as caller
     const outgoingConnected = await ctx.db
       .query("calls")
       .withIndex("by_caller_status", (q) =>
@@ -426,7 +533,35 @@ export const getActiveCall = query({
       .order("desc")
       .first();
 
-    const activeCall = incoming || connectedAsRecipient || outgoingConnected || outgoingRinging;
+    // 5. Look for recently ended calls (within last 3.5s) to allow clients to receive final status
+    let recentEnded = null;
+    if (!incoming && !connectedAsRecipient && !outgoingConnected && !outgoingRinging) {
+      const recentAsCaller = await ctx.db
+        .query("calls")
+        .withIndex("by_caller", (q) => q.eq("callerId", currentUser._id))
+        .order("desc")
+        .first();
+
+      const recentAsRecipient = await ctx.db
+        .query("calls")
+        .withIndex("by_recipient", (q) => q.eq("recipientId", currentUser._id))
+        .order("desc")
+        .first();
+
+      const candidates = [recentAsCaller, recentAsRecipient].filter(
+        (c): c is any =>
+          !!c &&
+          !!c.endedAt &&
+          now - c.endedAt < 3500 &&
+          ["declined", "canceled", "completed", "missed"].includes(c.status)
+      );
+      if (candidates.length > 0) {
+        candidates.sort((a, b) => (b.endedAt || 0) - (a.endedAt || 0));
+        recentEnded = candidates[0];
+      }
+    }
+
+    const activeCall = incoming || connectedAsRecipient || outgoingConnected || outgoingRinging || recentEnded;
     if (!activeCall) return null;
 
     const caller: any = await ctx.db.get(activeCall.callerId);

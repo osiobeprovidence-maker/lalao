@@ -985,12 +985,17 @@ export const ChatModal: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-1 shrink-0">
-              {!(conv as any).isGroupChat && (
+              {!(conv as any).isGroupChat && !(conv as any).isPageConvo && (
                 <>
                   <button
                     id="btn-chat-voice-call"
                     type="button"
-                    onClick={() => startCall({ recipient: conv.participant, type: 'voice', conversationId: conv.id })}
+                    onClick={async () => {
+                      const res = await startCall({ recipient: conv.participant, type: 'voice', conversationId: conv.id });
+                      if (!res.success) {
+                        triggerShareToast(res.reason || 'Could not start call');
+                      }
+                    }}
                     className="rounded-full p-2 text-theme-secondary hover:bg-theme-surface-hover hover:text-[#5E43F3] active:scale-95 transition-all cursor-pointer"
                     title="Voice call"
                     aria-label="Voice call"
@@ -1000,7 +1005,12 @@ export const ChatModal: React.FC = () => {
                   <button
                     id="btn-chat-video-call"
                     type="button"
-                    onClick={() => startCall({ recipient: conv.participant, type: 'video', conversationId: conv.id })}
+                    onClick={async () => {
+                      const res = await startCall({ recipient: conv.participant, type: 'video', conversationId: conv.id });
+                      if (!res.success) {
+                        triggerShareToast(res.reason || 'Could not start call');
+                      }
+                    }}
                     className="rounded-full p-2 text-theme-secondary hover:bg-theme-surface-hover hover:text-[#5E43F3] active:scale-95 transition-all cursor-pointer"
                     title="Video call"
                     aria-label="Video call"
@@ -1105,13 +1115,16 @@ export const ChatModal: React.FC = () => {
                           </div>
                         </div>
 
-                        {!(conv as any).isGroupChat && (
+                        {!(conv as any).isGroupChat && !(conv as any).isPageConvo && (
                           <button
                             type="button"
-                            onClick={(e) => {
+                            onClick={async (e) => {
                               e.stopPropagation();
                               const isVid = msg.callType === 'video' || msg.text.toLowerCase().includes('video');
-                              startCall({ recipient: conv.participant, type: isVid ? 'video' : 'voice', conversationId: conv.id });
+                              const res = await startCall({ recipient: conv.participant, type: isVid ? 'video' : 'voice', conversationId: conv.id });
+                              if (!res.success) {
+                                triggerShareToast(res.reason || 'Could not start call');
+                              }
                             }}
                             className="px-2.5 py-1 rounded-full bg-[#5E43F3]/15 hover:bg-[#5E43F3]/25 text-[#8E79FC] text-[11px] font-semibold transition-colors shrink-0 cursor-pointer"
                           >

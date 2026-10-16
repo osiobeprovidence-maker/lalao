@@ -1,6 +1,7 @@
 "use node";
 
 import { action } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import agoraTokenPkg from "agora-token";
 
@@ -13,15 +14,21 @@ const { RtcTokenBuilder, RtcRole } = (agoraTokenPkg as any).default || agoraToke
 export const generateRtcToken = action({
   args: {
     callId: v.id("calls"),
+    uid: v.number(),
   },
   handler: async (ctx, args) => {
-    // 1. Fetch authorized call session from Convex database
-    const call: any = await ctx.runQuery(api.calls.getCallById, {
+    // 1. Fetch authorized call session from Convex database via internal query
+    const call: any = await ctx.runQuery(internal.calls.getCallInternal, {
       callId: args.callId,
     });
 
     if (!call) {
-      throw new Error("Call session not found or you are not authorized to access this call");
+      throw new Error("Call session not found");
+    }
+
+    // Verify requested UID belongs to this call session
+    if (args.uid !== call.callerUid && args.uid !== call.recipientUid) {
+      throw new Error("UID not authorized for this call session");
     }
 
     if (["completed", "declined", "canceled", "failed"].includes(call.status)) {
@@ -30,10 +37,6 @@ export const generateRtcToken = action({
 
     const appId = (process.env.AGORA_APP_ID || process.env.VITE_AGORA_APP_ID || "").trim();
     const appCertificate = (process.env.AGORA_APP_CERTIFICATE || "").trim();
-
-    // Determine current user's assigned numeric UID for this call
-    // Note: getCallById has verified authorization; callers and recipients have distinct UIDs
-    const uid = call.callerUid; // Fallback UID if not differentiated
 
     if (!appId || appId === "replace_with_your_app_id") {
       return {
@@ -44,23 +47,23 @@ export const generateRtcToken = action({
         channelName: call.channelName,
         callerUid: call.callerUid,
         recipientUid: call.recipientUid,
+        uid: args.uid,
         message: "Agora App ID is not configured. Set AGORA_APP_ID in Convex environment variables.",
       };
     }
 
-    // 2. Generate signed token if App Certificate is configured
+    // 2. Generate signed token if App Certificate is configured for this specific UID
     let token = "";
     if (appCertificate && appCertificate.length === 32) {
       const expirationTimeInSeconds = 3600; // 1 hour token lifetime
       const privilegeExpirationTimeInSeconds = 3600;
 
       try {
-        // Generate for caller UID
         token = RtcTokenBuilder.buildTokenWithUid(
           appId,
           appCertificate,
           call.channelName,
-          uid,
+          args.uid,
           RtcRole.PUBLISHER,
           expirationTimeInSeconds,
           privilegeExpirationTimeInSeconds
@@ -78,6 +81,7 @@ export const generateRtcToken = action({
       channelName: call.channelName,
       callerUid: call.callerUid,
       recipientUid: call.recipientUid,
+      uid: args.uid,
     };
   },
 });
