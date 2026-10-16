@@ -11,9 +11,11 @@ import {
   Heart,
   Download,
   Flame,
+  History,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { usePWA } from '../../hooks/usePWA';
+import { AppIcon } from '../common/AppIcon';
 
 interface MobileDrawerProps {
   isOpen: boolean;
@@ -47,6 +49,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
     { id: 'following', label: 'Following', icon: Users },
     { id: 'saved', label: 'Saved', icon: Bookmark },
     { id: 'liked', label: 'Liked', icon: Heart },
+    { id: 'recent-searches', label: 'Recent Searches', icon: History },
   ] as const;
 
   const handleWalletAction = () => {
@@ -77,7 +80,10 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
       >
         <div className="sticky top-0 z-20 border-b border-theme-divider/80 bg-theme-surface/90 px-4 pb-4 pt-4 backdrop-blur-sm">
           <div className="flex items-center justify-between">
-            <span className="lalao-wordmark text-[22px] text-theme-primary">lalao</span>
+            <div className="flex items-center gap-2">
+              <AppIcon className="w-7 h-7 rounded-lg shrink-0" />
+              <span className="lalao-wordmark text-[22px] text-theme-primary">lalao</span>
+            </div>
 
             <button
               id="btn-close-mobile-drawer"

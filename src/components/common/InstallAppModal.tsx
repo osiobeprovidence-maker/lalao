@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Smartphone, Share, CheckCircle2 } from 'lucide-react';
 import { usePWA } from '../../hooks/usePWA';
+import { AppIcon } from './AppIcon';
 
 export const InstallAppModal: React.FC = () => {
   const {
@@ -30,8 +31,8 @@ export const InstallAppModal: React.FC = () => {
 
         {/* Header / Icon */}
         <div className="pt-8 pb-4 flex flex-col items-center">
-          <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-lg mb-4 bg-theme-surface flex items-center justify-center p-2">
-            <img src="/mascot.png" alt="Lalao App" className="w-full h-full object-contain" />
+          <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-lg mb-4 bg-theme-surface flex items-center justify-center p-1.5">
+            <AppIcon className="w-full h-full rounded-xl" />
           </div>
           <h2 className="text-2xl font-bold text-theme-primary">
             {installed ? 'Lalao is already installed' : 'Install Lalao'}

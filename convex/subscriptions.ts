@@ -1,5 +1,6 @@
 import { mutation, query, action, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { Doc } from "./_generated/dataModel";
 import { v, ConvexError } from "convex/values";
 
 // Helper to resolve authenticated user
@@ -578,7 +579,7 @@ export const settlePaystackSubscription = internalMutation({
     }
 
     // Locate reservation by reference or ID
-    let reservation = null;
+    let reservation: Doc<"subscriptionReservations"> | null = null;
     if (args.reservationId) {
       reservation = await ctx.db.get(args.reservationId);
     } else {
@@ -592,10 +593,10 @@ export const settlePaystackSubscription = internalMutation({
       throw new ConvexError("Subscription reservation not found for reference: " + args.reference);
     }
 
-    const subscription = await ctx.db.get(reservation.subscriptionId);
+    const subscription: Doc<"subscriptionListings"> | null = await ctx.db.get(reservation.subscriptionId);
     if (!subscription) throw new ConvexError("Subscription listing not found");
 
-    const slot = await ctx.db.get(reservation.slotId);
+    const slot: Doc<"subscriptionSlots"> | null = await ctx.db.get(reservation.slotId);
     if (!slot) throw new ConvexError("Subscription slot not found");
 
     // Occupy slot
@@ -796,7 +797,7 @@ export const getJointheQAdminOverview = query({
 
     const pageFollowers = await ctx.db
       .query("pageFollowers")
-      .withIndex("by_page", (q) => q.eq("pageId", args.pageId))
+      .withIndex("by_page_user", (q) => q.eq("pageId", args.pageId))
       .collect();
 
     const activeMembers = memberships.filter((m) => m.status === "active");
@@ -1080,54 +1081,8 @@ export const getPageSubscriptions = query({
   },
 });
 
-export const getCRMData = query({
-  args: { pageId: v.id("pages") },
-  handler: async (ctx, args) => {
-    return await getJointheQAdminOverview(ctx, args);
-  },
-});
-
-export const getMyMemberships = query({
-  args: {},
-  handler: async (ctx) => {
-    const user = await getAuthedUser(ctx);
-    if (!user) return [];
-
-    const memberships = await ctx.db
-      .query("subscriptionMemberships")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .collect();
-
-    return Promise.all(
-      memberships.map(async (m) => {
-        const page = await ctx.db.get(m.pageId);
-        const plan = await ctx.db.get(m.subscriptionId);
-        const slot = await ctx.db.get(m.slotId);
-        return {
-          ...m,
-          page,
-          plan,
-          slot,
-        };
-      })
-    );
-  },
-});
-
-export const cancelMembership = mutation({
-  args: { membershipId: v.id("subscriptionMemberships") },
-  handler: async (ctx, args) => {
-    return await cancelSubscriptionRenewal(ctx, args);
-  },
-});
-
-export const joinSlot = mutation({
-  args: {
-    subscriptionId: v.id("subscriptionListings"),
-    role: v.optional(v.union(v.literal("Head of Family"), v.literal("Member"))),
-  },
-  handler: async (ctx, args) => {
-    return await joinViaWallet(ctx, { subscriptionId: args.subscriptionId });
-  },
-});
+// Export alias matching CRM and previous schemas
+export const getCRMData = getJointheQAdminOverview;
+export const cancelMembership = cancelSubscriptionRenewal;
+export const joinSlot = joinViaWallet;
 

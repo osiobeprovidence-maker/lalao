@@ -23,6 +23,7 @@ import {
   ShieldAlert,
   Sparkles,
   Crown,
+  Clock,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { EventsView } from '../events/EventsView';
@@ -61,6 +62,8 @@ export const DiscoverView: React.FC = () => {
     toggleFollowUser,
     setActiveCommentsPostId,
     featureFlags,
+    discoverSearchQuery,
+    setDiscoverSearchQuery,
   } = useLalao();
 
   const rawUsers = useQuery(api.social.listUsersForExplore);
@@ -88,11 +91,87 @@ export const DiscoverView: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Sync external search query (e.g. from Recent Searches page)
+  useEffect(() => {
+    if (discoverSearchQuery) {
+      setSearchQuery(discoverSearchQuery);
+      setDebouncedQuery(discoverSearchQuery);
+      setDiscoverSearchQuery('');
+    }
+  }, [discoverSearchQuery, setDiscoverSearchQuery]);
+
   // Actual backend search query
   const searchResults = useQuery(api.search.globalSearch, {
     query: debouncedQuery,
     filter: activeFilter,
   });
+
+  // Recent searches integration
+  const recentSearches = useQuery(api.search.getRecentSearches, { limit: 10 });
+  const recordSearch = useMutation(api.search.recordRecentSearch);
+  const removeSearch = useMutation(api.search.removeRecentSearch);
+
+  // Automatically save keyword searches when query is typed and settles
+  useEffect(() => {
+    const clean = debouncedQuery.trim();
+    if (clean.length >= 2) {
+      recordSearch({
+        query: clean,
+        type: 'keyword',
+      }).catch(() => {});
+    }
+  }, [debouncedQuery, recordSearch]);
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const clean = searchQuery.trim();
+      if (clean.length > 0) {
+        setDebouncedQuery(clean);
+        recordSearch({
+          query: clean,
+          type: 'keyword',
+        }).catch(() => {});
+      }
+    }
+  };
+
+  const handleSelectPerson = (user: any) => {
+    const displayName = getPublicIdentityLabel(user) || user.name || 'User';
+    recordSearch({
+      query: displayName,
+      type: 'person',
+      entityId: user.id || user._id,
+      title: displayName,
+      subtitle: user.username ? `@${user.username}` : undefined,
+      avatarUrl: user.avatar,
+      isVerified: user.isVerified,
+      verificationTier: user.verificationTier,
+    }).catch(() => {});
+    setActiveUserProfile(user);
+  };
+
+  const handleSelectPage = (page: any) => {
+    recordSearch({
+      query: page.name || 'Page',
+      type: 'page',
+      entityId: page.id || page._id,
+      title: page.name,
+      subtitle: page.category || (page.username ? `@${page.username}` : undefined),
+      avatarUrl: page.avatar,
+    }).catch(() => {});
+    navigate('/app/page/' + (page.id || page._id));
+  };
+
+  const handleSelectPlum = () => {
+    recordSearch({
+      query: 'Plum',
+      type: 'page',
+      entityId: 'plum',
+      title: 'Plum',
+      subtitle: 'Dating & Connections (18+)',
+    }).catch(() => {});
+    setActiveTab('plum');
+  };
 
   // Removed local toggleFollowUser and people state.
   // Using global toggleFollowUser and users from context.
@@ -248,6 +327,7 @@ export const DiscoverView: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
               placeholder={`Search people, content, pages...`}
               className="w-full pl-9 pr-9 py-2 rounded-full bg-theme-surface-hover hover:bg-theme-surface-active/60 focus:bg-theme-surface focus:ring-2 focus:ring-[#5E43F3]/20 focus:border-[#5E43F3] border border-transparent text-sm text-theme-primary placeholder:text-theme-tertiary transition-all outline-none"
             />
@@ -350,6 +430,86 @@ export const DiscoverView: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* Recent Searches Section (when not actively searching) */}
+      {!isSearching && recentSearches && recentSearches.length > 0 && (
+        <div id="discover-recent-searches-section" className="px-4 mt-3 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-theme-tertiary" />
+              <span className="text-xs font-bold text-theme-primary">Recent Searches</span>
+            </div>
+            <button
+              id="btn-discover-view-all-recent"
+              type="button"
+              onClick={() => setActiveTab('recent-searches')}
+              className="text-[11px] font-bold text-[#5E43F3] hover:text-[#4E34E0] transition-colors cursor-pointer"
+            >
+              View All
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+            {recentSearches.slice(0, 8).map((item) => (
+              <div
+                key={item._id}
+                id={`quick-recent-${item._id}`}
+                onClick={() => {
+                  if (item.type === 'person') {
+                    setActiveUserProfile({
+                      id: item.entityId,
+                      _id: item.entityId,
+                      name: item.title || item.query,
+                      username: (item.subtitle || '').replace(/^@/, ''),
+                      avatar: item.avatarUrl,
+                      isVerified: item.isVerified,
+                      verificationTier: item.verificationTier,
+                    } as any);
+                  } else if (item.type === 'page' || item.type === 'shop') {
+                    if (item.entityId === 'plum') {
+                      setActiveTab('plum');
+                    } else if (item.entityId) {
+                      navigate(`/app/page/${item.entityId}`);
+                    } else {
+                      setSearchQuery(item.query);
+                      setDebouncedQuery(item.query);
+                    }
+                  } else {
+                    setSearchQuery(item.query);
+                    setDebouncedQuery(item.query);
+                  }
+                }}
+                className="group flex items-center gap-2 pl-2 pr-1.5 py-1.5 rounded-full bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider/80 transition-all cursor-pointer shrink-0 shadow-2xs"
+              >
+                {item.type === 'person' ? (
+                  <Avatar src={item.avatarUrl} alt={item.title || item.query} size="xs" />
+                ) : item.type === 'page' && item.avatarUrl ? (
+                  <Avatar src={item.avatarUrl} alt={item.title || item.query} size="xs" />
+                ) : (
+                  <div className="w-5 h-5 rounded-full bg-[#5E43F3]/10 text-[#5E43F3] flex items-center justify-center">
+                    <Clock className="w-3 h-3" />
+                  </div>
+                )}
+                <span className="text-xs font-semibold text-theme-primary max-w-[120px] truncate">
+                  {item.title || item.query}
+                </span>
+                <button
+                  type="button"
+                  id={`btn-remove-quick-search-${item._id}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeSearch({ id: item._id });
+                  }}
+                  className="w-4 h-4 rounded-full flex items-center justify-center text-theme-tertiary hover:text-red-500 hover:bg-red-500/10 transition-colors ml-0.5 cursor-pointer"
+                  title="Remove"
+                >
+                  <X className="w-3 h-3 stroke-[2.5]" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Ghost Mode Notice if active and NOT searching */}
       {locationPrivacy?.ghostMode && !isSearching && (
@@ -462,7 +622,7 @@ export const DiscoverView: React.FC = () => {
                       {searchResults.people.map((user: any) => (
                         <div key={user.id} className="py-3.5 flex items-center justify-between gap-3">
                           <div
-                            onClick={() => setActiveUserProfile(user)}
+                            onClick={() => handleSelectPerson(user)}
                             className="flex items-center gap-2.5 min-w-0 cursor-pointer"
                           >
                             <Avatar src={user?.avatar} alt={getPublicIdentityLabel(user)} size="md" />
@@ -522,7 +682,7 @@ export const DiscoverView: React.FC = () => {
                       {'plum'.includes(debouncedQuery.toLowerCase()) || 'dating'.includes(debouncedQuery.toLowerCase()) ? (
                         <div 
                           className="py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-theme-base/50 transition-colors"
-                          onClick={() => setActiveTab('plum')}
+                          onClick={handleSelectPlum}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#7B1FA2] via-[#C2185B] to-[#FF4081] flex items-center justify-center text-white shrink-0 shadow-sm">
@@ -556,7 +716,7 @@ export const DiscoverView: React.FC = () => {
                         <div 
                           key={page.id} 
                           className="py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-theme-base/50 transition-colors"
-                          onClick={() => navigate('/app/page/' + page.id)}
+                          onClick={() => handleSelectPage(page)}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <Avatar src={page?.avatar} alt={page?.name || 'Page'} size="md" />

@@ -17,6 +17,7 @@ import { Avatar } from './Avatar';
 import { NotificationItem } from '../../types';
 import { SEED_NOTIFICATIONS } from '../../data/seedData';
 import { VerificationBadge } from './VerificationBadge';
+import { PaymentHistoryTab } from '../notifications/PaymentHistoryTab';
 
 interface SuggestedAccount {
   id: string;
@@ -52,7 +53,7 @@ export const NotificationsModal: React.FC = () => {
   const [suggestions, setSuggestions] = useState<SuggestedAccount[]>([]);
   const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
   const [isFeaturedDismissed, setIsFeaturedDismissed] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'suggested' | 'activity'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'suggested' | 'activity' | 'payments'>('all');
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -207,6 +208,18 @@ export const NotificationsModal: React.FC = () => {
           >
             Recent Activity
           </button>
+          <button
+            type="button"
+            id="btn-modal-notifications-payments"
+            onClick={() => setActiveFilter('payments')}
+            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+              activeFilter === 'payments'
+                ? 'bg-theme-inverse text-theme-text-inverse shadow-xs'
+                : 'bg-black/[0.03] dark:bg-white/[0.04] text-theme-secondary hover:bg-black/[0.06] dark:hover:bg-white/[0.07] hover:text-theme-primary'
+            }`}
+          >
+            Payments
+          </button>
         </div>
 
         {/* Push Notification Alert Banner */}
@@ -231,8 +244,15 @@ export const NotificationsModal: React.FC = () => {
 
         {/* Scrollable Content */}
         <div ref={containerRef} className="flex-1 overflow-y-auto min-h-0 divide-y divide-black/[0.04] dark:divide-white/[0.06]">
+          {/* SECTION: PAYMENTS TAB */}
+          {activeFilter === 'payments' && (
+            <div className="p-4">
+              <PaymentHistoryTab />
+            </div>
+          )}
+
           {/* SECTION 1: FEATURED (from inspo screenshot) */}
-          {(activeFilter === 'all' || activeFilter === 'suggested') && !isFeaturedDismissed && (
+          {activeFilter !== 'payments' && (activeFilter === 'all' || activeFilter === 'suggested') && !isFeaturedDismissed && (
             <div className="pb-2">
               <div className="px-4 pt-4 pb-2">
                 <h2 className="text-lg font-bold text-theme-primary tracking-tight">
@@ -268,7 +288,7 @@ export const NotificationsModal: React.FC = () => {
           )}
 
           {/* SECTION 2: SUGGESTED FOR YOU (from inspo screenshot) */}
-          {(activeFilter === 'all' || activeFilter === 'suggested') && suggestions.length > 0 && (
+          {activeFilter !== 'payments' && (activeFilter === 'all' || activeFilter === 'suggested') && suggestions.length > 0 && (
             <div className="py-2">
               <div className="px-4 pt-2 pb-2.5 flex items-center justify-between">
                 <h2 className="text-lg font-bold text-theme-primary tracking-tight">
@@ -354,7 +374,7 @@ export const NotificationsModal: React.FC = () => {
           )}
 
           {/* SECTION 3: RECENT NOTIFICATIONS / ACTIVITY */}
-          {(activeFilter === 'all' || activeFilter === 'activity') && (
+          {activeFilter !== 'payments' && (activeFilter === 'all' || activeFilter === 'activity') && (
             <div className="py-2">
               {/* Today */}
               {todayNotifs.length > 0 && (

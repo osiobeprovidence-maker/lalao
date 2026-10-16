@@ -16,10 +16,14 @@ import {
   Pause,
   Trash2,
   Square,
+  Video,
+  PhoneMissed,
+  PhoneOff,
 } from 'lucide-react';
 import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
+import { useCall } from '../../context/CallContext';
 import { Avatar } from '../common/Avatar';
 import { VerificationBadge } from '../common/VerificationBadge';
 import { getPublicIdentityLabel } from '../common/UserIdentity';
@@ -424,6 +428,8 @@ export const ChatModal: React.FC = () => {
     editMessage,
     deleteMessage,
   } = useLalao();
+
+  const { startCall } = useCall();
 
   // Text / editing state
   const [inputMessage, setInputMessage] = useState('');
@@ -979,13 +985,30 @@ export const ChatModal: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-1 shrink-0">
-              <button
-                onClick={() => triggerShareToast('Voice calls coming in v0.2')}
-                className="rounded-full p-2 text-theme-secondary hover:bg-theme-surface-hover hover:text-theme-primary transition-colors cursor-pointer"
-                title="Voice call"
-              >
-                <Phone className="w-4 h-4" />
-              </button>
+              {!(conv as any).isGroupChat && (
+                <>
+                  <button
+                    id="btn-chat-voice-call"
+                    type="button"
+                    onClick={() => startCall({ recipient: conv.participant, type: 'voice', conversationId: conv.id })}
+                    className="rounded-full p-2 text-theme-secondary hover:bg-theme-surface-hover hover:text-[#5E43F3] active:scale-95 transition-all cursor-pointer"
+                    title="Voice call"
+                    aria-label="Voice call"
+                  >
+                    <Phone className="w-4 h-4 stroke-[2.2]" />
+                  </button>
+                  <button
+                    id="btn-chat-video-call"
+                    type="button"
+                    onClick={() => startCall({ recipient: conv.participant, type: 'video', conversationId: conv.id })}
+                    className="rounded-full p-2 text-theme-secondary hover:bg-theme-surface-hover hover:text-[#5E43F3] active:scale-95 transition-all cursor-pointer"
+                    title="Video call"
+                    aria-label="Video call"
+                  >
+                    <Video className="w-4 h-4 stroke-[2.2]" />
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 className="rounded-full p-2 text-theme-secondary hover:bg-theme-surface-hover hover:text-theme-primary transition-colors cursor-pointer"
@@ -1054,7 +1077,49 @@ export const ChatModal: React.FC = () => {
                       </div>
                     )}
 
-                    {msg.viewOnce ? (
+                    {msg.type === 'call' || (msg.text && (msg.text.includes('Voice call') || msg.text.includes('Video call') || msg.text.includes('call ·') || msg.text.includes('Missed') || msg.text.includes('Declined'))) ? (
+                      <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl bg-white/[0.04] border border-white/10 w-full max-w-xs shadow-xs my-1">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                            msg.text.includes('Missed') || msg.text.includes('Declined')
+                              ? 'bg-rose-500/15 text-rose-400'
+                              : 'bg-emerald-500/15 text-emerald-400'
+                          }`}>
+                            {msg.text.includes('Missed') ? (
+                              <PhoneMissed className="w-4 h-4 stroke-[2.2]" />
+                            ) : msg.text.includes('Declined') ? (
+                              <PhoneOff className="w-4 h-4 stroke-[2.2]" />
+                            ) : msg.text.includes('video') || msg.text.includes('Video') ? (
+                              <Video className="w-4 h-4 stroke-[2.2]" />
+                            ) : (
+                              <Phone className="w-4 h-4 stroke-[2.2]" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <span className="block text-xs font-semibold text-theme-primary truncate">
+                              {msg.text.replace(/^[📞📹]\s*/, '')}
+                            </span>
+                            <span className="block text-[10px] text-theme-tertiary">
+                              {msg.text.includes('Missed') ? 'Missed call' : (msg.text.includes('Declined') ? 'Declined' : 'Completed')}
+                            </span>
+                          </div>
+                        </div>
+
+                        {!(conv as any).isGroupChat && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const isVid = msg.callType === 'video' || msg.text.toLowerCase().includes('video');
+                              startCall({ recipient: conv.participant, type: isVid ? 'video' : 'voice', conversationId: conv.id });
+                            }}
+                            className="px-2.5 py-1 rounded-full bg-[#5E43F3]/15 hover:bg-[#5E43F3]/25 text-[#8E79FC] text-[11px] font-semibold transition-colors shrink-0 cursor-pointer"
+                          >
+                            Call back
+                          </button>
+                        )}
+                      </div>
+                    ) : msg.viewOnce ? (
                       msg.viewOnceOpened ? (
                         <div className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border ${msg.isMine ? 'border-neutral-800 bg-black' : 'border-[#5E43F3]/20 bg-[#5E43F3]'}`}>
                           <CheckCheck className="w-4 h-4 text-theme-tertiary opacity-70" />

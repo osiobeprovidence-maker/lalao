@@ -1,6 +1,6 @@
 import { mutation, query, action, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
+import { internal, api } from "./_generated/api";
 
 export const getUserByIdentity = internalQuery({
   args: { 
@@ -74,7 +74,6 @@ export const getWallet = query({
       .query("users")
       .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
       .unique();
-
     if (!user) return null;
 
     const wallet = await ctx.db
@@ -82,7 +81,189 @@ export const getWallet = query({
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .first();
 
-    return wallet;
+    if (!wallet) return null;
+
+    return {
+      ...wallet,
+      hasPin: Boolean(wallet.walletPin && wallet.walletPin.length === 4),
+      walletPin: undefined, // Never expose raw or hashed PIN to client
+    };
+  },
+});
+
+export const setWalletPin = mutation({
+  args: {
+    pin: v.string(),
+    oldPin: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    if (!/^\d{4}$/.test(args.pin)) {
+      throw new Error("PIN must be exactly 4 numeric digits.");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) throw new Error("User not found");
+
+    let wallet = await ctx.db
+      .query("userWallets")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .first();
+
+    if (!wallet) {
+      const walletId = await ctx.db.insert("userWallets", {
+        userId: user._id,
+        balance: 0,
+        currency: "LC",
+        accountNumber: "LC-" + Math.floor(100000 + Math.random() * 900000).toString(),
+        accountName: user.name || "Lalao User",
+        bankName: "LaLao Platform",
+        walletPin: args.pin,
+        updatedAt: Date.now(),
+      });
+      return { success: true, message: "Wallet PIN created successfully." };
+    }
+
+    // If wallet already has a PIN, verify the old PIN before changing
+    if (wallet.walletPin && wallet.walletPin.length === 4) {
+      if (!args.oldPin || args.oldPin !== wallet.walletPin) {
+        throw new Error("Incorrect current PIN.");
+      }
+    }
+
+    await ctx.db.patch(wallet._id, {
+      walletPin: args.pin,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true, message: "Wallet PIN updated successfully." };
+  },
+});
+
+export const storePinResetOtp = internalMutation({
+  args: {
+    userId: v.id("users"),
+    otp: v.string(),
+    expiresAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    let wallet = await ctx.db
+      .query("userWallets")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .first();
+
+    if (!wallet) {
+      const walletId = await ctx.db.insert("userWallets", {
+        userId: args.userId,
+        balance: 0,
+        currency: "LC",
+        pinResetOtp: args.otp,
+        pinResetExpiresAt: args.expiresAt,
+        updatedAt: Date.now(),
+      });
+      return walletId;
+    }
+
+    await ctx.db.patch(wallet._id, {
+      pinResetOtp: args.otp,
+      pinResetExpiresAt: args.expiresAt,
+      updatedAt: Date.now(),
+    });
+
+    return wallet._id;
+  },
+});
+
+export const requestPinResetOtp = action({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const user = await ctx.runQuery(internal.wallet.getUserByIdentity, {
+      tokenIdentifier: identity.tokenIdentifier,
+    });
+    if (!user) throw new Error("User profile not found.");
+
+    const email = user.email || identity.email;
+    if (!email) {
+      throw new Error("No verified email address associated with your account.");
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    await ctx.runMutation(internal.wallet.storePinResetOtp, {
+      userId: user._id,
+      otp,
+      expiresAt,
+    });
+
+    // Send via Resend
+    const res = await ctx.runAction(api.emails.sendOtpEmail, {
+      to: email,
+      otp,
+      purpose: "reset your transaction security PIN",
+    });
+
+    return {
+      success: true,
+      email: email.replace(/(.{2})(.*)(?=@)/, (_gp, a, b) => a + "*".repeat(b.length)),
+      mock: res?.mock,
+    };
+  },
+});
+
+export const resetWalletPinWithOtp = mutation({
+  args: {
+    otp: v.string(),
+    newPin: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    if (!/^\d{4}$/.test(args.newPin)) {
+      throw new Error("PIN must be exactly 4 numeric digits.");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) throw new Error("User not found");
+
+    const wallet = await ctx.db
+      .query("userWallets")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .first();
+
+    if (!wallet) throw new Error("Wallet not found");
+
+    if (!wallet.pinResetOtp || !wallet.pinResetExpiresAt || Date.now() > wallet.pinResetExpiresAt) {
+      throw new Error("Verification code has expired. Please request a new code.");
+    }
+
+    if (wallet.pinResetOtp.trim() !== args.otp.trim()) {
+      throw new Error("Invalid verification code. Please check your email and try again.");
+    }
+
+    await ctx.db.patch(wallet._id, {
+      walletPin: args.newPin,
+      pinResetOtp: undefined,
+      pinResetExpiresAt: undefined,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true, message: "Your transaction PIN has been successfully reset!" };
   },
 });
 
@@ -446,6 +627,13 @@ export const transferCredits = mutation({
 
     if (!senderWallet || senderWallet.balance < args.amount) {
       throw new Error("Insufficient balance");
+    }
+
+    // Validate PIN if wallet has a configured PIN
+    if (senderWallet.walletPin) {
+      if (!args.pin || args.pin !== senderWallet.walletPin) {
+        throw new Error("Incorrect wallet security PIN.");
+      }
     }
 
     const recipientOwner = await ctx.db.get(recipientPage.ownerId);

@@ -673,7 +673,11 @@ export interface DirectMessage {
   replyToMessageId?: string;
   replyToMessageText?: string;
   isEdited?: boolean;
-  type?: 'text' | 'image' | 'video';
+  type?: 'text' | 'image' | 'video' | 'call';
+  callId?: string;
+  callType?: 'voice' | 'video';
+  callDuration?: number;
+  callStatus?: 'completed' | 'missed' | 'declined' | 'canceled' | 'failed';
   mediaUrl?: string;
   mimeType?: string;
   fileName?: string;
@@ -685,6 +689,40 @@ export interface DirectMessage {
   viewedAt?: number;
 }
 
+export type CallType = 'voice' | 'video';
+export type CallStatus =
+  | 'calling'
+  | 'ringing'
+  | 'connected'
+  | 'completed'
+  | 'missed'
+  | 'declined'
+  | 'canceled'
+  | 'failed';
+
+export interface CallSession {
+  _id: string;
+  callerId: string;
+  recipientId: string;
+  conversationId?: string;
+  type: CallType;
+  status: CallStatus;
+  channelName: string;
+  callerUid: number;
+  recipientUid: number;
+  startedAt: number;
+  connectedAt?: number;
+  endedAt?: number;
+  duration?: number;
+  endReason?: string;
+  isCaller?: boolean;
+  myUid?: number;
+  targetUid?: number;
+  caller?: User | null;
+  recipient?: User | null;
+  otherUser?: User | null;
+}
+
 export interface Conversation {
   id: string;
   participant: User;
@@ -694,7 +732,15 @@ export interface Conversation {
   messages: DirectMessage[];
 }
 
-export type NotificationType = 'follow' | 'like' | 'reply' | 'rally_join' | 'page_interaction' | 'message';
+export type NotificationType =
+  | 'follow'
+  | 'like'
+  | 'reply'
+  | 'rally_join'
+  | 'page_interaction'
+  | 'message'
+  | 'missed_call'
+  | 'incoming_call';
 
 export interface NotificationItem {
   id: string;

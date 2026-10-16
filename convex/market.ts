@@ -2,8 +2,20 @@ import { internalMutation, internalQuery, action, query } from "./_generated/ser
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 
-const MOCK_PROVIDER = process.env.MARKET_PROVIDER === "mock";
+const CLUBKONNECT_USER_ID = process.env.CLUBKONNECT_USER_ID;
+const CLUBKONNECT_API_KEY = process.env.CLUBKONNECT_API_KEY;
+const MOCK_PROVIDER = process.env.MARKET_PROVIDER === "mock" || (!CLUBKONNECT_USER_ID && !process.env.VTU_USERNAME);
 const VTU_BASE_URL = process.env.VTU_API_BASE_URL || "https://vtu.ng/wp-json";
+
+// Clubkonnect Network Codes: 01=MTN, 02=Glo, 03=9mobile, 04=Airtel
+function getClubkonnectNetworkCode(net?: string): string {
+  const n = (net || '').toUpperCase();
+  if (n.includes('MTN')) return '01';
+  if (n.includes('GLO')) return '02';
+  if (n.includes('9MOBILE') || n.includes('ETISALAT')) return '03';
+  if (n.includes('AIRTEL')) return '04';
+  return '01';
+}
 
 // Helper function to safely fetch from VTU.ng
 async function vtuFetch(endpoint: string, options: RequestInit = {}) {
@@ -80,6 +92,36 @@ export const getVariations = action({
       ]
     };
 
+    // Call live Clubkonnect data plan feed if configured
+    if (CLUBKONNECT_USER_ID) {
+      try {
+        const ckPlansRes = await fetch(`https://www.nellobytesystems.com/APIDatabundlePlansV2.asp?UserID=${encodeURIComponent(CLUBKONNECT_USER_ID)}`);
+        const ckData = await ckPlansRes.json();
+        const networkKeyMap: Record<string, string> = {
+          MTN: "MTN",
+          GLO: "Glo",
+          AIRTEL: "Airtel",
+          "9MOBILE": "m_9mobile"
+        };
+        const netKey = networkKeyMap[net] || "MTN";
+        const netObj = ckData?.MOBILE_NETWORK?.[netKey]?.[0];
+        if (netObj && Array.isArray(netObj.PRODUCT)) {
+          return netObj.PRODUCT.map((p: any) => ({
+            id: `ck_${p.PRODUCT_ID}_${p.PRODUCT_CODE}`,
+            network: net,
+            planName: p.PRODUCT_NAME,
+            dataAmount: p.PRODUCT_NAME.split('-')[0]?.trim() || p.PRODUCT_NAME,
+            validity: p.PRODUCT_NAME.includes('days') || p.PRODUCT_NAME.includes('day') || p.PRODUCT_NAME.includes('Monthly') ? p.PRODUCT_NAME : '30 Days',
+            price: Math.ceil(parseFloat(p.PRODUCT_AMOUNT) || 0),
+            variationId: p.PRODUCT_ID || p.PRODUCT_CODE,
+          }));
+        }
+      } catch (err) {
+        console.warn("Failed fetching live Clubkonnect plans, using curated catalog:", err);
+      }
+      return PLANS_BY_NETWORK[net] || PLANS_BY_NETWORK.MTN;
+    }
+
     if (MOCK_PROVIDER || !process.env.VTU_USERNAME || !process.env.VTU_PASSWORD) {
       if (args.type === "data") {
         return PLANS_BY_NETWORK[net] || PLANS_BY_NETWORK.MTN;
@@ -136,9 +178,9 @@ export const initiatePurchase = internalMutation({
       .first();
     if (existing) throw new Error("Duplicate request");
 
-    // 2. Validate PIN (assuming it's a basic check for now)
-    if (args.pin.length !== 4) {
-      throw new Error("Invalid PIN format");
+    // 2. Validate PIN format
+    if (!/^\d{4}$/.test(args.pin)) {
+      throw new Error("Invalid PIN format. PIN must be 4 digits.");
     }
 
     // 3. Get wallet
@@ -148,6 +190,13 @@ export const initiatePurchase = internalMutation({
       .first();
     
     if (!wallet) throw new Error("Wallet not found");
+
+    // Verify PIN against saved wallet PIN if configured
+    if (wallet.walletPin && wallet.walletPin.length === 4) {
+      if (args.pin !== wallet.walletPin) {
+        throw new Error("Incorrect wallet security PIN.");
+      }
+    }
 
     const totalAmount = args.amount + args.fee;
     if (wallet.balance < totalAmount) {
@@ -182,7 +231,7 @@ export const initiatePurchase = internalMutation({
       userId: args.userId,
       type: "MARKET_PURCHASE",
       category: args.serviceCategory.toUpperCase(),
-      provider: MOCK_PROVIDER ? "mock" : "vtu_ng",
+      provider: MOCK_PROVIDER ? "mock" : CLUBKONNECT_USER_ID ? "clubkonnect" : "vtu_ng",
       status: "PENDING",
       requestId: args.requestId,
       amount: args.amount,
@@ -409,7 +458,50 @@ export const purchaseService = action({
         return { success: true, status: 'COMPLETED', message: 'Transaction successful' };
       }
 
-      // 2. Call actual VTU.ng API
+      // 2. Call Clubkonnect API if configured
+      if (CLUBKONNECT_USER_ID && CLUBKONNECT_API_KEY) {
+        const netCode = getClubkonnectNetworkCode(args.network || args.provider);
+        let apiUrl = '';
+
+        if (args.serviceCategory === 'airtime') {
+          apiUrl = `https://www.nellobytesystems.com/APIAirtimeV1.asp?UserID=${encodeURIComponent(CLUBKONNECT_USER_ID)}&APIKey=${encodeURIComponent(CLUBKONNECT_API_KEY)}&MobileNetwork=${netCode}&Amount=${args.amount}&MobileNumber=${encodeURIComponent(args.customerIdentifier)}&RequestID=${encodeURIComponent(requestId)}`;
+        } else if (args.serviceCategory === 'data') {
+          const planCode = args.variationId || '1000';
+          apiUrl = `https://www.nellobytesystems.com/APIDatabundleV1.asp?UserID=${encodeURIComponent(CLUBKONNECT_USER_ID)}&APIKey=${encodeURIComponent(CLUBKONNECT_API_KEY)}&MobileNetwork=${netCode}&DataPlan=${encodeURIComponent(planCode)}&MobileNumber=${encodeURIComponent(args.customerIdentifier)}&RequestID=${encodeURIComponent(requestId)}`;
+        } else {
+          throw new Error('This service category is currently only supported via card or VTU fallback.');
+        }
+
+        console.log(`[Clubkonnect] Sending ${args.serviceCategory} request:`, { netCode, phone: args.customerIdentifier, amount: args.amount, requestId });
+
+        const ckRaw = await fetch(apiUrl);
+        const ckResponse = await ckRaw.json().catch(() => null);
+
+        console.log(`[Clubkonnect] Response:`, ckResponse);
+
+        // Status code 100 = ORDER_RECEIVED, 200 = ORDER_COMPLETED
+        const statusCode = ckResponse?.statuscode?.toString();
+        const statusText = (ckResponse?.status || '').toUpperCase();
+        const isSuccess = statusCode === '100' || statusCode === '200' || statusText.includes('ORDER_RECEIVED') || statusText.includes('ORDER_COMPLETED');
+
+        if (isSuccess) {
+          await ctx.runMutation(internal.market.updatePurchaseStatus, {
+            userId: user._id, marketTxId, walletTxId, status: "COMPLETED",
+            providerOrderId: ckResponse?.orderid?.toString() || `ck_${Date.now()}`,
+            providerAmount: ckResponse?.amountcharged ? parseFloat(ckResponse.amountcharged) : args.amount,
+            providerDiscount: ckResponse?.discount ? parseFloat(ckResponse.discount) : 0,
+          });
+          return { success: true, status: 'COMPLETED', message: 'Transaction successful' };
+        } else {
+          const errMsg = ckResponse?.msg || ckResponse?.remark || ckResponse?.status || 'Provider transaction failed';
+          await ctx.runMutation(internal.market.updatePurchaseStatus, {
+            userId: user._id, marketTxId, walletTxId, status: "FAILED", errorMessage: errMsg
+          });
+          return { success: false, status: 'FAILED', message: errMsg };
+        }
+      }
+
+      // Legacy VTU.ng fallback
       let endpoint = '';
       let payload: any = { request_id: requestId };
 
@@ -430,9 +522,6 @@ export const purchaseService = action({
         body: JSON.stringify(payload)
       });
 
-      // 3. Process Response
-      // VTU.ng typically returns a specific shape, e.g. vtuResponse.code === "success"
-      // We will map it to our internal status
       const isSuccess = vtuResponse.code === 'success' || vtuResponse.status === 'successful';
       
       if (isSuccess) {

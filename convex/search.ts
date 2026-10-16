@@ -1,4 +1,4 @@
-import { query } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { resolveUserVerification } from "./social";
@@ -263,3 +263,216 @@ export const globalSearch = query({
     };
   }
 });
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   RECENT SEARCHES API
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Fetch the authenticated user's recent searches, sorted newest to oldest.
+ */
+export const getRecentSearches = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return [];
+
+    const limit = args.limit ?? 30;
+
+    const searches = await ctx.db
+      .query("recentSearches")
+      .withIndex("by_user_time", (q) => q.eq("userId", currentUser._id))
+      .order("desc")
+      .take(limit);
+
+    // Enrich live user data if target entity is a person or page
+    const enriched = await Promise.all(
+      searches.map(async (item) => {
+        if (item.type === "person" && item.entityId) {
+          try {
+            const userDoc = await ctx.db.get(item.entityId as Id<"users">);
+            if (userDoc) {
+              return {
+                ...item,
+                title: userDoc.name || item.title || "User",
+                subtitle: userDoc.username ? `@${userDoc.username}` : item.subtitle,
+                avatarUrl: userDoc.avatarUrl || item.avatarUrl,
+                ...resolveUserVerification(userDoc),
+              };
+            }
+          } catch {
+            // Deleted or invalid ID fallback
+          }
+        } else if ((item.type === "page" || item.type === "shop") && item.entityId) {
+          try {
+            const pageDoc = await ctx.db.get(item.entityId as Id<"pages">);
+            if (pageDoc) {
+              return {
+                ...item,
+                title: pageDoc.name || item.title,
+                subtitle: pageDoc.category || item.subtitle,
+                avatarUrl: pageDoc.avatar || item.avatarUrl,
+              };
+            }
+          } catch {
+            // Deleted or invalid ID fallback
+          }
+        }
+        return item;
+      })
+    );
+
+    return enriched;
+  },
+});
+
+/**
+ * Record a search entry. If an identical query/entity exists, update timestamp and move to top.
+ */
+export const recordRecentSearch = mutation({
+  args: {
+    query: v.string(),
+    type: v.union(
+      v.literal("keyword"),
+      v.literal("person"),
+      v.literal("page"),
+      v.literal("shop"),
+      v.literal("content"),
+      v.literal("event")
+    ),
+    entityId: v.optional(v.string()),
+    title: v.optional(v.string()),
+    subtitle: v.optional(v.string()),
+    avatarUrl: v.optional(v.string()),
+    isVerified: v.optional(v.boolean()),
+    verificationTier: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return null;
+
+    const cleanQuery = args.query.trim();
+    if (!cleanQuery) return null;
+
+    const now = Date.now();
+
+    // Look for existing entry:
+    // If entityId exists (e.g. clicked on a profile or page), match by entityId + type
+    let existing = null;
+    if (args.entityId) {
+      existing = await ctx.db
+        .query("recentSearches")
+        .withIndex("by_user", (q) => q.eq("userId", currentUser._id))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("entityId"), args.entityId),
+            q.eq(q.field("type"), args.type)
+          )
+        )
+        .first();
+    }
+
+    // If no existing entity match, match by query and type
+    if (!existing) {
+      existing = await ctx.db
+        .query("recentSearches")
+        .withIndex("by_user_query", (q) =>
+          q.eq("userId", currentUser._id).eq("query", cleanQuery)
+        )
+        .filter((q) => q.eq(q.field("type"), args.type))
+        .first();
+    }
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        timestamp: now,
+        entityId: args.entityId ?? existing.entityId,
+        title: args.title ?? existing.title,
+        subtitle: args.subtitle ?? existing.subtitle,
+        avatarUrl: args.avatarUrl ?? existing.avatarUrl,
+        isVerified: args.isVerified ?? existing.isVerified,
+        verificationTier: args.verificationTier ?? existing.verificationTier,
+      });
+      return existing._id;
+    }
+
+    // Insert new entry
+    const id = await ctx.db.insert("recentSearches", {
+      userId: currentUser._id,
+      query: cleanQuery,
+      type: args.type,
+      entityId: args.entityId,
+      title: args.title,
+      subtitle: args.subtitle,
+      avatarUrl: args.avatarUrl,
+      isVerified: args.isVerified,
+      verificationTier: args.verificationTier,
+      timestamp: now,
+    });
+
+    // Keep history trimmed to a max of 50 items per user
+    const total = await ctx.db
+      .query("recentSearches")
+      .withIndex("by_user_time", (q) => q.eq("userId", currentUser._id))
+      .order("asc")
+      .collect();
+
+    if (total.length > 50) {
+      const toDelete = total.slice(0, total.length - 50);
+      for (const item of toDelete) {
+        await ctx.db.delete(item._id);
+      }
+    }
+
+    return id;
+  },
+});
+
+/**
+ * Remove a single search record by ID.
+ */
+export const removeRecentSearch = mutation({
+  args: {
+    id: v.id("recentSearches"),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Unauthenticated");
+
+    const record = await ctx.db.get(args.id);
+    if (!record) return { success: true };
+
+    // Strict privacy boundary: only owner can delete their search
+    if (record.userId !== currentUser._id) {
+      throw new Error("Unauthorized to remove this search item");
+    }
+
+    await ctx.db.delete(args.id);
+    return { success: true };
+  },
+});
+
+/**
+ * Clear all recent searches for the authenticated user.
+ */
+export const clearAllRecentSearches = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return { count: 0 };
+
+    const records = await ctx.db
+      .query("recentSearches")
+      .withIndex("by_user", (q) => q.eq("userId", currentUser._id))
+      .collect();
+
+    for (const record of records) {
+      await ctx.db.delete(record._id);
+    }
+
+    return { count: records.length };
+  },
+});
+

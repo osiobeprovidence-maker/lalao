@@ -14,6 +14,7 @@ import { ProfileView } from './components/profile/ProfileView';
 import { EventsView } from './components/events/EventsView';
 import { MyPagesView } from './pages/my-pages/MyPagesView';
 import { PlumView } from './components/plum/PlumView';
+import { RecentSearchesPage } from './components/search/RecentSearchesPage';
 import { SoundDetailModal } from './components/sounds/SoundDetailModal';
 import { CreateSoundModal } from './components/sounds/CreateSoundModal';
 
@@ -36,6 +37,9 @@ import { SettingsPageView } from './components/profile/SettingsPageView';
 import { NotificationListener } from './components/notifications/NotificationListener';
 import { CommentsModal } from './components/common/CommentsModal';
 import { NotificationsModal } from './components/common/NotificationsModal';
+import { CallProvider } from './context/CallContext';
+import { IncomingCallModal } from './components/calls/IncomingCallModal';
+import { ActiveCallModal } from './components/calls/ActiveCallModal';
 import { AuthPromptModal } from './components/common/AuthPromptModal';
 import { PermissionPromptModal } from './components/permissions/PermissionPromptModal';
 import { DevicePermissionsModal } from './components/permissions/DevicePermissionsModal';
@@ -331,6 +335,11 @@ const LalaoAppContent: React.FC = () => {
                 <DiscoverView />
               </div>
             )}
+            {activeTab === 'recent-searches' && (
+              <div key="tab-recent-searches" className="animate-in fade-in duration-200 w-full bg-transparent">
+                <RecentSearchesPage />
+              </div>
+            )}
             {activeTab === 'create-page' && (
               <div key="tab-create-page" className="animate-in fade-in duration-200 w-full bg-transparent pb-24">
                 <CreatePageView />
@@ -455,6 +464,8 @@ const LalaoAppContent: React.FC = () => {
       <CommentsModal />
       <NotificationsModal />
       <VideoFeedModal />
+      <IncomingCallModal />
+      <ActiveCallModal />
 
       {!['create-post'].includes(activeTab) && <CycleStoryViewerModal />}
       {!['create-post'].includes(activeTab) && <PermissionPromptModal />}
@@ -512,7 +523,9 @@ const LalaoApp: React.FC = () => (
   <KlyroWalletProvider>
     <EventDistributionProvider>
       <LalaoProvider>
-        <LalaoAppContent />
+        <CallProvider>
+          <LalaoAppContent />
+        </CallProvider>
       </LalaoProvider>
     </EventDistributionProvider>
   </KlyroWalletProvider>

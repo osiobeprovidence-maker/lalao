@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Menu, Search } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { MobileDrawer } from './MobileDrawer';
+import { AppIcon } from '../common/AppIcon';
 
 export const Header: React.FC = () => {
   const {
@@ -28,7 +29,8 @@ export const Header: React.FC = () => {
             <Menu className="h-5 w-5 stroke-[2.2]" />
           </button>
 
-          <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none">
+          <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none flex items-center gap-1.5">
+            <AppIcon className="w-6 h-6 rounded-lg shrink-0" />
             <span className="lalao-wordmark text-xl text-theme-primary">lalao</span>
           </div>
 

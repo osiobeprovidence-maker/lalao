@@ -65,7 +65,8 @@ export type NavTab =
   | 'beta-tester'
   | 'creator-hub'
   | 'sounds'
-  | 'plum';
+  | 'plum'
+  | 'recent-searches';
 export type FeedTab = 'for_you' | 'following' | 'community' | 'nearby' | (string & {});
 export type CreateOption = 'post' | 'rally' | 'page' | 'cycle' | 'group-chat' | 'group-cycle' | null;
 
@@ -267,6 +268,10 @@ interface LalaoContextType {
   setComposerInitialText: (text: string) => void;
   activeCommentsPostId: string | null;
   setActiveCommentsPostId: (id: string | null) => void;
+
+  // Search integration
+  discoverSearchQuery: string;
+  setDiscoverSearchQuery: (query: string) => void;
 
   // Sounds & Music Library
   activeSoundId: string | null;
@@ -601,6 +606,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [currentUser]);
 
   const [activeTab, setRawActiveTab] = useState<NavTab>('home');
+  const [discoverSearchQuery, setDiscoverSearchQuery] = useState<string>('');
   const [activeSoundId, setActiveSoundId] = useState<string | null>(null);
   const [isCreateSoundOpen, setIsCreateSoundOpen] = useState(false);
 
@@ -2855,6 +2861,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updateUserProfile,
         generateCloudinarySignature,
         featureFlags,
+        discoverSearchQuery,
+        setDiscoverSearchQuery,
         activeSoundId,
         setActiveSoundId,
         isCreateSoundOpen,

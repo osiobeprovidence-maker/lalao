@@ -19,6 +19,7 @@ import {
   Sparkles,
   Briefcase,
   Flame,
+  History,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useLalao } from '../../context/LalaoContext';
@@ -27,6 +28,7 @@ import { Avatar } from '../common/Avatar';
 import { VerificationBadge } from '../common/VerificationBadge';
 import { getPublicIdentityLabel } from '../common/UserIdentity';
 import { usePWA } from '../../hooks/usePWA';
+import { AppIcon } from '../common/AppIcon';
 
 export const DesktopSidebar: React.FC = () => {
   const {
@@ -163,6 +165,7 @@ export const DesktopSidebar: React.FC = () => {
     { id: 'following', label: 'Following', icon: Users },
     { id: 'saved', label: 'Saved', icon: Bookmark },
     { id: 'liked', label: 'Liked', icon: Heart },
+    { id: 'recent-searches', label: 'Recent Searches', icon: History },
   ] as const;
 
   const accountNav = [
@@ -172,7 +175,7 @@ export const DesktopSidebar: React.FC = () => {
   ] as const;
 
   const isMenuItemActive = (id: string) =>
-    ['following', 'saved', 'liked'].includes(id) && activeTab === id;
+    ['following', 'saved', 'liked', 'recent-searches'].includes(id) && activeTab === id;
 
   return (
     <aside
@@ -191,9 +194,10 @@ export const DesktopSidebar: React.FC = () => {
               const mainEl = document.querySelector('main');
               if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'instant' });
             }}
-            className="text-left cursor-pointer"
+            className="flex items-center gap-2.5 text-left cursor-pointer group"
             aria-label="Go to home feed"
           >
+            <AppIcon className="w-8 h-8 rounded-xl shrink-0 transition-transform group-hover:scale-105" />
             <span className="lalao-wordmark text-[26px] text-theme-primary">lalao</span>
           </button>
 

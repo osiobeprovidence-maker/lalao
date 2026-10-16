@@ -17,8 +17,7 @@ interface JointheQTabProps {
 type TabSection = 'discover' | 'my_subscriptions' | 'about' | 'admin_dashboard';
 
 export const JointheQTab: React.FC<JointheQTabProps> = ({ page }) => {
-  const { user: currentUser } = useAuth();
-  const { setSelectedSubscriptionPlan, setIsSubscriptionCheckoutOpen, setIsWalletModalOpen, triggerShareToast } = useLalao();
+  const { currentUser, setSelectedSubscriptionPlan, setIsSubscriptionCheckoutOpen, setIsWalletModalOpen, triggerShareToast } = useLalao();
 
   const [activeSection, setActiveSection] = useState<TabSection>('discover');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -26,7 +25,7 @@ export const JointheQTab: React.FC<JointheQTabProps> = ({ page }) => {
 
   // Admin capabilities check
   const isOwner = currentUser?.id === page.ownerId;
-  const isSuperAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'admin';
+  const isSuperAdmin = (currentUser as any)?.role === 'super_admin' || (currentUser as any)?.role === 'admin';
   const pageMembers = useQuery(api.pages.getPageMembers, { pageId: page.id as any }) || [];
   const myMembership = pageMembers.find((m: any) => m.userId === currentUser?.id);
   const isPageManager = isOwner || isSuperAdmin || (myMembership && ['owner', 'admin', 'staff'].includes(myMembership.role));

@@ -120,7 +120,7 @@ const getBaseEmailLayout = (title: string, contentHtml: string): string => `
    ───────────────────────────────────────────────────────────────────────────── */
 
 function getResendClient() {
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = process.env.RESEND_API_KEY || process.env.AUTH_RESEND_KEY;
   if (!apiKey) {
     return null;
   }

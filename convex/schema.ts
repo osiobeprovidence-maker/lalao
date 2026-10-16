@@ -511,7 +511,11 @@ export default defineSchema({
     readAt: v.optional(v.number()),
     replyToMessageId: v.optional(v.id("messages")),
     isEdited: v.optional(v.boolean()),
-    type: v.optional(v.union(v.literal("text"), v.literal("image"), v.literal("video"))),
+    type: v.optional(v.union(v.literal("text"), v.literal("image"), v.literal("video"), v.literal("call"))),
+    callId: v.optional(v.id("calls")),
+    callType: v.optional(v.union(v.literal("voice"), v.literal("video"))),
+    callDuration: v.optional(v.number()),
+    callStatus: v.optional(v.string()),
     mediaStorageId: v.optional(v.id("_storage")),
     mimeType: v.optional(v.string()),
     fileName: v.optional(v.string()),
@@ -526,6 +530,40 @@ export default defineSchema({
     .index("by_conversation", ["conversationId"])
     .index("by_sender", ["senderId"])
     .index("by_conversation_read", ["conversationId", "isRead"]),
+
+  /**
+   * Real-time Voice and Video Calling sessions via Agora RTC.
+   */
+  calls: defineTable({
+    callerId: v.id("users"),
+    recipientId: v.id("users"),
+    conversationId: v.optional(v.id("conversations")),
+    type: v.union(v.literal("voice"), v.literal("video")),
+    status: v.union(
+      v.literal("calling"),
+      v.literal("ringing"),
+      v.literal("connected"),
+      v.literal("completed"),
+      v.literal("missed"),
+      v.literal("declined"),
+      v.literal("canceled"),
+      v.literal("failed")
+    ),
+    channelName: v.string(),
+    callerUid: v.number(),
+    recipientUid: v.number(),
+    startedAt: v.number(),
+    connectedAt: v.optional(v.number()),
+    endedAt: v.optional(v.number()),
+    duration: v.optional(v.number()),
+    endReason: v.optional(v.string()),
+  })
+    .index("by_caller", ["callerId"])
+    .index("by_recipient", ["recipientId"])
+    .index("by_conversation", ["conversationId"])
+    .index("by_recipient_status", ["recipientId", "status"])
+    .index("by_caller_status", ["callerId", "status"])
+    .index("by_channel", ["channelName"]),
 
   /**
    * Real notification events. Created server-side on like / comment / follow / rally_join.
@@ -549,6 +587,8 @@ export default defineSchema({
       v.literal("subscription_renewal"),
       v.literal("subscription_cancelled"),
       v.literal("subscription_payment_failed"),
+      v.literal("missed_call"),
+      v.literal("incoming_call"),
     ),
     postId: v.optional(v.id("posts")),
     commentId: v.optional(v.id("comments")),
@@ -694,6 +734,9 @@ export default defineSchema({
     accountNumber: v.optional(v.string()),
     accountName: v.optional(v.string()),
     bankName: v.optional(v.string()),
+    walletPin: v.optional(v.string()), // 4-digit transaction security PIN
+    pinResetOtp: v.optional(v.string()),
+    pinResetExpiresAt: v.optional(v.number()),
     updatedAt: v.number(),
   }).index("by_user", ["userId"]),
 
@@ -720,15 +763,29 @@ export default defineSchema({
       v.literal("prize_payout"),
       v.literal("transfer_out"),
       v.literal("MARKET_PURCHASE"),
-      v.literal("MARKET_REFUND")
+      v.literal("MARKET_REFUND"),
+      v.literal("gift_sent"),
+      v.literal("page_payment")
     ),
-    status: v.union(v.literal("pending"), v.literal("processing"), v.literal("completed"), v.literal("failed"), v.literal("refunded"), v.literal("reversed")),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("processing"),
+      v.literal("completed"),
+      v.literal("failed"),
+      v.literal("refunded"),
+      v.literal("reversed"),
+      v.literal("cancelled")
+    ),
     description: v.string(),
     reference: v.optional(v.string()),
+    relatedPageId: v.optional(v.id("pages")),
+    metadata: v.optional(v.any()),
+    receiptNumber: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_wallet", ["walletId"])
     .index("by_user", ["userId"])
+    .index("by_user_created", ["userId", "createdAt"])
     .index("by_created", ["createdAt"])
     .index("by_reference", ["reference"]),
 
@@ -774,6 +831,7 @@ export default defineSchema({
     refundedAt: v.optional(v.number()),
   })
     .index("by_user", ["userId"])
+    .index("by_user_created", ["userId", "createdAt"])
     .index("by_request_id", ["requestId"])
     .index("by_provider_order_id", ["providerOrderId"]),
 
@@ -1633,5 +1691,29 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_page", ["userId", "pageSlugOrId"]),
+
+  // Recent Searches for users
+  recentSearches: defineTable({
+    userId: v.id("users"),
+    query: v.string(),
+    type: v.union(
+      v.literal("keyword"),
+      v.literal("person"),
+      v.literal("page"),
+      v.literal("shop"),
+      v.literal("content"),
+      v.literal("event")
+    ),
+    entityId: v.optional(v.string()), // Target user ID, page ID, etc.
+    title: v.optional(v.string()), // Display title (e.g. user name or page title)
+    subtitle: v.optional(v.string()), // Display subtitle (e.g. @username or category)
+    avatarUrl: v.optional(v.string()), // Display avatar for people / pages
+    isVerified: v.optional(v.boolean()),
+    verificationTier: v.optional(v.string()),
+    timestamp: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_time", ["userId", "timestamp"])
+    .index("by_user_query", ["userId", "query"]),
 });
 
