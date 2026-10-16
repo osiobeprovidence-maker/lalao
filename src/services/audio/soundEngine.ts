@@ -97,12 +97,30 @@ export const PRESET_SOUNDS: PresetSoundDef[] = [
 
 // AudioContext singleton helper
 let sharedAudioCtx: AudioContext | null = null;
+let soundEngineHasInteracted = false;
+
+if (typeof window !== 'undefined') {
+  const onGesture = () => {
+    soundEngineHasInteracted = true;
+    if (sharedAudioCtx && sharedAudioCtx.state === 'suspended') {
+      sharedAudioCtx.resume().catch(() => {});
+    }
+    window.removeEventListener('click', onGesture);
+    window.removeEventListener('touchstart', onGesture);
+    window.removeEventListener('keydown', onGesture);
+  };
+  window.addEventListener('click', onGesture, { once: true, passive: true });
+  window.addEventListener('touchstart', onGesture, { once: true, passive: true });
+  window.addEventListener('keydown', onGesture, { once: true, passive: true });
+}
+
 export function getAudioContext(): AudioContext {
   if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
     sharedAudioCtx = new AudioCtx();
   }
-  if (sharedAudioCtx.state === 'suspended') {
+  const canAutoplay = (navigator as any)?.userActivation?.hasBeenActive ?? soundEngineHasInteracted;
+  if (sharedAudioCtx.state === 'suspended' && canAutoplay) {
     sharedAudioCtx.resume().catch(() => {});
   }
   return sharedAudioCtx;

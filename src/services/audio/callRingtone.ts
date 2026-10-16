@@ -7,16 +7,39 @@ class CallRingtoneService {
   private audioCtx: AudioContext | null = null;
   private ringInterval: any = null;
   private isRinging = false;
+  private userHasInteracted = false;
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      const markInteracted = () => {
+        this.userHasInteracted = true;
+        if (this.audioCtx && this.audioCtx.state === 'suspended') {
+          this.audioCtx.resume().catch(() => {});
+        }
+        window.removeEventListener('click', markInteracted);
+        window.removeEventListener('touchstart', markInteracted);
+        window.removeEventListener('keydown', markInteracted);
+      };
+      window.addEventListener('click', markInteracted, { once: true, passive: true });
+      window.addEventListener('touchstart', markInteracted, { once: true, passive: true });
+      window.addEventListener('keydown', markInteracted, { once: true, passive: true });
+    }
+  }
 
   private getAudioContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
+    const canAutoplay = (navigator as any)?.userActivation?.hasBeenActive ?? this.userHasInteracted;
     if (!this.audioCtx) {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       if (AudioContextClass) {
-        this.audioCtx = new AudioContextClass();
+        try {
+          this.audioCtx = new AudioContextClass();
+        } catch {
+          return null;
+        }
       }
     }
-    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+    if (this.audioCtx && this.audioCtx.state === 'suspended' && canAutoplay) {
       this.audioCtx.resume().catch(() => {});
     }
     return this.audioCtx;

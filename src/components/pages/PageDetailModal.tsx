@@ -139,7 +139,7 @@ export const PageDetailModal: React.FC = () => {
   const resolvedPageId = currentPage?.id;
 
   const activePlans = useQuery(api.subscriptions.getPageSubscriptions, resolvedPageId && !isVirtualPage ? { pageId: resolvedPageId as any } : 'skip') || [];
-  const myMemberships = useQuery(api.subscriptions.getMyMemberships) || [];
+  const myMemberships = useQuery(api.subscriptions.getMyMemberships, currentUser ? { userId: (currentUser as any)._id || (currentUser as any).id } : 'skip') || [];
   const pageLocations = useQuery(api.pages.getPageLocations, resolvedPageId && !isVirtualPage ? { pageId: resolvedPageId as any } : 'skip') || [];
   const ensureRoomyOrg = useMutation((api.roomy as any)?.ensureRoomyOrganization);
   const ensureJointheQ = useMutation(api.subscriptions.ensureJointheQPage);

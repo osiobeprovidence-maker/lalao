@@ -722,6 +722,41 @@ export const getMySubscriptions = query({
   },
 });
 
+export const getMyMemberships = query({
+  args: { userId: v.optional(v.union(v.id("users"), v.string())) },
+  handler: async (ctx, args) => {
+    let user = await getAuthedUser(ctx);
+    if (!user && args.userId) {
+      const normalized = ctx.db.normalizeId("users", args.userId as string);
+      if (normalized) {
+        user = await ctx.db.get(normalized);
+      }
+    }
+    if (!user) return [];
+
+    const memberships = await ctx.db
+      .query("subscriptionMemberships")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+
+    const results = await Promise.all(
+      memberships.map(async (m) => {
+        const subscription = await ctx.db.get(m.subscriptionId);
+        const slot = await ctx.db.get(m.slotId);
+        const page = await ctx.db.get(m.pageId);
+        return {
+          ...m,
+          subscription,
+          slot,
+          page,
+        };
+      })
+    );
+
+    return results;
+  },
+});
+
 export const cancelSubscriptionRenewal = mutation({
   args: { membershipId: v.id("subscriptionMemberships") },
   handler: async (ctx, args) => {
