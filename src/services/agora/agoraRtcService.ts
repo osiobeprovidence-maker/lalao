@@ -123,25 +123,31 @@ class AgoraRtcService {
     this.isJoined = true;
 
     // Create local audio track with acoustic echo cancellation and noise suppression
-    this.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack({
-      encoderConfig: 'high_quality_stereo',
-      AEC: true,
-      ANS: true,
-      AGC: true,
-    });
+    if (!this.localAudioTrack) {
+      this.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack({
+        encoderConfig: 'high_quality_stereo',
+        AEC: true,
+        ANS: true,
+        AGC: true,
+      });
+    }
 
     const tracksToPublish: any[] = [this.localAudioTrack];
 
-    // If video call, create local video track
+    // If video call, create local video track if not already created
     if (callType === 'video') {
-      try {
-        this.localVideoTrack = await AgoraRTC.createCameraVideoTrack({
-          encoderConfig: '720p_1',
-          optimizationMode: 'detail',
-        });
+      if (!this.localVideoTrack) {
+        try {
+          this.localVideoTrack = await AgoraRTC.createCameraVideoTrack({
+            encoderConfig: '720p_1',
+            optimizationMode: 'detail',
+          });
+        } catch (videoErr) {
+          console.warn('[AgoraRTC] Failed to initialize camera, proceeding with voice only:', videoErr);
+        }
+      }
+      if (this.localVideoTrack) {
         tracksToPublish.push(this.localVideoTrack);
-      } catch (videoErr) {
-        console.warn('[AgoraRTC] Failed to initialize camera, proceeding with voice only:', videoErr);
       }
     }
 
@@ -155,11 +161,32 @@ class AgoraRtcService {
   }
 
   /**
+   * Create local video preview track before joining channel.
+   */
+  public async createLocalVideoPreview(): Promise<ICameraVideoTrack | null> {
+    if (this.localVideoTrack) return this.localVideoTrack;
+    try {
+      this.localVideoTrack = await AgoraRTC.createCameraVideoTrack({
+        encoderConfig: '720p_1',
+        optimizationMode: 'detail',
+      });
+      return this.localVideoTrack;
+    } catch (err) {
+      console.warn('[AgoraRTC] Could not create camera video preview:', err);
+      return null;
+    }
+  }
+
+  /**
    * Play local video track in specified DOM element or ID.
    */
   public playLocalVideo(element: HTMLElement | string) {
     if (this.localVideoTrack) {
-      this.localVideoTrack.play(element);
+      try {
+        this.localVideoTrack.play(element, { fit: 'cover' });
+      } catch (err) {
+        console.warn('[AgoraRTC] Error playing local video:', err);
+      }
     }
   }
 
@@ -169,7 +196,11 @@ class AgoraRtcService {
   public playRemoteVideo(uid: number | string, element: HTMLElement | string) {
     const user = this.remoteUsers.get(uid);
     if (user && user.videoTrack) {
-      user.videoTrack.play(element);
+      try {
+        user.videoTrack.play(element, { fit: 'cover' });
+      } catch (err) {
+        console.warn('[AgoraRTC] Error playing remote video:', err);
+      }
     }
   }
 

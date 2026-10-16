@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React from 'react';
 import {
   PhoneOff,
   Mic,
@@ -33,6 +33,7 @@ export const ActiveCallModal: React.FC = () => {
     connectionState,
     mediaError,
     remoteUser,
+    hasRemoteVideo,
     isAgoraConfigured,
     endCall,
     toggleMute,
@@ -44,21 +45,14 @@ export const ActiveCallModal: React.FC = () => {
     attachRemoteVideo,
   } = useCall();
 
-  const localVideoRef = useRef<HTMLDivElement | null>(null);
-  const remoteVideoRef = useRef<HTMLDivElement | null>(null);
+  // Callback refs for video container attachment upon mounting
+  const localVideoCallbackRef = (node: HTMLDivElement | null) => {
+    attachLocalVideo(node);
+  };
 
-  // Attach DOM containers for video rendering
-  useEffect(() => {
-    if (localVideoRef.current) {
-      attachLocalVideo(localVideoRef.current);
-    }
-  }, [localVideoRef.current, isCameraOff]);
-
-  useEffect(() => {
-    if (remoteVideoRef.current) {
-      attachRemoteVideo(remoteVideoRef.current);
-    }
-  }, [remoteVideoRef.current, remoteUser]);
+  const remoteVideoCallbackRef = (node: HTMLDivElement | null) => {
+    attachRemoteVideo(node);
+  };
 
   // Don't show active modal while receiving incoming call (IncomingCallModal handles it)
   if (!activeCall || isIncomingCall) return null;
@@ -227,13 +221,13 @@ export const ActiveCallModal: React.FC = () => {
           <div className="relative w-full max-w-4xl h-full max-h-[750px] rounded-3xl overflow-hidden bg-black flex items-center justify-center border border-theme-divider-light dark:border-white/10 shadow-2xl">
             {/* Primary Remote Video Stream */}
             <div
-              ref={remoteVideoRef}
+              ref={remoteVideoCallbackRef}
               id="remote-video-container"
               className="w-full h-full flex items-center justify-center object-cover"
             />
 
             {/* Placeholder when remote camera is inactive / connecting */}
-            {(!remoteUser || !remoteUser.videoTrack) && (
+            {!hasRemoteVideo && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#121420] to-[#0A0C14] p-6 text-center">
                 <div className="relative mb-4">
                   {connectionState === 'connected' && (
@@ -267,7 +261,7 @@ export const ActiveCallModal: React.FC = () => {
               className="absolute top-4 right-4 sm:top-6 sm:right-6 w-28 h-40 sm:w-36 sm:h-52 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl bg-[#161822] z-30"
             >
               <div
-                ref={localVideoRef}
+                ref={localVideoCallbackRef}
                 id="local-video-container"
                 className={`w-full h-full object-cover ${isCameraOff ? 'hidden' : 'block'}`}
               />

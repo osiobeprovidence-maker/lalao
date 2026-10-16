@@ -1,4 +1,5 @@
 import { mutation, query, internalQuery } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { getAuthedUser } from "./social";
 
@@ -160,6 +161,17 @@ export const initiateCall = mutation({
       isRead: false,
       createdAt: now,
     });
+
+    // Schedule background Web Push notification if recipient is offline / backgrounded
+    try {
+      await ctx.scheduler.runAfter(0, (internal as any).pushActions.dispatchPush, {
+        recipientId: normRecipientId,
+        title: `Incoming ${args.type === "video" ? "Video" : "Voice"} Call`,
+        body: `${currentUser.name || "A Lalao user"} is calling you...`,
+        url: `/app/messages`,
+        icon: currentUser.avatarUrl || "/mascot.png",
+      });
+    } catch (_) {}
 
     return {
       success: true,
@@ -487,10 +499,10 @@ export const getActiveCall = query({
       .withIndex("by_recipient_status", (q) =>
         q.eq("recipientId", currentUser._id).eq("status", "ringing")
       )
-      .order("desc")
-      .take(5);
+      .collect();
 
     let incoming = null;
+    incomingCalls.sort((a, b) => b.startedAt - a.startedAt);
     for (const call of incomingCalls) {
       if (now - call.startedAt <= 45000) {
         incoming = call;
@@ -513,10 +525,10 @@ export const getActiveCall = query({
       .withIndex("by_caller_status", (q) =>
         q.eq("callerId", currentUser._id).eq("status", "ringing")
       )
-      .order("desc")
-      .take(5);
+      .collect();
 
     let outgoingRinging = null;
+    outgoingRingingCalls.sort((a, b) => b.startedAt - a.startedAt);
     for (const call of outgoingRingingCalls) {
       if (now - call.startedAt <= 45000) {
         outgoingRinging = call;

@@ -21,6 +21,8 @@ interface CallContextType {
   connectionState: 'idle' | 'calling' | 'ringing' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
   mediaError: string | null;
   remoteUser: IAgoraRTCRemoteUser | null;
+  hasRemoteVideo: boolean;
+  hasRemoteAudio: boolean;
   isAgoraConfigured: boolean;
 
   // Actions
@@ -63,6 +65,11 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [connectionState, setConnectionState] = useState<CallContextType['connectionState']>('idle');
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [remoteUser, setRemoteUser] = useState<IAgoraRTCRemoteUser | null>(null);
+  const [remoteStreamState, setRemoteStreamState] = useState<{
+    uid: number | string | null;
+    hasVideo: boolean;
+    hasAudio: boolean;
+  }>({ uid: null, hasVideo: false, hasAudio: false });
   const [isAgoraConfigured, setIsAgoraConfigured] = useState(true);
 
   const durationTimerRef = useRef<any>(null);
@@ -100,6 +107,15 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         callRingtoneService.startOutgoingRingtone();
       } else {
         callRingtoneService.startIncomingRingtone();
+      }
+
+      // If video call and camera is not disabled, start local camera preview immediately
+      if (activeCall.type === 'video' && !isCameraOff) {
+        agoraRtcService.createLocalVideoPreview().then((track) => {
+          if (track && localVideoContainerRef.current) {
+            agoraRtcService.playLocalVideo(localVideoContainerRef.current);
+          }
+        }).catch(() => {});
       }
 
       // Check for timeout every 4 seconds
@@ -171,17 +187,36 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       agoraRtcService.initClient({
         onRemoteUserJoined: (user) => {
           setRemoteUser(user);
-          if (remoteVideoContainerRef.current) {
+          setRemoteStreamState({
+            uid: user.uid,
+            hasVideo: !!user.videoTrack,
+            hasAudio: !!user.audioTrack,
+          });
+          if (remoteVideoContainerRef.current && user.videoTrack) {
             agoraRtcService.playRemoteVideo(user.uid, remoteVideoContainerRef.current);
           }
         },
         onRemoteUserLeft: () => {
           setRemoteUser(null);
+          setRemoteStreamState({ uid: null, hasVideo: false, hasAudio: false });
         },
         onRemoteVideoChanged: (user, isOff) => {
-          if (!isOff && remoteVideoContainerRef.current) {
+          setRemoteUser(user);
+          setRemoteStreamState((prev) => ({
+            ...prev,
+            uid: user.uid,
+            hasVideo: !isOff && !!user.videoTrack,
+          }));
+          if (!isOff && remoteVideoContainerRef.current && user.videoTrack) {
             agoraRtcService.playRemoteVideo(user.uid, remoteVideoContainerRef.current);
           }
+        },
+        onRemoteAudioChanged: (user, isMuted) => {
+          setRemoteStreamState((prev) => ({
+            ...prev,
+            uid: user.uid,
+            hasAudio: !isMuted,
+          }));
         },
         onConnectionStateChanged: (curState) => {
           if (curState === 'CONNECTED') setConnectionState('connected');
@@ -236,6 +271,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsCameraOff(false);
     setIsMinimized(false);
     setRemoteUser(null);
+    setRemoteStreamState({ uid: null, hasVideo: false, hasAudio: false });
     setConnectionState('idle');
   }, []);
 
@@ -356,20 +392,20 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Attach local video DOM element
-  const attachLocalVideo = (element: HTMLDivElement | null) => {
+  const attachLocalVideo = useCallback((element: HTMLDivElement | null) => {
     localVideoContainerRef.current = element;
     if (element && agoraRtcService.getLocalVideoTrack()) {
       agoraRtcService.playLocalVideo(element);
     }
-  };
+  }, []);
 
   // Attach remote video DOM element
-  const attachRemoteVideo = (element: HTMLDivElement | null) => {
+  const attachRemoteVideo = useCallback((element: HTMLDivElement | null) => {
     remoteVideoContainerRef.current = element;
     if (element && remoteUser && remoteUser.videoTrack) {
       agoraRtcService.playRemoteVideo(remoteUser.uid, element);
     }
-  };
+  }, [remoteUser]);
 
   const isIncomingCall = !!activeCall && activeCall.status === 'ringing' && !activeCall.isCaller;
   const isOutgoingCall = !!activeCall && activeCall.status === 'ringing' && !!activeCall.isCaller;
@@ -391,6 +427,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         connectionState,
         mediaError,
         remoteUser,
+        hasRemoteVideo: remoteStreamState.hasVideo,
+        hasRemoteAudio: remoteStreamState.hasAudio,
         isAgoraConfigured,
         startCall,
         acceptCall,
