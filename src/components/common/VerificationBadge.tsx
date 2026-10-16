@@ -27,22 +27,60 @@ const SIZE_MAP = {
  * - Tier 4: Priority Verified (₦1,700) -> Dual-ring Lalao blue crest with priority beacon & checkmark.
  * - Tier 5: Creator Premium (₦3,500) -> Lalao blue octa-shield with spark crest and checkmark.
  */
+export function normalizeTier(tier?: string | null): VerificationTier {
+  if (!tier) return 'none';
+  const t = String(tier).toLowerCase().trim();
+  if (t === 'creator' || t === 'creator_premium' || t === 'tier_5' || t === 'tier 5' || t === 'tier5') return 'creator';
+  if (t === 'priority' || t === 'tier_4' || t === 'tier 4' || t === 'tier4') return 'priority';
+  if (t === 'verified' || t === 'standard' || t === 'tier_3' || t === 'tier 3' || t === 'tier3') return 'verified';
+  return 'none';
+}
+
 /**
  * Resolve a user's CURRENT active subscription tier.
- * Mirrors `resolveUserVerification` in convex/social.ts — the single rule:
- * paid tier + status active (or unset) + not past expiry. Never post-based.
+ * Robustly inspects verificationTier, subscription object, and boolean verification flags.
  */
 export function getActiveSubscriptionTier(user?: Partial<User> | null): VerificationTier {
   if (!user) return 'none';
   const u = user as any;
-  const tier: VerificationTier | undefined = u.verificationTier;
-  if (tier && tier !== 'none') {
-    if (u.verificationStatus && u.verificationStatus !== 'active') return 'none';
-    if (u.verificationExpiresAt && u.verificationExpiresAt <= Date.now()) return 'none';
-    return tier;
+
+  // 1. Check direct candidate tier fields
+  const candidateTier = u.verificationTier || u.tier || u.creatorTier || u.subscription?.tier;
+
+  // Status check: if explicitly inactive, expired, or cancelled, treat as none
+  const rawStatus = u.verificationStatus ?? u.subscription?.status;
+  const status = typeof rawStatus === 'string' ? rawStatus.toLowerCase().trim() : undefined;
+  if (status && (status === 'inactive' || status === 'expired' || status === 'cancelled')) {
+    return 'none';
   }
-  // Legacy payloads that only carry the boolean flag
-  return u.isVerified ? 'verified' : 'none';
+
+  // Expiration check: if timestamp has passed, return 'none'
+  const rawExp = u.verificationExpiresAt ?? u.subscription?.expiresAt ?? u.subscription?.nextBillingDate;
+  if (rawExp) {
+    const expTime = typeof rawExp === 'string' ? new Date(rawExp).getTime() : Number(rawExp);
+    if (!isNaN(expTime) && expTime > 0 && expTime <= Date.now()) {
+      return 'none';
+    }
+  }
+
+  // If candidate tier is recognized, return normalized tier
+  if (candidateTier) {
+    const normalized = normalizeTier(candidateTier);
+    if (normalized !== 'none') {
+      return normalized;
+    }
+  }
+
+  // 2. Boolean flag check (isVerified, verified, is_verified, hasActiveSubscription)
+  const isFlagged = Boolean(u.isVerified || u.verified || u.is_verified || u.hasActiveSubscription);
+  if (isFlagged) {
+    if (u.creatorCategory || (typeof u.creatorLevel === 'number' && u.creatorLevel > 0)) {
+      return 'creator';
+    }
+    return 'verified';
+  }
+
+  return 'none';
 }
 
 export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
@@ -54,11 +92,10 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
   asSpan = false,
   interactive = true,
 }) => {
-  // Resolve tier: explicit propTier takes precedence, otherwise derive from user's CURRENT status
-  const tier: VerificationTier = propTier || getActiveSubscriptionTier(user);
-
-  // Normalize creator_premium to creator
-  const normalizedTier = tier === 'creator_premium' ? 'creator' : tier;
+  // Resolve tier: explicit propTier takes precedence if recognized, otherwise derive from user
+  const explicitTier = propTier ? normalizeTier(propTier) : 'none';
+  const resolvedTier: VerificationTier = explicitTier !== 'none' ? explicitTier : getActiveSubscriptionTier(user);
+  const normalizedTier = normalizeTier(resolvedTier);
 
   if (normalizedTier === 'none') {
     return null;
@@ -68,11 +105,15 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
 
   // Tooltip descriptions
   const isCreator = normalizedTier === 'creator';
+  const isPriority = normalizedTier === 'priority';
   const tooltipText = isCreator
     ? 'Creator Verified\nThis person is a verified creator on Lalao.'
+    : isPriority
+    ? 'Priority Verified\nThis person has priority verification on Lalao.'
     : 'Verified\nThis person has completed Lalao verification.';
 
-  const badgeColor = isCreator ? '#1DA1F2' : '#0F1419';
+  // Standard verified blue across verified profiles matching the post badge
+  const badgeColor = '#1DA1F2';
 
   const svgIcon = (
     <svg
@@ -102,7 +143,7 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
       <span
         title={showTooltip ? tooltipText : undefined}
         className={`inline-flex items-center justify-center shrink-0 align-middle ${box} ${className}`}
-        aria-label={isCreator ? 'Creator Verified' : 'Verified'}
+        aria-label={isCreator ? 'Creator Verified' : isPriority ? 'Priority Verified' : 'Verified'}
       >
         {svgIcon}
       </span>
@@ -127,7 +168,7 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
       }}
       title={showTooltip ? tooltipText : undefined}
       className={`inline-flex items-center justify-center shrink-0 align-middle transition-transform hover:scale-110 cursor-pointer ${box} ${className}`}
-      aria-label={isCreator ? 'Creator Verified' : 'Verified'}
+      aria-label={isCreator ? 'Creator Verified' : isPriority ? 'Priority Verified' : 'Verified'}
     >
       {svgIcon}
     </span>

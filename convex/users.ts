@@ -1,6 +1,7 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { resolveUserVerification } from "./social";
 
 async function getAuthUserId(ctx: any): Promise<Id<"users"> | null> {
   const identity = await ctx.auth.getUserIdentity();
@@ -55,6 +56,7 @@ export const getCurrentUser = query({
       ...user,
       avatarUrl: effectiveAvatar,
       avatar: effectiveAvatar,
+      ...resolveUserVerification(user),
     };
   },
 });
@@ -90,6 +92,7 @@ export const getUserByUsername = query({
       ...user,
       avatarUrl: effectiveAvatar,
       avatar: effectiveAvatar,
+      ...resolveUserVerification(user),
     };
   },
 });

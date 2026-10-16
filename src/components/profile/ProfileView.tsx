@@ -180,9 +180,22 @@ export const ProfileView: React.FC = () => {
                 <h2 className="text-xl font-bold text-theme-primary leading-tight">
                   {getPublicIdentityLabel(currentUser)}
                 </h2>
-                <VerificationBadge user={currentUser} size="sm" />
+                <VerificationBadge
+                  user={currentUser}
+                  tier={
+                    subscription.status === 'active' && subscription.tier !== 'none'
+                      ? subscription.tier
+                      : currentUser.verificationTier
+                  }
+                  size="sm"
+                />
                 {currentUser.badge && <Badge type={currentUser.badge} />}
               </div>
+              {currentUser.username && (
+                <p className="text-xs text-theme-tertiary font-medium mt-0.5">
+                  @{currentUser.username.replace(/^@+/, '')}
+                </p>
+              )}
             </div>
 
             {/* 3. Bio or description */}

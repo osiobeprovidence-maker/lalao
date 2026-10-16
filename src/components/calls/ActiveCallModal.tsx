@@ -245,7 +245,7 @@ export const ActiveCallModal: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-1.5 mb-1">
                   <h3 className="text-xl font-bold text-white">{identityLabel}</h3>
-                  {otherUser?.verified && <VerificationBadge user={otherUser} size="xs" />}
+                  <VerificationBadge user={otherUser} size="xs" />
                 </div>
                 <p className="text-xs text-white/50">@{username}</p>
                 <div className="mt-3 px-3 py-1 rounded-full bg-white/10 text-xs text-white/80">
@@ -302,7 +302,7 @@ export const ActiveCallModal: React.FC = () => {
                 <h2 className="text-2xl font-black tracking-tight text-theme-primary dark:text-white truncate">
                   {identityLabel}
                 </h2>
-                {otherUser?.verified && <VerificationBadge user={otherUser} size="sm" />}
+                <VerificationBadge user={otherUser} size="sm" />
               </div>
               <p className="text-sm text-theme-tertiary dark:text-white/60 mb-5">@{username}</p>
 

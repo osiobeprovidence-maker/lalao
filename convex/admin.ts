@@ -499,7 +499,7 @@ export const setTestAccountStatus = mutation({
     isTestAccount: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const actor = await requireSuperAdmin(ctx);
+    const actor = await requireAdmin(ctx, ["super_admin", "admin"]);
     const target = await ctx.db.get(args.userId);
     if (!target) throw new Error("Target user not found");
 
@@ -662,7 +662,7 @@ export const deleteTestAccounts = mutation({
     dryRun: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const actor = await requireSuperAdmin(ctx);
+    const actor = await requireAdmin(ctx, ["super_admin", "admin"]);
 
     const results: {
       userId: string;
@@ -692,11 +692,11 @@ export const deleteTestAccounts = mutation({
         continue;
       }
 
-      if (user.role === "super_admin") {
+      if (user.role === "super_admin" || (actor.role === "admin" && user.role === "admin")) {
         results.push({
           userId,
           status: "skipped_protected",
-          reason: "Super Admin accounts are protected from deletion.",
+          reason: "Admin/Super Admin accounts are protected from deletion.",
         });
         continue;
       }

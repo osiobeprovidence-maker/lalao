@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "tsx src/test/wallet_flow.test.ts && tsx src/test/payment_history.test.ts && tsx src/test/data_plan_selector.test.ts && tsx src/test/agora_calling.test.ts"
+    "test": "tsx src/test/wallet_flow.test.ts && tsx src/test/payment_history.test.ts && tsx src/test/data_plan_selector.test.ts && tsx src/test/agora_calling.test.ts && tsx src/test/verification_badge.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

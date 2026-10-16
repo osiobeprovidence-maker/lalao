@@ -61,7 +61,7 @@ export const IncomingCallModal: React.FC = () => {
           <h2 className="text-xl font-bold text-theme-primary dark:text-white truncate">
             {identityLabel}
           </h2>
-          {otherUser?.verified && <VerificationBadge user={otherUser} size="xs" />}
+          <VerificationBadge user={otherUser} size="xs" />
         </div>
         <p className="relative z-10 text-xs text-theme-tertiary dark:text-white/60 mb-8">@{username}</p>
 

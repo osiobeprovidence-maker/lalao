@@ -48,6 +48,7 @@ export const UserProfileModal: React.FC = () => {
     posts,
     cycles,
     rallies,
+    subscription,
     openCycleStory,
     openChatWithUser,
     toggleFollowUser,
@@ -90,6 +91,26 @@ export const UserProfileModal: React.FC = () => {
   }, [activeUserProfile?.id]);
 
   const isOwnProfile = activeUserProfile?.id === currentUser.id;
+
+  // Live query for the latest target user profile to resolve verification status in real-time
+  const liveUser = useQuery(
+    api.users.getUserByUsername,
+    activeUserProfile?.username ? { username: activeUserProfile.username } : "skip"
+  );
+
+  const effectiveProfile = useMemo(() => {
+    if (!activeUserProfile) return null;
+    if (isOwnProfile) return currentUser;
+    if (!liveUser) return activeUserProfile;
+    return {
+      ...activeUserProfile,
+      ...liveUser,
+      id: activeUserProfile.id || (liveUser as any)._id,
+      isVerified: (liveUser as any).isVerified ?? activeUserProfile.isVerified,
+      verificationTier: (liveUser as any).verificationTier ?? activeUserProfile.verificationTier,
+      verificationStatus: (liveUser as any).verificationStatus ?? activeUserProfile.verificationStatus,
+    };
+  }, [activeUserProfile, liveUser, isOwnProfile, currentUser]);
 
   // Active 24-hour cycle for this user
   const userCycle = cycles.find(
@@ -411,10 +432,25 @@ export const UserProfileModal: React.FC = () => {
                 {/* 1. Public identity label (Name OR Username) and verification badge */}
                 <div>
                   <h2 className="text-xl font-bold text-theme-primary leading-tight flex items-center gap-2 flex-wrap">
-                    {getPublicIdentityLabel(activeUserProfile)}
-                    <VerificationBadge user={activeUserProfile} size="sm" />
-                    {activeUserProfile.badge && <Badge type={activeUserProfile.badge} />}
+                    {getPublicIdentityLabel(effectiveProfile || activeUserProfile)}
+                    <VerificationBadge
+                      user={effectiveProfile || activeUserProfile}
+                      tier={
+                        isOwnProfile && subscription.status === 'active' && subscription.tier !== 'none'
+                          ? subscription.tier
+                          : (effectiveProfile?.verificationTier || activeUserProfile?.verificationTier)
+                      }
+                      size="sm"
+                    />
+                    {(effectiveProfile?.badge || activeUserProfile.badge) && (
+                      <Badge type={(effectiveProfile?.badge || activeUserProfile.badge)!} />
+                    )}
                   </h2>
+                  {(effectiveProfile?.username || activeUserProfile.username) && (
+                    <p className="text-xs text-theme-tertiary font-medium mt-0.5">
+                      @{(effectiveProfile?.username || activeUserProfile.username).replace(/^@+/, '')}
+                    </p>
+                  )}
                 </div>
 
                 {/* 3. Bio or description */}
@@ -482,10 +518,10 @@ export const UserProfileModal: React.FC = () => {
                 </div>
 
                 {/* 6. Creator Level and Ranked Creator badges (Grouped together below community, no decorative sparkle icon) */}
-                {activeUserProfile.verificationTier === 'creator' && (
+                {(effectiveProfile?.verificationTier || activeUserProfile.verificationTier) === 'creator' && (
                   <div className="flex items-center gap-1.5 pt-0.5 flex-wrap">
                     <span className="px-2.5 py-0.5 rounded-full bg-[#5E43F3]/10 text-[#5E43F3] border border-[#5E43F3]/20 text-[10px] font-black uppercase tracking-wider inline-flex items-center">
-                      {activeUserProfile.creatorCategory || 'CREATOR'} · LEVEL {activeUserProfile.creatorLevel || 1}
+                      {(effectiveProfile?.creatorCategory || activeUserProfile.creatorCategory) || 'CREATOR'} · LEVEL {(effectiveProfile?.creatorLevel || activeUserProfile.creatorLevel) || 1}
                     </span>
                     <span className="px-2 py-0.5 rounded-full bg-theme-surface text-theme-secondary border border-theme-divider-light text-[10px] font-bold inline-flex items-center gap-1">
                       <TrendingUp className="w-2.5 h-2.5 text-[#5E43F3]" />

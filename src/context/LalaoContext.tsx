@@ -420,11 +420,20 @@ const EMPTY_ORDERS: Order[] = [];
 const normalizeConvexUser = (user: Record<string, any> | null | undefined): User => {
   if (!user) return EMPTY_CURRENT_USER;
 
+  const rawTier = user.verificationTier || user.tier || user.creatorTier;
+  const status = user.verificationStatus;
+  const isExp = user.verificationExpiresAt && user.verificationExpiresAt <= Date.now();
+  const isVerified = Boolean(
+    user.isVerified ||
+    user.verified ||
+    (rawTier && rawTier !== 'none' && (!status || status === 'active') && !isExp)
+  );
+
   return {
     id: user._id ?? user.id ?? EMPTY_CURRENT_USER.id,
     name: user.name ?? 'New user',
     username: user.username ?? 'newuser',
-    avatar: user.avatarUrl ?? EMPTY_CURRENT_USER.avatar,
+    avatar: user.avatarUrl ?? user.avatar ?? EMPTY_CURRENT_USER.avatar,
     userType: (user.userType ?? 'person') as User['userType'],
     bio: user.bio ?? undefined,
     location: (user.locationName ?? user.location ?? EMPTY_CURRENT_USER.location).replace(/\s*\(Detected\)\s*/i, '').replace(/^GPS Detected$/i, '').trim(),
@@ -433,7 +442,17 @@ const normalizeConvexUser = (user: Record<string, any> | null | undefined): User
     followersCount: typeof user.followersCount === 'number' ? user.followersCount : 0,
     followingCount: typeof user.followingCount === 'number' ? user.followingCount : 0,
     isFollowing: typeof user.isFollowing === 'boolean' ? user.isFollowing : false,
-    isVerified: typeof user.isVerified === 'boolean' ? user.isVerified : false,
+    isVerified,
+    verificationTier: isVerified ? (rawTier || 'verified') : 'none',
+    verificationStatus: user.verificationStatus,
+    verificationStartedAt: user.verificationStartedAt,
+    verificationExpiresAt: user.verificationExpiresAt,
+    creatorCategory: user.creatorCategory,
+    creatorLevel: user.creatorLevel,
+    creatorEarnings: user.creatorEarnings,
+    creatorPendingEarnings: user.creatorPendingEarnings,
+    creatorAchievements: user.creatorAchievements,
+    badge: user.badge,
     phoneSetupCompleted: user.phoneSetupCompleted,
     accessStatus: user.accessStatus,
     publicIdentityType: (user.publicIdentityType as "display_name" | "username") ?? "display_name",
@@ -1041,6 +1060,27 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       tier: 'none',
     };
   }, [backendSubscription, localSubscriptionState, currentUser?.verificationTier, currentUser?.verificationStatus, currentUser?.verificationExpiresAt, currentUser?.verificationStartedAt]);
+
+  // Effective current user enriched with active subscription status
+  const effectiveCurrentUser = useMemo<User>(() => {
+    const isSubActive = subscription.status === 'active' && subscription.tier !== 'none';
+    const subTier = (subscription.tier === 'creator_premium' ? 'creator' : subscription.tier) as VerificationTier;
+
+    if (isSubActive) {
+      return {
+        ...currentUser,
+        isVerified: true,
+        verificationTier: subTier,
+        verificationStatus: 'active',
+        verificationExpiresAt: subscription.nextBillingDate || currentUser.verificationExpiresAt,
+        subscription,
+      };
+    }
+    return {
+      ...currentUser,
+      subscription,
+    };
+  }, [currentUser, subscription]);
 
   const isCreatorPremiumActive = Boolean(
     subscription.status === 'active' &&
@@ -2670,7 +2710,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <LalaoContext.Provider
       value={{
-        currentUser,
+        currentUser: effectiveCurrentUser,
         setCurrentUser,
         activeTab,
         setActiveTab,
