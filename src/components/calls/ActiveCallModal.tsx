@@ -63,14 +63,17 @@ export const ActiveCallModal: React.FC = () => {
   const username = otherUser?.username || 'user';
   const identityLabel = getPublicIdentityLabel(otherUser) || displayName;
 
-  const isTerminalState = ['declined', 'canceled', 'completed', 'missed', 'failed'].includes(activeCall.status);
+  const isTerminalState =
+    ['declined', 'canceled', 'completed', 'missed', 'failed'].includes(activeCall.status) ||
+    connectionState === 'failed' ||
+    connectionState === 'disconnected';
 
   const getStatusLabel = () => {
     if (activeCall.status === 'declined') return 'Call Declined';
     if (activeCall.status === 'canceled') return 'Call Canceled';
     if (activeCall.status === 'missed') return 'Call Missed';
     if (activeCall.status === 'completed') return `Call Ended · ${formattedDuration || '0:00'}`;
-    if (activeCall.status === 'failed') return 'Call Failed';
+    if (activeCall.status === 'failed' || connectionState === 'failed') return 'Call Failed';
     if (connectionState === 'ringing') return activeCall.isCaller ? 'Ringing...' : 'Incoming...';
     if (connectionState === 'connecting') return 'Connecting...';
     if (connectionState === 'reconnecting') return 'Reconnecting...';
@@ -209,7 +212,7 @@ export const ActiveCallModal: React.FC = () => {
         <div className="relative z-20 mx-4 my-2 p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-center gap-2 max-w-md self-center">
           <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
           <span className="truncate">
-            {mediaError || 'Agora RTC configured. Waiting for media connection.'}
+            {mediaError || 'Agora App ID not configured. Set VITE_AGORA_APP_ID in .env.local and AGORA_APP_ID in Convex.'}
           </span>
         </div>
       )}

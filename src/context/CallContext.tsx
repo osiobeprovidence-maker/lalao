@@ -18,7 +18,7 @@ interface CallContextType {
   isMinimized: boolean;
   duration: number;
   formattedDuration: string;
-  connectionState: 'idle' | 'calling' | 'ringing' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
+  connectionState: 'idle' | 'calling' | 'ringing' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'failed';
   mediaError: string | null;
   remoteUser: IAgoraRTCRemoteUser | null;
   hasRemoteVideo: boolean;
@@ -175,11 +175,14 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       const appId = tokenResult.appId || (import.meta.env.VITE_AGORA_APP_ID as string) || '';
-      setIsAgoraConfigured(!!appId && appId !== 'replace_with_your_app_id');
+      const isConfigured = !!appId && appId !== 'replace_with_your_app_id';
+      setIsAgoraConfigured(isConfigured);
 
-      if (!appId || appId === 'replace_with_your_app_id') {
-        console.warn('[CallContext] Agora App ID is not configured. Media transport will remain in signaling-only state.');
-        setConnectionState('connected');
+      if (!isConfigured) {
+        const errorMsg = 'Agora App ID is not configured. Set VITE_AGORA_APP_ID in .env.local or AGORA_APP_ID in Convex dashboard.';
+        console.error(`[CallContext] ${errorMsg}`);
+        setMediaError(errorMsg);
+        setConnectionState('failed');
         return;
       }
 
@@ -223,7 +226,23 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           else if (curState === 'RECONNECTING') setConnectionState('reconnecting');
           else if (curState === 'DISCONNECTED') setConnectionState('disconnected');
         },
+        onTokenPrivilegeWillExpire: async () => {
+          try {
+            console.log('[CallContext] Renewing expiring Agora token from server...');
+            const renewed: any = await generateTokenAction({
+              callId: call._id as any,
+              uid: myUid,
+            });
+            if (renewed?.token) {
+              await agoraRtcService.renewToken(renewed.token);
+              console.log('[CallContext] Agora token successfully renewed');
+            }
+          } catch (renewErr) {
+            console.error('[CallContext] Failed to renew token:', renewErr);
+          }
+        },
         onError: (err) => {
+          console.error('[AgoraRTC] Client error:', err);
           setMediaError(err.message || 'Media connection issue');
         },
       });
@@ -250,10 +269,13 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         errMsg = 'Permission denied. Please allow microphone and camera in your browser.';
       } else if (err.name === 'NotFoundError') {
         errMsg = 'Microphone or camera hardware not found.';
+      } else if (err.code === 'CAN_NOT_GET_GATEWAY_SERVER' || err.message?.includes('gateway')) {
+        errMsg = 'Cannot reach Agora media server. Check network connection or firewall.';
       } else if (err.message) {
         errMsg = err.message;
       }
       setMediaError(errMsg);
+      setConnectionState('failed');
     }
   };
 

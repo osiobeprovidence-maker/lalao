@@ -18,6 +18,8 @@ export type AgoraEventCallbacks = {
   onRemoteVideoChanged?: (user: IAgoraRTCRemoteUser, isMuted: boolean) => void;
   onRemoteAudioChanged?: (user: IAgoraRTCRemoteUser, isMuted: boolean) => void;
   onConnectionStateChanged?: (curState: string, revState: string, reason?: string) => void;
+  onTokenPrivilegeWillExpire?: () => void;
+  onNetworkQuality?: (uplinkQuality: number, downlinkQuality: number) => void;
   onError?: (err: Error) => void;
 };
 
@@ -28,6 +30,26 @@ class AgoraRtcService {
   private remoteUsers: Map<number | string, IAgoraRTCRemoteUser> = new Map();
   private callbacks: AgoraEventCallbacks = {};
   private isJoined = false;
+
+  constructor() {
+    // Register official Agora Web SDK audio autoplay failure handler
+    if (typeof window !== 'undefined') {
+      AgoraRTC.onAudioAutoplayFailed = () => {
+        console.warn('[AgoraRTC] Audio autoplay policy prevented immediate playback. Registering user gesture handler.');
+        const resumeAudio = () => {
+          for (const user of this.remoteUsers.values()) {
+            if (user.audioTrack && !user.audioTrack.isPlaying) {
+              user.audioTrack.play();
+            }
+          }
+          window.removeEventListener('click', resumeAudio);
+          window.removeEventListener('touchstart', resumeAudio);
+        };
+        window.addEventListener('click', resumeAudio, { once: true });
+        window.addEventListener('touchstart', resumeAudio, { once: true });
+      };
+    }
+  }
 
   public isSupported(): boolean {
     return typeof window !== 'undefined' && !!navigator.mediaDevices && !!window.RTCPeerConnection;
@@ -97,9 +119,27 @@ class AgoraRtcService {
       this.client.on('connection-state-change', (curState, revState, reason) => {
         this.callbacks.onConnectionStateChanged?.(curState, revState, reason);
       });
+
+      this.client.on('token-privilege-will-expire', () => {
+        console.warn('[AgoraRTC] Token privilege will expire in 30s. Triggering proactive renewal...');
+        this.callbacks.onTokenPrivilegeWillExpire?.();
+      });
+
+      this.client.on('network-quality', (stats) => {
+        this.callbacks.onNetworkQuality?.(stats.uplinkNetworkQuality, stats.downlinkNetworkQuality);
+      });
     }
 
     return this.client;
+  }
+
+  /**
+   * Renew Agora RTC Token when near expiration.
+   */
+  public async renewToken(token: string): Promise<void> {
+    if (this.client && token) {
+      await this.client.renewToken(token);
+    }
   }
 
   /**
