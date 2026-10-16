@@ -14,13 +14,11 @@ import { NotificationItem } from '../../types';
 import { SEED_NOTIFICATIONS } from '../../data/seedData';
 import { VerificationBadge } from '../common/VerificationBadge';
 import { getPublicIdentityLabel } from '../common/UserIdentity';
-import { SuggestedForYouFeed } from '../recommendations/SuggestedForYouFeed';
 import { PaymentHistoryTab } from './PaymentHistoryTab';
 
 export const NotificationsView: React.FC = () => {
   const {
     currentUser,
-    suggestedUsers,
     notifications,
     markAllNotificationsRead,
     markNotificationRead,
@@ -31,7 +29,7 @@ export const NotificationsView: React.FC = () => {
     triggerShareToast,
   } = useLalao();
 
-  const [activeFilter, setActiveFilter] = useState<'all' | 'suggested' | 'activity' | 'payments'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'activity' | 'payments'>('all');
 
   const now = Date.now();
   const oneDayMs = 24 * 60 * 60 * 1000;
@@ -92,7 +90,6 @@ export const NotificationsView: React.FC = () => {
     setActiveTab('home');
   };
 
-  const visibleSuggested = (activeFilter === 'suggested' || activeFilter === 'all') ? (suggestedUsers || []) : [];
   const shouldShowActivity = activeFilter !== 'payments' && (activeFilter === 'activity' || activeFilter === 'all');
 
   return (
@@ -116,7 +113,6 @@ export const NotificationsView: React.FC = () => {
         <div className="mt-2.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {[
             { id: 'all', label: 'All' },
-            { id: 'suggested', label: 'Suggested for you' },
             { id: 'activity', label: 'Recent Activity' },
             { id: 'payments', label: 'Payments' },
           ].map((tab) => (
@@ -124,7 +120,7 @@ export const NotificationsView: React.FC = () => {
               key={tab.id}
               type="button"
               id={`tab-notifications-${tab.id}`}
-              onClick={() => setActiveFilter(tab.id as 'all' | 'suggested' | 'activity' | 'payments')}
+              onClick={() => setActiveFilter(tab.id as 'all' | 'activity' | 'payments')}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 activeFilter === tab.id
                   ? 'bg-theme-inverse text-theme-text-inverse shadow-xs'
@@ -141,11 +137,6 @@ export const NotificationsView: React.FC = () => {
         {/* Payments Tab */}
         {activeFilter === 'payments' && (
           <PaymentHistoryTab />
-        )}
-
-        {/* Suggested For You */}
-        {activeFilter !== 'payments' && (activeFilter === 'all' || activeFilter === 'suggested') && (
-          <SuggestedForYouFeed />
         )}
 
         {/* Recent Activity */}

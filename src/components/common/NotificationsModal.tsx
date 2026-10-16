@@ -188,17 +188,6 @@ export const NotificationsModal: React.FC = () => {
           </button>
           <button
             type="button"
-            onClick={() => setActiveFilter('suggested')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-              activeFilter === 'suggested'
-                ? 'bg-theme-inverse text-theme-text-inverse shadow-xs'
-                : 'bg-black/[0.03] dark:bg-white/[0.04] text-theme-secondary hover:bg-black/[0.06] dark:hover:bg-white/[0.07] hover:text-theme-primary'
-            }`}
-          >
-            Suggested for you
-          </button>
-          <button
-            type="button"
             onClick={() => setActiveFilter('activity')}
             className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
               activeFilter === 'activity'
@@ -287,91 +276,7 @@ export const NotificationsModal: React.FC = () => {
             </div>
           )}
 
-          {/* SECTION 2: SUGGESTED FOR YOU (from inspo screenshot) */}
-          {activeFilter !== 'payments' && (activeFilter === 'all' || activeFilter === 'suggested') && suggestions.length > 0 && (
-            <div className="py-2">
-              <div className="px-4 pt-2 pb-2.5 flex items-center justify-between">
-                <h2 className="text-lg font-bold text-theme-primary tracking-tight">
-                  Suggested for you
-                </h2>
-                <span className="text-xs font-semibold text-[#0095F6]">
-                  {suggestions.length} accounts
-                </span>
-              </div>
 
-              <div className="space-y-1">
-                {suggestions.map((item) => {
-                  const isFollowing = !!followingMap[item.id];
-
-                  return (
-                    <div
-                      key={item.id}
-                      className="px-4 py-2 hover:bg-theme-base/80 transition-colors flex items-center justify-between gap-2.5"
-                    >
-                      {/* Left: Avatar with fallback support */}
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <Avatar
-                          src={item.avatar}
-                          alt={item.name}
-                          size="md"
-                        />
-
-                        {/* Middle: User info */}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-sm text-theme-primary truncate">
-                              {item.name} <VerificationBadge user={item} size="xs" className="ml-0.5" />
-                            </span>
-                          </div>
-
-                          {/* Mutual avatars and count */}
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <div className="flex -space-x-1.5 shrink-0">
-                              {item.mutualAvatars.slice(0, 3).map((av, idx) => (
-                                <img
-                                  key={idx}
-                                  src={av}
-                                  alt="Mutual"
-                                  className="w-3.5 h-3.5 rounded-full ring-1 ring-white object-cover"
-                                />
-                              ))}
-                            </div>
-                            <span className="text-[11px] text-theme-tertiary truncate font-normal">
-                              {item.mutualCount} mutuals
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Right: Blue Follow button and Dismiss button */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleFollow(item)}
-                          className={`text-xs font-semibold px-4 py-1.5 rounded-lg transition-all active:scale-95 cursor-pointer shadow-2xs ${
-                            isFollowing
-                              ? 'bg-theme-surface-hover hover:bg-theme-surface-active text-theme-primary border border-theme-divider-strong'
-                              : 'bg-[#0095F6] hover:bg-[#1877F2] text-white'
-                          }`}
-                        >
-                          {isFollowing ? 'Following' : 'Follow'}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleDismissSuggestion(item.id, item.name)}
-                          className="text-theme-tertiary hover:text-theme-secondary p-1 rounded-full transition-colors cursor-pointer"
-                          aria-label={`Dismiss suggestion for ${item.name}`}
-                        >
-                          <X className="w-3.5 h-3.5 stroke-[2.2]" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
           {/* SECTION 3: RECENT NOTIFICATIONS / ACTIVITY */}
           {activeFilter !== 'payments' && (activeFilter === 'all' || activeFilter === 'activity') && (

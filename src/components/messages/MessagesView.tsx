@@ -24,6 +24,7 @@ import { Badge } from '../common/Badge';
 import { VerificationBadge } from '../common/VerificationBadge';
 import { getPublicIdentityLabel } from '../common/UserIdentity';
 import { ChatModal } from './ChatModal';
+import { AddPeopleModal } from './AddPeopleModal';
 
 export const MessagesView: React.FC = () => {
   const {
@@ -42,6 +43,7 @@ export const MessagesView: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAddPeopleOpen, setIsAddPeopleOpen] = useState(false);
   
   const [selectedMode, setSelectedMode] = useState(currentUser?.disappearingMode || 'off');
   const [customValue, setCustomValue] = useState(currentUser?.disappearingCustomValue?.toString() || '1');
@@ -307,8 +309,17 @@ export const MessagesView: React.FC = () => {
           </div>
           <div className="flex items-center gap-1">
             <button
+              id="btn-messages-add-people"
+              onClick={() => setIsAddPeopleOpen(true)}
+              className="p-1.5 rounded-full text-[#707070] dark:text-[#707070] hover:text-[#5E43F3] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
+              title="Add people"
+              aria-label="Add people"
+            >
+              <UserPlus className="w-5 h-5" />
+            </button>
+            <button
               onClick={() => setIsCreateGroupChatOpen(true)}
-              className="p-1.5 rounded-full text-[#707070] dark:text-[#707070] hover:text-[#5E43F3] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors"
+              className="p-1.5 rounded-full text-[#707070] dark:text-[#707070] hover:text-[#5E43F3] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
               title="New group chat"
               aria-label="New group chat"
             >
@@ -316,7 +327,7 @@ export const MessagesView: React.FC = () => {
             </button>
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className="p-1.5 rounded-full text-[#707070] dark:text-[#707070] hover:text-theme-primary hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors"
+              className="p-1.5 rounded-full text-[#707070] dark:text-[#707070] hover:text-theme-primary hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
               title="Message settings"
             >
               <Settings className="w-5 h-5" />
@@ -605,6 +616,11 @@ export const MessagesView: React.FC = () => {
         </div>
       </div>
     </div>
+
+    <AddPeopleModal
+      isOpen={isAddPeopleOpen}
+      onClose={() => setIsAddPeopleOpen(false)}
+    />
     </>
   );
 };
