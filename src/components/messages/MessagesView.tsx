@@ -566,6 +566,7 @@ export const MessagesView: React.FC = () => {
           {unifiedChats.matchedContacts.map((contact) => (
             <div
               key={contact.id}
+              id={`contact-item-${contact.id}`}
               onClick={() => openChatWithUser(contact)}
               className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
             >

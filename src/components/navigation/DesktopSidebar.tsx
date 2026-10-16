@@ -336,6 +336,7 @@ export const DesktopSidebar: React.FC = () => {
             return (
               <button
                 key={item.id}
+                id={`btn-nav-desktop-${item.id}`}
                 type="button"
                 onClick={item.action}
                 className={`group flex items-center justify-between rounded-full px-3 py-2.5 text-left transition cursor-pointer ${
