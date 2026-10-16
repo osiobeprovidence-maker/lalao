@@ -258,6 +258,49 @@ class MockRepository extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// All known available users excluding the current user for people discovery
+  List<User> get allAvailableUsers {
+    final Map<String, User> userMap = {};
+    for (var u in nearbyUsers) {
+      if (u.id != currentUser.id) userMap[u.id] = u;
+    }
+    for (var c in conversations) {
+      if (c.contact.id != currentUser.id) userMap[c.contact.id] = c.contact;
+    }
+    for (var n in notifications) {
+      if (n.triggerUser.id != currentUser.id) userMap[n.triggerUser.id] = n.triggerUser;
+    }
+    for (var p in posts) {
+      if (p.author.id != currentUser.id) userMap[p.author.id] = p.author;
+    }
+    return userMap.values.toList();
+  }
+
+  Conversation? findConversationWithUser(String userId) {
+    try {
+      return conversations.firstWhere((c) => c.contact.id == userId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Conversation getOrCreateConversationWithUser(User user) {
+    final existing = findConversationWithUser(user.id);
+    if (existing != null) {
+      return existing;
+    }
+    final newConvo = Conversation(
+      id: 'c_${DateTime.now().millisecondsSinceEpoch}',
+      contact: user,
+      lastMessage: 'Started a chat',
+      timestamp: 'Just now',
+      messages: [],
+    );
+    conversations.insert(0, newConvo);
+    notifyListeners();
+    return newConvo;
+  }
+
   void markAllNotificationsRead() {
     for (var n in notifications) n.isRead = true;
     notifyListeners();

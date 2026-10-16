@@ -11,7 +11,7 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final repo = MockRepository();
   String _activeFilter = 'All';
-  final List<String> _filters = ['All', 'Suggested for you', 'Recent Activity'];
+  final List<String> _filters = ['All', 'Recent Activity'];
 
   @override
   void initState() {

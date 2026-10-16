@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import '../../data/mock_repository.dart';
 import 'create_cycle_screen.dart';
 import 'cycle_viewer_screen.dart';
 import 'chat_screen.dart';
+import 'add_people_sheet.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -37,6 +39,14 @@ class _MessagesScreenState extends State<MessagesScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         title: const Text('Messages', style: TextStyle(color: Colors.black87, fontSize: 24, fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            icon: const Icon(LucideIcons.user_plus, color: Colors.black87, size: 22),
+            onPressed: () => AddPeopleSheet.show(context),
+            tooltip: 'Add people',
+          ),
+          const SizedBox(width: 8),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Padding(
