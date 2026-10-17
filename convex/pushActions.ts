@@ -161,11 +161,63 @@ export const sendTestNotification = action({
     
     if (!userId) throw new Error("User not found");
 
+    // Also record in in-app notifications
+    await ctx.runMutation(internal.push.recordSystemNotification, {
+      recipientId: userId,
+      title: "Lalao Test Notification",
+      body: "Push notifications are working perfectly on your device!",
+    });
+
     await ctx.runAction(internal.pushActions.dispatchPush, {
       recipientId: userId,
       title: "Lalao Test Notification",
-      body: "Push notifications are working.",
+      body: "Push notifications are working perfectly on your device!",
       url: "/app/notifications",
     });
   },
 });
+
+export const broadcastTestNotification = action({
+  args: {
+    title: v.optional(v.string()),
+    body: v.optional(v.string()),
+    url: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const title = args.title ?? "Lalao Platform Announcement";
+    const body = args.body ?? "Test notification to all users across all platforms! 🚀";
+    const url = args.url ?? "/app/notifications";
+
+    const userIds: any[] = await ctx.runQuery(internal.push.getAllUserIds, {});
+
+    let dispatchedCount = 0;
+    for (const userId of userIds) {
+      try {
+        // 1. Record in-app notification so user sees it in their Notifications tab
+        await ctx.runMutation(internal.push.recordSystemNotification, {
+          recipientId: userId,
+          title,
+          body,
+        });
+
+        // 2. Dispatch push to Web Push & FCM (mobile)
+        await ctx.runAction(internal.pushActions.dispatchPush, {
+          recipientId: userId,
+          title,
+          body,
+          url,
+        });
+        dispatchedCount++;
+      } catch (err) {
+        console.error(`[push] Failed to broadcast to user ${userId}:`, err);
+      }
+    }
+
+    return {
+      success: true,
+      totalUsers: userIds.length,
+      dispatchedCount,
+    };
+  },
+});
+

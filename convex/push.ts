@@ -218,3 +218,30 @@ export const getUserIdFromIdentity = internalQuery({
     return user?._id ?? null;
   },
 });
+
+export const getAllUserIds = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    return users.map((u) => u._id);
+  },
+});
+
+export const recordSystemNotification = internalMutation({
+  args: {
+    recipientId: v.id("users"),
+    title: v.string(),
+    body: v.string(),
+  },
+  handler: async (ctx, { recipientId, title, body }) => {
+    await ctx.db.insert("notifications", {
+      recipientId,
+      actorId: recipientId,
+      type: "system_alert",
+      targetExcerpt: `${title}: ${body}`,
+      isRead: false,
+      createdAt: Date.now(),
+    });
+  },
+});
+

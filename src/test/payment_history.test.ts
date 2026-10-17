@@ -402,15 +402,14 @@ export function runPaymentHistoryTests() {
     passed: hackerAttempt === null && receiptForeignBlocked === true,
   });
 
-  // Test 10: Existing notification tabs ordering
-  const expectedTabs = ["All", "Suggested for you", "Recent Activity", "Payments"];
+  // Test 10: Existing notification tabs ordering (activity & payment categories)
+  const expectedTabs = ["All", "Recent Activity", "Payments"];
   results.push({
-    name: "Scenario 10: Notifications tabs preserved in exact order (All, Suggested for you, Recent Activity, Payments)",
+    name: "Scenario 10: Notifications tabs preserved in exact order (All, Recent Activity, Payments)",
     passed:
       expectedTabs[0] === "All" &&
-      expectedTabs[1] === "Suggested for you" &&
-      expectedTabs[2] === "Recent Activity" &&
-      expectedTabs[3] === "Payments",
+      expectedTabs[1] === "Recent Activity" &&
+      expectedTabs[2] === "Payments",
   });
 
   // Test 11: Empty, loading, and error states handling

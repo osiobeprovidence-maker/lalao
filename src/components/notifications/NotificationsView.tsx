@@ -15,6 +15,7 @@ import { SEED_NOTIFICATIONS } from '../../data/seedData';
 import { VerificationBadge } from '../common/VerificationBadge';
 import { getPublicIdentityLabel } from '../common/UserIdentity';
 import { PaymentHistoryTab } from './PaymentHistoryTab';
+import { PushNotificationSettings } from './PushNotificationSettings';
 
 export const NotificationsView: React.FC = () => {
   const {
@@ -132,6 +133,8 @@ export const NotificationsView: React.FC = () => {
           ))}
         </div>
       </div>
+
+      <PushNotificationSettings />
 
       <div className="px-4 pt-4 space-y-5">
         {/* Payments Tab */}
