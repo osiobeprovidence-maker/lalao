@@ -18,7 +18,7 @@ export const getUserByIdentity = internalQuery({
     if (args.tokenIdentifier) {
       const byToken = await ctx.db
         .query("users")
-        .withIndex("by_token", (q) => q.eq("tokenIdentifier", args.tokenIdentifier))
+        .withIndex("by_token", (q) => q.eq("tokenIdentifier", args.tokenIdentifier!))
         .unique();
       if (byToken) return byToken;
     }
@@ -182,11 +182,11 @@ export const storePinResetOtp = internalMutation({
 
 export const requestPinResetOtp = action({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<any> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
 
-    const user = await ctx.runQuery(internal.wallet.getUserByIdentity, {
+    const user: any = await ctx.runQuery(internal.wallet.getUserByIdentity, {
       tokenIdentifier: identity.tokenIdentifier,
     });
     if (!user) throw new Error("User profile not found.");
@@ -207,7 +207,7 @@ export const requestPinResetOtp = action({
     });
 
     // Send via Resend
-    const res = await ctx.runAction(api.emails.sendOtpEmail, {
+    const res: any = await ctx.runAction(api.emails.sendOtpEmail, {
       to: email,
       otp,
       purpose: "reset your transaction security PIN",
@@ -215,7 +215,7 @@ export const requestPinResetOtp = action({
 
     return {
       success: true,
-      email: email.replace(/(.{2})(.*)(?=@)/, (_gp, a, b) => a + "*".repeat(b.length)),
+      email: email.replace(/(.{2})(.*)(?=@)/, (_gp: string, a: string, b: string) => a + "*".repeat(b.length)),
       mock: res?.mock,
     };
   },
@@ -384,7 +384,7 @@ export const initializeFunding = action({
     reference: v.string(),
     userId: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<any> => {
     // 1. Validation: Minimum funding is 100 LC (₦100), maximum is 500,000 LC (₦500,000)
     if (typeof args.amount !== "number" || isNaN(args.amount) || args.amount < 100) {
       throw new Error("Minimum funding amount is ₦100 (100 LC).");
@@ -517,7 +517,7 @@ export const verifyPaystackFunding = action({
   args: {
     reference: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<any> => {
     // Verify with Paystack API
     const secretKey = process.env.PAYSTACK_SECRET_KEY;
     if (!secretKey) {
@@ -654,6 +654,10 @@ export const transferCredits = mutation({
         updatedAt: Date.now(),
       });
       recipientWallet = await ctx.db.get(walletId);
+    }
+
+    if (!recipientWallet) {
+      throw new Error("Recipient wallet could not be found or initialized.");
     }
     
     await ctx.db.patch(senderWallet._id, {

@@ -11,3 +11,17 @@ coverage/
  
 .agents/
 skills-lock.json
+
+# Local agent & AI files
+.claude/
+convex/_generated/ai/
+AGENTS.md
+CLAUDE.md
+
+# IDE & Editor folders
+.vscode/
+.idea/
+
+# Local audit & diff scratch files
+*.txt
+!README*.txt

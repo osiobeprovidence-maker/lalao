@@ -663,7 +663,7 @@ export const verifyAndJoinPaystack = action({
     reference: v.string(),
     reservationId: v.optional(v.id("subscriptionReservations")),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<any> => {
     const secretKey = process.env.PAYSTACK_SECRET_KEY;
     if (!secretKey) throw new Error("PAYSTACK_SECRET_KEY is not configured on the server.");
 

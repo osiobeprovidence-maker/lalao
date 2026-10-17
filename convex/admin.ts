@@ -279,6 +279,7 @@ export const verifyAdminSession = query({
 
     if (!user) return false;
     user = await ensureSuperAdmin(ctx, user);
+    if (!user) return false;
 
     const allowedRoles = ["super_admin", "admin", "editor"];
     if (!user.role || !allowedRoles.includes(user.role)) return false;

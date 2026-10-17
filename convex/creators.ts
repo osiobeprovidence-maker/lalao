@@ -630,7 +630,7 @@ export const getCreatorRankings = query({
     const rankings = scoredList.slice(0, limit).map((item, index) => {
       const rank = index + 1;
       // Deterministic rank movement: uses user's id hash and score delta
-      const hash = (item.user.username || "creator").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+      const hash = (item.user.username || "creator").split("").reduce((acc: number, c: string) => acc + c.charCodeAt(0), 0);
       const movementDelta = ((hash + rank) % 7) - 3; // range -3 to +3
       const movement = rank <= 2 ? Math.max(0, movementDelta) : movementDelta;
 
@@ -664,7 +664,7 @@ export const getCreatorRankings = query({
     if (currentUser && !currentUserRank) {
       const myIdx = scoredList.findIndex((item) => item.user._id === currentUser._id);
       if (myIdx !== -1) {
-        const hash = (currentUser.username || "me").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+        const hash = (currentUser.username || "me").split("").reduce((acc: number, c: string) => acc + c.charCodeAt(0), 0);
         const movement = ((hash + myIdx) % 7) - 3;
         currentUserRank = {
           rank: myIdx + 1,

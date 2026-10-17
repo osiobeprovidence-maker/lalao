@@ -391,10 +391,10 @@ export const getTransactionReceipt = query({
         .withIndex("by_reference", (q) => q.eq("reference", args.reference))
         .first();
 
-      if (!tx) {
+      if (!tx && args.reference) {
         tx = await ctx.db
           .query("marketTransactions")
-          .withIndex("by_request_id", (q) => q.eq("requestId", args.reference))
+          .withIndex("by_request_id", (q) => q.eq("requestId", args.reference!))
           .first();
       }
     }
@@ -446,7 +446,7 @@ export const getTransactionReceipt = query({
       payer: {
         id: user._id,
         name: user.name || "Lala User",
-        email: user.email ? user.email.replace(/(.{2})(.*)(?=@)/, (_gp, a, b) => a + "*".repeat(b.length)) : undefined,
+        email: user.email ? user.email.replace(/(.{2})(.*)(?=@)/, (_gp: string, a: string, b: string) => a + "*".repeat(b.length)) : undefined,
         username: user.username ? `@${user.username}` : undefined,
       },
       recipient: {

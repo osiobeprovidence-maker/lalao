@@ -966,7 +966,7 @@ export const getPage = query({
 
     // Optional: map specific hardcoded IDs if needed (e.g. page_honorofkings)
     // For now, we try to fetch it from DB.
-    let page;
+    let page: any;
     try {
       page = await ctx.db.get(pageId as any);
     } catch {
@@ -1126,7 +1126,7 @@ export const listConversations = query({
 
       if (isGroupChat && conversation.groupChatId) {
         groupChat = await ctx.db.get(conversation.groupChatId);
-        groupMemberIds = groupChat?.memberIds.map((id) => id.toString()) ?? [];
+        groupMemberIds = groupChat?.memberIds.map((id: any) => id.toString()) ?? [];
         if (!groupChat || !canAccessGroupChat(currentUser._id.toString(), groupChat.creatorId.toString(), groupMemberIds)) {
           continue;
         }
@@ -2595,6 +2595,7 @@ export const saveDraft = mutation({
 
     // Authorization checks for destinations
     if (args.audience === "page" || args.audience === "community") {
+      if (!args.pageRefId) throw new Error("Destination ID is required");
       const normalizedId = ctx.db.normalizeId("pages", args.pageRefId);
       if (!normalizedId) throw new Error("Invalid destination ID");
       const page = await ctx.db.get(normalizedId);
