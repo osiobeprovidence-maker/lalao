@@ -56,10 +56,26 @@ export async function getOrRequestWebPushSubscription(): Promise<PushSubscriptio
 
     // First check if we already have a subscription
     let subscription = await registration.pushManager.getSubscription();
+    const convertedVapidKey = urlBase64ToUint8Array(VAPID_KEY);
+
+    // If the VAPID key changed since the subscription was created, the old
+    // subscription can never receive pushes from the new key: replace it.
+    if (subscription) {
+      const existingKey = subscription.options?.applicationServerKey;
+      if (existingKey) {
+        const existingBytes = new Uint8Array(existingKey);
+        const same =
+          existingBytes.length === convertedVapidKey.length &&
+          existingBytes.every((byte, i) => byte === convertedVapidKey[i]);
+        if (!same) {
+          await subscription.unsubscribe();
+          subscription = null;
+        }
+      }
+    }
 
     if (!subscription) {
       // Create a new subscription
-      const convertedVapidKey = urlBase64ToUint8Array(VAPID_KEY);
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: convertedVapidKey
@@ -69,6 +85,22 @@ export async function getOrRequestWebPushSubscription(): Promise<PushSubscriptio
     return subscription;
   } catch (err) {
     console.error("[push] Failed to get push subscription:", err);
+    return null;
+  }
+}
+
+/**
+ * Returns existing subscription without requesting permission.
+ */
+export async function getCurrentWebPushSubscription(): Promise<PushSubscription | null> {
+  if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
+    return null;
+  }
+  try {
+    const registration = await navigator.serviceWorker.getRegistration("/sw.js");
+    if (!registration) return null;
+    return await registration.pushManager.getSubscription();
+  } catch {
     return null;
   }
 }

@@ -101,6 +101,7 @@ import { SignUpPage } from './pages/auth/SignUpPage';
 import { OTPVerifyPage } from './pages/auth/OTPVerifyPage';
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
+import { PlaysoleCallbackPage } from './pages/auth/PlaysoleCallbackPage';
 
 // Onboarding pages
 import { WelcomePage } from './pages/onboarding/WelcomePage';
@@ -154,6 +155,40 @@ const LalaoAppContent: React.FC = () => {
   
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Handle deep linking from push notification clicks (e.g. /app?tab=notifications or /app?chat=...)
+  useEffect(() => {
+    if (!location.search) return;
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    const chatParam = params.get('chat');
+
+    let handled = false;
+    if (tabParam) {
+      const validTabs = [
+        'home', 'discover', 'create', 'create-post', 'messages', 'notifications',
+        'profile', 'following', 'saved', 'create-page', 'my-pages', 'liked',
+        'events', 'location', 'pages', 'verification', 'beta-tester', 'creator-hub',
+        'sounds', 'plum',
+      ];
+      if (validTabs.includes(tabParam)) {
+        setActiveTab(tabParam as any);
+        handled = true;
+      }
+    } else if (chatParam) {
+      setActiveTab('messages');
+      handled = true;
+    }
+
+    if (handled) {
+      // Remove handled search parameters cleanly from URL without reloading
+      const nextParams = new URLSearchParams(location.search);
+      nextParams.delete('tab');
+      nextParams.delete('chat');
+      const cleanSearch = nextParams.toString() ? `?${nextParams.toString()}` : '';
+      navigate(`${location.pathname}${cleanSearch}`, { replace: true });
+    }
+  }, [location.search, setActiveTab, navigate]);
 
   // Protect Creator Hub route: if non-creator-premium user visits, redirect away
   useEffect(() => {
@@ -539,6 +574,7 @@ export default function App() {
 
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignUpPage />} />
+      <Route path="/auth/playsole/callback" element={<PlaysoleCallbackPage />} />
       <Route path="/verify" element={<OTPVerifyPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />

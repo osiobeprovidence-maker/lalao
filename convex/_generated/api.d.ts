@@ -35,6 +35,7 @@ import type * as pageEvents from "../pageEvents.js";
 import type * as pages from "../pages.js";
 import type * as payments from "../payments.js";
 import type * as platformSettings from "../platformSettings.js";
+import type * as playsole from "../playsole.js";
 import type * as plum from "../plum.js";
 import type * as push from "../push.js";
 import type * as pushActions from "../pushActions.js";
@@ -88,6 +89,7 @@ declare const fullApi: ApiFromModules<{
   pages: typeof pages;
   payments: typeof payments;
   platformSettings: typeof platformSettings;
+  playsole: typeof playsole;
   plum: typeof plum;
   push: typeof push;
   pushActions: typeof pushActions;

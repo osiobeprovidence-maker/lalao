@@ -11,7 +11,9 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(STATIC_ASSETS))
+      .then((cache) => Promise.all(
+        STATIC_ASSETS.map((asset) => cache.add(asset).catch(() => {})),
+      ))
       .then(() => self.skipWaiting()),
   );
 });
@@ -101,11 +103,13 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const clickData = event.notification.data || {};
-  const urlToOpen = clickData.url || clickData.conversationId
+  const urlToOpen = clickData.conversationId
     ? `/app?chat=${clickData.conversationId}`
     : clickData.postId
       ? `/app?post=${clickData.postId}`
-      : '/app';
+      : (typeof clickData.url === 'string' && clickData.url.startsWith('/'))
+        ? clickData.url
+        : '/app';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {

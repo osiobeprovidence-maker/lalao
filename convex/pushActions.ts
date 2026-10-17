@@ -19,6 +19,8 @@ export const dispatchPush = internalAction({
     badge: v.optional(v.string()),
   },
   handler: async (ctx, { recipientId, title, body, url, icon, badge }) => {
+    let webPushDelivered = false;
+
     // 1. Native Web Push
     const webPushSubs: any[] = await ctx.runQuery(internal.push.getWebPushSubscriptionsForUser, {
       userId: recipientId,
@@ -55,6 +57,7 @@ export const dispatchPush = internalAction({
             };
 
             await webpush.sendNotification(pushSubscription, payload);
+            webPushDelivered = true;
           } catch (err: any) {
             console.error("[push] Error sending native Web Push:", err);
             // If the endpoint is gone or unsubscribed (status 404 or 410)
@@ -70,7 +73,13 @@ export const dispatchPush = internalAction({
       }
     }
 
+    // Web Push already reached at least one device: skip the FCM fallback so
+    // the same device does not receive a duplicate notification.
+    if (webPushDelivered) return;
+
     // 2. Fallback to legacy FCM if tokens exist
+    // NOTE: the legacy /fcm/send endpoint is deprecated by Google and may be
+    // rejected; migrate to FCM HTTP v1 when service-account credentials exist.
     const fcmTokens: any[] = await ctx.runQuery(internal.push.getFcmTokensForUser, {
       userId: recipientId,
     });

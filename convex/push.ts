@@ -60,6 +60,30 @@ export const upsertWebPushSubscription = mutation({
 });
 
 /**
+ * Deactivate a Web Push subscription on logout or toggle off.
+ */
+export const deactivateWebPushSubscription = mutation({
+  args: {
+    endpoint: v.string(),
+  },
+  handler: async (ctx, { endpoint }) => {
+    const existing = await ctx.db
+      .query("pushSubscriptions")
+      .withIndex("by_endpoint", (q) => q.eq("endpoint", endpoint))
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        isActive: false,
+        updatedAt: Date.now(),
+      });
+      return true;
+    }
+    return false;
+  },
+});
+
+/**
  * Upsert an FCM registration token for the current user/device (Legacy/Fallback).
  */
 export const upsertFcmToken = mutation({

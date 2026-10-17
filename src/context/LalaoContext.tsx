@@ -464,7 +464,7 @@ const normalizeConvexUser = (user: Record<string, any> | null | undefined): User
 export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const currentUserQuery = useQuery(api.users.getCurrentUser);
   const featureFlags = useQuery(api.platformSettings.getFeatureFlags) || { communityEnabled: false, ralliesEnabled: true, cyclesEnabled: true, roomyEnabled: true };
-  const pushEnabledQuery = useQuery(api.push.hasActivePushToken);
+  const pushEnabledQuery = useQuery(api.push.hasActivePushToken, currentUserQuery ? {} : "skip");
   const upsertWebPushSubscription = useMutation(api.push.upsertWebPushSubscription);
   const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
   const toggleFollowUserMutation = useMutation(api.social.toggleFollowUser);

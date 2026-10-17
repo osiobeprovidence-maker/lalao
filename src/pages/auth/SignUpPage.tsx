@@ -6,6 +6,7 @@ import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
+import { initiatePlaysoleLogin } from '../../lib/playsoleAuth';
 
 export const SignUpPage: React.FC = () => {
   const navigate = useNavigate();
@@ -168,44 +169,62 @@ export const SignUpPage: React.FC = () => {
               <div className="flex-1 h-px bg-theme-surface-active" />
             </div>
 
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  const provider = new GoogleAuthProvider();
-                  const credential = await signInWithPopup(auth, provider);
-                  await credential.user.getIdToken(true);
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => initiatePlaysoleLogin()}
+                className="w-full py-3.5 rounded-xl border border-black/10 dark:border-white/15 bg-black text-white hover:bg-neutral-900 font-bold text-base flex items-center justify-center gap-3 active:scale-[0.98] transition-all cursor-pointer shadow-sm"
+              >
+                <img 
+                  src="https://one.playsole.xyz/logo.svg" 
+                  alt="Playsole One" 
+                  className="w-5 h-5 object-contain" 
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = 'https://one.playsole.xyz/brand/logo-icon-256.png';
+                  }} 
+                />
+                <span>Continue with Playsole</span>
+              </button>
 
-                  let attempts = 0;
-                  while (attempts < 15) {
-                    try {
-                      await createUserRecord({ 
-                        email: credential.user.email ?? undefined,
-                        name: credential.user.displayName ?? undefined,
-                        avatarUrl: credential.user.photoURL ?? undefined,
-                      });
-                      break;
-                    } catch (e: any) {
-                      if (e.message?.includes("Not authenticated")) {
-                        await new Promise(r => setTimeout(r, 500));
-                        attempts++;
-                      } else {
-                        throw e;
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const provider = new GoogleAuthProvider();
+                    const credential = await signInWithPopup(auth, provider);
+                    await credential.user.getIdToken(true);
+
+                    let attempts = 0;
+                    while (attempts < 15) {
+                      try {
+                        await createUserRecord({ 
+                          email: credential.user.email ?? undefined,
+                          name: credential.user.displayName ?? undefined,
+                          avatarUrl: credential.user.photoURL ?? undefined,
+                        });
+                        break;
+                      } catch (e: any) {
+                        if (e.message?.includes("Not authenticated")) {
+                          await new Promise(r => setTimeout(r, 500));
+                          attempts++;
+                        } else {
+                          throw e;
+                        }
                       }
                     }
-                  }
-                  if (attempts >= 15) throw new Error('Server authentication timeout.');
+                    if (attempts >= 15) throw new Error('Server authentication timeout.');
 
-                  navigate('/onboarding/phone');
-                } catch (err: any) {
-                  setError(err.message || 'Google sign-up failed.');
-                }
-              }}
-              className="w-full py-3.5 rounded-xl border-2 border-theme-divider bg-theme-surface text-theme-secondary font-bold text-base flex items-center justify-center gap-3 hover:bg-theme-base active:scale-[0.98] transition-all cursor-pointer"
-            >
-              <Chrome className="w-5 h-5" />
-              <span>Continue with Google</span>
-            </button>
+                    navigate('/onboarding/phone');
+                  } catch (err: any) {
+                    setError(err.message || 'Google sign-up failed.');
+                  }
+                }}
+                className="w-full py-3.5 rounded-xl border-2 border-theme-divider bg-theme-surface text-theme-secondary font-bold text-base flex items-center justify-center gap-3 hover:bg-theme-base active:scale-[0.98] transition-all cursor-pointer"
+              >
+                <Chrome className="w-5 h-5" />
+                <span>Continue with Google</span>
+              </button>
+            </div>
 
             <p className="text-center text-sm font-semibold text-theme-tertiary mt-8">
               Already have an account?{' '}

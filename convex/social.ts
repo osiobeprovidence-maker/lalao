@@ -2466,7 +2466,7 @@ export const listNotifications = query({
                 userType: actor.userType ?? "person",
                 followersCount: actor.followersCount ?? 0,
                 followingCount: actor.followingCount ?? 0,
-                isFollowing: false,
+                isFollowing: relSets.followingIds.has(actor._id),
                 ...resolveUserVerification(actor),
               }
             : null,
@@ -2492,7 +2492,9 @@ export const getUnreadNotificationCount = query({
       .withIndex("by_recipient_read", (q: any) =>
         q.eq("recipientId", currentUser._id).eq("isRead", false)
       )
-      .collect();
+      .take(100);
+
+    // Capped at 100 so the badge query stays cheap for heavy inboxes.
 
     return unread.length;
   },
@@ -2509,7 +2511,7 @@ export const markAllNotificationsRead = mutation({
       .withIndex("by_recipient_read", (q: any) =>
         q.eq("recipientId", currentUser._id).eq("isRead", false)
       )
-      .collect();
+      .take(250);
 
     await Promise.all(unread.map((n: any) => ctx.db.patch(n._id, { isRead: true })));
     return { count: unread.length };
