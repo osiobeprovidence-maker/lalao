@@ -3013,30 +3013,54 @@ export const sendMessage = mutation({
       updatedAt: Date.now(),
     });
 
-    if (recipientId) {
-      // Find the other user to get their name for the push notification
+    // Determine all recipients to notify (direct 1:1 or group chat members)
+    const recipientsToNotify: Id<"users">[] = [];
+    if (conversation.groupChatId) {
+      const groupChat = await ctx.db.get(conversation.groupChatId);
+      if (groupChat) {
+        for (const memberId of groupChat.memberIds) {
+          if (memberId !== currentUser._id) {
+            recipientsToNotify.push(memberId);
+          }
+        }
+      }
+    } else if (recipientId && recipientId !== currentUser._id) {
+      recipientsToNotify.push(recipientId);
+    }
+
+    if (recipientsToNotify.length > 0) {
+      // Find sender name for the push notification
       const senderName = args.pageSenderId 
         ? (await ctx.db.get(args.pageSenderId))?.name 
         : currentUser.name;
 
-      await ctx.db.insert("notifications", {
-        recipientId,
-        actorId: currentUser._id,
-        type: "message",
-        conversationId: args.conversationId,
-        messageId,
-        targetExcerpt: args.text.slice(0, 80),
-        isRead: false,
-        createdAt: Date.now(),
-      });
-      
-      // Dispatch push notification
-      await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
-        recipientId,
-        title: `New message from ${senderName ?? "Someone"}`,
-        body: args.text.slice(0, 100),
-        url: `/app/messages`,
-      });
+      const previewText = args.text.trim().slice(0, 100);
+      const pushTitle = conversation.groupChatId
+        ? `New message in group`
+        : `New message from ${senderName ?? "Someone"}`;
+
+      for (const recId of recipientsToNotify) {
+        await ctx.db.insert("notifications", {
+          recipientId: recId,
+          actorId: currentUser._id,
+          type: "message",
+          conversationId: args.conversationId,
+          messageId,
+          targetExcerpt: args.text.slice(0, 80),
+          isRead: false,
+          createdAt: Date.now(),
+        });
+
+        // Dispatch native web push
+        await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
+          recipientId: recId,
+          title: pushTitle,
+          body: previewText,
+          url: `/app?chat=${args.conversationId}`,
+          conversationId: args.conversationId,
+          messageId: messageId.toString(),
+        });
+      }
     }
 
     return messageId;

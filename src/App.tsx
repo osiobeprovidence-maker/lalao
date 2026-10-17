@@ -150,6 +150,7 @@ const LalaoAppContent: React.FC = () => {
     setActiveSoundId,
     isCreateSoundOpen,
     setIsCreateSoundOpen,
+    setActiveChatId,
   } = useLalao();
   const mainRef = useRef<HTMLElement>(null);
   
@@ -177,6 +178,7 @@ const LalaoAppContent: React.FC = () => {
       }
     } else if (chatParam) {
       setActiveTab('messages');
+      setActiveChatId(chatParam);
       handled = true;
     }
 
@@ -188,7 +190,7 @@ const LalaoAppContent: React.FC = () => {
       const cleanSearch = nextParams.toString() ? `?${nextParams.toString()}` : '';
       navigate(`${location.pathname}${cleanSearch}`, { replace: true });
     }
-  }, [location.search, setActiveTab, navigate]);
+  }, [location.search, setActiveTab, setActiveChatId, navigate]);
 
   // Protect Creator Hub route: if non-creator-premium user visits, redirect away
   useEffect(() => {

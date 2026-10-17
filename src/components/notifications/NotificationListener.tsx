@@ -25,12 +25,14 @@ export const resolveNotificationTab = (url?: string | null): NavTab | null => {
 
 export const NotificationListener: React.FC = () => {
   const [toast, setToast] = useState<PushNotificationPayload | null>(null);
-  const { activeTab, setActiveTab } = useLalao();
+  const { activeTab, setActiveTab, setActiveChatId } = useLalao();
 
   // Keep latest values in refs so the subscriptions below are created once
   // instead of being torn down and re-created on every render.
   const setActiveTabRef = useRef(setActiveTab);
   setActiveTabRef.current = setActiveTab;
+  const setActiveChatIdRef = useRef(setActiveChatId);
+  setActiveChatIdRef.current = setActiveChatId;
   const activeTabRef = useRef(activeTab);
   activeTabRef.current = activeTab;
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -80,6 +82,14 @@ export const NotificationListener: React.FC = () => {
       } else if (event.data && event.data.type === 'NAVIGATE') {
         const tab = resolveNotificationTab(event.data.url) ?? 'home';
         setActiveTabRef.current(tab);
+        if (event.data.data?.conversationId) {
+          setActiveChatIdRef.current(event.data.data.conversationId);
+        } else if (event.data.url && event.data.url.includes('chat=')) {
+          const match = event.data.url.match(/chat=([^&]+)/);
+          if (match && match[1]) {
+            setActiveChatIdRef.current(match[1]);
+          }
+        }
       }
     };
 
@@ -110,6 +120,12 @@ export const NotificationListener: React.FC = () => {
   const handleToastClick = () => {
     const tab = resolveNotificationTab(toast?.url);
     if (tab) setActiveTabRef.current(tab);
+    if (toast?.url && toast.url.includes('chat=')) {
+      const match = toast.url.match(/chat=([^&]+)/);
+      if (match && match[1]) {
+        setActiveChatIdRef.current(match[1]);
+      }
+    }
     dismissToast();
   };
 

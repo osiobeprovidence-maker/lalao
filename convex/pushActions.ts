@@ -17,8 +17,17 @@ export const dispatchPush = internalAction({
     url: v.optional(v.string()),
     icon: v.optional(v.string()),
     badge: v.optional(v.string()),
+    conversationId: v.optional(v.string()),
+    messageId: v.optional(v.string()),
+    tag: v.optional(v.string()),
+    actions: v.optional(v.array(v.object({
+      action: v.string(),
+      title: v.string(),
+      type: v.optional(v.string()),
+      placeholder: v.optional(v.string()),
+    }))),
   },
-  handler: async (ctx, { recipientId, title, body, url, icon, badge }) => {
+  handler: async (ctx, { recipientId, title, body, url, icon, badge, conversationId, messageId, tag, actions }) => {
     let webPushDelivered = false;
 
     // 1. Native Web Push
@@ -43,6 +52,13 @@ export const dispatchPush = internalAction({
           url: url ?? "/",
           icon: icon ?? "/mascot.png",
           badge: badge ?? "/mascot.png",
+          tag: tag ?? (conversationId ? `chat-${conversationId}` : undefined),
+          data: {
+            url: url ?? "/",
+            conversationId,
+            messageId,
+          },
+          actions: actions ?? undefined,
           notificationId: Math.random().toString(36).substring(7),
         });
 
