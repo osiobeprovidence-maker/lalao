@@ -14,6 +14,7 @@ import {
   LogOut,
   ChevronRight,
   Megaphone,
+  Download,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
@@ -60,6 +61,7 @@ export const SettingsPageView: React.FC = () => {
     radiusKm,
     subscription,
     isCreatorPremiumActive,
+    setActiveTab,
   } = useLalao();
 
   const { theme } = useTheme();

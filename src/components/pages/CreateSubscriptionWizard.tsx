@@ -17,7 +17,7 @@ type Step = 1 | 2 | 3 | 4 | 5;
 export const CreateSubscriptionWizard: React.FC<CreateSubscriptionWizardProps> = ({ page, isOpen, onClose, onSuccess }) => {
   const [step, setStep] = useState<Step>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const createListing = useMutation(api.subscriptions.createListing);
+  const createListing = useMutation(api.subscriptions.createSubscriptionListing);
 
   // Form State
   const [platformId, setPlatformId] = useState<string>('');

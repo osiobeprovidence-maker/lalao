@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import { useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { getOrRequestWebPushSubscription } from '../lib/push';
+import { setOneSignalUser, requestOneSignalPushPermission } from '../lib/onesignal';
 import { useAuth } from './AuthContext';
 import {
   User,
@@ -579,6 +580,13 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         userAgent: navigator.userAgent,
       });
 
+      // Synchronize OneSignal push subscription if OneSignal is enabled
+      try {
+        await requestOneSignalPushPermission();
+      } catch (osErr) {
+        console.warn('[LalaoContext] OneSignal permission opt-in warning:', osErr);
+      }
+
       setPushEnabled(true);
       updatePermission('notifications', 'granted');
       return true;
@@ -622,6 +630,12 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       localStorage.setItem('lalao_current_user', JSON.stringify(currentUser));
     } catch {
       // ignore storage issues
+    }
+
+    if (currentUser && currentUser.id && currentUser.id !== EMPTY_CURRENT_USER.id) {
+      setOneSignalUser(currentUser.id).catch((err) => {
+        console.warn('[LalaoContext] Failed to associate OneSignal user:', err);
+      });
     }
   }, [currentUser]);
 

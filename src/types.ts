@@ -126,7 +126,9 @@ export interface Post {
   id: string;
   author: User;
   text: string;
+  content?: string;
   mediaUrl?: string;
+  media?: Array<{ url?: string; type?: 'image' | 'video'; [key: string]: any }>;
   mediaStorageId?: string;
   mediaType?: 'image' | 'video';
   muxUploadId?: string;

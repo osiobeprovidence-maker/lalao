@@ -28,9 +28,64 @@ export const dispatchPush = internalAction({
     }))),
   },
   handler: async (ctx, { recipientId, title, body, url, icon, badge, conversationId, messageId, tag, actions }) => {
+    let pushDelivered = false;
+
+    // 1. OneSignal REST API dispatch (preferred when ONESIGNAL_REST_API_KEY is configured)
+    const oneSignalApiKey = process.env.ONESIGNAL_REST_API_KEY;
+    const oneSignalAppId = process.env.ONESIGNAL_APP_ID || "0da46499-22a0-4035-8dfa-49f4395367da";
+
+    if (oneSignalApiKey) {
+      try {
+        const payload: Record<string, any> = {
+          app_id: oneSignalAppId,
+          target_channel: "push",
+          include_aliases: {
+            external_id: [recipientId.toString()],
+          },
+          headings: { en: title },
+          contents: { en: body },
+          url: url ?? "/app",
+          web_url: url ?? "/app",
+          chrome_web_icon: icon ?? "/mascot.png",
+          chrome_web_badge: badge ?? "/mascot.png",
+          data: {
+            url: url ?? "/app",
+            conversationId,
+            messageId,
+          },
+        };
+
+        if (tag) {
+          payload.web_push_topic = tag;
+        }
+
+        const res = await fetch("https://api.onesignal.com/notifications?c=push", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Basic ${oneSignalApiKey}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const json = await res.json() as any;
+        if (res.ok && json?.id) {
+          pushDelivered = true;
+          console.log(`[push] Successfully dispatched via OneSignal: id=${json.id}, recipients=${json.recipients ?? "unknown"}`);
+        } else {
+          console.warn("[push] OneSignal dispatch response:", json);
+        }
+      } catch (osErr) {
+        console.error("[push] OneSignal dispatch error:", osErr);
+      }
+    }
+
+    // If OneSignal successfully reached device(s), prevent duplicate notifications
+    if (pushDelivered) return;
+
     let webPushDelivered = false;
 
-    // 1. Native Web Push
+    // 2. Native Web Push (VAPID)
     const webPushSubs: any[] = await ctx.runQuery(internal.push.getWebPushSubscriptionsForUser, {
       userId: recipientId,
     });

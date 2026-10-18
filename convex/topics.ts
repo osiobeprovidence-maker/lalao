@@ -249,6 +249,54 @@ export const listPlatformTopics = query({
  */
 export const listActiveTopics = listPlatformTopics;
 
+async function applyTopicPreference(ctx: any, topicSlug: string, preference: "interested" | "reduced" | "excluded" | "none") {
+  const user = await getAuthedUser(ctx);
+  if (!user) throw new Error("Not authenticated");
+
+  const existing = await ctx.db
+    .query("userTopicPreferences")
+    .withIndex("by_user_topic", (q: any) => q.eq("userId", user._id).eq("topicSlug", topicSlug))
+    .first();
+
+  const now = Date.now();
+
+  if (preference === "none") {
+    if (existing) {
+      await ctx.db.delete(existing._id);
+    }
+    return { success: true, topicSlug, preference: "none" };
+  }
+
+  if (existing) {
+    await ctx.db.patch(existing._id, {
+      preference,
+      updatedAt: now,
+    });
+  } else {
+    await ctx.db.insert("userTopicPreferences", {
+      userId: user._id,
+      topicSlug,
+      preference,
+      updatedAt: now,
+    });
+  }
+
+  return { success: true, topicSlug, preference };
+}
+
+/**
+ * Backward-compatible mutation name used by the app before the topic API was renamed.
+ */
+export const updateUserHomePreference = mutation({
+  args: {
+    slug: v.string(),
+    enabled: v.boolean(),
+  },
+  handler: async (ctx, { slug, enabled }) => {
+    return applyTopicPreference(ctx, slug, enabled ? "interested" : "none");
+  },
+});
+
 /**
  * Seed default platform topics (Idempotent mutation)
  */

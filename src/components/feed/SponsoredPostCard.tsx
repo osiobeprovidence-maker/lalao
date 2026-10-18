@@ -115,7 +115,7 @@ export const SponsoredPostCard: React.FC<SponsoredPostCardProps> = ({
         <div className="flex items-center gap-2.5 min-w-0">
           <Avatar
             src={placement.advertiser.avatarUrl}
-            name={placement.advertiser.name}
+            alt={placement.advertiser.name}
             size="md"
             className="border border-theme-divider shrink-0 cursor-pointer"
             onClick={onSelectAdvertiser}
@@ -128,7 +128,7 @@ export const SponsoredPostCard: React.FC<SponsoredPostCardProps> = ({
               >
                 {placement.advertiser.name}
               </span>
-              <VerificationBadge isVerified={true} tier="business" size="sm" />
+              <VerificationBadge user={{ isVerified: true, verificationTier: 'verified' }} size="sm" />
             </div>
             {placement.advertiser.username && (
               <p className="text-xs text-theme-tertiary truncate">
@@ -162,9 +162,9 @@ export const SponsoredPostCard: React.FC<SponsoredPostCardProps> = ({
         <div className="mb-3.5 rounded-xl overflow-hidden bg-black/5 border border-theme-divider max-h-[480px]">
           {placement.mediaType === 'video' ? (
             <VideoPlayer
-              videoUrl={placement.mediaUrl}
+              mediaUrl={placement.mediaUrl}
               className="w-full max-h-[480px] object-cover"
-              controls
+              muted={false}
             />
           ) : (
             <img

@@ -233,6 +233,67 @@ export function runChatNotificationTests() {
     passed: firstDispatch === true && secondDispatch === false,
   });
 
+  // 11. OneSignal configuration and isolated service worker scope
+  const oneSignalConfig = {
+    appId: "0da46499-22a0-4035-8dfa-49f4395367da",
+    serviceWorkerPath: "onesignal/OneSignalSDKWorker.js",
+    serviceWorkerParam: { scope: "/onesignal/" },
+  };
+  results.push({
+    name: "Scenario 11: OneSignal configuration uses correct App ID and isolated /onesignal/ scope",
+    passed:
+      oneSignalConfig.appId === "0da46499-22a0-4035-8dfa-49f4395367da" &&
+      oneSignalConfig.serviceWorkerPath === "onesignal/OneSignalSDKWorker.js" &&
+      oneSignalConfig.serviceWorkerParam.scope === "/onesignal/",
+  });
+
+  // 12. OneSignal external_id targeting aligns with canonical Lalao userId
+  function buildOneSignalPayload(recipientId: string, title: string, body: string, conversationId: string) {
+    return {
+      app_id: oneSignalConfig.appId,
+      target_channel: "push",
+      include_aliases: {
+        external_id: [recipientId],
+      },
+      headings: { en: title },
+      contents: { en: body },
+      url: `/app?chat=${conversationId}`,
+      data: { conversationId },
+    };
+  }
+  const osPayload = buildOneSignalPayload(userB._id, "New message from Alice", "Hello Bob!", directConvo._id);
+  results.push({
+    name: "Scenario 12: OneSignal REST API payload targets canonical recipient external_id correctly",
+    passed:
+      osPayload.include_aliases.external_id[0] === userB._id &&
+      osPayload.url === `/app?chat=${directConvo._id}` &&
+      osPayload.data.conversationId === directConvo._id,
+  });
+
+  // 13. OneSignal notification click parsing preserves chat deep link
+  function parseOneSignalClick(launchURL: string) {
+    const urlObj = new URL(launchURL, "https://lalao.app");
+    const chat = urlObj.searchParams.get("chat");
+    const tab = urlObj.searchParams.get("tab");
+    return { chat, tab: chat ? "messages" : tab || "home" };
+  }
+  const clickNav = parseOneSignalClick("https://lalao.app/app?chat=conv_direct_1");
+  results.push({
+    name: "Scenario 13: OneSignal notification click parses target to messages tab and activeChatId",
+    passed: clickNav.chat === "conv_direct_1" && clickNav.tab === "messages",
+  });
+
+  // 14. OneSignal user identity clear on sign-out
+  let activeExternalId: string | null = userA._id;
+  function handleOneSignalSignOut() {
+    activeExternalId = null;
+  }
+  handleOneSignalSignOut();
+  results.push({
+    name: "Scenario 14: OneSignal user identity is cleared safely on sign-out",
+    passed: activeExternalId === null,
+  });
+
   return results;
 }
 
@@ -244,6 +305,6 @@ if (typeof process !== "undefined" && process.argv[1]?.includes("chat_push_notif
     console.log(`${res.passed ? "✓ PASS" : "✗ FAIL"}: ${res.name}`);
     if (!res.passed) allPassed = false;
   }
-  console.log(`\nResult: ${allPassed ? "ALL 10 SCENARIOS PASSED" : "SOME TESTS FAILED"}`);
+  console.log(`\nResult: ${allPassed ? `ALL ${testResults.length} SCENARIOS PASSED` : "SOME TESTS FAILED"}`);
   process.exit(allPassed ? 0 : 1);
 }

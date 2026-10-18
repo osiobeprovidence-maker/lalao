@@ -158,6 +158,34 @@ const LalaoAppContent: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Initialize OneSignal exactly once on app load
+  useEffect(() => {
+    import('./lib/onesignal').then(({ initOneSignal }) => {
+      initOneSignal({
+        onNotificationClick: (targetUrl) => {
+          try {
+            if (!targetUrl) return;
+            const parsed = new URL(targetUrl, window.location.origin);
+            const chat = parsed.searchParams.get('chat');
+            const tab = parsed.searchParams.get('tab');
+            if (chat) {
+              setActiveTab('messages');
+              setActiveChatId(chat);
+            } else if (tab) {
+              setActiveTab(tab as any);
+            } else if (parsed.pathname && parsed.pathname.startsWith('/')) {
+              navigate(parsed.pathname + parsed.search);
+            }
+          } catch (err) {
+            console.warn('[App] Error handling OneSignal click navigation:', err);
+          }
+        },
+      });
+    }).catch((err) => {
+      console.warn('[App] Failed to load OneSignal module:', err);
+    });
+  }, [setActiveTab, setActiveChatId, navigate]);
+
   // Handle deep linking from push notification clicks (e.g. /app?tab=notifications or /app?chat=...)
   useEffect(() => {
     if (!location.search) return;

@@ -1,6 +1,7 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import { getAuthedUser } from "./social";
 
 // ─────────────────────────────────────────────────────────────
 // INTERNAL HELPERS
@@ -115,6 +116,54 @@ export const bootstrapSuperAdmin = mutation({
     });
 
     return { status: "promoted", userId: user._id };
+  },
+});
+
+export const bootstrapPlatformPages = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+
+    const results: Array<{ name: string; status: string }> = [];
+    const defaultPages: Array<{
+      name: string;
+      username: string;
+      type: "community" | "organization";
+      badge: "COMMUNITY" | "ORG";
+    }> = [
+      { name: "Lalao Community", username: "lalao-community", type: "community", badge: "COMMUNITY" },
+      { name: "Roomy", username: "roomy", type: "organization", badge: "ORG" },
+    ];
+
+    const user = await getAuthedUser(ctx);
+    if (!user) throw new Error("Not authenticated");
+
+    for (const page of defaultPages) {
+      const existing = await ctx.db
+        .query("pages")
+        .withIndex("by_username", (q: any) => q.eq("username", page.username))
+        .unique();
+
+      if (!existing) {
+        await ctx.db.insert("pages", {
+          ownerId: user._id,
+          name: page.name,
+          username: page.username,
+          type: page.type,
+          badge: page.badge,
+          description: `${page.name} is a community page for the Lalao platform.`,
+          location: "Global",
+          followersCount: 0,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+        results.push({ name: page.name, status: "created" });
+      } else {
+        results.push({ name: page.name, status: "exists" });
+      }
+    }
+
+    return { results };
   },
 });
 

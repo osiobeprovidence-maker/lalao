@@ -139,6 +139,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e) {
       console.warn('Playsole logout error:', e);
     }
+
+    try {
+      const { clearOneSignalUser } = await import('../lib/onesignal');
+      await clearOneSignalUser();
+    } catch (e) {
+      console.warn('[AuthContext] OneSignal logout error:', e);
+    }
   };
 
   return (

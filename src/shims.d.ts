@@ -16,6 +16,7 @@ interface ImportMetaEnv {
   readonly VITE_PAYSTACK_PUBLIC_KEY?: string;
   readonly VITE_FIREBASE_VAPID_KEY?: string;
   readonly VITE_VAPID_PUBLIC_KEY?: string;
+  readonly VITE_ONESIGNAL_APP_ID?: string;
   readonly DEV: boolean;
 }
 

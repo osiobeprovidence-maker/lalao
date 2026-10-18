@@ -1731,6 +1731,24 @@ export const createPost = mutation({
   },
 });
 
+export const toggleRepost = mutation({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, { postId }) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const post = await ctx.db.get(postId);
+    if (!post) throw new Error("Post not found");
+
+    const nextCount = (post.repostsCount ?? 0) + 1;
+    await ctx.db.patch(postId, {
+      repostsCount: nextCount,
+    });
+
+    return { success: true, reposted: true };
+  },
+});
+
 export const deletePost = mutation({
   args: { postId: v.id("posts") },
   handler: async (ctx, { postId }) => {

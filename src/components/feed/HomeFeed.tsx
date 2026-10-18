@@ -82,8 +82,8 @@ const FeedSkeleton: React.FC = () => {
 
   // Fetch verified & targeted sponsored ad placement
   const sponsoredPlacement = useQuery(api.ads.getSponsoredPlacement, {
-    latitude: location.coords?.lat,
-    longitude: location.coords?.lng,
+    latitude: typeof location.latitude === 'number' ? location.latitude : undefined,
+    longitude: typeof location.longitude === 'number' ? location.longitude : undefined,
     locationName: location.name,
   });
 
