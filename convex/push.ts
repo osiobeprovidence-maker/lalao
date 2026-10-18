@@ -245,3 +245,38 @@ export const recordSystemNotification = internalMutation({
   },
 });
 
+/**
+ * Admin / Testing helper: turn off all push subscriptions across all users
+ * so all users return to prompt/opt-in state for testing.
+ */
+export const resetAllPushSubscriptions = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // 1. Deactivate all active push subscriptions
+    const allSubs = await ctx.db.query("pushSubscriptions").collect();
+    let deactivatedCount = 0;
+    for (const sub of allSubs) {
+      if (sub.isActive) {
+        await ctx.db.patch(sub._id, {
+          isActive: false,
+          updatedAt: Date.now(),
+        });
+        deactivatedCount++;
+      }
+    }
+
+    // 2. Remove legacy fcmTokens
+    const allFcm = await ctx.db.query("fcmTokens").collect();
+    for (const token of allFcm) {
+      await ctx.db.delete(token._id);
+    }
+
+    return {
+      success: true,
+      deactivatedSubscriptions: deactivatedCount,
+      deletedFcmTokens: allFcm.length,
+    };
+  },
+});
+
+
