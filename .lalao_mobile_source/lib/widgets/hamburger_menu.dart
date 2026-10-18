@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../screens/main/settings_hub_screen.dart';
 
 class HamburgerMenu extends StatelessWidget {
   const HamburgerMenu({super.key});
@@ -40,6 +41,17 @@ class HamburgerMenu extends StatelessWidget {
                   
                   _buildSectionHeader('ACCOUNT'),
                   _buildMenuItem(Icons.account_balance_wallet_outlined, 'Wallet'),
+                  _buildMenuItem(
+                    Icons.settings_outlined,
+                    'Settings & Profile',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const SettingsHubScreen()),
+                      );
+                    },
+                  ),
                   _buildMenuItem(Icons.history, 'Order History'),
                   
                   _buildSectionHeader('MY PAGES'),
@@ -69,11 +81,11 @@ class HamburgerMenu extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuItem(IconData icon, String title) {
+  Widget _buildMenuItem(IconData icon, String title, {VoidCallback? onTap}) {
     return ListTile(
       leading: Icon(icon, color: Colors.black87),
       title: Text(title, style: const TextStyle(fontSize: 16, color: Colors.black87)),
-      onTap: () {},
+      onTap: onTap ?? () {},
       dense: true,
       visualDensity: const VisualDensity(vertical: -2),
     );

@@ -120,7 +120,7 @@ class _ViewStatusScreenState extends State<ViewStatusScreen> with SingleTickerPr
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(LucideIcons.more_vertical, color: Colors.white),
+                    icon: const Icon(Icons.more_vert, color: Colors.white),
                     onPressed: () {},
                   ),
                   IconButton(

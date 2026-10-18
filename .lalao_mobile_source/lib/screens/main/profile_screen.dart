@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../data/mock_repository.dart';
-import 'feed_screen.dart'; // To reuse FeedScreen components if needed, though we will build local post card for now
+import 'settings_hub_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -44,7 +44,15 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         actions: [
           IconButton(icon: const Icon(Icons.favorite_border, color: Colors.black87), onPressed: () {}),
           IconButton(icon: const Icon(Icons.ios_share, color: Colors.black87), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.settings_outlined, color: Colors.black87), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, color: Colors.black87),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsHubScreen()),
+              );
+            },
+          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -119,7 +127,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         children: [
                           Expanded(
                             child: OutlinedButton(
-                              onPressed: () {},
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const SettingsHubScreen()),
+                                );
+                              },
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.black87,
                                 side: const BorderSide(color: Color(0xFFE5E7EB)),
