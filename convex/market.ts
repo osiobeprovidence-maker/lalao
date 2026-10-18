@@ -1,14 +1,14 @@
 import { internalMutation, internalQuery, action, query } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { DEFAULT_SERVICE_SETTINGS } from "./clubkonnect";
 
 const CLUBKONNECT_USER_ID = process.env.CLUBKONNECT_USER_ID;
 const CLUBKONNECT_API_KEY = process.env.CLUBKONNECT_API_KEY;
 const MOCK_PROVIDER = process.env.MARKET_PROVIDER === "mock" || (!CLUBKONNECT_USER_ID && !process.env.VTU_USERNAME);
-const VTU_BASE_URL = process.env.VTU_API_BASE_URL || "https://vtu.ng/wp-json";
 
 // Clubkonnect Network Codes: 01=MTN, 02=Glo, 03=9mobile, 04=Airtel
-function getClubkonnectNetworkCode(net?: string): string {
+export function getClubkonnectNetworkCode(net?: string): string {
   const n = (net || '').toUpperCase();
   if (n.includes('MTN')) return '01';
   if (n.includes('GLO')) return '02';
@@ -17,51 +17,39 @@ function getClubkonnectNetworkCode(net?: string): string {
   return '01';
 }
 
-// Helper function to safely fetch from VTU.ng
-async function vtuFetch(endpoint: string, options: RequestInit = {}) {
-  const url = `${VTU_BASE_URL}${endpoint}`;
-  
-  // Note: in a fully production system, JWT would be cached in the DB.
-  // For this integration, if JWT fails we would handle it, but here we simplify
-  // by authenticating or assuming token is passed.
-  
-  // We'll do a fresh auth for every action for simplicity unless caching is strictly required by the provider.
-  // The instructions said "Prevent multiple simultaneous requests from unnecessarily generating multiple tokens. Keep token server-side only."
-  // To cache tokens in Convex we need a DB table, let's just do that in an internal mutation if needed, or just fetch.
-  // Actually, VTU.ng docs say it expires in 7 days. We can store it in platformSettings or similar, but for now let's just do a basic auth.
-  
-  const authResponse = await fetch(`${VTU_BASE_URL}/jwt-auth/v1/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      username: process.env.VTU_USERNAME,
-      password: process.env.VTU_PASSWORD,
-    })
-  });
-  
-  if (!authResponse.ok) {
-    throw new Error("Failed to authenticate with VTU provider");
-  }
-  
-  const authData = await authResponse.json();
-  const token = authData.token;
-
-  const headers = {
-    ...options.headers,
-    "Authorization": `Bearer ${token}`,
-    "Content-Type": "application/json"
-  };
-
-  const response = await fetch(url, { ...options, headers });
-  return await response.json();
+// ClubKonnect Disco Codes
+export function getClubkonnectDiscoCode(disco?: string): string {
+  const d = (disco || '').toUpperCase();
+  if (d.includes('KADUNA') || d.includes('KAEDCO') || d === '07') return '07';
+  if (d.includes('ABUJA') || d.includes('AEDC') || d === '03') return '03';
+  if (d.includes('EKO') || d.includes('EKEDC') || d === '01') return '01';
+  if (d.includes('IKEJA') || d.includes('IKEDC') || d === '02') return '02';
+  if (d.includes('KANO') || d.includes('KEDCO') || d === '04') return '04';
+  if (d.includes('PORT') || d.includes('PHED') || d === '05') return '05';
+  if (d.includes('JOS') || d.includes('JED') || d === '06') return '06';
+  if (d.includes('ENUGU') || d.includes('EEDC') || d === '08') return '08';
+  if (d.includes('BENIN') || d.includes('BEDC') || d === '09') return '09';
+  return '01';
 }
 
+// ClubKonnect Cable TV Codes
+export function getClubkonnectCableCode(cable?: string): string {
+  const c = (cable || '').toLowerCase();
+  if (c.includes('dstv')) return 'dstv';
+  if (c.includes('gotv')) return 'gotv';
+  if (c.includes('startimes')) return 'startimes';
+  return 'dstv';
+}
+
+/**
+ * Fetch Data Bundles from Live ClubKonnect Feed
+ */
 export const getVariations = action({
   args: { type: v.string(), network: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const net = (args.network || "MTN").toUpperCase();
-    
-    // Default comprehensive data plans for Nigerian telcos (1 LC = ₦1)
+
+    // Default curated fallback data plans for Nigerian telcos
     const PLANS_BY_NETWORK: Record<string, any[]> = {
       MTN: [
         { id: 'mtn_500mb', network: 'MTN', planName: '500MB SME', dataAmount: '500MB', validity: '30 Days', price: 250, variationId: 'MTN_500MB' },
@@ -92,55 +80,241 @@ export const getVariations = action({
       ]
     };
 
-    // Call live Clubkonnect data plan feed if configured
-    if (CLUBKONNECT_USER_ID) {
-      try {
-        const ckPlansRes = await fetch(`https://www.nellobytesystems.com/APIDatabundlePlansV2.asp?UserID=${encodeURIComponent(CLUBKONNECT_USER_ID)}`);
-        const ckData = await ckPlansRes.json();
-        const networkKeyMap: Record<string, string> = {
-          MTN: "MTN",
-          GLO: "Glo",
-          AIRTEL: "Airtel",
-          "9MOBILE": "m_9mobile"
-        };
-        const netKey = networkKeyMap[net] || "MTN";
-        const netObj = ckData?.MOBILE_NETWORK?.[netKey]?.[0];
-        if (netObj && Array.isArray(netObj.PRODUCT)) {
-          return netObj.PRODUCT.map((p: any) => ({
-            id: `ck_${p.PRODUCT_ID}_${p.PRODUCT_CODE}`,
-            network: net,
-            planName: p.PRODUCT_NAME,
-            dataAmount: p.PRODUCT_NAME.split('-')[0]?.trim() || p.PRODUCT_NAME,
-            validity: p.PRODUCT_NAME.includes('days') || p.PRODUCT_NAME.includes('day') || p.PRODUCT_NAME.includes('Monthly') ? p.PRODUCT_NAME : '30 Days',
-            price: Math.ceil(parseFloat(p.PRODUCT_AMOUNT) || 0),
-            variationId: p.PRODUCT_ID || p.PRODUCT_CODE,
-          }));
-        }
-      } catch (err) {
-        console.warn("Failed fetching live Clubkonnect plans, using curated catalog:", err);
-      }
-      return PLANS_BY_NETWORK[net] || PLANS_BY_NETWORK.MTN;
-    }
-
-    if (MOCK_PROVIDER || !process.env.VTU_USERNAME || !process.env.VTU_PASSWORD) {
-      if (args.type === "data") {
-        return PLANS_BY_NETWORK[net] || PLANS_BY_NETWORK.MTN;
-      }
-      return [];
-    }
-
-    // Call live VTU.ng if credentials are configured
+    // Always attempt live fetch from official ClubKonnect APIDatabundlePlansV2
     try {
-      if (args.type === "data") {
-        const data = await vtuFetch(`/api/v2/variations/data`);
-        if (Array.isArray(data) && data.length > 0) return data;
-        return PLANS_BY_NETWORK[net] || PLANS_BY_NETWORK.MTN;
+      const url = CLUBKONNECT_USER_ID 
+        ? `https://www.nellobytesystems.com/APIDatabundlePlansV2.asp?UserID=${encodeURIComponent(CLUBKONNECT_USER_ID)}`
+        : `https://www.nellobytesystems.com/APIDatabundlePlansV2.asp`;
+      
+      const ckPlansRes = await fetch(url);
+      const ckData = await ckPlansRes.json();
+      const networkKeyMap: Record<string, string> = {
+        MTN: "MTN",
+        GLO: "Glo",
+        AIRTEL: "Airtel",
+        "9MOBILE": "m_9mobile"
+      };
+      const netKey = networkKeyMap[net] || "MTN";
+      const netObj = ckData?.MOBILE_NETWORK?.[netKey]?.[0];
+      if (netObj && Array.isArray(netObj.PRODUCT)) {
+        return netObj.PRODUCT.map((p: any) => ({
+          id: `ck_${p.PRODUCT_ID}_${p.PRODUCT_CODE}`,
+          network: net,
+          planName: p.PRODUCT_NAME,
+          dataAmount: p.PRODUCT_NAME.split('-')[0]?.trim() || p.PRODUCT_NAME,
+          validity: p.PRODUCT_NAME.includes('days') || p.PRODUCT_NAME.includes('day') || p.PRODUCT_NAME.includes('Monthly') ? p.PRODUCT_NAME : '30 Days',
+          price: Math.ceil(parseFloat(p.PRODUCT_AMOUNT) || 0),
+          variationId: p.PRODUCT_ID || p.PRODUCT_CODE,
+        }));
+      }
+    } catch (err) {
+      console.warn("Live ClubKonnect plan fetch fallback:", err);
+    }
+
+    return PLANS_BY_NETWORK[net] || PLANS_BY_NETWORK.MTN;
+  }
+});
+
+/**
+ * Fetch Cable TV packages from live ClubKonnect feed
+ */
+export const getCablePackages = action({
+  args: { provider: v.string() }, // 'dstv', 'gotv', 'startimes'
+  handler: async (ctx, args) => {
+    const cableCode = getClubkonnectCableCode(args.provider);
+    try {
+      const url = `https://www.nellobytesystems.com/APICableTVPackagesV2.asp`;
+      const res = await fetch(url);
+      const data = await res.json();
+      
+      const keyMap: Record<string, string> = {
+        dstv: "DStv",
+        gotv: "GOtv",
+        startimes: "StarTimes"
+      };
+      const targetKey = keyMap[cableCode] || "DStv";
+      const providerList = data?.TV_ID?.[targetKey]?.[0]?.PRODUCT;
+      if (Array.isArray(providerList)) {
+        return providerList.map((p: any) => ({
+          packageId: p.PACKAGE_ID,
+          packageName: p.PACKAGE_NAME,
+          price: Math.ceil(parseFloat(p.PACKAGE_AMOUNT) || 0),
+        }));
       }
     } catch (e) {
-      console.warn("VTU variations fetch failed, falling back to cached provider variations:", e);
-      return PLANS_BY_NETWORK[net] || PLANS_BY_NETWORK.MTN;
+      console.warn("Error fetching cable packages:", e);
     }
-    return [];
+
+    // Default fallback packages
+    if (cableCode === 'gotv') {
+      return [
+        { packageId: 'gotv-jinja', packageName: 'GOtv Jinja', price: 3300 },
+        { packageId: 'gotv-jolli', packageName: 'GOtv Jolli', price: 4850 },
+        { packageId: 'gotv-max', packageName: 'GOtv Max', price: 7200 },
+        { packageId: 'gotv-supa', packageName: 'GOtv Supa', price: 9600 },
+      ];
+    }
+    if (cableCode === 'startimes') {
+      return [
+        { packageId: 'nova-monthly', packageName: 'Nova Monthly', price: 1700 },
+        { packageId: 'basic-monthly', packageName: 'Basic Monthly', price: 3300 },
+        { packageId: 'smart-monthly', packageName: 'Smart Monthly', price: 4700 },
+        { packageId: 'classic-monthly', packageName: 'Classic Monthly', price: 5500 },
+      ];
+    }
+    return [
+      { packageId: 'dstv-padi', packageName: 'DStv Padi', price: 4400 },
+      { packageId: 'dstv-yanga', packageName: 'DStv Yanga', price: 6000 },
+      { packageId: 'dstv-confam', packageName: 'DStv Confam', price: 11000 },
+      { packageId: 'dstv-compact', packageName: 'DStv Compact', price: 19000 },
+    ];
+  }
+});
+
+/**
+ * Verify Electricity Meter Number via ClubKonnect
+ */
+export const verifyElectricityMeter = action({
+  args: {
+    discoCode: v.string(), // e.g. "01" (EKEDC)
+    meterNumber: v.string(),
+    meterType: v.string(), // "Prepaid" or "Postpaid"
+  },
+  handler: async (ctx, args) => {
+    const userId = process.env.CLUBKONNECT_USER_ID;
+    const apiKey = process.env.CLUBKONNECT_API_KEY;
+
+    if (!userId || !apiKey) {
+      // In development or when credentials are not yet set, return simulated response for testing
+      return {
+        verified: true,
+        customerName: `Customer #${args.meterNumber.slice(-4)} (Test Mode)`,
+        address: "Warri, Delta State",
+        meterNumber: args.meterNumber,
+        meterType: args.meterType,
+        discoCode: args.discoCode,
+      };
+    }
+
+    try {
+      const discoId = getClubkonnectDiscoCode(args.discoCode);
+      const url = `https://www.nellobytesystems.com/APIVerifyElectricityV1.asp?UserID=${encodeURIComponent(userId)}&APIKey=${encodeURIComponent(apiKey)}&ElectricCompany=${discoId}&MeterNo=${encodeURIComponent(args.meterNumber)}&MeterType=${encodeURIComponent(args.meterType)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data && (data.customer_name || data.name || data.status === "ORDER_RECEIVED")) {
+        return {
+          verified: true,
+          customerName: data.customer_name || data.name || "Verified Customer",
+          address: data.address || "",
+          meterNumber: args.meterNumber,
+          meterType: args.meterType,
+          discoCode: discoId,
+        };
+      } else {
+        throw new Error(data?.status || data?.msg || "Could not verify meter number with distribution company.");
+      }
+    } catch (e: any) {
+      throw new Error(e.message || "Failed to verify meter with provider.");
+    }
+  }
+});
+
+/**
+ * Verify Cable TV Smartcard / IUC Number via ClubKonnect
+ */
+export const verifyCableSmartcard = action({
+  args: {
+    cableProvider: v.string(), // 'dstv', 'gotv', 'startimes'
+    smartcardNumber: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = process.env.CLUBKONNECT_USER_ID;
+    const apiKey = process.env.CLUBKONNECT_API_KEY;
+
+    if (!userId || !apiKey) {
+      return {
+        verified: true,
+        customerName: `Subscriber #${args.smartcardNumber.slice(-4)} (Test Mode)`,
+        smartcardNumber: args.smartcardNumber,
+        cableProvider: args.cableProvider,
+      };
+    }
+
+    try {
+      const cableId = getClubkonnectCableCode(args.cableProvider);
+      const url = `https://www.nellobytesystems.com/APIVerifyCableTVV1.asp?UserID=${encodeURIComponent(userId)}&APIKey=${encodeURIComponent(apiKey)}&CableTV=${cableId}&SmartCardNo=${encodeURIComponent(args.smartcardNumber)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data && (data.customer_name || data.name || data.status === "ORDER_RECEIVED")) {
+        return {
+          verified: true,
+          customerName: data.customer_name || data.name || "Verified Subscriber",
+          smartcardNumber: args.smartcardNumber,
+          cableProvider: cableId,
+        };
+      } else {
+        throw new Error(data?.status || data?.msg || "Invalid smartcard / IUC number for selected provider.");
+      }
+    } catch (e: any) {
+      throw new Error(e.message || "Failed to verify smartcard with provider.");
+    }
+  }
+});
+
+/**
+ * Requery ClubKonnect transaction status
+ */
+export const requeryTransactionStatus = action({
+  args: {
+    orderId: v.string(),
+    marketTxId: v.id("marketTransactions"),
+  },
+  handler: async (ctx, args) => {
+    const userId = process.env.CLUBKONNECT_USER_ID;
+    const apiKey = process.env.CLUBKONNECT_API_KEY;
+
+    if (!userId || !apiKey) {
+      throw new Error("CLUBKONNECT credentials not configured");
+    }
+
+    const url = `https://www.nellobytesystems.com/APIQueryV1.asp?UserID=${encodeURIComponent(userId)}&APIKey=${encodeURIComponent(apiKey)}&OrderID=${encodeURIComponent(args.orderId)}`;
+    const res = await fetch(url);
+    const data = await res.json().catch(() => null);
+
+    const statusCode = data?.statuscode?.toString();
+    const statusText = (data?.status || '').toUpperCase();
+    const isCompleted = statusCode === '200' || statusText.includes('ORDER_COMPLETED') || statusText === 'COMPLETED';
+    const isFailed = statusCode === '300' || statusText.includes('CANCELLED') || statusText.includes('FAILED');
+
+    const tx: any = await ctx.runQuery(internal.market.getMarketTxById, { id: args.marketTxId });
+    if (tx && tx.metadata?.walletTxId) {
+      if (isCompleted) {
+        await ctx.runMutation(internal.market.updatePurchaseStatus, {
+          userId: tx.userId,
+          marketTxId: tx._id,
+          walletTxId: tx.metadata.walletTxId,
+          status: "COMPLETED",
+          providerOrderId: args.orderId,
+          token: data?.token || tx.token,
+          units: data?.units || tx.units,
+        });
+      } else if (isFailed) {
+        await ctx.runMutation(internal.market.updatePurchaseStatus, {
+          userId: tx.userId,
+          marketTxId: tx._id,
+          walletTxId: tx.metadata.walletTxId,
+          status: "FAILED",
+          errorMessage: data?.msg || "Provider confirmed failed transaction",
+        });
+      }
+    }
+
+    return {
+      status: isCompleted ? "COMPLETED" : isFailed ? "FAILED" : "PROCESSING",
+      raw: data,
+    };
   }
 });
 
@@ -152,6 +326,13 @@ export const getUserByToken = internalQuery({
       .query("users")
       .withIndex("by_token", q => q.eq("tokenIdentifier", args.tokenIdentifier))
       .first();
+  }
+});
+
+export const getMarketTxById = internalQuery({
+  args: { id: v.id("marketTransactions") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
   }
 });
 
@@ -231,7 +412,7 @@ export const initiatePurchase = internalMutation({
       userId: args.userId,
       type: "MARKET_PURCHASE",
       category: args.serviceCategory.toUpperCase(),
-      provider: MOCK_PROVIDER ? "mock" : CLUBKONNECT_USER_ID ? "clubkonnect" : "vtu_ng",
+      provider: "clubkonnect",
       status: "PENDING",
       requestId: args.requestId,
       amount: args.amount,
@@ -343,60 +524,9 @@ export const updatePurchaseStatus = internalMutation({
   }
 });
 
-// internal mutation to process webhook securely
-export const processWebhook = internalMutation({
-  args: {
-    requestId: v.string(),
-    providerOrderId: v.optional(v.string()),
-    status: v.string(),
-    rawPayload: v.string()
-  },
-  handler: async (ctx, args) => {
-    const marketTx = await ctx.db
-      .query("marketTransactions")
-      .withIndex("by_request_id", q => q.eq("requestId", args.requestId))
-      .first();
-
-    if (!marketTx) throw new Error("Transaction not found for requestId");
-
-    // Idempotency check
-    if (marketTx.status === "COMPLETED" || marketTx.status === "REFUNDED" || marketTx.status === "REVERSED") {
-      return; // Already handled
-    }
-
-    // Map VTU.ng status to LaLao status
-    let newStatus = "PROCESSING";
-    if (args.status === "completed-api" || args.status === "successful") newStatus = "COMPLETED";
-    else if (args.status === "refunded") newStatus = "REFUNDED";
-    else if (args.status === "failed") newStatus = "FAILED";
-
-    // Find the original wallet transaction
-    const walletTx = await ctx.db
-      .query("walletTransactions")
-      .withIndex("by_user", q => q.eq("userId", marketTx.userId))
-      .filter(q => q.eq(q.field("type"), "MARKET_PURCHASE"))
-      .filter(q => q.eq(q.field("status"), "pending")) // could be pending or processing
-      // We also need to match it properly, ideally by a reference, but we can search for the matching walletTxId 
-      // wait, marketTx doesn't store walletTxId. Let's find it by requestId if we stored it, or by amount/timestamp.
-      // Ah! I should have stored walletTxId on marketTransactions. Let's fix that too.
-      .first(); // This is unsafe, we must store walletTxId on marketTx.
-      
-    // Let's assume we update the initiatePurchase to store walletTxId, so we can just retrieve it:
-    if (!marketTx.metadata || !marketTx.metadata.walletTxId) {
-      console.error("Missing walletTxId on marketTx");
-      return;
-    }
-    
-    await ctx.runMutation(internal.market.updatePurchaseStatus, {
-      userId: marketTx.userId,
-      marketTxId: marketTx._id,
-      walletTxId: marketTx.metadata.walletTxId,
-      status: newStatus,
-      providerOrderId: args.providerOrderId
-    });
-  }
-});
-
+/**
+ * Execute Purchase Action: Airtime, Data, Electricity, and Cable TV via ClubKonnect
+ */
 export const purchaseService = action({
   args: {
     serviceCategory: v.string(), // 'airtime', 'data', 'electricity', 'cable'
@@ -408,6 +538,7 @@ export const purchaseService = action({
     fee: v.number(),
     pin: v.string(),
     network: v.optional(v.string()),
+    meterType: v.optional(v.string()), // For electricity: Prepaid / Postpaid
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -415,6 +546,13 @@ export const purchaseService = action({
 
     const user = await ctx.runQuery(internal.market.getUserByToken, { tokenIdentifier: identity.tokenIdentifier });
     if (!user) throw new Error("User not found");
+
+    // Server-side service enablement check
+    const serviceSettings: any = await ctx.runQuery(internal.market.getServiceSettingsInternal);
+    const catConfig = serviceSettings[args.serviceCategory];
+    if (catConfig && catConfig.enabled === false) {
+      throw new Error(`The ${args.serviceCategory} service is currently disabled by administrator.`);
+    }
 
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
@@ -434,17 +572,8 @@ export const purchaseService = action({
     });
 
     try {
+      // Test mode / Mock fallback
       if (MOCK_PROVIDER) {
-        // Simulate provider latency
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        if (args.customerIdentifier.endsWith('000')) {
-          await ctx.runMutation(internal.market.updatePurchaseStatus, {
-            userId: user._id, marketTxId, walletTxId, status: "PROCESSING", providerOrderId: `mock_proc_${Date.now()}`
-          });
-          return { success: false, status: 'PROCESSING', message: 'Transaction is being processed.' };
-        }
-        
         if (args.customerIdentifier.endsWith('999')) {
           await ctx.runMutation(internal.market.updatePurchaseStatus, {
             userId: user._id, marketTxId, walletTxId, status: "FAILED", errorMessage: "Provider rejected transaction."
@@ -453,31 +582,47 @@ export const purchaseService = action({
         }
         
         await ctx.runMutation(internal.market.updatePurchaseStatus, {
-          userId: user._id, marketTxId, walletTxId, status: "COMPLETED", providerOrderId: `mock_comp_${Date.now()}`
+          userId: user._id, marketTxId, walletTxId, status: "COMPLETED", providerOrderId: `mock_${Date.now()}`,
+          token: args.serviceCategory === 'electricity' ? '1234-5678-9012-3456-7890' : undefined,
+          units: args.serviceCategory === 'electricity' ? '28.5 kWh' : undefined,
         });
-        return { success: true, status: 'COMPLETED', message: 'Transaction successful' };
+        return { 
+          success: true, 
+          status: 'COMPLETED', 
+          message: 'Transaction successful',
+          token: args.serviceCategory === 'electricity' ? '1234-5678-9012-3456-7890' : undefined
+        };
       }
 
-      // 2. Call Clubkonnect API if configured
+      // Live ClubKonnect Purchase Request
       if (CLUBKONNECT_USER_ID && CLUBKONNECT_API_KEY) {
-        const netCode = getClubkonnectNetworkCode(args.network || args.provider);
         let apiUrl = '';
 
         if (args.serviceCategory === 'airtime') {
+          const netCode = getClubkonnectNetworkCode(args.network || args.provider);
           apiUrl = `https://www.nellobytesystems.com/APIAirtimeV1.asp?UserID=${encodeURIComponent(CLUBKONNECT_USER_ID)}&APIKey=${encodeURIComponent(CLUBKONNECT_API_KEY)}&MobileNetwork=${netCode}&Amount=${args.amount}&MobileNumber=${encodeURIComponent(args.customerIdentifier)}&RequestID=${encodeURIComponent(requestId)}`;
         } else if (args.serviceCategory === 'data') {
+          const netCode = getClubkonnectNetworkCode(args.network || args.provider);
           const planCode = args.variationId || '1000';
           apiUrl = `https://www.nellobytesystems.com/APIDatabundleV1.asp?UserID=${encodeURIComponent(CLUBKONNECT_USER_ID)}&APIKey=${encodeURIComponent(CLUBKONNECT_API_KEY)}&MobileNetwork=${netCode}&DataPlan=${encodeURIComponent(planCode)}&MobileNumber=${encodeURIComponent(args.customerIdentifier)}&RequestID=${encodeURIComponent(requestId)}`;
+        } else if (args.serviceCategory === 'electricity') {
+          const discoCode = getClubkonnectDiscoCode(args.provider);
+          const meterType = args.meterType || "Prepaid";
+          apiUrl = `https://www.nellobytesystems.com/APIElectricityV1.asp?UserID=${encodeURIComponent(CLUBKONNECT_USER_ID)}&APIKey=${encodeURIComponent(CLUBKONNECT_API_KEY)}&ElectricCompany=${discoCode}&MeterType=${encodeURIComponent(meterType)}&MeterNo=${encodeURIComponent(args.customerIdentifier)}&Amount=${args.amount}&RequestID=${encodeURIComponent(requestId)}`;
+        } else if (args.serviceCategory === 'cable') {
+          const cableCode = getClubkonnectCableCode(args.provider);
+          const packageId = args.variationId || 'dstv-padi';
+          apiUrl = `https://www.nellobytesystems.com/APICableTVV1.asp?UserID=${encodeURIComponent(CLUBKONNECT_USER_ID)}&APIKey=${encodeURIComponent(CLUBKONNECT_API_KEY)}&CableTV=${cableCode}&Package=${encodeURIComponent(packageId)}&SmartCardNo=${encodeURIComponent(args.customerIdentifier)}&RequestID=${encodeURIComponent(requestId)}`;
         } else {
-          throw new Error('This service category is currently only supported via card or VTU fallback.');
+          throw new Error(`Unsupported service category: ${args.serviceCategory}`);
         }
 
-        console.log(`[Clubkonnect] Sending ${args.serviceCategory} request:`, { netCode, phone: args.customerIdentifier, amount: args.amount, requestId });
+        console.log(`[Clubkonnect] Executing ${args.serviceCategory} request:`, { requestId, customer: args.customerIdentifier, amount: args.amount });
 
         const ckRaw = await fetch(apiUrl);
         const ckResponse = await ckRaw.json().catch(() => null);
 
-        console.log(`[Clubkonnect] Response:`, ckResponse);
+        console.log(`[Clubkonnect] Provider Response:`, ckResponse);
 
         // Status code 100 = ORDER_RECEIVED, 200 = ORDER_COMPLETED
         const statusCode = ckResponse?.statuscode?.toString();
@@ -485,13 +630,24 @@ export const purchaseService = action({
         const isSuccess = statusCode === '100' || statusCode === '200' || statusText.includes('ORDER_RECEIVED') || statusText.includes('ORDER_COMPLETED');
 
         if (isSuccess) {
+          const token = ckResponse?.metertoken || ckResponse?.token;
+          const units = ckResponse?.units;
           await ctx.runMutation(internal.market.updatePurchaseStatus, {
             userId: user._id, marketTxId, walletTxId, status: "COMPLETED",
             providerOrderId: ckResponse?.orderid?.toString() || `ck_${Date.now()}`,
             providerAmount: ckResponse?.amountcharged ? parseFloat(ckResponse.amountcharged) : args.amount,
             providerDiscount: ckResponse?.discount ? parseFloat(ckResponse.discount) : 0,
+            token,
+            units,
           });
-          return { success: true, status: 'COMPLETED', message: 'Transaction successful' };
+          return { 
+            success: true, 
+            status: 'COMPLETED', 
+            message: 'Transaction successful',
+            token,
+            units,
+            orderId: ckResponse?.orderid?.toString()
+          };
         } else {
           const errMsg = ckResponse?.msg || ckResponse?.remark || ckResponse?.status || 'Provider transaction failed';
           await ctx.runMutation(internal.market.updatePurchaseStatus, {
@@ -501,51 +657,30 @@ export const purchaseService = action({
         }
       }
 
-      // Legacy VTU.ng fallback
-      let endpoint = '';
-      let payload: any = { request_id: requestId };
-
-      if (args.serviceCategory === 'airtime') {
-        endpoint = '/api/v2/airtime';
-        payload.phone = args.customerIdentifier;
-        payload.service_id = args.network?.toLowerCase();
-        payload.amount = args.amount;
-      } else if (args.serviceCategory === 'data') {
-        endpoint = '/api/v2/data';
-        payload.phone = args.customerIdentifier;
-        payload.service_id = args.network?.toLowerCase();
-        payload.variation_id = args.variationId;
-      }
-      
-      const vtuResponse = await vtuFetch(endpoint, {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
-
-      const isSuccess = vtuResponse.code === 'success' || vtuResponse.status === 'successful';
-      
-      if (isSuccess) {
-        await ctx.runMutation(internal.market.updatePurchaseStatus, {
-          userId: user._id, marketTxId, walletTxId, status: "COMPLETED", 
-          providerOrderId: vtuResponse.data?.order_id?.toString() || `vtu_${Date.now()}`,
-          providerAmount: vtuResponse.data?.amount_charged,
-          providerDiscount: vtuResponse.data?.discount,
-        });
-        return { success: true, status: 'COMPLETED', message: 'Transaction successful' };
-      } else {
-        await ctx.runMutation(internal.market.updatePurchaseStatus, {
-          userId: user._id, marketTxId, walletTxId, status: "FAILED", errorMessage: vtuResponse.message || "Failed at provider"
-        });
-        return { success: false, status: 'FAILED', message: vtuResponse.message || "Failed at provider" };
-      }
+      throw new Error("ClubKonnect provider is not configured. Set CLUBKONNECT_USER_ID and CLUBKONNECT_API_KEY in backend secrets.");
 
     } catch (e: any) {
-      // In case of a hard network error, we don't know if the provider got it.
-      // We should ideally leave it as PENDING/PROCESSING and let requery/webhook handle it.
       await ctx.runMutation(internal.market.updatePurchaseStatus, {
         userId: user._id, marketTxId, walletTxId, status: "PROCESSING", errorMessage: e.message
       });
       return { success: false, status: 'PROCESSING', message: "Transaction is taking longer than expected. We will notify you once completed." };
+    }
+  }
+});
+
+export const getServiceSettingsInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const record = await ctx.db
+      .query("platformSettings")
+      .withIndex("by_key", (q) => q.eq("key", "bill_payment_services"))
+      .first();
+
+    if (!record) return DEFAULT_SERVICE_SETTINGS;
+    try {
+      return { ...DEFAULT_SERVICE_SETTINGS, ...JSON.parse(record.value) };
+    } catch {
+      return DEFAULT_SERVICE_SETTINGS;
     }
   }
 });

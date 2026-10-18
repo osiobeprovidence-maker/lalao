@@ -22,13 +22,15 @@ import {
   Plug,
   BarChart3,
   MapPin,
-  Megaphone
+  Megaphone,
+  Zap
 } from 'lucide-react';
 
 import { AdminDashboard } from './AdminDashboard';
 import { AdminUsers } from './AdminUsers';
 import { AdminPages } from './AdminPages';
 import { AdminAds } from './AdminAds';
+import { AdminBillPayments } from './AdminBillPayments';
 import { AdminSubscriptions } from './AdminSubscriptions';
 import { AdminTransactions } from './AdminTransactions';
 import { AdminAuditLog } from './AdminAuditLog';
@@ -83,6 +85,7 @@ export const AdminApp: React.FC = () => {
     {
       title: 'Commerce',
       items: [
+        { path: '/admin/bill-payments', label: 'Bill Payments (ClubKonnect)', icon: Zap },
         { path: '/admin/ads', label: 'Ads Management', icon: Megaphone },
         { path: '/admin/subscriptions', label: 'Subscriptions', icon: CreditCard },
         { path: '/admin/transactions', label: 'Transactions', icon: Activity },
@@ -233,6 +236,7 @@ export const AdminApp: React.FC = () => {
             <div className="max-w-6xl mx-auto w-full">
               <Routes>
                 <Route path="/" element={<AdminDashboard />} />
+                <Route path="/bill-payments" element={<AdminBillPayments />} />
                 <Route path="/ads" element={<AdminAds />} />
                 <Route path="/users" element={<AdminUsers />} />
                 <Route path="/pages" element={<AdminPages />} />

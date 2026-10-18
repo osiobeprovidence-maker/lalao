@@ -95,6 +95,10 @@ export const WalletModal: React.FC = () => {
   const performVerifyFunding = useAction(api.wallet.verifyPaystackFunding);
   const performPurchaseService = useAction(api.market.purchaseService);
   const fetchVariations = useAction(api.market.getVariations);
+  const fetchCablePackages = useAction(api.market.getCablePackages);
+  const verifyElectricityMeter = useAction(api.market.verifyElectricityMeter);
+  const verifyCableSmartcard = useAction(api.market.verifyCableSmartcard);
+  const serviceSettings = useQuery(api.clubkonnect.getCustomerServiceSettings);
 
   // Crypto wallet — real Web3 connection
   const web3 = useWeb3Wallet();
@@ -182,9 +186,14 @@ export const WalletModal: React.FC = () => {
   const [marketAmount, setMarketAmount] = useState<string>('');
   const [marketFee, setMarketFee] = useState<number>(0);
   const [marketTxRef, setMarketTxRef] = useState<string>('');
-  const [marketProviderRef, setMarketProviderRef] = useState<string>('');
   const [marketVariations, setMarketVariations] = useState<any[]>([]);
   const [isFetchingVariations, setIsFetchingVariations] = useState(false);
+  const [meterType, setMeterType] = useState<'Prepaid' | 'Postpaid'>('Prepaid');
+  const [verifiedCustomerName, setVerifiedCustomerName] = useState<string>('');
+  const [isVerifyingCustomer, setIsVerifyingCustomer] = useState(false);
+  const [returnedToken, setReturnedToken] = useState<string>('');
+  const [cablePackagesList, setCablePackagesList] = useState<any[]>([]);
+  const [isFetchingCablePackages, setIsFetchingCablePackages] = useState(false);
 
   // Generate a stable reference for the current flow
   const currentPaystackReference = useMemo(() => {
@@ -2473,22 +2482,55 @@ export const WalletModal: React.FC = () => {
                 <div className="flex-1 space-y-4 pt-4">
                   <h3 className="font-black text-theme-primary text-xl mb-4">Pay Bills</h3>
                   
-                  <button onClick={() => navigateTo('market_electricity')} className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active transition-colors group">
+                  <button 
+                    onClick={() => {
+                      setMarketServiceType('electricity');
+                      setMarketProvider('01'); // EKEDC default
+                      setMarketCustomerIdentifier('');
+                      setMarketAmount('');
+                      setVerifiedCustomerName('');
+                      setMarketFee(serviceSettings?.electricity?.fee ?? 100);
+                      navigateTo('market_electricity');
+                    }} 
+                    className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active transition-colors group cursor-pointer w-full text-left"
+                  >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
                         <span className="font-bold text-yellow-600 text-lg">⚡</span>
                       </div>
-                      <span className="font-bold text-theme-primary">Electricity</span>
+                      <div>
+                        <span className="font-bold text-theme-primary block">Electricity</span>
+                        <span className="text-xs text-theme-tertiary">Buy prepaid tokens or pay postpaid bills</span>
+                      </div>
                     </div>
                     <ChevronRight className="w-5 h-5 text-theme-tertiary" />
                   </button>
                   
-                  <button onClick={() => navigateTo('market_cable')} className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active transition-colors group">
+                  <button 
+                    onClick={() => {
+                      setMarketServiceType('cable');
+                      setMarketProvider('dstv');
+                      setMarketCustomerIdentifier('');
+                      setMarketAmount('');
+                      setMarketProduct(null);
+                      setVerifiedCustomerName('');
+                      setMarketFee(serviceSettings?.cable?.fee ?? 100);
+                      setIsFetchingCablePackages(true);
+                      fetchCablePackages({ provider: 'dstv' })
+                        .then(pkgs => setCablePackagesList(pkgs || []))
+                        .finally(() => setIsFetchingCablePackages(false));
+                      navigateTo('market_cable');
+                    }} 
+                    className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active transition-colors group cursor-pointer w-full text-left"
+                  >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
                         <span className="font-bold text-blue-600 text-lg">📺</span>
                       </div>
-                      <span className="font-bold text-theme-primary">Cable TV</span>
+                      <div>
+                        <span className="font-bold text-theme-primary block">Cable TV</span>
+                        <span className="text-xs text-theme-tertiary">DStv, GOtv, and StarTimes renewals</span>
+                      </div>
                     </div>
                     <ChevronRight className="w-5 h-5 text-theme-tertiary" />
                   </button>
@@ -2496,27 +2538,292 @@ export const WalletModal: React.FC = () => {
              </div>
           )}
 
+          {/* MARKET ELECTRICITY */}
+          {currentView === 'market_electricity' && (
+            <div className="p-4 flex flex-col h-full">
+              <div className="flex-1 space-y-4 pt-2">
+                <div className="flex justify-between items-center bg-theme-surface p-3.5 rounded-2xl border border-theme-divider-light">
+                  <div className="text-[11px] font-bold text-theme-secondary uppercase tracking-widest">Available Balance</div>
+                  <div className="font-mono font-black text-sm text-theme-primary">{internalBalance.toLocaleString()} LC</div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Select Disco</label>
+                    <select
+                      value={marketProvider}
+                      onChange={(e) => {
+                        setMarketProvider(e.target.value);
+                        setVerifiedCustomerName('');
+                      }}
+                      className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                    >
+                      <option value="01">Eko Electric (EKEDC)</option>
+                      <option value="02">Ikeja Electric (IKEDC)</option>
+                      <option value="03">Abuja Electric (AEDC)</option>
+                      <option value="04">Kano Electric (KEDCO)</option>
+                      <option value="05">Port Harcourt Electric (PHED)</option>
+                      <option value="06">Jos Electric (JED)</option>
+                      <option value="07">Kaduna Electric (KAEDCO)</option>
+                      <option value="08">Enugu Electric (EEDC)</option>
+                      <option value="09">Benin Electric (BEDC)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Meter Type</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {['Prepaid', 'Postpaid'].map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => {
+                            setMeterType(t as any);
+                            setVerifiedCustomerName('');
+                          }}
+                          className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                            meterType === t
+                              ? 'bg-[#5E43F3] text-white border-[#5E43F3]'
+                              : 'bg-theme-surface border-theme-divider-light text-theme-secondary hover:text-theme-primary'
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Meter Number</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={marketCustomerIdentifier}
+                        onChange={(e) => {
+                          setMarketCustomerIdentifier(e.target.value);
+                          setVerifiedCustomerName('');
+                        }}
+                        placeholder="Enter meter number"
+                        className="flex-1 bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3.5 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                      />
+                      <button
+                        type="button"
+                        disabled={!marketCustomerIdentifier || isVerifyingCustomer}
+                        onClick={async () => {
+                          setIsVerifyingCustomer(true);
+                          try {
+                            const res = await verifyElectricityMeter({
+                              discoCode: marketProvider,
+                              meterNumber: marketCustomerIdentifier,
+                              meterType,
+                            });
+                            setVerifiedCustomerName(res.customerName);
+                          } catch (err: any) {
+                            alert(err.message || 'Could not verify meter number');
+                          } finally {
+                            setIsVerifyingCustomer(false);
+                          }
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-theme-surface-hover hover:bg-theme-surface-active text-xs font-bold text-theme-primary transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        {isVerifyingCustomer ? 'Verifying...' : 'Verify'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {verifiedCustomerName && (
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-2">
+                      <Check className="w-4 h-4 shrink-0" />
+                      <span>Verified: {verifiedCustomerName}</span>
+                    </div>
+                  )}
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Amount (₦)</label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={marketAmount}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || /^\d*$/.test(val)) setMarketAmount(val);
+                      }}
+                      placeholder="e.g. 2000"
+                      className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3.5 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                    />
+                    <p className="text-[10px] text-theme-tertiary">Platform fee: ₦{marketFee}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="shrink-0 pt-4">
+                <button
+                  disabled={!marketCustomerIdentifier || !marketAmount || parseFloat(marketAmount) <= 0 || (parseFloat(marketAmount) + marketFee) > internalBalance}
+                  onClick={() => navigateTo('market_review')}
+                  className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-base hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 cursor-pointer"
+                >
+                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue to Confirmation'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* MARKET CABLE TV */}
+          {currentView === 'market_cable' && (
+            <div className="p-4 flex flex-col h-full">
+              <div className="flex-1 space-y-4 pt-2">
+                <div className="flex justify-between items-center bg-theme-surface p-3.5 rounded-2xl border border-theme-divider-light">
+                  <div className="text-[11px] font-bold text-theme-secondary uppercase tracking-widest">Available Balance</div>
+                  <div className="font-mono font-black text-sm text-theme-primary">{internalBalance.toLocaleString()} LC</div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Select Provider</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {['dstv', 'gotv', 'startimes'].map((p) => (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={async () => {
+                            setMarketProvider(p);
+                            setMarketProduct(null);
+                            setMarketAmount('');
+                            setVerifiedCustomerName('');
+                            setIsFetchingCablePackages(true);
+                            try {
+                              const pkgs = await fetchCablePackages({ provider: p });
+                              setCablePackagesList(pkgs || []);
+                            } finally {
+                              setIsFetchingCablePackages(false);
+                            }
+                          }}
+                          className={`py-2.5 rounded-xl text-xs font-bold border uppercase transition-all cursor-pointer ${
+                            marketProvider.toLowerCase() === p
+                              ? 'bg-[#5E43F3] text-white border-[#5E43F3]'
+                              : 'bg-theme-surface border-theme-divider-light text-theme-secondary hover:text-theme-primary'
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Choose Package</label>
+                    {isFetchingCablePackages ? (
+                      <p className="text-xs text-theme-tertiary">Loading live packages...</p>
+                    ) : (
+                      <select
+                        value={marketProduct?.packageId || ''}
+                        onChange={(e) => {
+                          const chosen = cablePackagesList.find(pkg => pkg.packageId === e.target.value);
+                          if (chosen) {
+                            setMarketProduct({ planName: chosen.packageName, variationId: chosen.packageId });
+                            setMarketAmount(chosen.price.toString());
+                          }
+                        }}
+                        className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                      >
+                        <option value="">Select a package</option>
+                        {cablePackagesList.map((pkg) => (
+                          <option key={pkg.packageId} value={pkg.packageId}>
+                            {pkg.packageName} — ₦{pkg.price.toLocaleString()}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Smartcard / IUC Number</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={marketCustomerIdentifier}
+                        onChange={(e) => {
+                          setMarketCustomerIdentifier(e.target.value);
+                          setVerifiedCustomerName('');
+                        }}
+                        placeholder="Enter IUC / Smartcard number"
+                        className="flex-1 bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3.5 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                      />
+                      <button
+                        type="button"
+                        disabled={!marketCustomerIdentifier || isVerifyingCustomer}
+                        onClick={async () => {
+                          setIsVerifyingCustomer(true);
+                          try {
+                            const res = await verifyCableSmartcard({
+                              cableProvider: marketProvider,
+                              smartcardNumber: marketCustomerIdentifier,
+                            });
+                            setVerifiedCustomerName(res.customerName);
+                          } catch (err: any) {
+                            alert(err.message || 'Could not verify smartcard number');
+                          } finally {
+                            setIsVerifyingCustomer(false);
+                          }
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-theme-surface-hover hover:bg-theme-surface-active text-xs font-bold text-theme-primary transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        {isVerifyingCustomer ? 'Verifying...' : 'Verify'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {verifiedCustomerName && (
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-2">
+                      <Check className="w-4 h-4 shrink-0" />
+                      <span>Subscriber: {verifiedCustomerName}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="shrink-0 pt-4">
+                <button
+                  disabled={!marketCustomerIdentifier || !marketAmount || parseFloat(marketAmount) <= 0 || (parseFloat(marketAmount) + marketFee) > internalBalance}
+                  onClick={() => navigateTo('market_review')}
+                  className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-base hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 cursor-pointer"
+                >
+                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue to Confirmation'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* MARKET REVIEW */}
           {currentView === 'market_review' && (
              <div className="p-4 flex flex-col h-full">
-                <h3 className="font-black text-theme-primary text-2xl mb-6">Confirm {marketServiceType === 'airtime' ? 'Airtime' : marketServiceType === 'data' ? 'Data' : 'Payment'}</h3>
+                <h3 className="font-black text-theme-primary text-2xl mb-6">Confirm {marketServiceType === 'airtime' ? 'Airtime' : marketServiceType === 'data' ? 'Data' : marketServiceType === 'electricity' ? 'Electricity' : 'Cable TV'}</h3>
                 
                 <div className="flex-1 space-y-4">
                   <div className="bg-theme-surface rounded-2xl p-5 border border-theme-divider-light space-y-4">
                     <div className="flex justify-between items-center">
-                      <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Network/Provider</div>
-                      <div className="font-bold text-theme-primary">{marketProvider}</div>
+                      <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Provider / Biller</div>
+                      <div className="font-bold text-theme-primary uppercase">{marketProvider}</div>
                     </div>
                     <div className="border-t border-theme-divider-light"></div>
                     <div className="flex justify-between items-center">
-                      <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Recipient</div>
+                      <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Recipient / Identifier</div>
                       <div className="font-bold text-theme-primary">{marketCustomerIdentifier}</div>
                     </div>
+                    {verifiedCustomerName && (
+                      <>
+                        <div className="border-t border-theme-divider-light"></div>
+                        <div className="flex justify-between items-center">
+                          <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Account Name</div>
+                          <div className="font-bold text-emerald-600">{verifiedCustomerName}</div>
+                        </div>
+                      </>
+                    )}
                     {marketProduct && marketProduct.planName && (
                       <>
                         <div className="border-t border-theme-divider-light"></div>
                         <div className="flex justify-between items-center">
-                          <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Plan</div>
+                          <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Package</div>
                           <div className="font-bold text-theme-primary">{marketProduct.planName}</div>
                         </div>
                       </>
@@ -2527,8 +2834,13 @@ export const WalletModal: React.FC = () => {
                       <div className="font-black text-theme-primary">₦{parseFloat(marketAmount).toLocaleString()}</div>
                     </div>
                     <div className="flex justify-between items-center">
-                      <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Fee</div>
+                      <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Platform Fee</div>
                       <div className="font-bold text-theme-primary">₦{marketFee.toLocaleString()}</div>
+                    </div>
+                    <div className="border-t border-theme-divider-light"></div>
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Total Payable</div>
+                      <div className="font-black text-base text-[#5E43F3]">₦{(parseFloat(marketAmount) + marketFee).toLocaleString()}</div>
                     </div>
                   </div>
                   
@@ -2539,8 +2851,8 @@ export const WalletModal: React.FC = () => {
                 </div>
 
                 <div className="shrink-0 pt-6 flex gap-3">
-                   <button onClick={goBack} className="flex-1 py-4 rounded-xl bg-theme-surface-hover text-theme-primary font-bold hover:bg-theme-surface-active transition-colors">Cancel</button>
-                   <button onClick={() => navigateTo('market_pin')} className="flex-[2] py-4 rounded-xl bg-[#5E43F3] text-white font-bold hover:bg-indigo-600 transition-colors shadow-lg">Confirm purchase</button>
+                   <button onClick={goBack} className="flex-1 py-4 rounded-xl bg-theme-surface-hover text-theme-primary font-bold hover:bg-theme-surface-active transition-colors cursor-pointer">Cancel</button>
+                   <button onClick={() => navigateTo('market_pin')} className="flex-[2] py-4 rounded-xl bg-[#5E43F3] text-white font-bold hover:bg-indigo-600 transition-colors shadow-lg cursor-pointer">Confirm purchase</button>
                 </div>
              </div>
           )}
@@ -2567,11 +2879,11 @@ export const WalletModal: React.FC = () => {
                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 'empty', 0, 'del'].map((num, i) => (
                    num === 'empty' ? <div key={i} /> :
                    num === 'del' ? (
-                     <button key={i} onClick={() => setPin(p => p.slice(0, -1))} className="h-14 flex items-center justify-center text-theme-primary font-bold hover:bg-theme-surface-hover rounded-full transition-colors">
+                     <button key={i} onClick={() => setPin(p => p.slice(0, -1))} className="h-14 flex items-center justify-center text-theme-primary font-bold hover:bg-theme-surface-hover rounded-full transition-colors cursor-pointer">
                        <ArrowLeft className="w-6 h-6" />
                      </button>
                    ) : (
-                     <button key={i} onClick={() => setPin(p => (p.length < 4 ? p + num : p))} className="h-14 flex items-center justify-center text-2xl font-bold text-theme-primary hover:bg-theme-surface-hover rounded-full transition-colors">
+                     <button key={i} onClick={() => setPin(p => (p.length < 4 ? p + num : p))} className="h-14 flex items-center justify-center text-2xl font-bold text-theme-primary hover:bg-theme-surface-hover rounded-full transition-colors cursor-pointer">
                        {num}
                      </button>
                    )
@@ -2591,10 +2903,12 @@ export const WalletModal: React.FC = () => {
                        variationId: marketProduct ? marketProduct.variationId : undefined,
                        amount: parseFloat(marketAmount),
                        fee: marketFee,
-                       pin: pin
+                       pin: pin,
+                       meterType: marketServiceType === 'electricity' ? meterType : undefined,
                      });
                      
                      if (res.success) {
+                       if (res.token) setReturnedToken(res.token);
                        navigateTo('market_success');
                      } else {
                        setWithdrawError(res.message || 'Transaction failed or is pending.');
@@ -2606,7 +2920,7 @@ export const WalletModal: React.FC = () => {
                      setPin('');
                    }
                  }}
-                 className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-lg hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50"
+                 className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-lg hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 cursor-pointer"
                >
                  {isProcessing ? 'Processing...' : 'Pay'}
                </button>
@@ -2616,18 +2930,34 @@ export const WalletModal: React.FC = () => {
           {/* MARKET SUCCESS */}
           {currentView === 'market_success' && (
              <div className="p-4 flex flex-col h-full text-center pb-12">
-               <div className="flex-1 flex flex-col items-center justify-center pt-12">
-                 <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mb-6 border border-green-100">
-                   <Check className="w-12 h-12 text-green-500" />
+               <div className="flex-1 flex flex-col items-center justify-center pt-8">
+                 <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-5 border border-emerald-500/20">
+                   <Check className="w-10 h-10 text-emerald-600" />
                  </div>
-                 <h3 className="font-black text-theme-primary text-2xl mb-4">Transaction successful</h3>
-                 <div className="font-black text-2xl text-theme-primary mb-2">₦{parseFloat(marketAmount).toLocaleString()} {marketProvider} {marketServiceType}</div>
-                 <p className="text-theme-secondary font-semibold text-sm max-w-[280px] mb-8 mx-auto">
-                   Sent to {marketCustomerIdentifier}
+                 <h3 className="font-black text-theme-primary text-2xl mb-2">Transaction Successful</h3>
+                 <div className="font-black text-2xl text-[#5E43F3] mb-1">
+                   ₦{(parseFloat(marketAmount) + marketFee).toLocaleString()}
+                 </div>
+                 <p className="text-xs text-theme-tertiary uppercase font-bold tracking-wider mb-2">
+                   {marketProvider} {marketServiceType.toUpperCase()}
                  </p>
+                 <p className="text-theme-secondary font-medium text-xs max-w-[280px] mb-6 mx-auto">
+                   Delivered to {marketCustomerIdentifier}
+                 </p>
+
+                 {/* Token Display for Electricity */}
+                 {returnedToken && (
+                   <div className="w-full max-w-sm p-4 rounded-2xl bg-theme-surface border-2 border-emerald-500/30 text-center space-y-1 mb-6">
+                     <span className="text-[10px] font-bold uppercase tracking-wider text-theme-tertiary">Electricity Token</span>
+                     <p className="text-base sm:text-lg font-mono font-black text-emerald-600 tracking-wider select-all">
+                       {returnedToken}
+                     </p>
+                     <p className="text-[10px] text-theme-tertiary">Enter this token on your physical meter keypad</p>
+                   </div>
+                 )}
                  
-                 <div className="w-full">
-                   <button onClick={handleClose} className="w-full py-4 rounded-xl bg-theme-surface-hover text-theme-primary font-bold hover:bg-theme-surface-active transition-colors">
+                 <div className="w-full max-w-sm">
+                   <button onClick={handleClose} className="w-full py-3.5 rounded-xl bg-[#5E43F3] text-white font-bold text-sm hover:bg-[#4E34E0] transition-colors cursor-pointer">
                      Done
                    </button>
                  </div>
