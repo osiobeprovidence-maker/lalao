@@ -1,11 +1,17 @@
-const CACHE_NAME = 'lalao-shell-v1';
+const CACHE_NAME = 'lalao-shell-v2';
 const STATIC_ASSETS = [
   '/index.html',
   '/manifest.json',
+  '/manifest.webmanifest',
   '/icon-192.png',
   '/icon-512.png',
+  '/icon-maskable-192.png',
+  '/icon-maskable-512.png',
+  '/apple-touch-icon.png',
+  '/app-icon.png',
   '/mascot.png',
   '/favicon.ico',
+  '/favicon.png',
 ];
 
 self.addEventListener('install', (event) => {
