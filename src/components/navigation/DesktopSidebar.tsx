@@ -18,8 +18,8 @@ import {
   Download,
   Sparkles,
   Briefcase,
-  Flame,
   History,
+  Megaphone,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useLalao } from '../../context/LalaoContext';
@@ -169,6 +169,7 @@ export const DesktopSidebar: React.FC = () => {
   ] as const;
 
   const accountNav = [
+    { id: 'ads', label: 'Lalao Ads', icon: Megaphone },
     { id: 'wallet', label: 'Wallet', icon: Wallet },
     { id: 'orders', label: 'Order History', icon: ShoppingBag },
     { id: 'install-app', label: 'Install App', icon: Download },
@@ -293,6 +294,11 @@ export const DesktopSidebar: React.FC = () => {
                       type="button"
                       role="menuitem"
                       onClick={() => {
+                        if (id === 'ads') {
+                          setActiveTab('ads');
+                          const mainEl = document.querySelector('main');
+                          if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'instant' });
+                        }
                         if (id === 'wallet') setIsWalletModalOpen(true);
                         if (id === 'orders') setIsShoppingHistoryOpen(true);
                         if (id === 'install-app') setIsInstallModalOpen(true);

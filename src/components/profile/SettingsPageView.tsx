@@ -11,9 +11,9 @@ import {
   BadgeCheck,
   FileCheck,
   ShieldAlert,
-  Download,
   LogOut,
   ChevronRight,
+  Megaphone,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
@@ -403,6 +403,22 @@ export const SettingsPageView: React.FC = () => {
                     Creator & Verification
                   </h3>
                 </div>
+
+                <SettingsRow
+                  id="row-settings-ads-manager"
+                  icon={Megaphone}
+                  title="Lalao Ads Manager"
+                  description="Promote posts, create image/video ads & track campaign performance"
+                  badge={
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-[#5E43F3]/10 text-[#5E43F3]">
+                      Self-Service
+                    </span>
+                  }
+                  onClick={() => {
+                    handleClose();
+                    setActiveTab('ads');
+                  }}
+                />
 
                 <SettingsRow
                   id="row-settings-creator-subscriptions"

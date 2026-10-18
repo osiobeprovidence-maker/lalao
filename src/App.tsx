@@ -56,6 +56,7 @@ import { MySubscriptionsModal } from './components/subscriptions/MySubscriptions
 import { CreatorHubView } from './components/creators/CreatorHubModal';
 import { VerificationPageView } from './components/creators/VerificationPageView';
 import { BetaTesterView } from './components/beta/BetaTesterView';
+import { AdvertiserDashboard } from './components/ads/AdvertiserDashboard';
 import { InstallAppModal } from './components/common/InstallAppModal';
 import { Check, Plus } from 'lucide-react';
 
@@ -425,6 +426,11 @@ const LalaoAppContent: React.FC = () => {
             {activeTab === 'beta-tester' && (
               <div key="tab-beta-tester" className="animate-in fade-in duration-200 w-full bg-transparent">
                 <BetaTesterView />
+              </div>
+            )}
+            {activeTab === 'ads' && (
+              <div key="tab-ads" className="animate-in fade-in duration-200 w-full bg-transparent pb-24">
+                <AdvertiserDashboard />
               </div>
             )}
             {activeTab === 'following' && (

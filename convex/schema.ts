@@ -589,6 +589,12 @@ export default defineSchema({
       v.literal("subscription_payment_failed"),
       v.literal("missed_call"),
       v.literal("incoming_call"),
+      v.literal("ad_submitted"),
+      v.literal("ad_payment_confirmed"),
+      v.literal("ad_approved"),
+      v.literal("ad_rejected"),
+      v.literal("ad_paused"),
+      v.literal("ad_completed"),
     ),
     postId: v.optional(v.id("posts")),
     commentId: v.optional(v.id("comments")),
@@ -1715,5 +1721,172 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_time", ["userId", "timestamp"])
     .index("by_user_query", ["userId", "query"]),
+
+  // ==========================================
+  // LALAO ADS — PRODUCTION ADVERTISING DOMAIN
+  // ==========================================
+
+  // Advertising campaigns created by users or businesses
+  adCampaigns: defineTable({
+    userId: v.id("users"),
+    pageId: v.optional(v.id("pages")), // Optional business or advertiser page profile
+    name: v.string(),
+    objective: v.union(
+      v.literal("reach"),
+      v.literal("website_visits"),
+      v.literal("engagement"),
+      v.literal("local_discovery")
+    ),
+    format: v.union(
+      v.literal("sponsored_post"),
+      v.literal("promoted_post"),
+      v.literal("image_ad"),
+      v.literal("video_ad")
+    ),
+    // Lifecycle states
+    status: v.union(
+      v.literal("draft"),
+      v.literal("pending_payment"),
+      v.literal("pending_review"),
+      v.literal("approved"),
+      v.literal("scheduled"),
+      v.literal("active"),
+      v.literal("paused"),
+      v.literal("rejected"),
+      v.literal("completed"),
+      v.literal("cancelled"),
+      v.literal("payment_failed")
+    ),
+    moderationStatus: v.union(
+      v.literal("unreviewed"),
+      v.literal("auto_flagged"),
+      v.literal("pending_admin"),
+      v.literal("approved"),
+      v.literal("rejected"),
+      v.literal("suspended")
+    ),
+    moderationReason: v.optional(v.string()),
+    reviewNote: v.optional(v.string()),
+    reviewedBy: v.optional(v.id("users")),
+    reviewedAt: v.optional(v.number()),
+
+    // Format B: Existing post reference
+    promotedPostId: v.optional(v.id("posts")),
+
+    // Creative Content (Formats A, C, D and overrides)
+    creative: v.object({
+      headline: v.string(),
+      description: v.optional(v.string()),
+      mediaUrl: v.optional(v.string()),
+      mediaStorageId: v.optional(v.union(v.id("_storage"), v.null())),
+      mediaType: v.optional(v.union(v.literal("image"), v.literal("video"))),
+      ctaLabel: v.union(
+        v.literal("Learn More"),
+        v.literal("Sign Up"),
+        v.literal("Shop Now"),
+        v.literal("Contact Us"),
+        v.literal("Visit Profile"),
+        v.literal("Order Now"),
+        v.literal("Book Now"),
+        v.literal("View Post")
+      ),
+      destinationUrl: v.string(), // Must be valid https:// URL or internal lalao route
+    }),
+
+    // Audience targeting
+    targeting: v.object({
+      targetType: v.union(v.literal("local_radius"), v.literal("city_state"), v.literal("broad_nation")),
+      locationName: v.optional(v.string()),
+      subArea: v.optional(v.string()),
+      radiusKm: v.optional(v.number()),
+      latitude: v.optional(v.number()),
+      longitude: v.optional(v.number()),
+      stateOrRegion: v.optional(v.string()),
+      country: v.string(), // e.g. "Nigeria"
+    }),
+
+    // Budget & Pricing (Smallest currency unit: kobo for NGN)
+    budget: v.object({
+      currency: v.string(), // e.g. "NGN"
+      totalBudgetKobo: v.number(), // Integer kobo, e.g. 500000 = 5,000 NGN
+      dailyLimitKobo: v.optional(v.number()),
+      spentKobo: v.number(), // Authoritative spend ledger total
+    }),
+
+    // Schedule
+    schedule: v.object({
+      startDate: v.number(), // Timestamp ms
+      endDate: v.number(),   // Timestamp ms
+    }),
+
+    // High-level aggregates cached for fast dashboard rendering
+    impressionsCount: v.number(),
+    clicksCount: v.number(),
+
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_status", ["status"])
+    .index("by_moderation", ["moderationStatus"])
+    .index("by_status_moderation", ["status", "moderationStatus"])
+    .index("by_promoted_post", ["promotedPostId"]),
+
+  // Campaign Payments (Paystack transactions)
+  adPayments: defineTable({
+    campaignId: v.id("adCampaigns"),
+    userId: v.id("users"),
+    amountKobo: v.number(), // Integer kobo
+    currency: v.string(), // e.g. "NGN"
+    reference: v.string(), // Unique Paystack transaction reference
+    status: v.union(
+      v.literal("pending"),
+      v.literal("successful"),
+      v.literal("failed"),
+      v.literal("refunded")
+    ),
+    paystackAccessCode: v.optional(v.string()),
+    paystackTransactionId: v.optional(v.string()),
+    paidAt: v.optional(v.number()),
+    gatewayResponse: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_reference", ["reference"])
+    .index("by_campaign", ["campaignId"])
+    .index("by_user", ["userId"]),
+
+  // Deduplicated Ad Events (Impressions & Clicks for fraud prevention & analytics)
+  adEvents: defineTable({
+    campaignId: v.id("adCampaigns"),
+    eventType: v.union(v.literal("impression"), v.literal("click")),
+    viewerUserId: v.optional(v.id("users")), // When authenticated
+    viewerSessionId: v.string(), // Deduplication key (userId or device/session fingerprint)
+    chargeKobo: v.number(), // Amount debited for this event (0 for prepaid impression, or per-cost model)
+    timestamp: v.number(),
+    dateBucket: v.string(), // YYYY-MM-DD for fast timeseries aggregation
+    locationName: v.optional(v.string()),
+  })
+    .index("by_campaign", ["campaignId"])
+    .index("by_campaign_date", ["campaignId", "dateBucket"])
+    .index("by_campaign_dedup", ["campaignId", "eventType", "viewerSessionId", "dateBucket"]),
+
+  // Moderation Audit Trail
+  adModerationLogs: defineTable({
+    campaignId: v.id("adCampaigns"),
+    reviewerId: v.id("users"),
+    action: v.union(
+      v.literal("auto_flag"),
+      v.literal("approved"),
+      v.literal("rejected"),
+      v.literal("suspended"),
+      v.literal("resumed")
+    ),
+    reason: v.optional(v.string()),
+    note: v.optional(v.string()),
+    timestamp: v.number(),
+  })
+    .index("by_campaign", ["campaignId"]),
 });
+
 

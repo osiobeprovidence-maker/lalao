@@ -89,6 +89,22 @@ http.route({
         return new Response("Ignored non-NGN currency", { status: 200 });
       }
 
+      // Check if reference belongs to Lalao Ads
+      if (typeof reference === "string" && reference.startsWith("LALAO_AD_")) {
+        try {
+          await ctx.runMutation(internal.adActions.settleAdPayment, {
+            reference,
+            paystackAmountKobo: amountKobo,
+            paystackTransactionId: transactionId,
+            gatewayResponse: data.data.gateway_response || "Webhook verified",
+          });
+          return new Response("Ad Payment Success", { status: 200 });
+        } catch (error: any) {
+          console.error("Paystack Ad webhook error:", error);
+          return new Response("Processed with error: " + error.message, { status: 200 });
+        }
+      }
+
       try {
         await ctx.runMutation(internal.wallet.settleWalletFunding, {
           reference,

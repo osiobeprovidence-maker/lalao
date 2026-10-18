@@ -21,12 +21,14 @@ import {
   Star,
   Plug,
   BarChart3,
-  MapPin
+  MapPin,
+  Megaphone
 } from 'lucide-react';
 
 import { AdminDashboard } from './AdminDashboard';
 import { AdminUsers } from './AdminUsers';
 import { AdminPages } from './AdminPages';
+import { AdminAds } from './AdminAds';
 import { AdminSubscriptions } from './AdminSubscriptions';
 import { AdminTransactions } from './AdminTransactions';
 import { AdminAuditLog } from './AdminAuditLog';
@@ -81,6 +83,7 @@ export const AdminApp: React.FC = () => {
     {
       title: 'Commerce',
       items: [
+        { path: '/admin/ads', label: 'Ads Management', icon: Megaphone },
         { path: '/admin/subscriptions', label: 'Subscriptions', icon: CreditCard },
         { path: '/admin/transactions', label: 'Transactions', icon: Activity },
         { path: '/admin/wallet', label: 'Wallet Activity', icon: Wallet },
@@ -230,6 +233,7 @@ export const AdminApp: React.FC = () => {
             <div className="max-w-6xl mx-auto w-full">
               <Routes>
                 <Route path="/" element={<AdminDashboard />} />
+                <Route path="/ads" element={<AdminAds />} />
                 <Route path="/users" element={<AdminUsers />} />
                 <Route path="/pages" element={<AdminPages />} />
                 <Route path="/subscriptions" element={<AdminSubscriptions />} />

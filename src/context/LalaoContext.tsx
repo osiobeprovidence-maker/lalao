@@ -66,7 +66,8 @@ export type NavTab =
   | 'creator-hub'
   | 'sounds'
   | 'plum'
-  | 'recent-searches';
+  | 'recent-searches'
+  | 'ads';
 export type FeedTab = 'for_you' | 'following' | 'community' | 'nearby' | (string & {});
 export type CreateOption = 'post' | 'rally' | 'page' | 'cycle' | 'group-chat' | 'group-cycle' | null;
 

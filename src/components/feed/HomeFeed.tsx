@@ -19,6 +19,9 @@ import {
 import { CommunityDirectory } from './CommunityDirectory';
 import { useEventDistribution } from '../../services/events/EventDistributionContext';
 import { EventFeedCard } from '../events/EventFeedCard';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { SponsoredPostCard } from './SponsoredPostCard';
 
 
 export const HomeFeed: React.FC = () => {
@@ -76,6 +79,13 @@ const FeedSkeleton: React.FC = () => {
 
   const { externalEvents } = useEventDistribution();
   const activeEvents = externalEvents.filter(e => e.status === 'active');
+
+  // Fetch verified & targeted sponsored ad placement
+  const sponsoredPlacement = useQuery(api.ads.getSponsoredPlacement, {
+    latitude: location.coords?.lat,
+    longitude: location.coords?.lng,
+    locationName: location.name,
+  });
 
   // Pull to refresh state
   const [followingSubTab, setFollowingSubTab] = useState<string>('All');
@@ -538,6 +548,12 @@ const FeedSkeleton: React.FC = () => {
               {filteredPosts.map((post, index) => (
                 <React.Fragment key={post.id}>
                   <PostItem post={post} showLocation={feedTab === 'nearby'} />
+                  {/* Inject verified sponsored ad card after 2nd post */}
+                  {index === 2 && sponsoredPlacement && (
+                    <div className="pt-4 pb-2 px-2 sm:px-0">
+                      <SponsoredPostCard placement={sponsoredPlacement} />
+                    </div>
+                  )}
                   {/* Inject an event card every 4 posts if there are active events */
                   index === 1 && activeEvents.length > 0 && feedTab === 'for_you' && (
                     <div className="pt-6 pb-2 px-2 sm:px-0">
