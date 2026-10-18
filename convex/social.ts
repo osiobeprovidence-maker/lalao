@@ -3047,10 +3047,35 @@ export const sendMessage = mutation({
     }
 
     if (recipientsToNotify.length > 0) {
-      // Find sender name for the push notification
-      const senderName = args.pageSenderId 
-        ? (await ctx.db.get(args.pageSenderId))?.name 
-        : currentUser.name;
+      // Find sender name and avatar for the push notification
+      let senderName = currentUser.name;
+      let senderAvatar: string | undefined;
+
+      if (args.pageSenderId) {
+        const page = await ctx.db.get(args.pageSenderId);
+        if (page) {
+          senderName = page.name;
+          if (page.avatar) {
+            senderAvatar = page.avatar;
+          }
+        }
+      } else {
+        if (currentUser.avatarUrl) {
+          senderAvatar = currentUser.avatarUrl;
+        } else if (currentUser.avatarStorageId) {
+          try {
+            const signed = await ctx.storage.getUrl(currentUser.avatarStorageId);
+            if (signed) senderAvatar = signed;
+          } catch (e) {
+            console.warn('[social] Failed to resolve sender avatarStorageId for push:', e);
+          }
+        }
+      }
+
+      // Ensure avatar is a valid absolute HTTPS URL; otherwise omit so default icon is used
+      if (senderAvatar && !senderAvatar.startsWith('https://')) {
+        senderAvatar = undefined;
+      }
 
       const previewText = args.text.trim().slice(0, 100);
       const pushTitle = conversation.groupChatId
@@ -3069,7 +3094,7 @@ export const sendMessage = mutation({
           createdAt: Date.now(),
         });
 
-        // Dispatch native web push
+        // Dispatch native web push / OneSignal with sender avatar
         await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
           recipientId: recId,
           title: pushTitle,
@@ -3077,6 +3102,7 @@ export const sendMessage = mutation({
           url: `/app?chat=${args.conversationId}`,
           conversationId: args.conversationId,
           messageId: messageId.toString(),
+          icon: senderAvatar,
         });
       }
     }

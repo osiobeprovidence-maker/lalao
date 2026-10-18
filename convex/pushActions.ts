@@ -36,6 +36,10 @@ export const dispatchPush = internalAction({
 
     if (oneSignalApiKey) {
       try {
+        const defaultAppIcon = "/icon-192.png";
+        const effectiveIcon = (icon && icon.trim().length > 0) ? icon.trim() : defaultAppIcon;
+        const effectiveBadge = (badge && badge.trim().length > 0) ? badge.trim() : "/icon-192.png";
+
         const payload: Record<string, any> = {
           app_id: oneSignalAppId,
           target_channel: "push",
@@ -46,8 +50,9 @@ export const dispatchPush = internalAction({
           contents: { en: body },
           url: url ?? "/app",
           web_url: url ?? "/app",
-          chrome_web_icon: icon ?? "/mascot.png",
-          chrome_web_badge: badge ?? "/mascot.png",
+          chrome_web_icon: effectiveIcon,
+          firefox_icon: effectiveIcon,
+          chrome_web_badge: effectiveBadge,
           data: {
             url: url ?? "/app",
             conversationId,
@@ -59,11 +64,17 @@ export const dispatchPush = internalAction({
           payload.web_push_topic = tag;
         }
 
+        const authHeader = oneSignalApiKey.startsWith("os_v2_")
+          ? `Key ${oneSignalApiKey}`
+          : oneSignalApiKey.startsWith("Basic ") || oneSignalApiKey.startsWith("Key ")
+            ? oneSignalApiKey
+            : `Key ${oneSignalApiKey}`;
+
         const res = await fetch("https://api.onesignal.com/notifications?c=push", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Basic ${oneSignalApiKey}`,
+            Authorization: authHeader,
           },
           body: JSON.stringify(payload),
         });
@@ -105,8 +116,8 @@ export const dispatchPush = internalAction({
           title,
           body,
           url: url ?? "/",
-          icon: icon ?? "/mascot.png",
-          badge: badge ?? "/mascot.png",
+          icon: icon ?? "/icon-192.png",
+          badge: badge ?? "/icon-192.png",
           tag: tag ?? (conversationId ? `chat-${conversationId}` : undefined),
           data: {
             url: url ?? "/",

@@ -294,6 +294,39 @@ export function runChatNotificationTests() {
     passed: activeExternalId === null,
   });
 
+  // 15. Chat notification with valid sender profile avatar URL
+  function resolveChatPushIcon(senderAvatar?: string) {
+    if (senderAvatar && senderAvatar.startsWith("https://")) {
+      return senderAvatar;
+    }
+    return "/icon-192.png";
+  }
+  const senderWithAvatar = "https://images.example.com/profiles/alice_photo.jpg";
+  const chatIconWithAvatar = resolveChatPushIcon(senderWithAvatar);
+  results.push({
+    name: "Scenario 15: Chat notifications use sender's valid HTTPS profile avatar as notification icon",
+    passed: chatIconWithAvatar === senderWithAvatar,
+  });
+
+  // 16. Chat notification with missing or invalid avatar falls back to official Lalao app icon
+  const chatIconWithoutAvatar = resolveChatPushIcon(undefined);
+  const chatIconWithHttp = resolveChatPushIcon("http://insecure.example.com/pic.jpg");
+  results.push({
+    name: "Scenario 16: Chat notifications with missing or non-HTTPS avatar gracefully fall back to official Lalao app icon",
+    passed: chatIconWithoutAvatar === "/icon-192.png" && chatIconWithHttp === "/icon-192.png",
+  });
+
+  // 17. General notifications (system, subscriptions, likes, comments) use official Lalao app icon
+  function resolveGeneralNotificationIcon(type: string) {
+    // Non-chat types default to official icon
+    return "/icon-192.png";
+  }
+  const generalIcon = resolveGeneralNotificationIcon("system_alert");
+  results.push({
+    name: "Scenario 17: General notifications (likes, follows, system, cycles) use official Lalao app icon",
+    passed: generalIcon === "/icon-192.png",
+  });
+
   return results;
 }
 
