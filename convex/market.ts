@@ -684,3 +684,88 @@ export const getServiceSettingsInternal = internalQuery({
     }
   }
 });
+
+/**
+ * Process ClubKonnect inbound webhook callbacks
+ */
+export const processWebhook = internalMutation({
+  args: {
+    requestId: v.string(),
+    providerOrderId: v.optional(v.string()),
+    status: v.optional(v.string()),
+    rawPayload: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const marketTx = await ctx.db
+      .query("marketTransactions")
+      .withIndex("by_request_id", (q) => q.eq("requestId", args.requestId))
+      .first();
+
+    if (!marketTx) {
+      console.warn(`Webhook: market transaction for request ${args.requestId} not found.`);
+      return;
+    }
+
+    if (marketTx.status === "COMPLETED" || marketTx.status === "REFUNDED") {
+      // Idempotency: Already finalized
+      return;
+    }
+
+    const walletTx = await ctx.db
+      .query("walletTransactions")
+      .withIndex("by_reference", (q) => q.eq("reference", `VTU-${args.requestId}`))
+      .first();
+
+    const normalizedStatus = (args.status || "").toLowerCase();
+
+    if (normalizedStatus.includes("completed") || normalizedStatus.includes("success") || normalizedStatus === "200") {
+      await ctx.db.patch(marketTx._id, {
+        status: "COMPLETED",
+        providerOrderId: args.providerOrderId || marketTx.providerOrderId,
+        updatedAt: Date.now(),
+        completedAt: Date.now(),
+      });
+      if (walletTx) {
+        await ctx.db.patch(walletTx._id, { status: "completed" });
+      }
+    } else if (normalizedStatus.includes("refund") || normalizedStatus.includes("failed")) {
+      // Refund user wallet
+      const wallet = await ctx.db
+        .query("userWallets")
+        .withIndex("by_user", (q) => q.eq("userId", marketTx.userId))
+        .first();
+
+      if (wallet) {
+        await ctx.db.patch(wallet._id, {
+          balance: wallet.balance + marketTx.totalAmount,
+          updatedAt: Date.now(),
+        });
+        await ctx.db.insert("walletTransactions", {
+          walletId: wallet._id,
+          userId: marketTx.userId,
+          amount: marketTx.totalAmount,
+          type: "MARKET_REFUND",
+          status: "completed",
+          description: `Provider refund for ${marketTx.category} - ${marketTx.recipient}`,
+          assetType: "LALAO_CREDITS",
+          currency: "LC",
+          reference: `REF-VTU-${args.requestId}`,
+          createdAt: Date.now(),
+        });
+      }
+
+      await ctx.db.patch(marketTx._id, {
+        status: "REFUNDED",
+        providerOrderId: args.providerOrderId || marketTx.providerOrderId,
+        errorMessage: `Provider returned status: ${args.status}`,
+        updatedAt: Date.now(),
+        refundedAt: Date.now(),
+      });
+
+      if (walletTx) {
+        await ctx.db.patch(walletTx._id, { status: "refunded" });
+      }
+    }
+  },
+});
+

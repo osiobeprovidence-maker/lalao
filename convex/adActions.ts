@@ -228,7 +228,7 @@ export const verifyCampaignPayment = action({
   args: {
     reference: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<any> => {
     const secretKey = process.env.PAYSTACK_SECRET_KEY;
 
     if (!secretKey) {
@@ -251,7 +251,7 @@ export const verifyCampaignPayment = action({
     const paystackTransactionId = data.data.id?.toString();
     const gatewayResponse = data.data.gateway_response;
 
-    const result = await ctx.runMutation(internal.adActions.settleAdPayment, {
+    const result: any = await ctx.runMutation(internal.adActions.settleAdPayment, {
       reference: args.reference,
       paystackAmountKobo,
       paystackTransactionId,

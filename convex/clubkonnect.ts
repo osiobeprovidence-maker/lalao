@@ -1,4 +1,4 @@
-import { query, mutation, action } from "./_generated/server";
+import { query, mutation, action, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { requireAdmin } from "./admin";
@@ -220,7 +220,7 @@ export const adminTestClubKonnectConnection = action({
       }
 
       // Record test status
-      await ctx.runMutation(internal.clubkonnect.recordConnectionStatus, {
+      await ctx.runMutation((internal as any).clubkonnect.recordConnectionStatus, {
         status: statusResult,
         balance: balanceStr,
         error: errorMsg,
@@ -233,7 +233,7 @@ export const adminTestClubKonnectConnection = action({
         timestamp: Date.now(),
       };
     } catch (err: any) {
-      await ctx.runMutation(internal.clubkonnect.recordConnectionStatus, {
+      await ctx.runMutation((internal as any).clubkonnect.recordConnectionStatus, {
         status: "NETWORK_ERROR",
         balance: null,
         error: err.message || "Failed to reach ClubKonnect server",
@@ -252,7 +252,7 @@ export const adminTestClubKonnectConnection = action({
 /**
  * Internal mutation to record connection test status
  */
-export const recordConnectionStatus = mutation({
+export const recordConnectionStatus = internalMutation({
   args: {
     status: v.string(),
     balance: v.optional(v.union(v.string(), v.null())),

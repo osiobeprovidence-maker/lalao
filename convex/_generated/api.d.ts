@@ -8,13 +8,16 @@
  * @module
  */
 
+import type * as adActions from "../adActions.js";
 import type * as admin from "../admin.js";
+import type * as ads from "../ads.js";
 import type * as apiPartners from "../apiPartners.js";
 import type * as beta from "../beta.js";
 import type * as callActions from "../callActions.js";
 import type * as calls from "../calls.js";
 import type * as cleanPages from "../cleanPages.js";
 import type * as cloudinary from "../cloudinary.js";
+import type * as clubkonnect from "../clubkonnect.js";
 import type * as community from "../community.js";
 import type * as creators from "../creators.js";
 import type * as cryptoWallets from "../cryptoWallets.js";
@@ -62,13 +65,16 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  adActions: typeof adActions;
   admin: typeof admin;
+  ads: typeof ads;
   apiPartners: typeof apiPartners;
   beta: typeof beta;
   callActions: typeof callActions;
   calls: typeof calls;
   cleanPages: typeof cleanPages;
   cloudinary: typeof cloudinary;
+  clubkonnect: typeof clubkonnect;
   community: typeof community;
   creators: typeof creators;
   cryptoWallets: typeof cryptoWallets;
