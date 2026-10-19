@@ -80,11 +80,14 @@ export const dispatchPush = internalAction({
         });
 
         const json = await res.json() as any;
-        if (res.ok && json?.id) {
+        const recipientsCount = typeof json?.recipients === "number" ? json.recipients : 0;
+        const hasInvalidAliases = Boolean(json?.errors?.invalid_aliases);
+
+        if (res.ok && json?.id && recipientsCount > 0 && !hasInvalidAliases) {
           pushDelivered = true;
-          console.log(`[push] Successfully dispatched via OneSignal: id=${json.id}, recipients=${json.recipients ?? "unknown"}`);
+          console.log(`[push] Successfully dispatched via OneSignal: id=${json.id}, recipients=${recipientsCount}`);
         } else {
-          console.warn("[push] OneSignal dispatch response:", json);
+          console.warn(`[push] OneSignal did not reach any subscriber: id=${json?.id ?? "none"}, recipients=${recipientsCount}, errors=${JSON.stringify(json?.errors ?? null)}. Falling back to native push if available.`);
         }
       } catch (osErr) {
         console.error("[push] OneSignal dispatch error:", osErr);

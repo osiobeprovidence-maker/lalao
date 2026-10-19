@@ -122,21 +122,53 @@ export async function initOneSignal(options?: {
   return window.__onesignal_init_promise__;
 }
 
+let lastBoundUserId: string | null = null;
+
 /**
  * Associates the current browser subscription with Lalao's stable canonical user ID.
  * Uses OneSignal.login(externalId).
+ * Automatically ensures push subscription is opted in if browser permission is already granted.
  */
 export async function setOneSignalUser(userId: string): Promise<void> {
   if (typeof window === "undefined" || !userId) return;
 
+  lastBoundUserId = userId;
   await initOneSignal();
 
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   window.OneSignalDeferred.push(async (OneSignal: any) => {
     try {
+      // 1. If native permission is already granted but OneSignal push subscription is not yet opted in, opt in automatically without re-prompting
+      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+        if (OneSignal?.User?.PushSubscription && !OneSignal.User.PushSubscription.optedIn) {
+          try {
+            await OneSignal.User.PushSubscription.optIn();
+          } catch (optInErr) {
+            console.warn("[OneSignal] PushSubscription.optIn() attempt:", optInErr);
+          }
+        }
+      }
+
+      // 2. Associate external_id
       if (OneSignal?.login) {
         await OneSignal.login(userId);
-        console.log(`[OneSignal] Logged in with external user ID: ${userId}`);
+        console.log(`[OneSignal] Logged in with external user ID: ${userId}, pushOptedIn=${Boolean(OneSignal?.User?.PushSubscription?.optedIn)}, subscriptionId=${OneSignal?.User?.PushSubscription?.id || "pending"}`);
+      }
+
+      // 3. Attach a subscription change observer to guarantee identity is bound once subscription becomes active
+      if (OneSignal?.User?.PushSubscription?.addEventListener && !(window as any).__onesignal_sub_listener_attached__) {
+        (window as any).__onesignal_sub_listener_attached__ = true;
+        OneSignal.User.PushSubscription.addEventListener("change", async (event: any) => {
+          console.log("[OneSignal] Push subscription state changed:", event?.current);
+          if (event?.current?.optedIn && lastBoundUserId) {
+            try {
+              await OneSignal.login(lastBoundUserId);
+              console.log(`[OneSignal] Re-bound external ID ${lastBoundUserId} on subscription activation: id=${event?.current?.id}`);
+            } catch (reErr) {
+              console.warn("[OneSignal] Failed to re-bind external ID on change:", reErr);
+            }
+          }
+        });
       }
     } catch (err) {
       console.warn("[OneSignal] Failed to associate user identity:", err);

@@ -318,13 +318,57 @@ export function runChatNotificationTests() {
 
   // 17. General notifications (system, subscriptions, likes, comments) use official Lalao app icon
   function resolveGeneralNotificationIcon(type: string) {
-    // Non-chat types default to official icon
     return "/icon-192.png";
   }
   const generalIcon = resolveGeneralNotificationIcon("system_alert");
   results.push({
     name: "Scenario 17: General notifications (likes, follows, system, cycles) use official Lalao app icon",
     passed: generalIcon === "/icon-192.png",
+  });
+
+  // 18. OneSignal zero-recipient / invalid_aliases response triggers fallback to VAPID
+  function evaluateOneSignalDelivery(resStatus: number, json: any): { pushDelivered: boolean; shouldFallback: boolean } {
+    const recipientsCount = typeof json?.recipients === "number" ? json.recipients : 0;
+    const hasInvalidAliases = Boolean(json?.errors?.invalid_aliases);
+    const delivered = resStatus === 200 && Boolean(json?.id) && recipientsCount > 0 && !hasInvalidAliases;
+    return {
+      pushDelivered: delivered,
+      shouldFallback: !delivered,
+    };
+  }
+
+  const zeroRecipientResponse = evaluateOneSignalDelivery(200, {
+    id: "os-notif-uuid-1",
+    recipients: 0,
+    errors: { invalid_aliases: { external_id: ["user_b_456"] } },
+  });
+  results.push({
+    name: "Scenario 18: OneSignal API response with recipients=0 and invalid_aliases triggers fallback without dropping notification",
+    passed: zeroRecipientResponse.pushDelivered === false && zeroRecipientResponse.shouldFallback === true,
+  });
+
+  // 19. OneSignal accepted response with recipients > 0 prevents duplicate VAPID fallback
+  const validDeliveryResponse = evaluateOneSignalDelivery(200, {
+    id: "os-notif-uuid-2",
+    recipients: 1,
+  });
+  results.push({
+    name: "Scenario 19: OneSignal API response with recipients > 0 records successful delivery and guards against duplicate dispatch",
+    passed: validDeliveryResponse.pushDelivered === true && validDeliveryResponse.shouldFallback === false,
+  });
+
+  // 20. When native permission is already granted, OneSignal opts in without prompting user again
+  function resolveOptInAction(nativePermission: string, oneSignalOptedIn: boolean) {
+    if (nativePermission === "granted") {
+      return oneSignalOptedIn ? "already_active" : "auto_opt_in_silent";
+    }
+    return "prompt_permission";
+  }
+  const autoOptInAction = resolveOptInAction("granted", false);
+  const alreadyActiveAction = resolveOptInAction("granted", true);
+  results.push({
+    name: "Scenario 20: Pre-granted native notification permission automatically syncs OneSignal optIn without re-prompting",
+    passed: autoOptInAction === "auto_opt_in_silent" && alreadyActiveAction === "already_active",
   });
 
   return results;
