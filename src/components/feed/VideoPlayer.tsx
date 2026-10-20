@@ -78,8 +78,10 @@ export const VideoPlayer = React.memo(
     const [controlsVisible, setControlsVisible] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [hasError, setHasError] = useState(false);
+    const fallbackAspectRatio =
+      aspect === 'square' ? 1 : aspect === 'portrait' ? 9 / 16 : aspect === 'video' ? 16 / 9 : null;
     const [exactAspectRatio, setExactAspectRatio] = useState<number | null>(
-      mediaWidth && mediaHeight ? mediaWidth / mediaHeight : null
+      mediaWidth && mediaHeight ? mediaWidth / mediaHeight : fallbackAspectRatio
     );
     const [playbackSpeed, setPlaybackSpeed] = useState(1);
     const [showSpeedMenu, setShowSpeedMenu] = useState(false);
@@ -269,8 +271,19 @@ export const VideoPlayer = React.memo(
       playerRef.current.currentTime = newTime;
     };
 
-    // Dynamic aspect ratio styling for the wrapper before metadata loads
-    const wrapperStyle = exactAspectRatio ? { aspectRatio: exactAspectRatio } : {};
+    // Keep the wrapper and media at the same intrinsic ratio. The width cap
+    // prevents tall portrait videos from exceeding the usable viewport height
+    // without reserving blank space beneath the video.
+    const wrapperStyle = exactAspectRatio
+      ? {
+          aspectRatio: exactAspectRatio,
+          maxWidth: `min(100%, calc(70vh * ${exactAspectRatio}))`,
+          marginInline: 'auto',
+        }
+      : undefined;
+    const playerMediaClass = exactAspectRatio
+      ? 'block w-full h-full object-contain object-center'
+      : 'block w-full h-auto max-h-[70vh] object-contain object-center';
 
     // Loading / error UI
     if (mediaStatus === 'uploading') {
@@ -354,8 +367,8 @@ export const VideoPlayer = React.memo(
             loop={loop}
             playsInline
             preload="metadata"
-            style={{ '--media-object-fit': 'cover', '--media-object-position': 'center' } as any}
-            className={`block w-full h-auto max-h-[65vh] md:max-h-[70vh] object-cover object-center mx-auto`}
+            style={{ '--media-object-fit': 'contain', '--media-object-position': 'center' } as any}
+            className={playerMediaClass}
           />
         );
       }
@@ -370,7 +383,7 @@ export const VideoPlayer = React.memo(
           playsInline
           preload="metadata"
           controls={false}
-          className={`block w-full h-auto max-h-[65vh] md:max-h-[70vh] object-cover object-center mx-auto`}
+          className={playerMediaClass}
         />
       );
     };
@@ -378,7 +391,7 @@ export const VideoPlayer = React.memo(
     return (
       <div
         ref={containerRef}
-        className={`relative w-full overflow-hidden rounded-[12px] ${className.replace('w-fit', '').replace('max-w-full', '').replace('mx-auto', '')}`}
+        className={`relative w-full overflow-hidden rounded-[12px] bg-black ${className.replace('w-fit', '').replace('max-w-full', '').replace('mx-auto', '')}`}
         onMouseMove={showControls}
         onTouchStart={showControls}
         style={wrapperStyle}
@@ -387,7 +400,7 @@ export const VideoPlayer = React.memo(
           <img
             src={posterUrl}
             alt="Video poster"
-            className={`block w-full h-auto max-h-[65vh] md:max-h-[70vh] object-cover object-center filter blur-sm transition-all duration-300 mx-auto`}
+            className={`${playerMediaClass} filter blur-sm transition-all duration-300`}
             loading="lazy"
           />
         ) : (

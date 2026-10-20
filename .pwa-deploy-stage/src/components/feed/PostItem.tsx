@@ -1,0 +1,911 @@
+import React, { useState } from 'react';
+import {
+  Heart,
+  MessageCircle,
+  Repeat,
+  Share2,
+  Bookmark,
+  MoreHorizontal,
+  Play,
+  Pause,
+  MapPin,
+  Volume2,
+  VolumeX,
+  Zap,
+  Clock,
+  Users,
+  Check,
+  Calendar,
+  Music,
+  Disc,
+} from 'lucide-react';
+import { Post, Rally, User } from '../../types';
+import { Avatar } from '../common/Avatar';
+import { Badge } from '../common/Badge';
+import { VerificationBadge } from '../common/VerificationBadge';
+import { UserIdentity, getPublicIdentityLabel } from '../common/UserIdentity';
+import { useLalao } from '../../context/LalaoContext';
+import { formatDistance, getProximityCategory } from '../../utils/locationUtils';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { Id } from '../../../convex/_generated/dataModel';
+import { getTopicIcon } from '../../utils/topicIcons';
+import { PostImage } from '../common/PostImage';
+import { VideoPlayer } from './VideoPlayer';
+import { CommentThread } from '../common/CommentsModal';
+import { CommentComposer } from '../common/CommentComposer';
+import { ReportModal } from './ReportModal';
+
+import { ExternalEvent } from '../../services/events/types';
+import { ExternalEventDetailModal } from '../events/ExternalEventDetailModal';
+
+export interface PostItemProps {
+  post?: Post;
+  rally?: Rally;
+  externalEvent?: ExternalEvent;
+  onSelectAuthor?: () => void;
+  compactMedia?: boolean;
+  showLocation?: boolean;
+}
+
+export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, externalEvent, onSelectAuthor, compactMedia, showLocation }) => {
+  const {
+    currentUser,
+    openSoundDetail,
+    toggleLikePost,
+    toggleRepostPost,
+    setActiveCommentsPostId,
+    triggerShareToast,
+    setActiveUserProfile,
+    setActivePageId,
+    toggleJoinRally,
+    setActiveChatId,
+    openChatWithUser,
+    conversations,
+    rallies,
+    posts,
+    pages,
+    locationPrivacy,
+    deletePost,
+    setActiveVideoFeedPostId,
+    addComment,
+    cycles,
+    openCycleStory,
+    setActiveTab,
+    toggleFollowUser,
+  } = useLalao();
+
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [showOptions, setShowOptions] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showInlineComments, setShowInlineComments] = useState(false);
+  const [showEventModal, setShowEventModal] = useState(false);
+
+  // Local state for standalone rally likes
+  const [standaloneLiked, setStandaloneLiked] = useState(false);
+  const [userPollVote, setUserPollVote] = useState<number | null>(null);
+
+  const handleVote = (idx: number) => {
+    if (userPollVote === null) {
+      setUserPollVote(idx);
+    }
+  };
+
+  // Resolve linked rally if post has rallyRefId, or use directRally
+  const linkedRally = directRally || (post?.rallyRefId ? rallies.find((r) => r.id === post.rallyRefId) : null);
+  const isRallyPost = Boolean(linkedRally);
+
+  // If this is a direct rally, check if there's a corresponding post
+  const associatedPost = post || (directRally ? posts.find((p) => p.rallyRefId === directRally.id) : null);
+
+  // Determine effective author
+  const author: User = post ? post.author : (linkedRally ? linkedRally.creator : {
+    id: 'unknown',
+    name: 'Anonymous',
+    username: 'anonymous',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400',
+    userType: 'person',
+    followersCount: 0,
+    followingCount: 0,
+  });
+
+  const isAuthor = currentUser?.id === author.id;
+
+  // Distance from post metadata or rally
+  const distanceMeters = post?.distanceMeters;
+
+  // Location & Proximity: only render when valid metadata exists and enabled for this view context
+  const shouldShowLocation = showLocation !== undefined ? showLocation : true;
+  const locationText = (post?.location || linkedRally?.location || '').trim();
+  const hasValidDistance = typeof distanceMeters === 'number' && !isNaN(distanceMeters) && distanceMeters >= 0;
+  const formattedDistance = hasValidDistance ? formatDistance(distanceMeters, locationPrivacy?.approximateDistance) : '';
+  const proximity = hasValidDistance ? getProximityCategory(distanceMeters) : { label: '', color: '', dotColor: '' };
+
+  // Timestamp
+  const timeText = post ? post.createdAt : (linkedRally ? linkedRally.timeDate : (externalEvent ? '2h' : 'Just now'));
+
+  // Author click handler
+  const matchedPage = pages.find((p) => p.username === author.username);
+  const handleAuthorClick = () => {
+    if (onSelectAuthor) {
+      onSelectAuthor();
+      return;
+    }
+    if (matchedPage) {
+      setActivePageId(matchedPage.id);
+    } else {
+      setActiveUserProfile(author);
+    }
+  };
+
+  const authorCycle = cycles?.find((c) => c.user?.id === author.id || (author.id === currentUser?.id && c.id === 'cycle_user_me'));
+  const hasActiveCycle = Boolean(authorCycle && authorCycle.items && authorCycle.items.length > 0);
+
+  const handleAvatarClick = () => {
+    if (hasActiveCycle && authorCycle) {
+      openCycleStory(authorCycle.id, 0);
+    } else {
+      handleAuthorClick();
+    }
+  };
+
+  // Message Creator handler
+  const handleMessageCreator = () => {
+    openChatWithUser(author);
+  };
+
+  // Social interactions
+  const isLiked = associatedPost ? associatedPost.isLiked : standaloneLiked;
+  const likesCount = associatedPost
+    ? associatedPost.likesCount
+    : (linkedRally ? (linkedRally.joinedUsersCount * 2 + (standaloneLiked ? 1 : 0)) : (externalEvent ? 3 + (standaloneLiked ? 1 : 0) : 0));
+
+  const commentsCount = associatedPost ? associatedPost.commentsCount : (linkedRally ? 3 : (externalEvent ? 2 : 0));
+  const repostsCount = associatedPost ? associatedPost.repostsCount : (externalEvent ? 1 : 0);
+  const isReposted = associatedPost ? associatedPost.isReposted : false;
+
+  const handleLike = () => {
+    if (associatedPost) {
+      toggleLikePost(associatedPost.id);
+    } else {
+      setStandaloneLiked(!standaloneLiked);
+    }
+  };
+
+  const isTextOnly = associatedPost && !associatedPost.mediaUrl && !linkedRally;
+
+  const handleComment = () => {
+    if (associatedPost) {
+      setShowInlineComments((prev) => !prev);
+    } else if (linkedRally) {
+      triggerShareToast('Opening Rally thread...');
+    } else if (externalEvent) {
+      triggerShareToast('Opening Event thread...');
+    }
+  };
+
+  const handleRepost = () => {
+    if (associatedPost) {
+      toggleRepostPost(associatedPost.id);
+    } else {
+      triggerShareToast('Rally shared to your followers');
+    }
+  };
+
+  const handleShare = () => {
+    triggerShareToast(isRallyPost ? 'Rally link copied to clipboard!' : 'Post link copied to clipboard!');
+  };
+
+  const handleBookmark = () => {
+    triggerShareToast(isRallyPost ? 'Rally saved to bookmarks' : 'Post saved to bookmarks');
+  };
+
+  const itemId = post?.id || linkedRally?.id || externalEvent?.id || 'feed-item';
+
+  return (
+    <article
+      id={`feed-item-${itemId}`}
+      className="p-4 bg-transparent border-b border-theme-divider/70 hover:bg-theme-surface-hover/30 transition-colors"
+    >
+      {/* 1. Instagram-Style Post Header */}
+      <div className="flex items-start justify-between gap-3 mb-2.5">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {/* Left: Avatar with Cycle Beacon */}
+          <div
+            className="relative shrink-0 cursor-pointer group"
+            onClick={handleAvatarClick}
+            role="button"
+            aria-label="View user avatar or cycle"
+          >
+            <div
+              className={`rounded-full transition-all duration-200 ${
+                hasActiveCycle
+                  ? authorCycle?.hasUnseen
+                    ? 'p-[2.5px] bg-gradient-to-tr from-[#5E43F3] via-fuchsia-500 to-pink-500 shadow-xs'
+                    : 'p-[2px] bg-theme-divider-strong/80'
+                  : ''
+              }`}
+            >
+              <div className={`${hasActiveCycle ? 'bg-theme-surface p-[1.5px] rounded-full' : ''}`}>
+                <Avatar
+                  src={author?.avatar}
+                  alt={author?.name || 'User'}
+                  size="md"
+                />
+              </div>
+            </div>
+            {hasActiveCycle && authorCycle?.hasUnseen && (
+              <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#5E43F3] rounded-full border-2 border-white ring-1 ring-[#5E43F3]/30" />
+            )}
+          </div>
+
+          {/* Middle: Identity & Timestamp */}
+          <div className="flex flex-col min-w-0 flex-1 justify-center py-0.5">
+            {/* Identity line(s) */}
+            {author.publicIdentityType === 'both' ? (
+              <>
+                {/* First line: Display Name + Badges + Optional Follow button */}
+                <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAuthorClick();
+                    }}
+                    className="font-bold text-[14.5px] text-theme-primary hover:underline cursor-pointer truncate tracking-tight"
+                  >
+                    {(author.name || '').trim() || (author.username || '').replace(/^@+/, '') || 'User'}
+                  </span>
+
+                  <VerificationBadge user={author} size="xs" />
+                  {author.badge && <Badge type={author.badge} />}
+
+                  {/* Inline Follow Button */}
+                  {!isAuthor && !author.isFollowing && author.id !== 'unknown' && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFollowUser(author.id);
+                      }}
+                      className="ml-1 text-[13px] font-semibold text-[#5E43F3] hover:text-[#4931D3] dark:text-[#7A62F8] dark:hover:text-[#917DF9] transition-colors cursor-pointer select-none"
+                    >
+                      • Follow
+                    </button>
+                  )}
+                </div>
+
+                {/* Second line: Username */}
+                <div className="flex items-center gap-1 min-w-0">
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAuthorClick();
+                    }}
+                    className="text-xs text-theme-secondary hover:underline cursor-pointer truncate font-medium"
+                  >
+                    @{ (author.username || '').replace(/^@+/, '') || 'user' }
+                  </span>
+                </div>
+              </>
+            ) : author.publicIdentityType === 'username' ? (
+              /* Username only */
+              <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAuthorClick();
+                  }}
+                  className="font-bold text-[14.5px] text-theme-primary hover:underline cursor-pointer truncate tracking-tight"
+                >
+                  @{ (author.username || '').replace(/^@+/, '') || (author.name || '').trim() || 'user' }
+                </span>
+
+                <VerificationBadge user={author} size="xs" />
+                {author.badge && <Badge type={author.badge} />}
+
+                {/* Inline Follow Button */}
+                {!isAuthor && !author.isFollowing && author.id !== 'unknown' && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFollowUser(author.id);
+                    }}
+                    className="ml-1 text-[13px] font-semibold text-[#5E43F3] hover:text-[#4931D3] dark:text-[#7A62F8] dark:hover:text-[#917DF9] transition-colors cursor-pointer select-none"
+                  >
+                    • Follow
+                  </button>
+                )}
+              </div>
+            ) : (
+              /* Display Name only (Default) */
+              <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAuthorClick();
+                  }}
+                  className="font-bold text-[14.5px] text-theme-primary hover:underline cursor-pointer truncate tracking-tight"
+                >
+                  {(author.name || '').trim() || (author.username || '').replace(/^@+/, '') || 'User'}
+                </span>
+
+                <VerificationBadge user={author} size="xs" />
+                {author.badge && <Badge type={author.badge} />}
+
+                {/* Inline Follow Button */}
+                {!isAuthor && !author.isFollowing && author.id !== 'unknown' && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFollowUser(author.id);
+                    }}
+                    className="ml-1 text-[13px] font-semibold text-[#5E43F3] hover:text-[#4931D3] dark:text-[#7A62F8] dark:hover:text-[#917DF9] transition-colors cursor-pointer select-none"
+                  >
+                    • Follow
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Line beneath identity: Timestamp & optional location/proximity */}
+            <div className="flex items-center gap-1.5 text-xs text-theme-tertiary mt-0.5 flex-wrap">
+              <span className="font-normal">{timeText}</span>
+              {shouldShowLocation && locationText && (
+                <>
+                  <span className="text-theme-tertiary/60">·</span>
+                  {hasValidDistance && formattedDistance ? (
+                    <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-theme-surface-hover text-theme-secondary text-[11px] font-medium">
+                      <span className={`w-1.5 h-1.5 rounded-full ${proximity.dotColor}`} />
+                      <MapPin className="w-2.5 h-2.5 text-[#5E43F3]" />
+                      <span>{locationText}</span>
+                      <span className="text-theme-tertiary">·</span>
+                      <span className="font-bold text-theme-primary">{formattedDistance}</span>
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-theme-surface-hover text-theme-secondary text-[11px] font-medium">
+                      <MapPin className="w-2.5 h-2.5 text-[#5E43F3]" />
+                      <span>{locationText}</span>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Badges & Three-dot menu */}
+        <div className="flex items-center gap-1 shrink-0 pt-0.5">
+              {/* Rally Badges if applicable */}
+              {linkedRally && (
+                <>
+                  {linkedRally.urgency === 'urgent' && (
+                    <span className="inline-flex items-center gap-0.5 px-2 py-0.5 text-[10px] font-bold tracking-wide rounded-full bg-rose-50 text-rose-600 border border-rose-200 uppercase">
+                      <Zap className="w-2.5 h-2.5 fill-rose-500 text-rose-500" />
+                      Urgent
+                    </span>
+                  )}
+                  <span className="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-indigo-50 text-[#5E43F3] border border-indigo-100">
+                    {linkedRally.category}
+                  </span>
+                </>
+              )}
+
+              {/* Kebab Options Menu */}
+              <div className="relative">
+                <button
+                  id={`btn-item-options-${itemId}`}
+                  onClick={() => setShowOptions(!showOptions)}
+                  className="p-1.5 rounded-full text-theme-tertiary hover:text-theme-secondary hover:bg-theme-surface-hover transition-colors"
+                  aria-label="Options"
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </button>
+
+                {showOptions && (
+                  <div className="absolute right-0 top-7 z-20 w-44 bg-theme-surface rounded-xl shadow-lg border border-theme-divider-light py-1.5 text-xs text-theme-secondary animate-in fade-in zoom-in-95">
+                    <button
+                      onClick={() => {
+                        triggerShareToast(isRallyPost ? 'Rally link copied' : 'Post link copied');
+                        setShowOptions(false);
+                      }}
+                      className="w-full text-left px-3.5 py-2 hover:bg-theme-base flex items-center justify-between cursor-pointer"
+                    >
+                      <span>Copy link</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        triggerShareToast(isRallyPost ? 'Rally saved to bookmarks' : 'Post saved to bookmarks');
+                        setShowOptions(false);
+                      }}
+                      className="w-full text-left px-3.5 py-2 hover:bg-theme-base cursor-pointer"
+                    >
+                      {isRallyPost ? 'Save Rally' : 'Save post'}
+                    </button>
+                    {isAuthor && post && (
+                      <>
+                        <div className="h-px bg-theme-surface-hover my-1" />
+                        <button
+                          onClick={() => {
+                            setShowOptions(false);
+                            setShowDeleteModal(true);
+                          }}
+                          className="w-full text-left px-3.5 py-2 hover:bg-theme-base text-red-600 font-medium cursor-pointer"
+                        >
+                          Delete post
+                        </button>
+                      </>
+                    )}
+                    {!isAuthor && (
+                      <button
+                        onClick={() => {
+                          setShowReportModal(true);
+                          setShowOptions(false);
+                        }}
+                        className="w-full text-left px-3.5 py-2 hover:bg-theme-base text-rose-600 font-medium cursor-pointer"
+                      >
+                        {isRallyPost ? 'Report Rally' : 'Report post'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Normal Post Text if post exists */}
+          {post && post.text && (
+            <p className="mt-2 text-[15px] text-theme-primary leading-relaxed break-words whitespace-pre-line">
+              {post.text}
+            </p>
+          )}
+
+          {/* Destination Badge if not general everyone */}
+          {post?.audience && post.audience !== 'everyone' && (
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#5E43F3]/10 text-[#5E43F3]">
+                {post.audience === 'anime' && (
+                  <>
+                    {React.createElement(getTopicIcon('anime'), { className: "w-3 h-3" })} Anime
+                  </>
+                )}
+                {post.audience === 'nearby' && '📍 Nearby'}
+                {post.audience === 'community' && '💬 Community'}
+                {post.audience === 'interest' && '#Topic'}
+                {post.audience === 'closeFriends' && '⭐ Close Friends'}
+              </span>
+            </div>
+          )}
+
+          {/* Poll Card */}
+          {post?.poll && (
+            <div className="mt-3 rounded-2xl border border-theme-divider bg-theme-base/80 p-3.5 space-y-2">
+              <p className="text-sm font-semibold text-theme-primary">{post.poll.question}</p>
+              <div className="space-y-1.5">
+                {post.poll.options.map((option, idx) => {
+                  const votes = (post.poll?.votes?.[idx] ?? 0) + (userPollVote === idx ? 1 : 0);
+                  const totalVotes = ((post.poll?.votes ?? []).reduce((a, b) => a + b, 0)) + (userPollVote !== null ? 1 : 0);
+                  const percent = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+                  const hasVoted = userPollVote !== null;
+                  const isSelected = userPollVote === idx;
+
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleVote(idx)}
+                      className={`relative w-full overflow-hidden rounded-xl border p-2.5 text-left text-xs font-medium transition cursor-pointer ${
+                        isSelected
+                          ? 'border-[#5E43F3] bg-[#5E43F3]/5 text-[#5E43F3]'
+                          : 'border-theme-divider bg-theme-surface text-theme-primary hover:border-theme-divider-strong'
+                      }`}
+                    >
+                      {hasVoted && (
+                        <div
+                          className="absolute inset-y-0 left-0 bg-[#5E43F3]/15 transition-all duration-300 pointer-events-none"
+                          style={{ width: `${percent}%` }}
+                        />
+                      )}
+                      <div className="relative flex items-center justify-between z-10 pointer-events-none">
+                        <span className="font-semibold">{option}</span>
+                        {hasVoted && (
+                          <span className="text-[11px] font-bold text-theme-tertiary">{percent}%</span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-theme-tertiary pt-0.5">
+                {((post.poll.votes ?? []).reduce((a, b) => a + b, 0)) + (userPollVote !== null ? 1 : 0)} votes
+              </p>
+            </div>
+          )}
+
+          {/* Rally Specific Body (Rendered seamlessly within the same card layout) */}
+          {linkedRally && (
+            <div className={`space-y-2 ${post ? 'mt-2.5 pt-2.5 border-t border-theme-divider-light' : 'mt-2'}`}>
+              <h3 className="text-[15px] font-bold text-theme-primary tracking-tight leading-snug">
+                {linkedRally.title}
+              </h3>
+
+              {/* Show description if standalone rally, or if post text didn't already convey it */}
+              {(!post || linkedRally.description !== post.text) && (
+                <p className="text-sm text-theme-secondary leading-relaxed break-words whitespace-pre-line">
+                  {linkedRally.description}
+                </p>
+              )}
+
+              {/* Metadata Info Chips: Time & Participants & Interested Avatars */}
+              <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs text-theme-secondary">
+                <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-theme-surface-hover text-theme-secondary font-medium">
+                  <Clock className="w-3.5 h-3.5 text-theme-tertiary" />
+                  <span>{linkedRally.eventDate ? `${linkedRally.eventDate} ${linkedRally.eventTime || ''}`.trim() : linkedRally.timeDate}</span>
+                </div>
+
+                <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-theme-surface-hover text-theme-secondary font-medium">
+                  <Users className="w-3.5 h-3.5 text-theme-tertiary" />
+                  <span>
+                    {linkedRally.joinedUsersCount} {linkedRally.joinedUsersCount === 1 ? 'person' : 'people'} joined
+                    {(linkedRally.peopleNeeded || linkedRally.maxNeeded) ? ` (need ${(linkedRally.peopleNeeded || linkedRally.maxNeeded || 0) - linkedRally.joinedUsersCount} more)` : ''}
+                  </span>
+                </div>
+
+                {/* Avatars Stack of Interested Users */}
+                {linkedRally.interestedUsers && linkedRally.interestedUsers.length > 0 && (
+                  <div className="flex items-center -space-x-1.5 ml-1">
+                    {linkedRally.interestedUsers.slice(0, 3).map((user, idx) => (
+                      <img
+                        key={idx}
+                        src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400'}
+                        alt={user?.name || 'User'}
+                        referrerPolicy="no-referrer"
+                        className="w-5 h-5 rounded-full border border-white object-cover"
+                      />
+                    ))}
+                    {linkedRally.joinedUsersCount > 3 && (
+                      <span className="w-5 h-5 rounded-full bg-theme-surface-hover border border-white text-[9px] font-bold text-theme-secondary flex items-center justify-center">
+                        +{linkedRally.joinedUsersCount - 3}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Media Attachment (for normal post without rally or with independent media) */}
+          {((post?.mediaUrl || (post as any)?.muxUploadId) && !linkedRally) && (
+            <div className="mt-3 w-full"> 
+              {post.mediaType === 'video' ? (
+                <div className={`w-full rounded-[16px] overflow-hidden border border-theme-divider-light bg-black/5 dark:bg-theme-surface/5`}>
+                  <VideoPlayer
+                    muxPlaybackId={(post as any).muxPlaybackId}
+                    mediaUrl={post.mediaUrl}
+                    mediaStatus={(post as any).mediaStatus}
+                    mediaWidth={(post as any).mediaWidth}
+                    mediaHeight={(post as any).mediaHeight}
+                    aspect="auto"
+                    autoPlay={true}
+                    className="w-full h-auto"
+                    onExpandVideo={() => setActiveVideoFeedPostId(post.id)}
+                  />
+                </div>
+              ) : (
+                post.mediaUrl && (
+                  <PostImage
+                    src={post.mediaUrl}
+                    width={(post as any).mediaWidth}
+                    height={(post as any).mediaHeight}
+                    maxHeight={compactMedia ? 300 : 500}
+                    onClick={() => externalEvent && setShowEventModal(true)}
+                  />
+                )
+              )}
+            </div>
+          )}
+
+          {/* Attached Sound Badge */}
+          {post?.soundTitle && (
+            <div className="mt-2.5 flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (post.soundId) {
+                    openSoundDetail(post.soundId);
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#5E43F3]/10 hover:bg-[#5E43F3]/20 border border-[#5E43F3]/25 text-[#5E43F3] text-xs font-semibold transition-colors cursor-pointer group"
+              >
+                <Music className="w-3.5 h-3.5 animate-pulse" />
+                <span className="truncate max-w-[200px] sm:max-w-xs">{post.soundTitle}</span>
+                {post.soundAuthorName && (
+                  <span className="text-theme-tertiary text-[11px] font-normal truncate">
+                    • {post.soundAuthorName}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  try {
+                    localStorage.setItem('lalao_pending_sound', JSON.stringify({
+                      id: post.soundId || 'sound-' + post.id,
+                      title: post.soundTitle,
+                      creatorName: post.soundAuthorName || post.author.name,
+                      audioUrl: (post as any).soundAudioUrl || post.mediaUrl || '',
+                      duration: (post as any).soundDuration || 15,
+                    }));
+                    setActiveTab('create-post');
+                  } catch {
+                    // ignore
+                  }
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-theme-surface-hover hover:bg-[#5E43F3] hover:text-white border border-theme-divider text-[11px] font-bold text-theme-secondary transition-all cursor-pointer shadow-2xs"
+                title="Create a video with this sound"
+              >
+                <Disc className="w-3 h-3 text-[#5E43F3] group-hover:text-white" />
+                <span>Use Sound</span>
+              </button>
+            </div>
+          )}
+
+          {/* External Event Specific Body */}
+          {externalEvent && (
+            <div className="mt-3">
+              <div className="grid grid-cols-2 gap-3 mb-3 text-sm font-semibold text-theme-secondary">
+                <div className="flex items-center gap-2 bg-theme-base p-2.5 rounded-xl">
+                  <Calendar className="w-4 h-4 text-[#5E43F3]" />
+                  <span className="truncate">{new Date(externalEvent.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                </div>
+                <div className="flex items-center gap-2 bg-theme-base p-2.5 rounded-xl">
+                  <Clock className="w-4 h-4 text-[#5E43F3]" />
+                  <span>{externalEvent.time}</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-1.5 text-sm font-semibold text-theme-tertiary truncate">
+                  <MapPin className="w-4 h-4 shrink-0" />
+                  <span className="truncate">{externalEvent.area}, {externalEvent.city}</span>
+                </div>
+                
+                <button 
+                  onClick={() => setShowEventModal(true)}
+                  className="px-5 py-2 rounded-full bg-theme-inverse text-theme-text-inverse font-bold text-sm hover:bg-theme-inverse transition-colors shrink-0"
+                >
+                  View Event →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* GIF Attachment */}
+          {post?.gifUrl && !linkedRally && (
+            <div className="mt-3 w-full">
+              <PostImage
+                src={post.gifUrl}
+                alt="GIF attachment"
+              />
+            </div>
+          )}
+
+          {/* Unified Action Row */}
+          <div className="mt-3.5 flex items-center justify-between text-theme-tertiary text-xs">
+            {/* Left Social Interactions */}
+            <div className="flex items-center gap-1 sm:gap-2">
+              {/* Like */}
+              <button
+                id={`btn-like-${itemId}`}
+                onClick={handleLike}
+                className={`flex items-center gap-1.5 py-1 px-2 rounded-lg transition-colors cursor-pointer group ${
+                  isLiked ? 'text-rose-600 font-semibold' : 'hover:text-rose-600'
+                }`}
+              >
+                <Heart
+                  className={`w-4 h-4 transition-transform group-active:scale-125 ${
+                    isLiked ? 'fill-rose-600 stroke-rose-600' : 'stroke-[1.8]'
+                  }`}
+                />
+                <span>{likesCount}</span>
+              </button>
+
+              {/* Comment */}
+              <button
+                id={`btn-comment-${itemId}`}
+                onClick={handleComment}
+                className="flex items-center gap-1.5 py-1 px-2 rounded-lg hover:text-[#5E43F3] transition-colors cursor-pointer group"
+              >
+                <MessageCircle className="w-4 h-4 stroke-[1.8] group-active:scale-125 transition-transform" />
+                <span>{commentsCount}</span>
+              </button>
+
+              {/* Repost */}
+              {(!linkedRally) && (
+                <button
+                  id={`btn-repost-${itemId}`}
+                  onClick={handleRepost}
+                  className={`flex items-center gap-1.5 py-1 px-2 rounded-lg transition-colors cursor-pointer group ${
+                    isReposted ? 'text-emerald-600 font-semibold' : 'hover:text-emerald-600'
+                  }`}
+                >
+                  <Repeat
+                    className={`w-4 h-4 stroke-[1.8] group-active:rotate-180 transition-transform ${
+                      isReposted ? 'stroke-emerald-600' : ''
+                    }`}
+                  />
+                  <span>{repostsCount}</span>
+                </button>
+              )}
+            </div>
+
+            {/* Right Side Actions (Bookmark & Rally Actions) */}
+            <div className="flex items-center gap-1.5">
+              {/* Rally-Specific Actions */}
+              {linkedRally && (
+                <>
+                  <button
+                    id={`btn-msg-rally-${linkedRally.id}`}
+                    onClick={handleMessageCreator}
+                    className="p-1.5 rounded-lg text-theme-tertiary hover:text-theme-primary hover:bg-theme-surface-hover transition-colors cursor-pointer"
+                    title="Message creator"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    id={`btn-join-rally-${linkedRally.id}`}
+                    onClick={() => toggleJoinRally(linkedRally.id)}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      linkedRally.isJoined
+                        ? 'bg-theme-inverse text-theme-text-inverse hover:bg-theme-inverse'
+                        : 'bg-[#5E43F3] text-white hover:bg-[#4E34E0] shadow-sm shadow-[#5E43F3]/25 active:scale-95'
+                    }`}
+                  >
+                    {linkedRally.isJoined ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                        <span>Joined</span>
+                      </>
+                    ) : (
+                      <span>
+                        {linkedRally.type === 'ASK' ? 'I Can Help' : 
+                         linkedRally.type === 'HELP' ? "I'm Interested" : 
+                         'Join Rally'}
+                      </span>
+                    )}
+                  </button>
+                </>
+              )}
+
+              {/* Bookmark */}
+              <button
+                id={`btn-bookmark-${itemId}`}
+                onClick={handleBookmark}
+                className="flex items-center py-1 px-2 rounded-lg hover:text-theme-primary transition-colors cursor-pointer"
+                title="Bookmark"
+              >
+                <Bookmark className="w-4 h-4 stroke-[1.8]" />
+              </button>
+            </div>
+          </div>
+
+          {/* Inline Comments Section */}
+          {showInlineComments && associatedPost && (
+            <div className="mt-4 pt-3 border-t border-theme-divider-light animate-in fade-in slide-in-from-top-2">
+              <InlineComments 
+                postId={associatedPost.id} 
+                postAuthorId={associatedPost.author.id} 
+              />
+            </div>
+          )}
+
+
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-theme-surface rounded-2xl w-full max-w-[320px] p-6 shadow-xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-theme-primary mb-2">Delete this post?</h3>
+            <p className="text-[15px] text-theme-secondary mb-6">
+              This can't be undone. The post and all its replies will be permanently removed.
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 px-4 py-2.5 rounded-full font-bold text-theme-secondary bg-theme-surface-hover hover:bg-theme-surface-active transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (post) {
+                    await deletePost(post.id);
+                  }
+                  setShowDeleteModal(false);
+                }}
+                className="flex-1 px-4 py-2.5 rounded-full font-bold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-sm shadow-red-600/20"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ReportModal 
+        isOpen={showReportModal} 
+        onClose={() => setShowReportModal(false)}
+        targetId={post ? post.id : (linkedRally?.id ?? (externalEvent?.id ?? ""))}
+        targetType={post ? "post" : "other"}
+        onSuccess={() => {
+          triggerShareToast('Thank you for keeping Lalao safe');
+        }}
+      />
+      
+      {showEventModal && externalEvent && (
+        <ExternalEventDetailModal 
+          eventId={externalEvent.id}
+          onClose={() => setShowEventModal(false)}
+        />
+      )}
+    </article>
+  );
+};
+
+const InlineComments = ({ postId, postAuthorId }: { postId: string, postAuthorId: string }) => {
+  const { toggleLikeComment, deleteComment, setActiveUserProfile, currentUser } = useLalao();
+  const comments = useQuery(api.social.getCommentsForPost, { postId: postId as Id<"posts"> });
+  const [replyingTo, setReplyingTo] = useState<{ commentId: string; username: string } | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  if (!comments) return <div className="py-4 text-center text-xs text-theme-tertiary">Loading replies...</div>;
+
+  const displayComments = isExpanded ? comments : comments.slice(0, 3);
+
+  return (
+    <div className="flex flex-col">
+      <CommentComposer
+        postId={postId}
+        replyingTo={replyingTo}
+        onCancelReply={() => setReplyingTo(null)}
+        onCommentAdded={() => setIsExpanded(true)}
+        currentUser={currentUser}
+      />
+      
+      {comments.length > 0 && (
+        <div className="mt-4 space-y-3">
+          {displayComments.map((comment: any) => (
+            <CommentThread
+              key={comment.id}
+              comment={comment}
+              postId={postId}
+              postAuthorId={postAuthorId}
+              onReply={(commentId, username) => {
+                setReplyingTo({ commentId, username });
+              }}
+              onLike={toggleLikeComment}
+              onDelete={deleteComment}
+              setActiveUserProfile={setActiveUserProfile}
+              currentUser={currentUser}
+            />
+          ))}
+          {!isExpanded && comments.length > 3 && (
+            <button 
+              onClick={() => setIsExpanded(true)}
+              className="text-xs font-medium text-[#5E43F3] hover:underline pl-10 pt-1"
+            >
+              View all {comments.length} replies
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+

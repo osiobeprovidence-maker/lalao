@@ -67,8 +67,8 @@ export const DynamicBranding: React.FC = () => {
         icons: settings.appIconUrl ? [
           {
             src: settings.appIconUrl,
-            sizes: "192x192 512x512",
-            type: "image/png",
+            // Admin supplied icons may be a single size or a non-PNG image.
+            // Omit sizes/type so Chrome reads the actual image metadata.
             purpose: "any"
           },
           {

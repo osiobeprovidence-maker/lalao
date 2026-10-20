@@ -25,6 +25,18 @@ export const PushNotificationSettings: React.FC = () => {
   const handleTestPush = async () => {
     try {
       setIsTesting(true);
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        try {
+          new Notification('Lalao Test Notification', {
+            body: 'Desktop notifications are appearing on this device.',
+            icon: '/icon-192.png',
+            tag: 'lalao-local-notification-test',
+          });
+        } catch (notificationError) {
+          // Still run the server push test if the browser blocks page-created notifications.
+          console.warn('Could not show local browser notification:', notificationError);
+        }
+      }
       await sendTestNotification();
     } catch (err) {
       console.error('Test push error:', err);

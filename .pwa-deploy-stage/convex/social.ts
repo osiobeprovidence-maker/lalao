@@ -1,0 +1,3269 @@
+import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
+import { canAccessGroupChat } from "./groupAccess";
+import { isPostMatchingTopic, getKeywordsForTopic } from "./topicKeywords";
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   AUTH HELPERS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+export async function getAuthedUser(ctx: any) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) return null;
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+    .unique();
+
+  if (user && (user.accessStatus === "country_restricted" || user.accessStatus === "waitlisted")) {
+    throw new Error("Access denied: Country restricted");
+  }
+
+  return user;
+}
+
+export async function getRelationshipSets(ctx: any, currentUser: any) {
+  const followingIds = new Set<string>();
+  const followerIds = new Set<string>();
+  if (currentUser) {
+    const followsOut = await ctx.db
+      .query("follows")
+      .withIndex("by_follower", (q: any) => q.eq("followerId", currentUser._id))
+      .collect();
+    followsOut.forEach((f: any) => followingIds.add(f.followingId));
+    
+    const followsIn = await ctx.db
+      .query("follows")
+      .withIndex("by_following", (q: any) => q.eq("followingId", currentUser._id))
+      .collect();
+    followsIn.forEach((f: any) => followerIds.add(f.followerId));
+  }
+  return { followingIds, followerIds };
+}
+
+export function resolveRelationship(userId: string, sets: { followingIds: Set<string>, followerIds: Set<string> }): "none" | "following" | "follower" | "friends" {
+  const isFollowing = sets.followingIds.has(userId);
+  const isFollower = sets.followerIds.has(userId);
+  if (isFollowing && isFollower) return "friends";
+  if (isFollowing) return "following";
+  if (isFollower) return "follower";
+  return "none";
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   INTERNAL HELPERS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+function formatRelativeTime(ms: number | undefined | null): string {
+  if (!ms) return "Just now";
+  const diff = Date.now() - ms;
+  const minutes = Math.floor(diff / 60_000);
+  const hours = Math.floor(diff / 3_600_000);
+  const days = Math.floor(diff / 86_400_000);
+  if (minutes < 1 || isNaN(minutes)) return "Just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  if (hours < 24) return `${hours} hr ago`;
+  if (days === 1) return "Yesterday";
+  try {
+    return new Date(ms).toLocaleDateString();
+  } catch {
+    return "Just now";
+  }
+}
+
+/**
+ * Calculates geographical distance in meters between two coordinates (Haversine formula).
+ */
+function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371e3; // Earth radius in meters
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const φ1 = toRad(lat1);
+  const φ2 = toRad(lat2);
+  const Δφ = toRad(lat2 - lat1);
+  const Δλ = toRad(lon2 - lon1);
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
+
+
+/**
+ * Build the author sub-object for feed / comment payloads.
+ * Resolves real isFollowing state from the follows table.
+ */
+/**
+ * SINGLE SOURCE OF TRUTH for a user's CURRENT subscription / verification badge.
+ * Always derived live from the `users` document - never stored on posts/comments.
+ * A badge is shown only if the user has a paid tier, the subscription is not
+ * cancelled/expired/inactive, and it has not passed its expiry date.
+ */
+export function resolveUserVerification(doc: any): { isVerified: boolean; verificationTier: "none" | "verified" | "priority" | "creator" } {
+  if (!doc) return { isVerified: false, verificationTier: "none" };
+  const status = doc.verificationStatus;
+  const isVerified = Boolean(
+    doc.verificationTier &&
+    doc.verificationTier !== "none" &&
+    (!status || status === "active") &&
+    (!doc.verificationExpiresAt || doc.verificationExpiresAt > Date.now())
+  );
+  return {
+    isVerified,
+    verificationTier: isVerified ? (doc.verificationTier ?? "none") : "none",
+  };
+}
+
+async function resolveAuthor(ctx: any, authorDoc: any, currentUserId: string | null) {
+  if (!authorDoc) return null;
+
+  let isFollowing = false;
+  if (currentUserId && currentUserId !== authorDoc._id) {
+    const follow = await ctx.db
+      .query("follows")
+      .withIndex("by_follower_following", (q: any) =>
+        q.eq("followerId", currentUserId).eq("followingId", authorDoc._id)
+      )
+      .unique();
+    isFollowing = !!follow;
+  }
+
+  // Resolve avatar URL. Prefer stored Convex storage URL if available.
+  let avatar = authorDoc.avatarUrl || "";
+  if (!avatar && (authorDoc as any).avatarStorageId) {
+    try {
+      const signed = await ctx.storage.getUrl((authorDoc as any).avatarStorageId);
+      if (signed) avatar = signed;
+    } catch (e) {
+      console.warn('Failed to generate signed avatar URL', e);
+    }
+  }
+  // Fallback to legacy avatar field.
+  if (!avatar && (authorDoc as any).avatar) {
+    avatar = (authorDoc as any).avatar;
+  }
+
+  return {
+    id: authorDoc._id,
+    name: authorDoc.name ?? "User",
+    username: authorDoc.username ?? "user",
+    avatar,
+    avatarUrl: avatar,
+    userType: authorDoc.userType ?? "person",
+    bio: authorDoc.bio ?? "",
+    location: (authorDoc.locationName ?? "").replace(/\s*\(Detected\)\s*/i, "").replace(/^GPS Detected$/i, "").trim(),
+    followersCount: authorDoc.followersCount ?? 0,
+    followingCount: authorDoc.followingCount ?? 0,
+    isFollowing,
+    publicIdentityType: (authorDoc.publicIdentityType as "display_name" | "username") ?? "display_name",
+    ...resolveUserVerification(authorDoc),
+  };
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   STORAGE
+   ───────────────────────────────────────────────────────────────────────────── */
+
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const resolveStorageUrl = mutation({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    return await ctx.storage.getUrl(args.storageId);
+  },
+});
+
+export const getStorageUrl = query({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    return await ctx.storage.getUrl(args.storageId);
+  },
+});
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   FEED
+   ───────────────────────────────────────────────────────────────────────────── */
+
+export const listFeedPosts = query({
+  args: {
+    feedType: v.optional(v.string()),
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
+    radiusKm: v.optional(v.number()),
+    locationName: v.optional(v.string()),
+    cursor: v.optional(v.number()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    const limit = args.limit ?? 40;
+    const currentUserId = currentUser?._id;
+
+    const userLat = args.latitude ?? currentUser?.latitude;
+    const userLng = args.longitude ?? currentUser?.longitude;
+    const radiusKm = args.radiusKm ?? currentUser?.radiusKm ?? 5;
+    const maxRadiusMeters = radiusKm * 1000;
+    const cleanLocationName = (args.locationName ?? currentUser?.locationName ?? "").trim().toLowerCase();
+
+    const feedType = args.feedType || 'for_you';
+    let posts: any[] = [];
+
+    /* ─── TAB 1: FOLLOWING ─── */
+    if (feedType === 'following') {
+      if (!currentUserId) return [];
+
+      // Get users the current user follows
+      const followedUsers = await ctx.db
+        .query("follows")
+        .withIndex("by_follower", (q: any) => q.eq("followerId", currentUserId))
+        .collect();
+      const followedUserIds = new Set(followedUsers.map((f: any) => f.followingId));
+
+      // Get pages the current user follows
+      const followedPages = await ctx.db
+        .query("pageFollowers")
+        .withIndex("by_page_user")
+        .filter((q) => q.eq(q.field("userId"), currentUserId))
+        .collect();
+      const followedPageIds = new Set(followedPages.map((f: any) => f.pageId));
+
+      // Strictly accounts the user actively follows: if following nobody, return empty
+      if (followedUserIds.size === 0 && followedPageIds.size === 0) {
+        return [];
+      }
+
+      let candidatePosts: any[] = [];
+      if (followedUserIds.size + followedPageIds.size <= 30) {
+        // Query author/page posts directly by index for high accuracy
+        const userPromises = Array.from(followedUserIds).map((authorId) =>
+          ctx.db
+            .query("posts")
+            .withIndex("by_author", (q: any) => q.eq("authorId", authorId))
+            .order("desc")
+            .take(25)
+        );
+        const pagePromises = Array.from(followedPageIds).map((pageId) =>
+          ctx.db
+            .query("posts")
+            .filter((q: any) => q.eq(q.field("pageRefId"), pageId))
+            .order("desc")
+            .take(25)
+        );
+        const allResults = await Promise.all([...userPromises, ...pagePromises]);
+        const postMap = new Map<string, any>();
+        for (const list of allResults) {
+          for (const p of list) {
+            if (p.moderationStatus !== "removed") {
+              postMap.set(p._id, p);
+            }
+          }
+        }
+        candidatePosts = Array.from(postMap.values()).sort((a, b) => b.createdAt - a.createdAt);
+      } else {
+        const recent = await ctx.db
+          .query("posts")
+          .withIndex("by_created")
+          .order("desc")
+          .take(300);
+
+        candidatePosts = recent.filter((p: any) => {
+          if (p.moderationStatus === "removed") return false;
+          if (p.pageRefId && followedPageIds.has(p.pageRefId)) return true;
+          if (!p.pageRefId && followedUserIds.has(p.authorId)) return true;
+          return false;
+        });
+      }
+
+      if (args.cursor) {
+        candidatePosts = candidatePosts.filter((p) => p.createdAt < args.cursor!);
+      }
+      posts = candidatePosts.slice(0, limit);
+    }
+
+    /* ─── TAB 2: NEARBY ─── */
+    else if (feedType === 'nearby') {
+      // Must have valid viewer coordinates to browse Nearby
+      if (typeof userLat !== 'number' || typeof userLng !== 'number' || isNaN(userLat) || isNaN(userLng)) {
+        return [];
+      }
+
+      // Query posts with by_created or by_nearby_created
+      const recentPosts = await ctx.db
+        .query("posts")
+        .withIndex("by_created")
+        .order("desc")
+        .take(300);
+
+      const candidatePosts = recentPosts.filter((post: any) => {
+        if (post.moderationStatus === "removed") return false;
+
+        // Private posts / restricted access: privacy restrictions override proximity
+        if (post.audience === "closeFriends" && post.authorId !== currentUserId) {
+          return false;
+        }
+
+        // Must have valid publication location coordinates
+        if (
+          typeof post.latitude !== "number" ||
+          typeof post.longitude !== "number" ||
+          isNaN(post.latitude) ||
+          isNaN(post.longitude)
+        ) {
+          return false;
+        }
+
+        // If post has an explicit nearbyEnabled flag and it is false, exclude it
+        if (post.nearbyEnabled === false) {
+          return false;
+        }
+
+        // Calculate accurate distance
+        const dist = haversineMeters(userLat, userLng, post.latitude, post.longitude);
+
+        // Strict distance threshold (default 5km or viewer radiusKm)
+        // Matching state names or city names alone DOES NOT grant eligibility
+        if (dist <= maxRadiusMeters) {
+          post._computedDistance = dist;
+          return true;
+        }
+
+        return false;
+      });
+
+      if (args.cursor) {
+        posts = candidatePosts.filter((p) => p.createdAt < args.cursor!).slice(0, limit);
+      } else {
+        posts = candidatePosts.slice(0, limit);
+      }
+    }
+
+    /* ─── TAB 3: TOPICS / INTEREST FEEDS ─── */
+    else if (feedType && !['for_you', 'following', 'nearby'].includes(feedType)) {
+      const topicSlug = feedType.toLowerCase().trim();
+      const topicDoc = await ctx.db
+        .query("topics")
+        .withIndex("by_slug", (q) => q.eq("slug", topicSlug))
+        .first();
+
+      const topicDisplayName = topicDoc?.displayName?.toLowerCase() || topicSlug;
+
+      const allPosts = await ctx.db
+        .query("posts")
+        .withIndex("by_created")
+        .order("desc")
+        .take(300);
+
+      const candidatePosts = allPosts.filter((p: any) => {
+        if (p.moderationStatus === "removed") return false;
+
+        // 1. Check maintainable keyword matching, contentTopics, and hashtags
+        if (isPostMatchingTopic(p, topicSlug) || isPostMatchingTopic(p, topicDisplayName)) {
+          return true;
+        }
+
+        return false;
+      });
+
+      if (args.cursor) {
+        posts = candidatePosts.filter((p) => p.createdAt < args.cursor!).slice(0, limit);
+      } else {
+        posts = candidatePosts.slice(0, limit);
+      }
+    }
+
+    /* ─── TAB 4: FOR YOU (ALGORITHMIC DISCOVERY) ─── */
+    else {
+      let recentPosts = await ctx.db
+        .query("posts")
+        .withIndex("by_created")
+        .order("desc")
+        .take(150);
+
+      if (args.cursor) {
+        recentPosts = recentPosts.filter((p) => p.createdAt < args.cursor!);
+      }
+
+      // Fetch active seed accounts to boost them
+      const activeSeeds = await ctx.db
+        .query("recommendations")
+        .withIndex("by_active_priority", (q) => q.eq("active", true))
+        .collect();
+      const seedIds = new Set(activeSeeds.map(s => s.targetId));
+
+      // Retrieve User Content Topic Preferences
+      const interestedTopics = new Set<string>();
+      const reducedTopics = new Set<string>();
+      const excludedTopics = new Set<string>();
+
+      if (currentUserId) {
+        const userPrefs = await ctx.db
+          .query("userTopicPreferences")
+          .withIndex("by_user", (q) => q.eq("userId", currentUserId))
+          .collect();
+
+        for (const up of userPrefs) {
+          const s = up.topicSlug.toLowerCase();
+          if (up.preference === "interested") interestedTopics.add(s);
+          else if (up.preference === "reduced") reducedTopics.add(s);
+          else if (up.preference === "excluded") excludedTopics.add(s);
+        }
+      }
+
+      // Query sensitive topics that require explicit opt-in
+      const sensitiveTopicsDocs = await ctx.db
+        .query("topics")
+        .withIndex("by_sensitive", (q) => q.eq("isSensitive", true))
+        .collect();
+
+      const sensitiveOptInSlugs = new Set<string>();
+      for (const st of sensitiveTopicsDocs) {
+        if (st.requiresExplicitOptIn) {
+          sensitiveOptInSlugs.add(st.slug.toLowerCase());
+          sensitiveOptInSlugs.add(st.displayName.toLowerCase());
+        }
+      }
+
+      // Also support legacy onboarding interests
+      for (const oi of currentUser?.interests || []) {
+        interestedTopics.add(oi.toLowerCase());
+      }
+
+      // Algorithmic discovery score: recency blended with engagement and interest matching
+      const scoredPosts = recentPosts
+        .filter((p) => {
+          if (p.moderationStatus === "removed") return false;
+
+          // Audience check: closeFriends posts only visible to author or allowed
+          if (p.audience === "closeFriends" && p.authorId !== currentUserId) {
+            return false;
+          }
+
+          // Extract post topic identifiers
+          const postTopics: string[] = [];
+          if (p.contentTopics && Array.isArray(p.contentTopics)) {
+            for (const t of p.contentTopics) postTopics.push(t.toLowerCase());
+          }
+          if (p.text) {
+            const textLower = p.text.toLowerCase();
+            const hashMatches = textLower.match(/#(\w+)/g);
+            if (hashMatches) {
+              for (const hm of hashMatches) postTopics.push(hm.substring(1).toLowerCase());
+            }
+          }
+
+          // Check keyword and topic matches for sensitive topics
+          const isPostSensitive = Array.from(sensitiveOptInSlugs).some((st) => isPostMatchingTopic(p, st));
+          if (isPostSensitive) {
+            const hasViewerOptedIn = Array.from(interestedTopics).some((it) => isPostMatchingTopic(p, it));
+            // If viewer has not explicitly opted into this sensitive topic, exclude from proactive For You feed
+            if (!hasViewerOptedIn && p.authorId !== currentUserId) {
+              return false;
+            }
+          }
+
+          // 2. EXCLUDED TOPICS: Completely exclude posts categorized or matching topics user chose to exclude
+          const isExcluded = Array.from(excludedTopics).some((et) => isPostMatchingTopic(p, et));
+          if (isExcluded && p.authorId !== currentUserId) {
+            return false;
+          }
+
+          return true;
+        })
+        .map((p) => {
+          const engagement =
+            (p.likesCount || 0) * 3 +
+            (p.commentsCount || 0) * 4 +
+            (p.repostsCount || 0) * 5;
+          const ageHours = Math.max(0.1, (Date.now() - p.createdAt) / (1000 * 60 * 60));
+
+          let topicMultiplier = 1;
+
+          // Interested: significant boost via keywords and topic metadata
+          const isInterested = Array.from(interestedTopics).some((it) => isPostMatchingTopic(p, it));
+          if (isInterested) {
+            topicMultiplier *= 3.5;
+          }
+
+          // Reduced: see less often (0.25x weight)
+          const isReduced = Array.from(reducedTopics).some((rt) => isPostMatchingTopic(p, rt));
+          if (isReduced) {
+            topicMultiplier *= 0.25;
+          }
+
+          let seedBoost = 1;
+          const authorOrPageId = p.pageRefId || p.authorId;
+          if (seedIds.has(authorOrPageId)) {
+            seedBoost = 5; // Heavy boost for seed accounts to solve cold start
+          }
+
+          const score = ((engagement + 1) * topicMultiplier * seedBoost) / Math.pow(ageHours + 2, 1.2);
+          return { post: p, score };
+        });
+
+      scoredPosts.sort((a, b) => b.score - a.score);
+      posts = scoredPosts.slice(0, limit).map((sp) => sp.post);
+    }
+
+
+    const results: any[] = [];
+
+    for (const post of posts) {
+      if (post.moderationStatus === "removed") continue;
+
+      let author;
+      
+      if (post.pageRefId) {
+        const pageDoc: any = await ctx.db.get(post.pageRefId as any);
+        if (pageDoc) {
+          author = {
+            id: pageDoc._id,
+            name: pageDoc.name,
+            username: pageDoc.username,
+            avatar: pageDoc.avatar || "",
+            userType: pageDoc.type || "business",
+            followersCount: pageDoc.followersCount || 0,
+            followingCount: 0,
+            isFollowing: false,
+            isVerified: true,
+            location: pageDoc.location,
+          };
+        } else {
+          // Fallback if page was deleted
+          const authorDoc = post.authorId ? await ctx.db.get(post.authorId) : null;
+          author = await resolveAuthor(ctx, authorDoc, currentUserId || null);
+        }
+      } else {
+        const authorDoc = post.authorId ? await ctx.db.get(post.authorId) : null;
+        author = await resolveAuthor(ctx, authorDoc, currentUserId || null);
+      }
+
+      const commentPayload: any[] = [];
+
+      let isLiked = false;
+      if (currentUserId) {
+        const postLike = await ctx.db
+          .query("likes")
+          .withIndex("by_user_target", (q: any) =>
+            q.eq("userId", currentUserId).eq("targetType", "post").eq("targetId", post._id)
+          )
+          .unique();
+        isLiked = !!postLike;
+      }
+
+      const mediaUrl = post.mediaUrl || (post.mediaStorageId ? await ctx.storage.getUrl(post.mediaStorageId) : undefined);
+
+      results.push({
+        id: post._id,
+        author,
+        text: post.text,
+        mediaUrl,
+        mediaStorageId: post.mediaStorageId,
+        muxUploadId: post.muxUploadId,
+        muxAssetId: post.muxAssetId,
+        muxPlaybackId: post.muxPlaybackId,
+        mediaType: post.mediaType,
+        location: post.location,
+        distanceMeters: (() => {
+          if (
+            typeof userLat === 'number' &&
+            typeof userLng === 'number' &&
+            typeof post.latitude === 'number' &&
+            typeof post.longitude === 'number'
+          ) {
+            return haversineMeters(userLat, userLng, post.latitude, post.longitude);
+          }
+          return undefined;
+        })(),
+        createdAt: formatRelativeTime(post.createdAt),
+        likesCount: post.likesCount ?? 0,
+        commentsCount: post.commentsCount ?? 0,
+        repostsCount: post.repostsCount ?? 0,
+        isLiked,
+        isReposted: false,
+        comments: commentPayload,
+        audience: post.audience ?? "everyone",
+        replyPermission: post.replyPermission ?? "everyone",
+        gifUrl: post.gifUrl,
+        contentTopics: post.contentTopics || [],
+        poll: post.pollQuestion
+          ? {
+              question: post.pollQuestion,
+              options: post.pollOptions ?? [],
+              votes: new Array((post.pollOptions ?? []).length).fill(0),
+            }
+          : undefined,
+        rallyRefId: post.rallyRefId,
+        pageRefId: post.pageRefId,
+        soundId: post.soundId,
+        soundTitle: post.soundTitle,
+        soundAuthorName: post.soundAuthorName,
+        soundAudioUrl: post.soundAudioUrl,
+        soundStartOffset: post.soundStartOffset,
+        soundVolume: post.soundVolume,
+        originalAudioVolume: post.originalAudioVolume,
+      });
+    }
+
+    return results;
+  },
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   PROFILE POSTS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Shared helper to resolve posts created by a specific profile/user.
+ * Robustly matches by normalized Convex Id, username, custom id, or authenticated user.
+ */
+async function fetchPostsForProfileUser(
+  ctx: any,
+  args: { userId?: string; username?: string }
+) {
+  const currentUser = await getAuthedUser(ctx);
+
+  // 1. Resolve target user
+  let targetUser: any = null;
+
+  if (args.userId) {
+    const normId = ctx.db.normalizeId("users", args.userId);
+    if (normId) {
+      targetUser = await ctx.db.get(normId);
+    }
+  }
+
+  if (!targetUser && args.username) {
+    const cleanUsername = args.username.replace(/^@/, "").trim().toLowerCase();
+    targetUser = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q: any) => q.eq("username", cleanUsername))
+      .unique();
+  }
+
+  if (!targetUser && args.userId) {
+    const cleanUserId = args.userId.replace(/^@/, "").trim().toLowerCase();
+    targetUser = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q: any) => q.eq("username", cleanUserId))
+      .unique();
+  }
+
+  if (!targetUser && args.userId) {
+    targetUser = await ctx.db
+      .query("users")
+      .collect()
+      .then((all: any[]) =>
+        all.find(
+          (u: any) =>
+            u._id === args.userId ||
+            u.username === args.userId ||
+            u.tokenIdentifier?.includes(args.userId)
+        )
+      );
+  }
+
+  if (!targetUser) {
+    targetUser = currentUser;
+  }
+
+  if (!targetUser) return [];
+
+  // 2. Query posts where author matches targetUser._id
+  const posts = await ctx.db
+    .query("posts")
+    .withIndex("by_author", (q: any) => q.eq("authorId", targetUser._id))
+    .order("desc")
+    .collect();
+
+  let isFollowing = false;
+  if (currentUser && currentUser._id !== targetUser._id) {
+    const follow = await ctx.db
+      .query("follows")
+      .withIndex("by_follower_following", (q: any) =>
+        q.eq("followerId", currentUser._id).eq("followingId", targetUser._id)
+      )
+      .unique();
+    isFollowing = !!follow;
+  }
+
+  const effectiveAvatar = targetUser.avatarUrl || (targetUser as any).avatar || "";
+  const authorObj = {
+    id: targetUser._id,
+    name: targetUser.name ?? "User",
+    username: targetUser.username ?? "user",
+    avatar: effectiveAvatar,
+    avatarUrl: effectiveAvatar,
+    userType: targetUser.userType ?? "person",
+    bio: targetUser.bio ?? "",
+    location: targetUser.locationName ?? "",
+    followersCount: targetUser.followersCount ?? 0,
+    followingCount: targetUser.followingCount ?? 0,
+    isFollowing,
+    ...resolveUserVerification(targetUser),
+  };
+
+  const results: any[] = [];
+  for (const post of posts) {
+    if (post.moderationStatus === "removed") continue;
+
+    let isLiked = false;
+    if (currentUser) {
+      isLiked = !!(await ctx.db
+        .query("likes")
+        .withIndex("by_user_target", (q: any) =>
+          q.eq("userId", currentUser._id).eq("targetType", "post").eq("targetId", post._id)
+        )
+        .unique());
+    }
+
+    // Top-level comments and direct replies for this post
+    const allComments = await ctx.db
+      .query("comments")
+      .withIndex("by_post", (q: any) => q.eq("postId", post._id))
+      .order("desc")
+      .take(20);
+
+    const topLevel = allComments.filter((c: any) => !c.parentCommentId);
+    const topLevelSlice = topLevel.slice(0, 10);
+
+    const commentPayload = await Promise.all(
+      topLevelSlice.map(async (comment: any) => {
+        const commentAuthorDoc = comment.authorId ? await ctx.db.get(comment.authorId) : null;
+        const commentAuthor = await resolveAuthor(ctx, commentAuthorDoc, currentUser?._id ?? null);
+        const commentLike = currentUser
+          ? await ctx.db
+              .query("likes")
+              .withIndex("by_user_target", (q: any) =>
+                q.eq("userId", currentUser._id).eq("targetType", "comment").eq("targetId", comment._id)
+              )
+              .unique()
+          : null;
+
+        const replies = allComments
+          .filter((c: any) => c.parentCommentId === comment._id)
+          .slice(0, 5);
+
+        return {
+          id: comment._id,
+          author: commentAuthor,
+          text: comment.text,
+          createdAt: formatRelativeTime(comment.createdAt),
+          likesCount: comment.likesCount ?? 0,
+          isLiked: !!commentLike,
+          replies: await Promise.all(
+            replies.map(async (reply: any) => {
+              const replyAuthorDoc = reply.authorId ? await ctx.db.get(reply.authorId) : null;
+              const replyAuthor = await resolveAuthor(ctx, replyAuthorDoc, currentUser?._id ?? null);
+              const replyLike = currentUser
+                ? await ctx.db
+                    .query("likes")
+                    .withIndex("by_user_target", (q: any) =>
+                      q.eq("userId", currentUser._id).eq("targetType", "comment").eq("targetId", reply._id)
+                    )
+                    .unique()
+                : null;
+              return {
+                id: reply._id,
+                author: replyAuthor,
+                text: reply.text,
+                createdAt: formatRelativeTime(reply.createdAt),
+                likesCount: reply.likesCount ?? 0,
+                isLiked: !!replyLike,
+                replyToUsername: (commentAuthorDoc as any)?.username ?? "user",
+              };
+            })
+          ),
+        };
+      })
+    );
+
+    const mediaUrl = post.mediaUrl || (post.mediaStorageId ? await ctx.storage.getUrl(post.mediaStorageId) : undefined);
+
+    results.push({
+      id: post._id,
+      author: authorObj,
+      text: post.text,
+      mediaUrl,
+      mediaStorageId: post.mediaStorageId,
+      muxUploadId: post.muxUploadId,
+      muxAssetId: post.muxAssetId,
+      muxPlaybackId: post.muxPlaybackId,
+      mediaType: post.mediaType,
+      location: post.location,
+      distanceMeters: (() => {
+        // Compute distance from viewer to post location only with verified coordinates
+        const vLat = currentUser?.latitude;
+        const vLng = currentUser?.longitude;
+        if (
+          typeof vLat === 'number' &&
+          typeof vLng === 'number' &&
+          typeof post.latitude === 'number' &&
+          typeof post.longitude === 'number'
+        ) {
+          return haversineMeters(vLat, vLng, post.latitude, post.longitude);
+        }
+        return undefined;
+      })(),
+      createdAt: formatRelativeTime(post.createdAt),
+      likesCount: post.likesCount ?? 0,
+      commentsCount: post.commentsCount ?? 0,
+      repostsCount: post.repostsCount ?? 0,
+      isLiked,
+      isReposted: false,
+      comments: commentPayload,
+      audience: post.audience ?? "everyone",
+      replyPermission: post.replyPermission ?? "everyone",
+      gifUrl: post.gifUrl,
+      poll: post.pollQuestion
+        ? {
+            question: post.pollQuestion,
+            options: post.pollOptions ?? [],
+            votes: new Array((post.pollOptions ?? []).length).fill(0),
+          }
+        : undefined,
+      rallyRefId: post.rallyRefId,
+      pageRefId: post.pageRefId,
+      soundId: post.soundId,
+      soundTitle: post.soundTitle,
+      soundAuthorName: post.soundAuthorName,
+      soundAudioUrl: post.soundAudioUrl,
+      soundStartOffset: post.soundStartOffset,
+      soundVolume: post.soundVolume,
+      originalAudioVolume: post.originalAudioVolume,
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Returns all posts created by the currently authenticated user (or specified user).
+ * Uses the by_author index so it is not limited to the feed window.
+ */
+export const listMyPosts = query({
+  args: {
+    userId: v.optional(v.string()),
+    username: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    return await fetchPostsForProfileUser(ctx, args);
+  },
+});
+
+/**
+ * Returns all posts created by a specific user (by their user id or username).
+ * Used when viewing another user's profile or own profile.
+ */
+export const listUserPosts = query({
+  args: {
+    userId: v.optional(v.string()),
+    username: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    return await fetchPostsForProfileUser(ctx, args);
+  },
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   USERS / SUGGESTIONS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+export const listUsersForExplore = query({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getAuthedUser(ctx);
+    const allUsers = await ctx.db.query("users").collect();
+
+    const relSets = await getRelationshipSets(ctx, currentUser);
+
+    return allUsers
+      .filter((user: any) => !currentUser || user._id !== currentUser._id)
+      .map((user: any) => ({
+        id: user._id,
+        name: user.name ?? "User",
+        username: user.username ?? "user",
+        avatar: user.avatarUrl ?? "",
+        userType: user.userType ?? "person",
+        bio: user.bio ?? "",
+        location: (user.locationName ?? "").replace(/\s*\(Detected\)\s*/i, "").replace(/^GPS Detected$/i, "").trim(),
+        latitude: user.latitude ?? undefined,
+        longitude: user.longitude ?? undefined,
+        followersCount: user.followersCount ?? 0,
+        followingCount: user.followingCount ?? 0,
+        isFollowing: currentUser ? relSets.followingIds.has(user._id) : false,
+        relationship: currentUser ? resolveRelationship(user._id, relSets) : "none",
+        ...resolveUserVerification(user),
+      }));
+  },
+});
+
+/**
+ * Suggested users — real database users not already followed by current user.
+ * Sorted by shared interests first, then by follower count.
+ */
+export const listSuggestedUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return [];
+
+    const relSets = await getRelationshipSets(ctx, currentUser);
+    const followingIds = relSets.followingIds;
+    followingIds.add(currentUser._id as string);
+
+    const allUsers = await ctx.db.query("users").collect();
+    const currentInterests = new Set<string>(currentUser.interests ?? []);
+
+    return allUsers
+      .filter((u: any) => !followingIds.has(u._id))
+      .map((u: any) => {
+        const sharedInterests = (u.interests ?? []).filter((i: string) =>
+          currentInterests.has(i)
+        ).length;
+        return { user: u, sharedInterests };
+      })
+      .sort((a: any, b: any) =>
+        b.sharedInterests !== a.sharedInterests
+          ? b.sharedInterests - a.sharedInterests
+          : (b.user.followersCount ?? 0) - (a.user.followersCount ?? 0)
+      )
+      .slice(0, 10)
+      .map(({ user }: any) => ({
+        id: user._id,
+        name: user.name ?? "User",
+        username: user.username ?? "user",
+        avatar: user.avatarUrl ?? "",
+        userType: user.userType ?? "person",
+        bio: user.bio ?? "",
+        location: (user.locationName ?? "").replace(/\s*\(Detected\)\s*/i, "").replace(/^GPS Detected$/i, "").trim(),
+        followersCount: user.followersCount ?? 0,
+        followingCount: user.followingCount ?? 0,
+        isFollowing: relSets.followingIds.has(user._id),
+        relationship: currentUser ? resolveRelationship(user._id, relSets) : "none",
+        ...resolveUserVerification(user),
+      }));
+  },
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   PAGES
+   ───────────────────────────────────────────────────────────────────────────── */
+
+export const getPage = query({
+  args: { pageId: v.string() },
+  handler: async (ctx, { pageId }) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!pageId) return null;
+
+    // Optional: map specific hardcoded IDs if needed (e.g. page_honorofkings)
+    // For now, we try to fetch it from DB.
+    let page: any;
+    try {
+      page = await ctx.db.get(pageId as any);
+    } catch {
+      // Invalid ID format
+      return null;
+    }
+
+    if (!page) return null;
+
+    let isFollowing = false;
+    let isOwner = false;
+
+    if (currentUser) {
+      isOwner = page.ownerId === currentUser._id;
+      isFollowing = !!(await ctx.db
+        .query("pageFollowers")
+        .withIndex("by_page_user", (q: any) =>
+          q.eq("pageId", page._id).eq("userId", currentUser._id)
+        )
+        .unique());
+    }
+
+    return {
+      id: page._id,
+      ownerId: page.ownerId,
+      name: page.name,
+      username: page.username,
+      type: page.type,
+      badge: page.badge ?? "COMMUNITY",
+      avatar: page.avatar ?? "",
+      coverImage: page.coverImage ?? "",
+      description: page.description ?? "",
+      location: page.location ?? "",
+      followersCount: page.followersCount ?? 0,
+      isFollowing,
+      isOwner,
+      category: page.category ?? "General",
+      aboutInfo: page.aboutInfo ?? {},
+      businessType: page.businessType,
+      activeTools: page.activeTools,
+    };
+  },
+});
+
+export const listPages = query({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return [];
+
+    const pages = await ctx.db.query("pages").collect();
+    const results: any[] = [];
+
+    for (const page of pages) {
+      if (page.ownerId === currentUser._id) {
+        continue; // Exclude own pages from discover
+      }
+      const isFollowing = !!(await ctx.db
+        .query("pageFollowers")
+        .withIndex("by_page_user", (q: any) =>
+          q.eq("pageId", page._id).eq("userId", currentUser._id)
+        )
+        .unique());
+
+      results.push({
+        id: page._id,
+        ownerId: page.ownerId,
+        name: page.name,
+        username: page.username,
+        type: page.type,
+        badge: page.badge ?? "COMMUNITY",
+        avatar: page.avatar ?? "",
+        coverImage: page.coverImage ?? "",
+        description: page.description ?? "",
+        location: page.location ?? "",
+        followersCount: page.followersCount ?? 0,
+        isFollowing,
+        isOwner: page.ownerId === currentUser._id,
+        category: page.category ?? "General",
+        aboutInfo: page.aboutInfo ?? {},
+        businessType: page.businessType,
+        activeTools: page.activeTools,
+        globalDiscoveryStatus: page.globalDiscoveryStatus ?? "global",
+        serviceAreas: page.serviceAreas ?? [],
+        isOnlineBusiness: page.isOnlineBusiness ?? false,
+      });
+    }
+
+    return results;
+  },
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   CONVERSATIONS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+export const listConversations = query({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return [];
+
+    const relSets = await getRelationshipSets(ctx, currentUser);
+
+    const convosAsUserA = await ctx.db
+      .query("conversations")
+      .withIndex("by_user_a", (q) => q.eq("userA", currentUser._id))
+      .collect();
+
+    const convosAsUserB = await ctx.db
+      .query("conversations")
+      .withIndex("by_user_b", (q) => q.eq("userB", currentUser._id))
+      .collect();
+      
+    const myPages = await ctx.db
+      .query("pages")
+      .withIndex("by_owner", (q) => q.eq("ownerId", currentUser._id))
+      .collect();
+      
+    const convosAsPage = [];
+    for (const page of myPages) {
+      const pageConvos = await ctx.db
+        .query("conversations")
+        .withIndex("by_page_b", (q) => q.eq("pageB", page._id))
+        .collect();
+      convosAsPage.push(...pageConvos);
+    }
+
+    const memberGroupChats = await ctx.db.query("groupChats").collect();
+    const groupConversations = await Promise.all(
+      memberGroupChats
+        .filter((groupChat) => groupChat.memberIds.includes(currentUser._id))
+        .map(async (groupChat) => {
+          const conversation = await ctx.db
+            .query("conversations")
+            .withIndex("by_group_chat", (q) => q.eq("groupChatId", groupChat._id))
+            .first();
+          return conversation ?? null;
+        }),
+    );
+
+    const allConvosMap = new Map();
+    [...convosAsUserA, ...convosAsUserB, ...convosAsPage, ...groupConversations.filter(Boolean)].forEach((c) => {
+      if (c) allConvosMap.set(c._id, c);
+    });
+    
+    const conversations = Array.from(allConvosMap.values());
+
+    const result: any[] = [];
+
+    for (const conversation of conversations) {
+      const isPageConvo = !!conversation.pageB;
+      const isGroupChat = !!conversation.groupChatId;
+      const amIUserA = conversation.userA === currentUser._id;
+      let groupChat: any = null;
+      let groupMemberIds: readonly string[] = [];
+
+      if (isGroupChat && conversation.groupChatId) {
+        groupChat = await ctx.db.get(conversation.groupChatId);
+        groupMemberIds = groupChat?.memberIds.map((id: any) => id.toString()) ?? [];
+        if (!groupChat || !canAccessGroupChat(currentUser._id.toString(), groupChat.creatorId.toString(), groupMemberIds)) {
+          continue;
+        }
+      }
+      
+      let otherParticipant: any = null;
+      let isFollowingParticipant = false;
+      let participantRelationship = "none";
+      
+      if (isPageConvo) {
+        // If I am UserA, the participant is the Page (PageB)
+        // If I am the Page Owner, the participant is the User (UserA)
+        if (amIUserA) {
+          otherParticipant = await ctx.db.get(conversation.pageB);
+          if (otherParticipant) {
+            otherParticipant.userType = otherParticipant.type;
+            const followRel = await ctx.db
+              .query("pageFollowers")
+              .withIndex("by_page_user", (q) => q.eq("pageId", otherParticipant._id).eq("userId", currentUser._id))
+              .first();
+            isFollowingParticipant = !!followRel;
+          }
+        } else {
+          otherParticipant = await ctx.db.get(conversation.userA);
+          if (otherParticipant) {
+            isFollowingParticipant = relSets.followingIds.has(otherParticipant._id);
+            participantRelationship = resolveRelationship(otherParticipant._id, relSets);
+          }
+        }
+      } else if (isGroupChat && groupChat) {
+        otherParticipant = {
+          id: groupChat._id,
+          name: groupChat.name,
+          username: `group-${groupChat._id}`,
+          avatar: groupChat.avatarUrl ?? "",
+          userType: "community",
+          badge: "COMMUNITY",
+          followersCount: groupChat.memberIds.length,
+          followingCount: 0,
+          isFollowing: true,
+          relationship: "friends",
+        };
+      } else {
+        const otherUserId = amIUserA ? conversation.userB : conversation.userA;
+        otherParticipant = await ctx.db.get(otherUserId);
+        if (otherParticipant) {
+          isFollowingParticipant = relSets.followingIds.has(otherParticipant._id);
+          participantRelationship = resolveRelationship(otherParticipant._id, relSets);
+        }
+      }
+
+      const latestMessage = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation", (q: any) => q.eq("conversationId", conversation._id))
+        .order("desc")
+        .first();
+
+      // Calculate unread count
+      let allMessagesRaw = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation", (q: any) => q.eq("conversationId", conversation._id))
+        .collect();
+
+      const now = Date.now();
+      
+      const allMessages = allMessagesRaw.filter(msg => {
+        // Apply disappearing message rule based on sender or recipient?
+        // Let's use currentUser's setting or if we want it to be fair, maybe just currentUser for their view.
+        const mode = currentUser.disappearingMode;
+        if (!mode || mode === 'off') return true;
+        
+        if (mode === 'after_read') {
+            // Disappear 1 minute after it was read
+            if (msg.isRead && msg.readAt && now - msg.readAt > 60000) return false;
+            return true;
+        }
+        
+        let expireDuration = 0;
+        if (mode === '24_hours') expireDuration = 24 * 60 * 60 * 1000;
+        else if (mode === '7_days') expireDuration = 7 * 24 * 60 * 60 * 1000;
+        else if (mode === '1_month') expireDuration = 30 * 24 * 60 * 60 * 1000;
+        else if (mode === 'custom' && currentUser.disappearingCustomValue) {
+           const unit = currentUser.disappearingCustomUnit || 'days';
+           const multiplier = unit === 'hours' ? 3600000 : unit === 'days' ? 86400000 : unit === 'weeks' ? 604800000 : 2592000000;
+           expireDuration = currentUser.disappearingCustomValue * multiplier;
+        }
+
+        if (expireDuration > 0 && now - msg.createdAt > expireDuration) {
+           return false;
+        }
+        return true;
+      });
+
+      let unreadCount = 0;
+      for (const msg of allMessages) {
+        if (!msg.isRead) {
+          // If we are looking as a Page Manager, it's unread if the customer sent it
+          if (isPageConvo && !amIUserA) {
+            if (msg.senderId !== currentUser._id && !msg.pageSenderId) {
+              unreadCount++;
+            }
+          } else {
+            // Otherwise, it's unread if someone else sent it to us
+            // Check if pageSenderId is not my page, OR senderId is not me
+            const senderWasPage = msg.pageSenderId !== undefined;
+            if (senderWasPage) {
+              // A page sent this. Am I the owner of this page?
+              // The conversation.pageB is the page. I am amIUserA (customer).
+              unreadCount++;
+            } else {
+              // A regular user sent this. Is it me?
+              if (msg.senderId !== currentUser._id) {
+                unreadCount++;
+              }
+            }
+          }
+        }
+      }
+
+      const messages = await Promise.all(
+        allMessages
+          .sort((a, b) => a.createdAt - b.createdAt)
+          .map(async (msg) => {
+            let isMine = false;
+            if (msg.pageSenderId && conversation.pageB) {
+                isMine = amIUserA ? false : true;
+            } else {
+                isMine = msg.senderId === currentUser._id;
+            }
+            
+            let replyToMessageText = undefined;
+            if (msg.replyToMessageId) {
+              const repliedMsg = allMessages.find(m => m._id === msg.replyToMessageId);
+              if (repliedMsg) {
+                replyToMessageText = repliedMsg.text;
+              }
+            }
+
+            let audioUrl = undefined;
+            if (msg.audioStorageId) {
+              audioUrl = (await ctx.storage.getUrl(msg.audioStorageId)) ?? undefined;
+            }
+            
+            let mediaUrl = undefined;
+            if (msg.mediaStorageId) {
+              mediaUrl = (await ctx.storage.getUrl(msg.mediaStorageId)) ?? undefined;
+            }
+
+            return {
+              id: msg._id,
+              senderId: msg.senderId,
+              text: msg.text,
+              timestamp: formatRelativeTime(msg.createdAt),
+              createdAt: msg.createdAt,
+              isMine,
+              status: msg.isRead ? 'read' : 'delivered',
+              replyToMessageId: msg.replyToMessageId,
+              replyToMessageText,
+              isEdited: msg.isEdited,
+              type: msg.type,
+              mediaUrl,
+              mimeType: msg.mimeType,
+              fileName: msg.fileName,
+              fileSize: msg.fileSize,
+              audioUrl,
+              audioDuration: msg.audioDuration,
+              viewOnce: msg.viewOnce,
+              viewOnceOpened: msg.viewOnceOpened,
+              viewedAt: msg.viewedAt
+            };
+          })
+      );
+
+      result.push({
+        id: conversation._id,
+        isPageConvo,
+        isGroupChat,
+        amIUserA,
+        groupChatId: conversation.groupChatId,
+        groupChat,
+        pageId: conversation.pageB,
+        participant: {
+          id: otherParticipant?._id ?? "",
+          name: otherParticipant?.name ?? "Unknown",
+          username: otherParticipant?.username ?? "unknown",
+          ...resolveUserVerification(otherParticipant),
+          avatar: otherParticipant?.avatarUrl || otherParticipant?.avatar || "",
+          userType: otherParticipant?.userType ?? "person",
+          followersCount: otherParticipant?.followersCount ?? 0,
+          followingCount: otherParticipant?.followingCount ?? 0,
+          isFollowing: isFollowingParticipant,
+          relationship: participantRelationship,
+        },
+        lastMessage: latestMessage?.text ?? "Say hello",
+        timestamp: latestMessage
+          ? new Date(latestMessage.createdAt).toLocaleTimeString()
+          : "Now",
+        updatedAt: conversation.updatedAt || latestMessage?.createdAt || 0,
+        unreadCount,
+        messages,
+      });
+    }
+
+    return result.sort((a, b) => b.updatedAt - a.updatedAt);
+  },
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   POSTS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+export const createPost = mutation({
+  args: {
+    text: v.string(),
+    mediaUrl: v.optional(v.string()),
+    mediaStorageId: v.optional(v.id("_storage")),
+    mediaType: v.optional(v.union(v.literal("image"), v.literal("video"))),
+    location: v.string(),
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
+    audience: v.optional(
+      v.union(
+        v.literal("everyone"),
+        v.literal("closeFriends"),
+        v.literal("community"),
+        v.literal("group"),
+        v.literal("page"),
+        v.literal("nearby"),
+        v.literal("anime"),
+        v.literal("interest")
+      )
+    ),
+    replyPermission: v.optional(
+      v.union(
+        v.literal("everyone"),
+        v.literal("followers"),
+        v.literal("following"),
+        v.literal("friends"),
+        v.literal("closeFriends"),
+        v.literal("sameInterests"),
+        v.literal("mentioned")
+      )
+    ),
+    gifUrl: v.optional(v.string()),
+    pollQuestion: v.optional(v.string()),
+    pollOptions: v.optional(v.array(v.string())),
+    rallyRefId: v.optional(v.string()),
+    pageRefId: v.optional(v.string()),
+    groupRefId: v.optional(v.string()),
+    contentTopics: v.optional(v.array(v.string())),
+    authorUserId: v.optional(v.string()),
+    authorUsername: v.optional(v.string()),
+    muxUploadId: v.optional(v.string()),
+    muxAssetId: v.optional(v.string()),
+    muxPlaybackId: v.optional(v.string()),
+    mediaWidth: v.optional(v.number()),
+    mediaHeight: v.optional(v.number()),
+    mediaStatus: v.optional(
+      v.union(
+        v.literal("uploading"),
+        v.literal("processing"),
+        v.literal("ready"),
+        v.literal("failed")
+      )
+    ),
+    // Sounds & Music integration
+    soundId: v.optional(v.union(v.id("sounds"), v.string())),
+    soundTitle: v.optional(v.string()),
+    soundAuthorName: v.optional(v.string()),
+    soundAudioUrl: v.optional(v.string()),
+    soundStartOffset: v.optional(v.number()),
+    soundVolume: v.optional(v.number()),
+    originalAudioVolume: v.optional(v.number()),
+    locationAccuracy: v.optional(v.number()),
+    locationCapturedAt: v.optional(v.number()),
+    locationCountry: v.optional(v.string()),
+    locationState: v.optional(v.string()),
+    locationCity: v.optional(v.string()),
+    locationNeighborhood: v.optional(v.string()),
+    nearbyEnabled: v.optional(v.boolean()),
+    rallyData: v.optional(
+      v.object({
+        type: v.union(v.literal("ASK"), v.literal("HELP"), v.literal("JOIN")),
+        title: v.string(),
+        description: v.string(),
+        location: v.string(),
+        eventDate: v.string(),
+        eventTime: v.string(),
+        peopleNeeded: v.optional(v.number()),
+        compensationType: v.optional(v.union(v.literal("free"), v.literal("paying"), v.literal("charging"), v.literal("other"))),
+        compensationAmount: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    let currentUser = await getAuthedUser(ctx);
+    if (!currentUser && (args.authorUserId || args.authorUsername)) {
+      if (args.authorUserId) {
+        const normId = ctx.db.normalizeId("users", args.authorUserId);
+        if (normId) {
+          currentUser = await ctx.db.get(normId);
+        }
+      }
+      if (!currentUser && args.authorUsername) {
+        const clean = args.authorUsername.replace(/^@/, "").trim().toLowerCase();
+        currentUser = await ctx.db
+          .query("users")
+          .withIndex("by_username", (q: any) => q.eq("username", clean))
+          .unique();
+      }
+      if (!currentUser && args.authorUserId) {
+        const clean = args.authorUserId.replace(/^@/, "").trim().toLowerCase();
+        currentUser = await ctx.db
+          .query("users")
+          .withIndex("by_username", (q: any) => q.eq("username", clean))
+          .unique();
+      }
+    }
+    if (!currentUser) throw new Error("Not authenticated");
+
+    let mediaUrl = args.mediaUrl;
+    if (args.mediaStorageId) {
+      mediaUrl = (await ctx.storage.getUrl(args.mediaStorageId)) ?? undefined;
+    }
+
+    // Auto-extract hashtags from text and combine with any explicitly provided contentTopics
+    const extractedTopics = (args.contentTopics ?? []).slice();
+    const hashtags = (args.text.match(/#[a-zA-Z0-9_\u00C0-\u00FF-]+/g) || []).map((t) =>
+      t.slice(1).toLowerCase()
+    );
+    for (const h of hashtags) {
+      if (!extractedTopics.includes(h)) {
+        extractedTopics.push(h);
+      }
+    }
+
+    // Determine initial media status
+    let initialMediaStatus = args.mediaStatus;
+    if (!initialMediaStatus) {
+      if (args.muxUploadId && !args.muxPlaybackId) {
+        initialMediaStatus = "processing";
+      } else if (args.mediaUrl || args.mediaStorageId || args.muxPlaybackId || args.gifUrl) {
+        initialMediaStatus = "ready";
+      }
+    }
+
+    // Authorization checks for destinations
+    if (args.audience === "group" || args.groupRefId) {
+      if (!args.groupRefId) throw new Error("Missing groupRefId for group destination");
+      const normGroupId = ctx.db.normalizeId("groupChats", args.groupRefId);
+      if (!normGroupId) throw new Error("Invalid group ID");
+      const group = await ctx.db.get(normGroupId);
+      if (!group) throw new Error("Group not found");
+
+      if (group.communityEnabled === false) {
+        throw new Error("Community features are not enabled for this group");
+      }
+      if (group.communityFeatures && group.communityFeatures.posts === false) {
+        throw new Error("Posting is disabled for this group");
+      }
+
+      if ((args.mediaUrl || args.mediaStorageId || args.muxUploadId) && group.communityFeatures?.media === false) {
+        throw new Error("Media uploads are disabled for this group");
+      }
+
+      const isCreator = group.creatorId === currentUser._id;
+      const mem = await ctx.db
+        .query("groupMembers")
+        .withIndex("by_group_user", (q: any) => q.eq("groupId", normGroupId).eq("userId", currentUser._id))
+        .first();
+      const isMember = isCreator || !!mem || (group.memberIds && group.memberIds.includes(currentUser._id));
+      const isAdmin = isCreator || mem?.role === "owner" || mem?.role === "admin";
+
+      if (!isMember) {
+        throw new Error("You must be a member of this group to publish content to it");
+      }
+
+      if (group.publishingPermissions?.canPost === "admins_only" && !isAdmin) {
+        throw new Error("Only group administrators can publish posts in this group");
+      }
+      if ((args.mediaUrl || args.mediaStorageId || args.muxUploadId) && group.publishingPermissions?.canUploadMedia === "admins_only" && !isAdmin) {
+        throw new Error("Only group administrators can upload media in this group");
+      }
+      if (args.rallyData && group.publishingPermissions?.canCreateRallies === "admins_only" && !isAdmin) {
+        throw new Error("Only group administrators can create rallies in this group");
+      }
+    }
+
+    if (args.audience === "page" || args.audience === "community") {
+      if (!args.pageRefId) throw new Error("Missing pageRefId for destination");
+      const normalizedId = ctx.db.normalizeId("pages", args.pageRefId);
+      if (!normalizedId) throw new Error("Invalid destination ID");
+      const page = await ctx.db.get(normalizedId);
+      if (!page) throw new Error("Destination not found");
+
+      if (args.audience === "page") {
+        if (page.ownerId !== currentUser._id) {
+          throw new Error("You do not have permission to post as this page");
+        }
+      } else if (args.audience === "community") {
+        if (page.ownerId !== currentUser._id) {
+          const isMember = await ctx.db
+            .query("pageFollowers")
+            .withIndex("by_page_user", (q: any) =>
+              q.eq("pageId", page._id).eq("userId", currentUser._id)
+            )
+            .first();
+          if (!isMember) {
+            throw new Error("You must join this community to publish content to it");
+          }
+        }
+      }
+    }
+
+    if (args.audience === "interest") {
+      if (!args.contentTopics || args.contentTopics.length === 0) {
+        throw new Error("Missing topic for interest destination");
+      }
+      for (const slug of args.contentTopics) {
+        const topic = await ctx.db
+          .query("topics")
+          .filter((q: any) => q.eq(q.field("slug"), slug))
+          .first();
+        if (!topic || !topic.active) {
+          throw new Error(`Topic ${slug} is not valid or active`);
+        }
+      }
+    }
+
+    const now = Date.now();
+    let finalRallyRefId = args.rallyRefId;
+
+    if (args.rallyData) {
+      const insertedRallyId = await ctx.db.insert("rallies", {
+        creatorId: currentUser._id,
+        type: args.rallyData.type,
+        title: args.rallyData.title,
+        description: args.rallyData.description,
+        location: args.rallyData.location,
+        latitude: args.latitude,
+        longitude: args.longitude,
+        eventDate: args.rallyData.eventDate,
+        eventTime: args.rallyData.eventTime,
+        peopleNeeded: args.rallyData.peopleNeeded,
+        compensationType: args.rallyData.compensationType,
+        compensationAmount: args.rallyData.compensationAmount,
+        groupRefId: args.groupRefId,
+        status: "active",
+        participantCount: 1, // creator is a participant
+        createdAt: now,
+      });
+      finalRallyRefId = insertedRallyId as any;
+
+      // Automatically join the creator
+      await ctx.db.insert("rallyParticipants", {
+        userId: currentUser._id,
+        rallyId: insertedRallyId,
+        createdAt: now,
+      });
+    }
+
+    // Validate and build publication location snapshot
+    const hasCoords =
+      typeof args.latitude === "number" &&
+      typeof args.longitude === "number" &&
+      !isNaN(args.latitude) &&
+      !isNaN(args.longitude) &&
+      args.latitude >= -90 &&
+      args.latitude <= 90 &&
+      args.longitude >= -180 &&
+      args.longitude <= 180;
+
+    const isNearbyAudience = args.audience === "nearby";
+    const explicitNearbyEnabled = args.nearbyEnabled !== undefined ? args.nearbyEnabled : isNearbyAudience;
+
+    // Check accuracy & recency thresholds for Nearby posts
+    let locationStatus: "verified" | "approximate" | "unverified" = "unverified";
+    let isNearbyEligible = false;
+
+    if (hasCoords) {
+      const accuracy = args.locationAccuracy;
+      const isAccurate = accuracy === undefined || accuracy <= 100; // 100m threshold
+      const isFresh =
+        args.locationCapturedAt === undefined ||
+        now - args.locationCapturedAt <= 10 * 60 * 1000; // 10 min
+
+      if (isAccurate && isFresh) {
+        locationStatus = "verified";
+        isNearbyEligible = explicitNearbyEnabled;
+      } else {
+        locationStatus = "approximate";
+        // If user explicitly asked for Nearby but accuracy/staleness failed, reject Nearby distribution
+        isNearbyEligible = false;
+      }
+    } else if (isNearbyAudience) {
+      // Cannot publish to Nearby without valid device coordinates
+      throw new Error(
+        "Location coordinates are required to publish to Nearby. Please enable location or publish to Everyone."
+      );
+    }
+
+    const postId = await ctx.db.insert("posts", {
+      authorId: currentUser._id,
+      text: args.text,
+      mediaUrl: mediaUrl,
+      mediaStorageId: args.mediaStorageId,
+      mediaType: args.mediaType,
+      location: args.location,
+      latitude: hasCoords ? args.latitude : undefined,
+      longitude: hasCoords ? args.longitude : undefined,
+      locationAccuracy: args.locationAccuracy,
+      locationCapturedAt: args.locationCapturedAt ?? (hasCoords ? now : undefined),
+      locationCountry: args.locationCountry,
+      locationState: args.locationState,
+      locationCity: args.locationCity,
+      locationNeighborhood: args.locationNeighborhood,
+      locationStatus,
+      nearbyEnabled: isNearbyEligible,
+      createdAt: now,
+      likesCount: 0,
+      commentsCount: 0,
+      repostsCount: 0,
+      audience: args.audience ?? "everyone",
+      replyPermission: args.replyPermission ?? "everyone",
+      gifUrl: args.gifUrl,
+      pollQuestion: args.pollQuestion,
+      pollOptions: args.pollOptions,
+      rallyRefId: finalRallyRefId,
+      pageRefId: args.pageRefId,
+      groupRefId: args.groupRefId,
+      contentTopics: extractedTopics.length > 0 ? extractedTopics : undefined,
+      muxUploadId: args.muxUploadId,
+      muxAssetId: args.muxAssetId,
+      muxPlaybackId: args.muxPlaybackId,
+      mediaWidth: args.mediaWidth,
+      mediaHeight: args.mediaHeight,
+      mediaStatus: initialMediaStatus,
+      // Sound fields
+      soundId: args.soundId,
+      soundTitle: args.soundTitle,
+      soundAuthorName: args.soundAuthorName,
+      soundAudioUrl: args.soundAudioUrl,
+      soundStartOffset: args.soundStartOffset,
+      soundVolume: args.soundVolume,
+      originalAudioVolume: args.originalAudioVolume,
+    });
+
+    // If a registered DB sound is attached, increment its usage count
+    if (args.soundId) {
+      const normSoundId = ctx.db.normalizeId("sounds", args.soundId);
+      if (normSoundId) {
+        const soundDoc = await ctx.db.get(normSoundId);
+        if (soundDoc) {
+          await ctx.db.patch(normSoundId, {
+            usageCount: (soundDoc.usageCount ?? 0) + 1,
+          });
+        }
+      }
+    }
+
+    if (args.rallyData && finalRallyRefId) {
+      await ctx.db.patch(finalRallyRefId as any, { postId });
+    }
+
+    return {
+      id: postId,
+      author: {
+        id: currentUser._id,
+        name: currentUser.name ?? "You",
+        username: currentUser.username ?? "you",
+        avatar: currentUser.avatarUrl ?? "",
+        userType: currentUser.userType ?? "person",
+        followersCount: currentUser.followersCount ?? 0,
+        followingCount: currentUser.followingCount ?? 0,
+        isFollowing: false,
+        ...resolveUserVerification(currentUser),
+      },
+      text: args.text,
+      mediaUrl: mediaUrl,
+      mediaStorageId: args.mediaStorageId,
+      mediaType: args.mediaType,
+      mediaWidth: args.mediaWidth,
+      mediaHeight: args.mediaHeight,
+      location: args.location,
+      distanceMeters: 0,
+      createdAt: "Just now",
+      likesCount: 0,
+      commentsCount: 0,
+      repostsCount: 0,
+      isLiked: false,
+      isReposted: false,
+      comments: [],
+      audience: args.audience ?? "everyone",
+      replyPermission: args.replyPermission ?? "everyone",
+      gifUrl: args.gifUrl,
+      poll: args.pollQuestion
+        ? { question: args.pollQuestion, options: args.pollOptions ?? [], votes: [] }
+        : undefined,
+      rallyRefId: args.rallyRefId,
+      pageRefId: args.pageRefId,
+    };
+  },
+});
+
+export const toggleRepost = mutation({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, { postId }) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const post = await ctx.db.get(postId);
+    if (!post) throw new Error("Post not found");
+
+    const nextCount = (post.repostsCount ?? 0) + 1;
+    await ctx.db.patch(postId, {
+      repostsCount: nextCount,
+    });
+
+    return { success: true, reposted: true };
+  },
+});
+
+export const deletePost = mutation({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, { postId }) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const post = await ctx.db.get(postId);
+    if (!post) throw new Error("Post not found");
+
+    if (post.authorId !== currentUser._id) {
+      throw new Error("Not authorized to delete this post");
+    }
+
+    // 1. Delete associated comments and their likes
+    const comments = await ctx.db
+      .query("comments")
+      .withIndex("by_post", (q: any) => q.eq("postId", postId))
+      .collect();
+    
+    for (const comment of comments) {
+      const commentLikes = await ctx.db
+        .query("likes")
+        .withIndex("by_target", (q: any) => q.eq("targetType", "comment").eq("targetId", comment._id))
+        .collect();
+      for (const like of commentLikes) {
+        await ctx.db.delete(like._id);
+      }
+      const replyLikes = await ctx.db
+        .query("likes")
+        .withIndex("by_target", (q: any) => q.eq("targetType", "reply").eq("targetId", comment._id))
+        .collect();
+      for (const like of replyLikes) {
+        await ctx.db.delete(like._id);
+      }
+      await ctx.db.delete(comment._id);
+    }
+
+    // 2. Delete post likes
+    const postLikes = await ctx.db
+      .query("likes")
+      .withIndex("by_target", (q: any) => q.eq("targetType", "post").eq("targetId", postId))
+      .collect();
+    for (const like of postLikes) {
+      await ctx.db.delete(like._id);
+    }
+
+    // 3. Delete notifications referencing this post
+    const notifications = await ctx.db
+      .query("notifications")
+      .withIndex("by_post", (q: any) => q.eq("postId", postId))
+      .collect();
+    for (const notification of notifications) {
+      await ctx.db.delete(notification._id);
+    }
+
+    // 4. Delete Convex Storage media
+    if (post.mediaStorageId) {
+      try {
+        await ctx.storage.delete(post.mediaStorageId);
+      } catch (err) {
+        console.warn("Failed to delete storage media:", err);
+      }
+    }
+
+    // 5. External Media cleanup
+    // TODO: If external media references exist (e.g., Mux video URLs) and aren't in Convex storage,
+    // add external API calls here to clean them up from the provider.
+
+    // 6. Delete the post itself
+    await ctx.db.delete(postId);
+  },
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   LIKES
+   ───────────────────────────────────────────────────────────────────────────── */
+
+export const toggleLikePost = mutation({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, { postId }) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const post = await ctx.db.get(postId);
+    if (!post) throw new Error("Post not found");
+
+    const existingLike = await ctx.db
+      .query("likes")
+      .withIndex("by_user_target", (q: any) =>
+        q.eq("userId", currentUser._id).eq("targetType", "post").eq("targetId", postId)
+      )
+      .unique();
+
+    if (existingLike) {
+      await ctx.db.delete(existingLike._id);
+      const nextCount = Math.max(0, (post.likesCount ?? 0) - 1);
+      await ctx.db.patch(postId, { likesCount: nextCount });
+      return { liked: false, likesCount: nextCount };
+    }
+
+    await ctx.db.insert("likes", {
+      userId: currentUser._id,
+      targetType: "post",
+      targetId: postId,
+      createdAt: Date.now(),
+    });
+
+    const nextCount = (post.likesCount ?? 0) + 1;
+    await ctx.db.patch(postId, { likesCount: nextCount });
+
+    // Notify post author (not self-likes)
+    if (post.authorId !== currentUser._id) {
+      await ctx.db.insert("notifications", {
+        recipientId: post.authorId,
+        actorId: currentUser._id,
+        type: "like",
+        postId,
+        targetExcerpt: post.text ? post.text.slice(0, 80) : undefined,
+        isRead: false,
+        createdAt: Date.now(),
+      });
+      await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
+        recipientId: post.authorId,
+        title: `${currentUser.name ?? "Someone"} liked your post`,
+        body: post.text ? post.text.slice(0, 100) : "Check it out on Lalao",
+        url: `/app?tab=home&post=${postId}`,
+      });
+    }
+
+    return { liked: true, likesCount: nextCount };
+  },
+});
+
+export const toggleLikeComment = mutation({
+  args: { commentId: v.id("comments") },
+  handler: async (ctx, { commentId }) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const comment = await ctx.db.get(commentId);
+    if (!comment) throw new Error("Comment not found");
+
+    const existingLike = await ctx.db
+      .query("likes")
+      .withIndex("by_user_target", (q: any) =>
+        q.eq("userId", currentUser._id).eq("targetType", "comment").eq("targetId", commentId)
+      )
+      .unique();
+
+    if (existingLike) {
+      await ctx.db.delete(existingLike._id);
+      const nextCount = Math.max(0, (comment.likesCount ?? 0) - 1);
+      await ctx.db.patch(commentId, { likesCount: nextCount });
+      return { liked: false, likesCount: nextCount };
+    }
+
+    await ctx.db.insert("likes", {
+      userId: currentUser._id,
+      targetType: "comment",
+      targetId: commentId,
+      createdAt: Date.now(),
+    });
+
+    const nextCount = (comment.likesCount ?? 0) + 1;
+    await ctx.db.patch(commentId, { likesCount: nextCount });
+
+    if (comment.authorId !== currentUser._id) {
+      const type = comment.parentCommentId ? "reply_like" : "comment_like";
+      await ctx.db.insert("notifications", {
+        recipientId: comment.authorId,
+        actorId: currentUser._id,
+        type,
+        postId: comment.postId,
+        commentId,
+        targetExcerpt: comment.text ? comment.text.slice(0, 80) : "an attachment",
+        isRead: false,
+        createdAt: Date.now(),
+      });
+      await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
+        recipientId: comment.authorId,
+        title: `${currentUser.name ?? "Someone"} liked your ${comment.parentCommentId ? "reply" : "comment"}`,
+        body: comment.text ? comment.text.slice(0, 100) : "an attachment",
+        url: `/app?tab=home&post=${comment.postId}`,
+      });
+    }
+
+    return { liked: true, likesCount: nextCount };
+  },
+});
+
+export const deleteComment = mutation({
+  args: { commentId: v.id("comments") },
+  handler: async (ctx, { commentId }) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const comment = await ctx.db.get(commentId);
+    if (!comment) throw new Error("Comment not found");
+
+    if (comment.authorId !== currentUser._id) {
+      throw new Error("Unauthorized");
+    }
+
+    // Check if it has children
+    const children = await ctx.db
+      .query("comments")
+      .withIndex("by_parent", (q) => q.eq("parentCommentId", commentId))
+      .collect();
+
+    if (children.length > 0) {
+      // Soft delete
+      await ctx.db.patch(commentId, {
+        text: "[Deleted]",
+        mediaUrl: undefined,
+        mediaStorageId: undefined,
+        mediaType: undefined,
+        duration: undefined,
+        isDeleted: true,
+      });
+    } else {
+      // Hard delete
+      await ctx.db.delete(commentId);
+      const post = await ctx.db.get(comment.postId);
+      if (post) {
+        await ctx.db.patch(comment.postId, {
+          commentsCount: Math.max(0, (post.commentsCount ?? 0) - 1),
+        });
+      }
+    }
+  },
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   COMMENTS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+export const addCommentToPost = mutation({
+  args: {
+    postId: v.id("posts"),
+    text: v.string(),
+    parentCommentId: v.optional(v.id("comments")),
+    mediaStorageId: v.optional(v.id("_storage")),
+    mediaType: v.optional(v.union(v.literal("image"), v.literal("voice"), v.literal("gif"), v.literal("sticker"))),
+    duration: v.optional(v.number()),
+  },
+  handler: async (ctx, { postId, text, parentCommentId, mediaStorageId, mediaType, duration }) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const trimmed = text.trim();
+    if (!trimmed && !mediaStorageId) throw new Error("Comment cannot be empty");
+
+    const post = await ctx.db.get(postId);
+    if (!post) throw new Error("Post not found");
+
+    if (post.replyPermission && post.replyPermission !== "everyone") {
+      const relSets = await getRelationshipSets(ctx, currentUser);
+      const isFollowing = relSets.followingIds.has(post.authorId);
+      const isFollower = relSets.followerIds.has(post.authorId);
+      const isFriend = isFollowing && isFollower;
+
+      if (post.replyPermission === "followers" && !isFollower) throw new Error("Only followers can reply");
+      if (post.replyPermission === "following" && !isFollowing) throw new Error("Only users this person follows can reply");
+      if (post.replyPermission === "friends" && !isFriend) throw new Error("Only friends can reply");
+      if (post.replyPermission === "mentioned") {
+        const isAuthor = post.authorId === currentUser._id;
+        const isMentioned = post.text.includes(`@${currentUser.username}`) || (currentUser.name && post.text.includes(`@${currentUser.name}`));
+        if (!isAuthor && !isMentioned) throw new Error("Only mentioned users can reply to this post");
+      }
+    }
+
+    if ((post as any).groupRefId) {
+      const normGroupId = ctx.db.normalizeId("groupChats", (post as any).groupRefId);
+      if (normGroupId) {
+        const group = await ctx.db.get(normGroupId);
+        if (group) {
+          if (group.communityEnabled === false || group.communityFeatures?.replies === false) {
+            throw new Error("Replies are disabled for this group");
+          }
+          const isCreator = group.creatorId === currentUser._id;
+          const mem = await ctx.db
+            .query("groupMembers")
+            .withIndex("by_group_user", (q: any) => q.eq("groupId", normGroupId).eq("userId", currentUser._id))
+            .first();
+          const isMember = isCreator || !!mem || (group.memberIds && group.memberIds.includes(currentUser._id));
+          const isAdmin = isCreator || mem?.role === "owner" || mem?.role === "admin";
+          const visibility = group.visibility ?? "private_discoverable";
+
+          if (visibility !== "public" && !isMember) {
+            throw new Error("You must be a member of this group to reply to posts");
+          }
+          if (group.publishingPermissions?.canReply === "admins_only" && !isAdmin) {
+            throw new Error("Only group administrators can reply to posts in this group");
+          }
+        }
+      }
+    }
+
+    let mediaUrl = undefined;
+    if (mediaStorageId) {
+      mediaUrl = (await ctx.storage.getUrl(mediaStorageId)) || undefined;
+    }
+
+    const now = Date.now();
+    const commentId = await ctx.db.insert("comments", {
+      postId,
+      authorId: currentUser._id,
+      parentCommentId,
+      text: trimmed,
+      createdAt: now,
+      likesCount: 0,
+      mediaUrl,
+      mediaStorageId,
+      mediaType,
+      duration,
+    });
+
+    await ctx.db.patch(postId, {
+      commentsCount: (post.commentsCount ?? 0) + 1,
+    });
+
+    // Notify post author of comment/reply (not self)
+    const notifType = parentCommentId ? "reply" : "comment";
+    if (post.authorId !== currentUser._id) {
+      await ctx.db.insert("notifications", {
+        recipientId: post.authorId,
+        actorId: currentUser._id,
+        type: notifType,
+        postId,
+        commentId,
+        targetExcerpt: trimmed.slice(0, 80),
+        isRead: false,
+        createdAt: now,
+      });
+      await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
+        recipientId: post.authorId,
+        title: `${currentUser.name ?? "Someone"} ${parentCommentId ? "replied to your comment" : "commented on your post"}`,
+        body: trimmed.slice(0, 100),
+        url: `/app?tab=home&post=${postId}`,
+      });
+    }
+
+    // Also notify parent comment author if different from post author and self
+    if (parentCommentId) {
+      const parentComment = await ctx.db.get(parentCommentId);
+      if (
+        parentComment &&
+        parentComment.authorId !== currentUser._id &&
+        parentComment.authorId !== post.authorId
+      ) {
+        await ctx.db.insert("notifications", {
+          recipientId: parentComment.authorId,
+          actorId: currentUser._id,
+          type: "reply",
+          postId,
+          commentId,
+          targetExcerpt: trimmed.slice(0, 80),
+          isRead: false,
+          createdAt: now,
+        });
+        await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
+          recipientId: parentComment.authorId,
+          title: `${currentUser.name ?? "Someone"} replied to your comment`,
+          body: trimmed.slice(0, 100),
+          url: `/app?tab=home&post=${postId}`,
+        });
+      }
+    }
+
+    return {
+      id: commentId,
+      authorId: currentUser._id,
+      parentCommentId,
+      text: trimmed,
+      createdAt: now,
+      likesCount: 0,
+      author: {
+        id: currentUser._id,
+        name: currentUser.name ?? "You",
+        username: currentUser.username ?? "you",
+        avatar: currentUser.avatarUrl ?? "",
+        userType: currentUser.userType ?? "person",
+        followersCount: currentUser.followersCount ?? 0,
+        followingCount: currentUser.followingCount ?? 0,
+        isFollowing: false,
+        ...resolveUserVerification(currentUser),
+      },
+    };
+  },
+});
+
+export const getCommentsForPost = query({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, { postId }) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return [];
+
+    const allComments = await ctx.db
+      .query("comments")
+      .withIndex("by_post", (q) => q.eq("postId", postId))
+      .order("desc")
+      .take(200);
+
+    const buildCommentTree = async (comments: any[], parentId?: any): Promise<any[]> => {
+      const children = comments.filter((c) => {
+        const cParentStr = c.parentCommentId ? String(c.parentCommentId) : undefined;
+        const parentStr = parentId ? String(parentId) : undefined;
+        return cParentStr === parentStr;
+      });
+      const enrichedChildren = await Promise.all(
+        children.map(async (c) => {
+          const authorDoc = await ctx.db.get(c.authorId);
+          const author = await resolveAuthor(ctx, authorDoc, currentUser._id);
+          const like = await ctx.db
+            .query("likes")
+            .withIndex("by_user_target", (q: any) =>
+              q.eq("userId", currentUser._id).eq("targetType", "comment").eq("targetId", c._id)
+            )
+            .unique();
+            
+          let parentAuthorDoc = null;
+          if (c.parentCommentId) {
+             const parent = comments.find(p => p._id === c.parentCommentId);
+             if (parent) parentAuthorDoc = await ctx.db.get(parent.authorId);
+          }
+
+          let mediaUrl = c.mediaUrl;
+          if (!mediaUrl && c.mediaStorageId) {
+             mediaUrl = await ctx.storage.getUrl(c.mediaStorageId);
+          }
+
+          return {
+            id: c._id,
+            author,
+            text: c.text,
+            createdAt: formatRelativeTime(c.createdAt),
+            likesCount: c.likesCount ?? 0,
+            isLiked: !!like,
+            mediaUrl,
+            mediaType: c.mediaType,
+            duration: c.duration,
+            isDeleted: c.isDeleted,
+            replyToUsername: (parentAuthorDoc as any)?.username ?? "user",
+            replies: await buildCommentTree(comments, c._id),
+          };
+        })
+      );
+      return enrichedChildren;
+    };
+
+    return buildCommentTree(allComments, undefined);
+  },
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   FOLLOWS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+export const getRelationship = query({
+  args: { targetUserId: v.id("users") },
+  handler: async (ctx, { targetUserId }) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) {
+      return { isFollowing: false, followsMe: false, isFriend: false, relationship: "none" };
+    }
+    const relSets = await getRelationshipSets(ctx, currentUser);
+    const relationship = resolveRelationship(targetUserId, relSets);
+    return {
+      isFollowing: relSets.followingIds.has(targetUserId),
+      followsMe: relSets.followerIds.has(targetUserId),
+      isFriend: relationship === "friends",
+      relationship,
+    };
+  }
+});
+
+/**
+ * Toggle follow/unfollow for a target user.
+ * Security: follower identity comes from server-side auth, never the request body.
+ */
+export const toggleFollowUser = mutation({
+  args: { targetUserId: v.id("users") },
+  handler: async (ctx, { targetUserId }) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+    if (currentUser._id === targetUserId) throw new Error("Cannot follow yourself");
+
+    const existing = await ctx.db
+      .query("follows")
+      .withIndex("by_follower_following", (q: any) =>
+        q.eq("followerId", currentUser._id).eq("followingId", targetUserId)
+      )
+      .unique();
+
+    if (existing) {
+      // Unfollow
+      await ctx.db.delete(existing._id);
+      await ctx.db.patch(currentUser._id, {
+        followingCount: Math.max(0, (currentUser.followingCount ?? 0) - 1),
+        updatedAt: Date.now(),
+      });
+      const target = await ctx.db.get(targetUserId);
+      if (target) {
+        await ctx.db.patch(targetUserId, {
+          followersCount: Math.max(0, (target.followersCount ?? 0) - 1),
+          updatedAt: Date.now(),
+        });
+      }
+      return { following: false };
+    }
+
+    // Follow
+    await ctx.db.insert("follows", {
+      followerId: currentUser._id,
+      followingId: targetUserId,
+      createdAt: Date.now(),
+    });
+
+    await ctx.db.patch(currentUser._id, {
+      followingCount: (currentUser.followingCount ?? 0) + 1,
+      updatedAt: Date.now(),
+    });
+
+    const target = await ctx.db.get(targetUserId);
+    if (target) {
+      await ctx.db.patch(targetUserId, {
+        followersCount: (target.followersCount ?? 0) + 1,
+        updatedAt: Date.now(),
+      });
+    }
+
+    // Notify the followed user
+    await ctx.db.insert("notifications", {
+      recipientId: targetUserId,
+      actorId: currentUser._id,
+      type: "follow",
+      isRead: false,
+      createdAt: Date.now(),
+    });
+    await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
+      recipientId: targetUserId,
+      title: "New follower on Lalao",
+      body: `${currentUser.name ?? "Someone"} started following you`,
+      url: "/app?tab=notifications",
+    });
+
+    return { following: true };
+  },
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   CONNECTION LISTS (for Community panel)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Get the list of real users who follow the current user.
+ * Returns profile info + whether the current user follows them back.
+ */
+export const getMyFollowers = query({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return [];
+
+    // People who follow me
+    const followerRecords = await ctx.db
+      .query("follows")
+      .withIndex("by_following", (q: any) => q.eq("followingId", currentUser._id))
+      .collect();
+
+    // People I follow (for "follow back" state)
+    const myFollowing = await ctx.db
+      .query("follows")
+      .withIndex("by_follower", (q: any) => q.eq("followerId", currentUser._id))
+      .collect();
+    const myFollowingIds = new Set(myFollowing.map((f: any) => f.followingId));
+
+    const followers = await Promise.all(
+      followerRecords.map(async (f: any) => {
+        const user = await ctx.db.get(f.followerId as Id<"users">);
+        if (!user) return null;
+        return {
+          id: user._id,
+          name: user.name ?? "User",
+          username: user.username ?? "user",
+          avatar: user.avatarUrl || "",
+          bio: user.bio ?? "",
+          location: (user.locationName ?? "").replace(/\s*\(Detected\)\s*/i, "").replace(/^GPS Detected$/i, "").trim(),
+          isFollowing: myFollowingIds.has(user._id), // do I follow them back?
+          followersCount: user.followersCount ?? 0,
+          followingCount: user.followingCount ?? 0,
+          ...resolveUserVerification(user),
+          followedAt: f.createdAt,
+        };
+      })
+    );
+
+    return followers.filter(Boolean);
+  },
+});
+
+/**
+ * Get the people and pages the current user follows.
+ * Returns { people: [...], pages: [...], peopleCt, pagesCt }.
+ */
+export const getMyFollowing = query({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return { people: [], pages: [], peopleCt: 0, pagesCt: 0 };
+
+    // Users I follow
+    const followingRecords = await ctx.db
+      .query("follows")
+      .withIndex("by_follower", (q: any) => q.eq("followerId", currentUser._id))
+      .collect();
+
+    const people = await Promise.all(
+      followingRecords.map(async (f: any) => {
+        const user: any = await ctx.db.get(f.followingId);
+        if (!user) return null;
+        return {
+          id: user._id,
+          type: "person" as const,
+          name: user.name ?? "User",
+          username: user.username ?? "user",
+          avatar: user.avatarUrl || user.avatar || "",
+          bio: user.bio ?? "",
+          location: user.locationName ?? "",
+          followersCount: user.followersCount ?? 0,
+          isFollowing: true,
+          ...resolveUserVerification(user),
+          followedAt: f.createdAt,
+        };
+      })
+    );
+
+    // Pages I follow
+    const pageFollowRecords = await ctx.db
+      .query("pageFollowers")
+      .filter((q: any) => q.eq(q.field("userId"), currentUser._id))
+      .collect();
+
+    const pages = await Promise.all(
+      pageFollowRecords.map(async (f: any) => {
+        const page: any = await ctx.db.get(f.pageId);
+        if (!page) return null;
+        return {
+          id: page._id,
+          type: "page" as const,
+          name: page.name ?? "Page",
+          username: page.username ?? "page",
+          avatar: page.avatar || "",
+          description: page.description ?? "",
+          location: page.location ?? "",
+          followersCount: page.followersCount ?? 0,
+          pageType: page.type,
+          badge: page.badge,
+          isFollowing: true,
+          followedAt: f.createdAt,
+        };
+      })
+    );
+
+    const filteredPeople = people.filter(Boolean);
+    const filteredPages = pages.filter(Boolean);
+
+    return {
+      people: filteredPeople,
+      pages: filteredPages,
+      peopleCt: filteredPeople.length,
+      pagesCt: filteredPages.length,
+    };
+  },
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   NOTIFICATIONS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+const NOTIF_TEXT: Record<string, string> = {
+  like: "liked your post",
+  comment: "commented on your post",
+  reply: "replied to your comment",
+  follow: "started following you",
+  rally_join: "joined your rally",
+  system_alert: "sent you a system alert",
+  message: "sent you a message",
+  mention: "mentioned you",
+};
+
+export const listNotifications = query({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return [];
+
+    const relSets = await getRelationshipSets(ctx, currentUser);
+
+    const notifs = await ctx.db
+      .query("notifications")
+      .withIndex("by_recipient", (q: any) => q.eq("recipientId", currentUser._id))
+      .order("desc")
+      .take(50);
+
+    return await Promise.all(
+      notifs.map(async (notif: any) => {
+        const actor = notif.actorId ? (await ctx.db.get(notif.actorId)) as any : null;
+        let actorAvatar = "";
+        if (actor) {
+          actorAvatar = actor.avatarUrl || "";
+          if (!actorAvatar && actor.avatarStorageId) {
+            try {
+              const signed = await ctx.storage.getUrl(actor.avatarStorageId);
+              if (signed) actorAvatar = signed;
+            } catch (_) {}
+          }
+          if (!actorAvatar && actor.avatar) {
+            actorAvatar = actor.avatar;
+          }
+        }
+
+        return {
+          id: notif._id,
+          type: notif.type as string,
+          text: NOTIF_TEXT[notif.type] ?? "interacted with your content",
+          actor: (actor && notif.type !== 'system_alert')
+            ? {
+                id: actor._id,
+                name: actor.name ?? "User",
+                username: actor.username ?? "user",
+                avatar: actorAvatar,
+                userType: actor.userType ?? "person",
+                followersCount: actor.followersCount ?? 0,
+                followingCount: actor.followingCount ?? 0,
+                isFollowing: relSets.followingIds.has(actor._id),
+                ...resolveUserVerification(actor),
+              }
+            : null,
+          targetId: notif.postId ?? null,
+          targetExcerpt: notif.targetExcerpt ?? null,
+          isRead: notif.isRead,
+          timestamp: formatRelativeTime(notif.createdAt),
+          createdAt: notif.createdAt,
+        };
+      })
+    );
+  },
+});
+
+export const getUnreadNotificationCount = query({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return 0;
+
+    const unread = await ctx.db
+      .query("notifications")
+      .withIndex("by_recipient_read", (q: any) =>
+        q.eq("recipientId", currentUser._id).eq("isRead", false)
+      )
+      .take(100);
+
+    // Capped at 100 so the badge query stays cheap for heavy inboxes.
+
+    return unread.length;
+  },
+});
+
+export const markAllNotificationsRead = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const unread = await ctx.db
+      .query("notifications")
+      .withIndex("by_recipient_read", (q: any) =>
+        q.eq("recipientId", currentUser._id).eq("isRead", false)
+      )
+      .take(250);
+
+    await Promise.all(unread.map((n: any) => ctx.db.patch(n._id, { isRead: true })));
+    return { count: unread.length };
+  },
+});
+
+export const markNotificationRead = mutation({
+  args: { id: v.id("notifications") },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+    const notif = await ctx.db.get(args.id);
+    if (!notif) throw new Error("Notification not found");
+    if (notif.recipientId !== currentUser._id) throw new Error("Unauthorized");
+    await ctx.db.patch(args.id, { isRead: true });
+  },
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   DRAFTS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+export const getDrafts = query({
+  args: {},
+  handler: async (ctx) => {
+    try {
+      const currentUser = await getAuthedUser(ctx);
+      if (!currentUser) return [];
+
+      const drafts = await ctx.db
+        .query("drafts")
+        .withIndex("by_author", (q: any) => q.eq("authorId", currentUser._id))
+        .collect();
+
+      return drafts
+        .sort((a: any, b: any) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+        .slice(0, 10);
+    } catch (error) {
+      console.error("Error fetching drafts:", error);
+      return [];
+    }
+  },
+});
+
+export const saveDraft = mutation({
+  args: {
+    draftId: v.optional(v.id("drafts")),
+    text: v.string(),
+    mediaUrl: v.optional(v.string()),
+    mediaType: v.optional(v.union(v.literal("image"), v.literal("video"))),
+    audience: v.optional(
+      v.union(
+        v.literal("everyone"),
+        v.literal("closeFriends"),
+        v.literal("community"),
+        v.literal("page"),
+        v.literal("nearby"),
+        v.literal("anime"),
+        v.literal("interest")
+      )
+    ),
+    replyPermission: v.optional(
+      v.union(
+        v.literal("everyone"),
+        v.literal("followers"),
+        v.literal("following"),
+        v.literal("friends"),
+        v.literal("closeFriends"),
+        v.literal("sameInterests"),
+        v.literal("mentioned")
+      )
+    ),
+    gifUrl: v.optional(v.string()),
+    pollQuestion: v.optional(v.string()),
+    pollOptions: v.optional(v.array(v.string())),
+    pageRefId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    // Authorization checks for destinations
+    if (args.audience === "page" || args.audience === "community") {
+      if (!args.pageRefId) throw new Error("Destination ID is required");
+      const normalizedId = ctx.db.normalizeId("pages", args.pageRefId);
+      if (!normalizedId) throw new Error("Invalid destination ID");
+      const page = await ctx.db.get(normalizedId);
+      if (!page) throw new Error("Destination not found");
+
+      if (args.audience === "page") {
+        if (page.ownerId !== currentUser._id) {
+          throw new Error("You do not have permission to post as this page");
+        }
+      } else if (args.audience === "community") {
+        if (page.ownerId !== currentUser._id) {
+          const isMember = await ctx.db
+            .query("pageFollowers")
+            .withIndex("by_page_user", (q: any) =>
+              q.eq("pageId", page._id).eq("userId", currentUser._id)
+            )
+            .first();
+          if (!isMember) {
+            throw new Error("You must join this community to save drafts to it");
+          }
+        }
+      }
+    }
+
+    const now = Date.now();
+    const { draftId, ...data } = args;
+
+    if (draftId) {
+      const existing = await ctx.db.get(draftId);
+      if (existing && existing.authorId === currentUser._id) {
+        await ctx.db.patch(draftId, { ...data, updatedAt: now });
+        return draftId;
+      }
+    }
+
+    return await ctx.db.insert("drafts", {
+      authorId: currentUser._id,
+      text: data.text,
+      mediaUrl: data.mediaUrl,
+      mediaType: data.mediaType,
+      audience: data.audience,
+      replyPermission: data.replyPermission,
+      gifUrl: data.gifUrl,
+      pollQuestion: data.pollQuestion,
+      pollOptions: data.pollOptions,
+      pageRefId: data.pageRefId,
+      createdAt: now,
+      updatedAt: now,
+    });
+  },
+});
+
+export const deleteDraft = mutation({
+  args: { draftId: v.id("drafts") },
+  handler: async (ctx, { draftId }) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const draft = await ctx.db.get(draftId);
+    if (!draft) throw new Error("Draft not found");
+    if (draft.authorId !== currentUser._id) throw new Error("Not authorized");
+
+    await ctx.db.delete(draftId);
+    return { deleted: true };
+  },
+});
+
+
+export const getMessageContacts = query({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return [];
+
+    const relSets = await getRelationshipSets(ctx, currentUser);
+    
+    // Friends are the intersection of followingIds and followerIds
+    const friendIds = Array.from(relSets.followingIds).filter(id => relSets.followerIds.has(id));
+
+    const results = [];
+    for (const friendId of friendIds) {
+      const friend = (await ctx.db.get(friendId as any)) as any;
+      if (friend) {
+        results.push({
+          id: friend._id,
+          name: friend.name ?? "User",
+          username: friend.username ?? "user",
+          avatar: friend.avatarUrl ?? "",
+          userType: friend.userType ?? "person",
+          followersCount: friend.followersCount ?? 0,
+          followingCount: friend.followingCount ?? 0,
+          isFollowing: true,
+          relationship: "friends",
+          ...resolveUserVerification(friend),
+        });
+      }
+    }
+    return results;
+  }
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MESSAGING
+   ───────────────────────────────────────────────────────────────────────────── */
+
+export const createGroupChat = mutation({
+  args: {
+    name: v.string(),
+    description: v.optional(v.string()),
+    memberIds: v.array(v.string()),
+    avatarUrl: v.optional(v.string()),
+    interests: v.array(v.string()),
+    creatorUserId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    let currentUser = await getAuthedUser(ctx);
+    if (!currentUser && args.creatorUserId) {
+      const normId = ctx.db.normalizeId("users", args.creatorUserId);
+      if (normId) {
+        currentUser = await ctx.db.get(normId);
+      }
+    }
+    if (!currentUser) throw new Error("Please sign in to create a group chat");
+
+    const validMemberIds: Id<"users">[] = [currentUser._id];
+    for (const rawId of args.memberIds) {
+      const norm = ctx.db.normalizeId("users", rawId);
+      if (norm && !validMemberIds.includes(norm)) {
+        validMemberIds.push(norm);
+      }
+    }
+
+    const groupChatId = await ctx.db.insert("groupChats", {
+      name: args.name,
+      description: args.description,
+      creatorId: currentUser._id,
+      memberIds: validMemberIds,
+      avatarUrl: args.avatarUrl,
+      interests: args.interests,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    // Populate groupMembers table
+    await ctx.db.insert("groupMembers", {
+      groupId: groupChatId,
+      userId: currentUser._id,
+      role: "owner",
+      joinedAt: Date.now(),
+    });
+    for (const memberId of validMemberIds) {
+      if (memberId !== currentUser._id) {
+        await ctx.db.insert("groupMembers", {
+          groupId: groupChatId,
+          userId: memberId,
+          role: "member",
+          joinedAt: Date.now(),
+        });
+      }
+    }
+
+    const conversationId = await ctx.db.insert("conversations", {
+      userA: currentUser._id,
+      groupChatId,
+      updatedAt: Date.now(),
+    });
+
+    return { groupChatId, conversationId };
+  },
+});
+
+export const createGroupCycle = mutation({
+  args: {
+    name: v.string(),
+    description: v.optional(v.string()),
+    memberIds: v.optional(v.array(v.string())),
+    avatarUrl: v.optional(v.string()),
+    interests: v.array(v.string()),
+    creatorUserId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    let currentUser = await getAuthedUser(ctx);
+    if (!currentUser && args.creatorUserId) {
+      const normId = ctx.db.normalizeId("users", args.creatorUserId);
+      if (normId) {
+        currentUser = await ctx.db.get(normId);
+      }
+    }
+    if (!currentUser) throw new Error("Please sign in to create a group cycle");
+
+    const validMemberIds: Id<"users">[] = [currentUser._id];
+    if (args.memberIds) {
+      for (const rawId of args.memberIds) {
+        const norm = ctx.db.normalizeId("users", rawId);
+        if (norm && !validMemberIds.includes(norm)) {
+          validMemberIds.push(norm);
+        }
+      }
+    }
+
+    const groupCycleId = await ctx.db.insert("groupCycles", {
+      name: args.name,
+      description: args.description,
+      creatorId: currentUser._id,
+      memberIds: validMemberIds,
+      avatarUrl: args.avatarUrl,
+      interests: args.interests,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    return groupCycleId;
+  },
+});
+
+export const inviteUserToGroupChat = mutation({
+  args: {
+    groupChatId: v.id("groupChats"),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const groupChat = await ctx.db.get(args.groupChatId);
+    if (!groupChat) throw new Error("Group chat not found");
+    if (!canAccessGroupChat(currentUser._id.toString(), groupChat.creatorId.toString(), groupChat.memberIds.map((id) => id.toString()))) {
+      throw new Error("Not authorized to invite members");
+    }
+
+    const normUser = ctx.db.normalizeId("users", args.userId);
+    if (!normUser) return args.groupChatId;
+
+    if (groupChat.memberIds.includes(normUser)) return groupChat._id;
+    await ctx.db.patch(args.groupChatId, {
+      memberIds: [...groupChat.memberIds, normUser],
+      updatedAt: Date.now(),
+    });
+    return args.groupChatId;
+  },
+});
+
+export const getOrCreateConversation = mutation({
+  args: {
+    otherUserId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    if (args.otherUserId === currentUser._id) {
+      throw new Error("Cannot start a conversation with yourself");
+    }
+
+    // Check if conversation already exists in either direction (userA/userB)
+    const convoAsA = await ctx.db
+      .query("conversations")
+      .withIndex("by_user_a", (q) => q.eq("userA", currentUser._id))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("userB"), args.otherUserId),
+          q.eq(q.field("pageB"), undefined)
+        )
+      )
+      .first();
+
+    if (convoAsA) return convoAsA._id;
+
+    const convoAsB = await ctx.db
+      .query("conversations")
+      .withIndex("by_user_a", (q) => q.eq("userA", args.otherUserId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("userB"), currentUser._id),
+          q.eq(q.field("pageB"), undefined)
+        )
+      )
+      .first();
+
+    if (convoAsB) return convoAsB._id;
+
+    // Create a new conversation
+    const conversationId = await ctx.db.insert("conversations", {
+      userA: currentUser._id,
+      userB: args.otherUserId,
+      updatedAt: Date.now(),
+    });
+
+    return conversationId;
+  },
+});
+
+export const startPageConversation = mutation({
+  args: {
+    pageId: v.id("pages"),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const page = await ctx.db.get(args.pageId);
+    if (!page) throw new Error("Page not found");
+
+    if (page.type !== "business" && page.badge !== "BIZ") {
+      throw new Error("Messaging is only available for Business pages");
+    }
+
+    if (page.ownerId === currentUser._id) {
+      throw new Error("Cannot start a conversation with your own page");
+    }
+
+    // Check if conversation already exists
+    const existingConvo = await ctx.db
+      .query("conversations")
+      .withIndex("by_user_a", (q) => q.eq("userA", currentUser._id))
+      .filter((q) => q.eq(q.field("pageB"), args.pageId))
+      .first();
+
+    if (existingConvo) {
+      return existingConvo._id;
+    }
+
+    const conversationId = await ctx.db.insert("conversations", {
+      userA: currentUser._id,
+      pageB: args.pageId,
+      updatedAt: Date.now(),
+    });
+
+    return conversationId;
+  },
+});
+
+export const sendMessage = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+    text: v.string(),
+    pageSenderId: v.optional(v.id("pages")),
+    replyToMessageId: v.optional(v.id("messages")),
+    type: v.optional(v.union(v.literal("text"), v.literal("image"), v.literal("video"))),
+    mediaStorageId: v.optional(v.id("_storage")),
+    mimeType: v.optional(v.string()),
+    fileName: v.optional(v.string()),
+    fileSize: v.optional(v.number()),
+    audioStorageId: v.optional(v.id("_storage")),
+    audioDuration: v.optional(v.number()),
+    viewOnce: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation) throw new Error("Conversation not found");
+
+    // Authorization check
+    let authorized = false;
+    if (conversation.groupChatId) {
+      const groupChat = await ctx.db.get(conversation.groupChatId);
+      authorized = !!groupChat && canAccessGroupChat(
+        currentUser._id.toString(),
+        groupChat.creatorId.toString(),
+        groupChat.memberIds.map((id) => id.toString()),
+      );
+    } else if (conversation.userA === currentUser._id || conversation.userB === currentUser._id) {
+      authorized = true;
+    }
+    
+    let recipientId: Id<"users"> | undefined;
+
+    // If the conversation is with a page, the page owner is authorized
+    if (conversation.pageB) {
+      const page = await ctx.db.get(conversation.pageB);
+      if (page && page.ownerId === currentUser._id) {
+        authorized = true;
+        // Verify pageSenderId matches the page they own
+        if (args.pageSenderId && args.pageSenderId !== page._id) {
+          throw new Error("Not authorized to send as this page");
+        }
+        recipientId = conversation.userA as Id<"users">;
+      } else if (page && conversation.userA === currentUser._id) {
+        recipientId = page.ownerId;
+      }
+    } else {
+      if (conversation.userA === currentUser._id) {
+        recipientId = conversation.userB;
+      } else {
+        recipientId = conversation.userA;
+      }
+    }
+
+    if (!authorized) {
+      throw new Error("Not authorized to send to this conversation");
+    }
+
+    const messageId = await ctx.db.insert("messages", {
+      conversationId: args.conversationId,
+      senderId: currentUser._id,
+      pageSenderId: args.pageSenderId,
+      text: args.text,
+      isRead: false,
+      replyToMessageId: args.replyToMessageId,
+      type: args.type,
+      mediaStorageId: args.mediaStorageId,
+      mimeType: args.mimeType,
+      fileName: args.fileName,
+      fileSize: args.fileSize,
+      audioStorageId: args.audioStorageId,
+      audioDuration: args.audioDuration,
+      viewOnce: args.viewOnce,
+      viewOnceOpened: false,
+      createdAt: Date.now(),
+    });
+    
+    await ctx.db.patch(args.conversationId, {
+      updatedAt: Date.now(),
+    });
+
+    // Determine all recipients to notify (direct 1:1 or group chat members)
+    const recipientsToNotify: Id<"users">[] = [];
+    if (conversation.groupChatId) {
+      const groupChat = await ctx.db.get(conversation.groupChatId);
+      if (groupChat) {
+        for (const memberId of groupChat.memberIds) {
+          if (memberId !== currentUser._id) {
+            recipientsToNotify.push(memberId);
+          }
+        }
+      }
+    } else if (recipientId && recipientId !== currentUser._id) {
+      recipientsToNotify.push(recipientId);
+    }
+
+    if (recipientsToNotify.length > 0) {
+      // Find sender name and avatar for the push notification
+      let senderName = currentUser.name;
+      let senderAvatar: string | undefined;
+
+      if (args.pageSenderId) {
+        const page = await ctx.db.get(args.pageSenderId);
+        if (page) {
+          senderName = page.name;
+          if (page.avatar) {
+            senderAvatar = page.avatar;
+          }
+        }
+      } else {
+        if (currentUser.avatarUrl) {
+          senderAvatar = currentUser.avatarUrl;
+        } else if (currentUser.avatarStorageId) {
+          try {
+            const signed = await ctx.storage.getUrl(currentUser.avatarStorageId);
+            if (signed) senderAvatar = signed;
+          } catch (e) {
+            console.warn('[social] Failed to resolve sender avatarStorageId for push:', e);
+          }
+        }
+      }
+
+      // Ensure avatar is a valid absolute HTTPS URL; otherwise omit so default icon is used
+      if (senderAvatar && !senderAvatar.startsWith('https://')) {
+        senderAvatar = undefined;
+      }
+
+      const previewText = args.text.trim().slice(0, 100);
+      const pushTitle = conversation.groupChatId
+        ? `New message in group`
+        : `New message from ${senderName ?? "Someone"}`;
+
+      for (const recId of recipientsToNotify) {
+        await ctx.db.insert("notifications", {
+          recipientId: recId,
+          actorId: currentUser._id,
+          type: "message",
+          conversationId: args.conversationId,
+          messageId,
+          targetExcerpt: args.text.slice(0, 80),
+          isRead: false,
+          createdAt: Date.now(),
+        });
+
+        // Dispatch native web push / OneSignal with sender avatar
+        await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
+          recipientId: recId,
+          title: pushTitle,
+          body: previewText,
+          url: `/app?chat=${args.conversationId}`,
+          conversationId: args.conversationId,
+          messageId: messageId.toString(),
+          icon: senderAvatar,
+        });
+      }
+    }
+
+    return messageId;
+  },
+});
+
+export const markConversationRead = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation) return;
+
+    let amIUserA = conversation.userA === currentUser._id;
+    let isPageConvo = !!conversation.pageB;
+    let isGroupChat = !!conversation.groupChatId;
+    let isGroupMember = false;
+
+    if (isGroupChat && conversation.groupChatId) {
+      const groupChat = await ctx.db.get(conversation.groupChatId);
+      isGroupMember = !!groupChat && canAccessGroupChat(
+        currentUser._id.toString(),
+        groupChat.creatorId.toString(),
+        groupChat.memberIds.map((id) => id.toString()),
+      );
+    }
+
+    let isManager = false;
+    if (isPageConvo && conversation.pageB) {
+      const page = await ctx.db.get(conversation.pageB);
+      if (page && page.ownerId === currentUser._id) {
+        isManager = true;
+      }
+    }
+
+    if (!isGroupMember && !amIUserA && conversation.userB !== currentUser._id && !isManager) {
+      throw new Error("Not authorized");
+    }
+
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_conversation_read", (q: any) => 
+        q.eq("conversationId", args.conversationId).eq("isRead", false)
+      )
+      .collect();
+
+    for (const msg of messages) {
+      if (isManager && !amIUserA) {
+        if (msg.senderId !== currentUser._id && !msg.pageSenderId) {
+          await ctx.db.patch(msg._id, { isRead: true, readAt: Date.now() });
+        }
+      } else {
+        if (msg.pageSenderId || msg.senderId !== currentUser._id) {
+          await ctx.db.patch(msg._id, { isRead: true, readAt: Date.now() });
+        }
+      }
+    }
+
+    // Also mark notifications as read
+    const notifications = await ctx.db
+      .query("notifications")
+      .withIndex("by_recipient_read", (q: any) => 
+        q.eq("recipientId", currentUser._id).eq("isRead", false)
+      )
+      .collect();
+      
+    for (const notif of notifications) {
+      if (notif.type === "message" && notif.conversationId === args.conversationId) {
+        await ctx.db.patch(notif._id, { isRead: true });
+      }
+    }
+  },
+});
+
+export const editMessage = mutation({
+  args: {
+    messageId: v.id("messages"),
+    text: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const message = await ctx.db.get(args.messageId);
+    if (!message) throw new Error("Message not found");
+
+    if (message.senderId !== currentUser._id) {
+      throw new Error("Not authorized to edit this message");
+    }
+
+    await ctx.db.patch(args.messageId, {
+      text: args.text,
+      isEdited: true,
+    });
+  },
+});
+
+export const deleteMessage = mutation({
+  args: {
+    messageId: v.id("messages"),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const message = await ctx.db.get(args.messageId);
+    if (!message) throw new Error("Message not found");
+
+    if (message.senderId !== currentUser._id) {
+      throw new Error("Not authorized to delete this message");
+    }
+
+    await ctx.db.delete(args.messageId);
+  },
+});
+
+export const markViewOnceOpened = mutation({
+  args: {
+    messageId: v.id("messages"),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const message = await ctx.db.get(args.messageId);
+    if (!message) throw new Error("Message not found");
+
+    if (!message.viewOnce) {
+      throw new Error("Message is not view once");
+    }
+
+    // Only the recipient (or sender, though sender shouldn't need to open it) can mark it
+    await ctx.db.patch(args.messageId, {
+      viewOnceOpened: true,
+      viewedAt: Date.now(),
+    });
+  },
+});
+
+export const updateDisappearingMessages = mutation({
+  args: {
+    mode: v.string(), // "off", "after_read", "24_hours", "7_days", "1_month", "custom"
+    customValue: v.optional(v.number()),
+    customUnit: v.optional(v.string()), // "hours", "days", "weeks", "months"
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Not authenticated");
+
+    await ctx.db.patch(currentUser._id, {
+      disappearingMode: args.mode,
+      disappearingCustomValue: args.customValue,
+      disappearingCustomUnit: args.customUnit,
+    });
+  },
+});
+
+

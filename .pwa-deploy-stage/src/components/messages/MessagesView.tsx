@@ -1,0 +1,626 @@
+import React, { useState, useMemo, useRef, useCallback } from 'react';
+import {
+  Search,
+  Plus,
+  ChevronRight,
+  X,
+  MessageSquare,
+  Check,
+  CheckCheck,
+  RotateCw,
+  ArrowDown,
+  CheckCircle2,
+  UserPlus,
+  Settings,
+  Clock,
+  History,
+  Users,
+} from 'lucide-react';
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { useLalao } from '../../context/LalaoContext';
+import { Avatar } from '../common/Avatar';
+import { Badge } from '../common/Badge';
+import { VerificationBadge } from '../common/VerificationBadge';
+import { getPublicIdentityLabel } from '../common/UserIdentity';
+import { ChatModal } from './ChatModal';
+import { AddPeopleModal } from './AddPeopleModal';
+
+export const MessagesView: React.FC = () => {
+  const {
+    conversations,
+    cycles,
+    messageContacts,
+    activeChatId,
+    setActiveChatId,
+    openCycleStory,
+    setIsCreateCycleOpen,
+    currentUser,
+    triggerShareToast,
+    openChatWithUser,
+    setIsCreateGroupChatOpen,
+  } = useLalao();
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAddPeopleOpen, setIsAddPeopleOpen] = useState(false);
+  
+  const [selectedMode, setSelectedMode] = useState(currentUser?.disappearingMode || 'off');
+  const [customValue, setCustomValue] = useState(currentUser?.disappearingCustomValue?.toString() || '1');
+  const [customUnit, setCustomUnit] = useState(currentUser?.disappearingCustomUnit || 'days');
+  
+  const updateDisappearingMessages = useMutation(api.social.updateDisappearingMessages);
+  
+  const handleSaveSettings = () => {
+    updateDisappearingMessages({
+      mode: selectedMode,
+      customValue: selectedMode === 'custom' ? parseInt(customValue) || 1 : undefined,
+      customUnit: selectedMode === 'custom' ? customUnit : undefined
+    }).catch(console.error);
+    triggerShareToast('Message settings updated');
+    setIsSettingsOpen(false);
+  };
+
+  // Pull to refresh state
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isPulling, setIsPulling] = useState(false);
+  const [refreshSuccess, setRefreshSuccess] = useState(false);
+
+  const startYRef = useRef<number | null>(null);
+  const pullThreshold = 56;
+  const maxPullDistance = 84;
+
+  const handleRefresh = useCallback(() => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    setRefreshSuccess(false);
+
+    // Simulate network sync for direct messages and 24h stories
+    setTimeout(() => {
+      setIsRefreshing(false);
+      setRefreshSuccess(true);
+      triggerShareToast('Messages and status updated!');
+
+      setTimeout(() => {
+        setRefreshSuccess(false);
+        setPullDistance(0);
+      }, 600);
+    }, 900);
+  }, [isRefreshing, triggerShareToast]);
+
+  // Touch Handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (window.scrollY <= 2 && !isRefreshing) {
+      startYRef.current = e.touches[0].clientY;
+      setIsPulling(true);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!startYRef.current || isRefreshing) return;
+
+    if (window.scrollY <= 2) {
+      const currentY = e.touches[0].clientY;
+      const diff = currentY - startYRef.current;
+
+      if (diff > 0) {
+        const pull = Math.min(maxPullDistance, diff * 0.45);
+        setPullDistance(pull);
+      }
+    } else {
+      setPullDistance(0);
+      setIsPulling(false);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!isPulling || isRefreshing) return;
+    setIsPulling(false);
+    startYRef.current = null;
+
+    if (pullDistance >= pullThreshold) {
+      handleRefresh();
+    } else {
+      setPullDistance(0);
+    }
+  };
+
+  // Mouse Handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (window.scrollY <= 2 && !isRefreshing) {
+      startYRef.current = e.clientY;
+      setIsPulling(true);
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!startYRef.current || isRefreshing || !isPulling) return;
+    const diff = e.clientY - startYRef.current;
+    if (diff > 0 && window.scrollY <= 2) {
+      const pull = Math.min(maxPullDistance, diff * 0.4);
+      setPullDistance(pull);
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (!isPulling || isRefreshing) return;
+    setIsPulling(false);
+    startYRef.current = null;
+    if (pullDistance >= pullThreshold) {
+      handleRefresh();
+    } else {
+      setPullDistance(0);
+    }
+  };
+
+  // Current user's cycle
+  const myCycle = cycles.find(
+    (c) => c.user?.id === currentUser.id || c.id === 'cycle_user_me'
+  );
+  const myHasItems = myCycle && myCycle.items && myCycle.items.length > 0;
+
+  // Other community cycles
+  const otherCycles = cycles.filter(
+    (c) => c.user?.id !== currentUser.id && c.id !== 'cycle_user_me' && c.items && c.items.length > 0
+  );
+
+  const unifiedChats = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    
+    // 1. Get all conversations matching search
+    const matchedConvs = conversations.filter(
+      (c) =>
+        c.participant.name.toLowerCase().includes(query) ||
+        c.lastMessage.toLowerCase().includes(query)
+    );
+
+    // 2. Track participant IDs to avoid duplicates
+    const convParticipantIds = new Set(conversations.map(c => c.participant.id));
+
+    // 3. Get contacts matching search that don't have a conversation
+    const matchedContacts = messageContacts.filter(
+      (c) =>
+        !convParticipantIds.has(c.id) &&
+        (c.name.toLowerCase().includes(query) ||
+         c.username.toLowerCase().includes(query))
+    );
+
+    return { matchedConvs, matchedContacts };
+  }, [conversations, messageContacts, searchQuery]);
+
+  const effectiveOffset = isRefreshing ? 54 : pullDistance;
+  const isReadyToRelease = pullDistance >= pullThreshold;
+
+  if (activeChatId) {
+    return (
+      <div className="min-h-screen bg-theme-base">
+        <ChatModal />
+      </div>
+    );
+  }
+
+  return (
+    <>
+    {isSettingsOpen && (
+      <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-200">
+        <div className="bg-[#F8F3EC] dark:bg-[#141414] w-full sm:w-[480px] sm:rounded-2xl rounded-t-2xl sm:max-h-[85vh] h-auto flex flex-col shadow-2xl border border-black/[0.06] dark:border-white/[0.06] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200">
+          
+          <div className="flex items-center justify-between p-4 border-b border-black/[0.04] dark:border-white/[0.06] shrink-0">
+            <h2 className="text-lg font-bold text-theme-primary">Message Settings</h2>
+            <button
+              onClick={() => setIsSettingsOpen(false)}
+              className="p-2 rounded-full text-theme-secondary hover:bg-theme-surface-hover transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-6">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-base font-semibold text-theme-primary flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-[#5E43F3]" />
+                  Disappearing Messages
+                </h3>
+                <p className="text-xs text-theme-tertiary mt-1">
+                  Choose when messages automatically clear from your chats. This applies to new messages.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {[
+                  { id: 'off', label: 'Off', desc: 'Messages remain normally.' },
+                  { id: 'after_read', label: 'After messages are read', desc: 'Messages disappear shortly after being read.' },
+                  { id: '24_hours', label: '24 hours', desc: 'Messages disappear 24 hours after they are sent.' },
+                  { id: '7_days', label: '7 days', desc: 'Messages disappear 7 days after they are sent.' },
+                  { id: '1_month', label: '1 month', desc: 'Messages disappear 1 month after they are sent.' },
+                  { id: 'custom', label: 'Custom', desc: 'Set a custom duration.' }
+                ].map(opt => (
+                  <label key={opt.id} className="flex items-start gap-3 p-3 rounded-xl border border-black/[0.06] dark:border-white/[0.06] bg-theme-surface dark:bg-[#181818] hover:bg-theme-surface-hover dark:hover:bg-[#1E1E1E] transition-colors cursor-pointer">
+                    <div className="mt-0.5 relative flex items-center justify-center w-5 h-5 rounded-full border border-theme-divider-strong shrink-0">
+                      {selectedMode === opt.id && <div className="w-2.5 h-2.5 rounded-full bg-[#5E43F3]" />}
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-theme-primary">{opt.label}</div>
+                      <div className="text-xs text-theme-tertiary mt-0.5">{opt.desc}</div>
+                    </div>
+                    <input type="radio" name="disappearingMode" className="hidden" checked={selectedMode === opt.id} onChange={() => setSelectedMode(opt.id)} />
+                  </label>
+                ))}
+              </div>
+
+              {selectedMode === 'custom' && (
+                <div className="flex items-center gap-3 p-4 bg-theme-surface dark:bg-[#181818] rounded-xl border border-black/[0.06] dark:border-white/[0.06] animate-in slide-in-from-top-2 duration-200">
+                  <input
+                    type="number"
+                    min="1"
+                    value={customValue}
+                    onChange={(e) => setCustomValue(e.target.value)}
+                    className="w-20 px-3 py-2 bg-theme-base border border-black/[0.06] dark:border-white/[0.06] rounded-lg text-theme-primary outline-none focus:border-[#5E43F3] text-sm text-center"
+                  />
+                  <select
+                    value={customUnit}
+                    onChange={(e) => setCustomUnit(e.target.value)}
+                    className="flex-1 px-3 py-2 bg-theme-base border border-black/[0.06] dark:border-white/[0.06] rounded-lg text-theme-primary outline-none focus:border-[#5E43F3] text-sm appearance-none cursor-pointer"
+                  >
+                    <option value="hours">Hours</option>
+                    <option value="days">Days</option>
+                    <option value="weeks">Weeks</option>
+                    <option value="months">Months</option>
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="p-4 border-t border-black/[0.04] dark:border-white/[0.06] shrink-0">
+            <button
+              onClick={handleSaveSettings}
+              className="w-full py-2.5 bg-[#5E43F3] text-white font-bold rounded-xl hover:bg-[#4E34E0] active:scale-95 transition-all text-sm shadow-sm"
+            >
+              Save Settings
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    <div
+      id="messages-view-container"
+      className="min-h-screen bg-theme-base pb-24 relative select-none"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+    >
+      {/* Top Header */}
+      <div className="sticky top-0 z-20 bg-theme-base/95 backdrop-blur-md border-b border-black/[0.04] dark:border-white/[0.06] px-4 py-2.5 space-y-2">
+        <div className="flex items-center justify-between">
+          <div
+            onClick={handleRefresh}
+            className="cursor-pointer group flex items-center gap-1.5"
+            title="Tap to refresh messages"
+          >
+            <h1 className="text-xl font-black tracking-tight text-theme-primary font-sans group-hover:text-[#5E43F3] transition-colors">
+              Messages
+            </h1>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              id="btn-messages-add-people"
+              onClick={() => setIsAddPeopleOpen(true)}
+              className="p-1.5 rounded-full text-[#707070] dark:text-[#707070] hover:text-[#5E43F3] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
+              title="Add people"
+              aria-label="Add people"
+            >
+              <UserPlus className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setIsCreateGroupChatOpen(true)}
+              className="p-1.5 rounded-full text-[#707070] dark:text-[#707070] hover:text-[#5E43F3] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
+              title="New group chat"
+              aria-label="New group chat"
+            >
+              <Users className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-1.5 rounded-full text-[#707070] dark:text-[#707070] hover:text-theme-primary hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
+              title="Message settings"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="relative flex items-center">
+          <Search className="w-4 h-4 text-theme-secondary absolute left-3 pointer-events-none" />
+          <input
+            id="input-messages-search"
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search messages & contacts..."
+            className="w-full pl-9 pr-9 py-2 rounded-full bg-theme-surface dark:bg-[#141414] hover:bg-theme-surface-hover focus:bg-theme-base focus:ring-2 focus:ring-[#5E43F3]/20 focus:border-[#5E43F3] border border-black/[0.06] dark:border-white/[0.06] text-sm text-theme-primary placeholder:text-theme-secondary transition-all outline-none"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 p-1 rounded-full text-theme-tertiary hover:text-theme-secondary"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Pull-to-Refresh Visual Indicator Banner */}
+      <div
+        style={{
+          height: `${effectiveOffset}px`,
+          opacity: effectiveOffset > 4 ? 1 : 0,
+        }}
+        className={`w-full overflow-hidden bg-gradient-to-b from-[#f8f5f1] to-[#f6f3ee] border-b border-theme-divider/80 flex items-center justify-center transition-[height,opacity] ${
+          isPulling ? 'duration-0' : 'duration-300 ease-out'
+        }`}
+      >
+        <div className="flex items-center gap-2.5 text-xs font-semibold text-theme-secondary">
+          {isRefreshing ? (
+            <>
+              <div className="w-5 h-5 rounded-full bg-[#5E43F3]/10 flex items-center justify-center">
+                <RotateCw className="w-3.5 h-3.5 text-[#5E43F3] animate-spin" />
+              </div>
+              <span className="text-[#5E43F3] font-bold">Syncing messages & status...</span>
+            </>
+          ) : refreshSuccess ? (
+            <>
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span className="text-emerald-700 font-bold">Messages up to date</span>
+            </>
+          ) : (
+            <>
+              <div
+                style={{
+                  transform: `rotate(${Math.min(180, (pullDistance / pullThreshold) * 180)}deg)`,
+                }}
+                className={`w-5 h-5 rounded-full flex items-center justify-center transition-transform ${
+                  isReadyToRelease ? 'bg-[#5E43F3] text-white' : 'bg-theme-surface-active text-theme-secondary'
+                }`}
+              >
+                <ArrowDown className="w-3 h-3 stroke-[2.5]" />
+              </div>
+              <span className={isReadyToRelease ? 'text-[#5E43F3] font-bold' : 'text-theme-tertiary'}>
+                {isReadyToRelease ? 'Release to refresh' : 'Pull down to update'}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Status / Story Cycles Section */}
+      <div className="pt-3 pb-3 border-b border-black/[0.04] dark:border-white/[0.06]">
+        <div className="px-4 flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-[#707070] dark:text-[#707070]">
+              Status
+            </h2>
+          </div>
+        </div>
+
+        {/* Story Scroll Ribbon - Perfectly Aligned Row */}
+        <div className="flex items-center gap-4 overflow-x-auto no-scrollbar px-4 py-1">
+          {/* User's Own Status */}
+          <div
+            onClick={() => {
+              if (myHasItems && myCycle) {
+                openCycleStory(myCycle.id, 0);
+              } else {
+                setIsCreateCycleOpen(true);
+              }
+            }}
+            className="w-16 flex flex-col items-center shrink-0 cursor-pointer group text-center"
+          >
+            <div className="relative w-14 h-14">
+              <div
+                className={`w-full h-full rounded-full flex items-center justify-center transition-transform group-hover:scale-105 p-[2.5px] ${
+                  myHasItems
+                    ? 'bg-gradient-to-tr from-[#5E43F3] via-fuchsia-500 to-amber-400'
+                    : 'bg-theme-surface-active'
+                }`}
+              >
+                <div className="w-full h-full bg-theme-surface p-[1.5px] rounded-full flex items-center justify-center">
+                  <Avatar src={currentUser.avatar} alt={currentUser.name} size="md" className="w-full h-full" />
+                </div>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsCreateCycleOpen(true);
+                }}
+                className="absolute -bottom-0.5 -right-0.5 w-4.5 h-4.5 rounded-full bg-[#5E43F3] text-white flex items-center justify-center border-[2px] border-theme-base shadow-xs hover:bg-[#4E34E0]"
+                title="Post to Cycle"
+              >
+                <Plus className="w-3 h-3 stroke-[3]" />
+              </button>
+            </div>
+            <span className="text-[11px] font-bold text-theme-primary mt-1.5 truncate w-full text-center block leading-tight">
+              {myHasItems ? 'My Status' : 'Add Status'}
+            </span>
+          </div>
+
+          {/* Other Users' Active Cycles */}
+          {otherCycles.map((cycle) => {
+            const user = cycle.user;
+            const firstName = user?.name ? user.name.split(' ')[0] : (cycle.name || 'Resident');
+
+            return (
+              <div
+                key={cycle.id}
+                onClick={() => openCycleStory(cycle.id, 0)}
+                className="w-16 flex flex-col items-center shrink-0 cursor-pointer group text-center"
+              >
+                <div className="relative w-14 h-14">
+                  <div
+                    className={`w-full h-full rounded-full flex items-center justify-center transition-transform group-hover:scale-105 ${
+                      cycle.hasUnseen
+                        ? 'p-[2.5px] bg-gradient-to-tr from-[#5E43F3] via-fuchsia-500 to-pink-500 shadow-xs'
+                        : 'p-[2.5px] bg-theme-divider-strong'
+                    }`}
+                  >
+                    <div className="w-full h-full bg-theme-surface p-[1.5px] rounded-full flex items-center justify-center">
+                      <Avatar
+                        src={user?.avatar || cycle.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400'}
+                        alt={user?.name || cycle.name || 'User'}
+                        size="md"
+                        className="w-full h-full"
+                      />
+                    </div>
+                  </div>
+                  {cycle.hasUnseen && (
+                    <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#5E43F3] rounded-full border-[2px] border-theme-base" />
+                  )}
+                </div>
+                <span className="text-[11px] font-bold text-theme-primary mt-1.5 truncate w-full text-center block leading-tight">
+                  {firstName}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Chats Section */}
+      <div className="pt-3">
+        <div className="px-4 mb-1">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-[#707070] dark:text-[#707070]">
+            Direct Chats
+          </h2>
+        </div>
+
+        <div className="divide-y divide-black/[0.04] dark:divide-white/[0.06]">
+          {/* 1. Render Conversations */}
+          {unifiedChats.matchedConvs.map((conv) => {
+            const lastMsg = conv.messages && conv.messages.length > 0 ? conv.messages[conv.messages.length - 1] : null;
+            const isLastMine = lastMsg?.isMine;
+
+            return (
+              <div
+                key={conv.id}
+                id={`conv-item-${conv.id}`}
+                onClick={() => setActiveChatId(conv.id)}
+                className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <Avatar
+                    src={conv.participant?.avatar}
+                    alt={conv.participant?.name || 'Contact'}
+                    size="md"
+                    online
+                  />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-sm text-theme-primary truncate">
+                        {getPublicIdentityLabel(conv.participant)}
+                      </span>
+                      {conv.participant?.badge && <Badge type={conv.participant.badge} />}
+                      <VerificationBadge user={conv.participant} size="xs" />
+                    </div>
+                    {(conv as any).isPageConvo && !(conv as any).amIUserA && (
+                      <div className="text-[10px] font-black tracking-wider text-[#5E43F3] bg-[#5E43F3]/10 border border-[#5E43F3]/20 px-1.5 py-0.5 rounded-sm uppercase mt-1 w-fit mb-0.5">
+                        Manager View
+                      </div>
+                    )}
+                    {(conv as any).isPageConvo && (conv as any).amIUserA && (
+                      <div className="text-[10px] font-black tracking-wider text-theme-tertiary bg-theme-surface-hover border border-theme-divider px-1.5 py-0.5 rounded-sm uppercase mt-1 w-fit mb-0.5">
+                        Business Chat
+                      </div>
+                    )}
+                    {(conv as any).isGroupChat && (
+                      <div className="text-[10px] font-black tracking-wider text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/40 px-1.5 py-0.5 rounded-sm uppercase mt-1 w-fit mb-0.5">
+                        Group Chat
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1 text-xs text-theme-tertiary truncate mt-0.5 max-w-[220px]">
+                      {isLastMine && (
+                        <span className="shrink-0" title={lastMsg?.status === 'read' ? 'Read' : lastMsg?.status === 'delivered' ? 'Delivered' : 'Sent'}>
+                          {lastMsg?.status === 'read' ? (
+                            <CheckCheck className="w-3.5 h-3.5 text-sky-500 stroke-[2.4]" />
+                          ) : lastMsg?.status === 'delivered' ? (
+                            <CheckCheck className="w-3.5 h-3.5 text-theme-tertiary stroke-[2.2]" />
+                          ) : (
+                            <Check className="w-3 h-3 text-theme-tertiary stroke-[2.2]" />
+                          )}
+                        </span>
+                      )}
+                      <span className="truncate">{conv.lastMessage}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 ml-3">
+                  <div className="text-right">
+                    <span className="text-[11px] text-theme-tertiary block">{conv.timestamp}</span>
+                    {conv.unreadCount > 0 && (
+                      <span className="inline-block mt-1 w-2 h-2 rounded-full bg-[#5E43F3]" />
+                    )}
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-theme-tertiary" />
+                </div>
+              </div>
+            );
+          })}
+
+          {/* 2. Render Contacts without a conversation */}
+          {unifiedChats.matchedContacts.map((contact) => (
+            <div
+              key={contact.id}
+              id={`contact-item-${contact.id}`}
+              onClick={() => openChatWithUser(contact)}
+              className="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <Avatar
+                  src={contact.avatar}
+                  alt={contact.name}
+                  size="md"
+                />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-sm text-theme-primary truncate">
+                      {getPublicIdentityLabel(contact)}
+                    </span>
+                    {contact.badge && <Badge type={contact.badge} />}
+                    <VerificationBadge user={contact} size="xs" />
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-theme-tertiary truncate mt-0.5 max-w-[220px]">
+                    <span className="truncate">Start a conversation</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0 ml-3">
+                <ChevronRight className="w-4 h-4 text-theme-tertiary" />
+              </div>
+            </div>
+          ))}
+
+          {unifiedChats.matchedConvs.length === 0 && unifiedChats.matchedContacts.length === 0 && (
+            <div className="p-8 text-center text-theme-tertiary space-y-2">
+              <MessageSquare className="w-8 h-8 mx-auto text-theme-tertiary" />
+              <p className="text-xs font-semibold">No chats found</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+
+    <AddPeopleModal
+      isOpen={isAddPeopleOpen}
+      onClose={() => setIsAddPeopleOpen(false)}
+    />
+    </>
+  );
+};

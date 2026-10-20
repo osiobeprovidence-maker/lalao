@@ -26,7 +26,7 @@ export const DEFAULT_BRANDING_SETTINGS: BrandingSettings = {
   backgroundColor: "#F8F9FA",
   browserTitle: "Lalao | Community Platform",
   browserDescription: "Join the community on Lalao",
-  pwaName: "Lalao App",
+  pwaName: "Lalao",
   pwaShortName: "Lalao",
   authLogoUrl: "",
   authWordmark: "",

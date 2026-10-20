@@ -1,0 +1,766 @@
+import { mutation, query, action, internalMutation, internalQuery } from "./_generated/server";
+import { v } from "convex/values";
+import { internal, api } from "./_generated/api";
+
+export const getUserByIdentity = internalQuery({
+  args: { 
+    tokenIdentifier: v.optional(v.string()),
+    userId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    if (args.userId) {
+      const norm = ctx.db.normalizeId("users", args.userId);
+      if (norm) {
+        const byId = await ctx.db.get(norm);
+        if (byId) return byId;
+      }
+    }
+    if (args.tokenIdentifier) {
+      const byToken = await ctx.db
+        .query("users")
+        .withIndex("by_token", (q) => q.eq("tokenIdentifier", args.tokenIdentifier!))
+        .unique();
+      if (byToken) return byToken;
+    }
+    return null;
+  }
+});
+
+export const getOrCreateUserWallet = internalMutation({
+  args: {
+    userId: v.id("users"),
+    userName: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    let wallet = await ctx.db
+      .query("userWallets")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .first();
+
+    if (!wallet) {
+      const walletId = await ctx.db.insert("userWallets", {
+        userId: args.userId,
+        balance: 0,
+        currency: "LC",
+        accountNumber: "LC-" + Math.floor(100000 + Math.random() * 900000).toString(),
+        accountName: args.userName || "Lalao User",
+        bankName: "LaLao Platform",
+        updatedAt: Date.now(),
+      });
+      wallet = await ctx.db.get(walletId);
+    }
+    return wallet;
+  }
+});
+
+export const getWalletByUserId = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("userWallets")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .first();
+  }
+});
+
+// Create or get user's wallet
+export const getWallet = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+    if (!user) return null;
+
+    const wallet = await ctx.db
+      .query("userWallets")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .first();
+
+    if (!wallet) return null;
+
+    return {
+      ...wallet,
+      hasPin: Boolean(wallet.walletPin && wallet.walletPin.length === 4),
+      walletPin: undefined, // Never expose raw or hashed PIN to client
+    };
+  },
+});
+
+export const setWalletPin = mutation({
+  args: {
+    pin: v.string(),
+    oldPin: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    if (!/^\d{4}$/.test(args.pin)) {
+      throw new Error("PIN must be exactly 4 numeric digits.");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) throw new Error("User not found");
+
+    let wallet = await ctx.db
+      .query("userWallets")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .first();
+
+    if (!wallet) {
+      const walletId = await ctx.db.insert("userWallets", {
+        userId: user._id,
+        balance: 0,
+        currency: "LC",
+        accountNumber: "LC-" + Math.floor(100000 + Math.random() * 900000).toString(),
+        accountName: user.name || "Lalao User",
+        bankName: "LaLao Platform",
+        walletPin: args.pin,
+        updatedAt: Date.now(),
+      });
+      return { success: true, message: "Wallet PIN created successfully." };
+    }
+
+    // If wallet already has a PIN, verify the old PIN before changing
+    if (wallet.walletPin && wallet.walletPin.length === 4) {
+      if (!args.oldPin || args.oldPin !== wallet.walletPin) {
+        throw new Error("Incorrect current PIN.");
+      }
+    }
+
+    await ctx.db.patch(wallet._id, {
+      walletPin: args.pin,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true, message: "Wallet PIN updated successfully." };
+  },
+});
+
+export const storePinResetOtp = internalMutation({
+  args: {
+    userId: v.id("users"),
+    otp: v.string(),
+    expiresAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    let wallet = await ctx.db
+      .query("userWallets")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .first();
+
+    if (!wallet) {
+      const walletId = await ctx.db.insert("userWallets", {
+        userId: args.userId,
+        balance: 0,
+        currency: "LC",
+        pinResetOtp: args.otp,
+        pinResetExpiresAt: args.expiresAt,
+        updatedAt: Date.now(),
+      });
+      return walletId;
+    }
+
+    await ctx.db.patch(wallet._id, {
+      pinResetOtp: args.otp,
+      pinResetExpiresAt: args.expiresAt,
+      updatedAt: Date.now(),
+    });
+
+    return wallet._id;
+  },
+});
+
+export const requestPinResetOtp = action({
+  args: {},
+  handler: async (ctx): Promise<any> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const user: any = await ctx.runQuery(internal.wallet.getUserByIdentity, {
+      tokenIdentifier: identity.tokenIdentifier,
+    });
+    if (!user) throw new Error("User profile not found.");
+
+    const email = user.email || identity.email;
+    if (!email) {
+      throw new Error("No verified email address associated with your account.");
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    await ctx.runMutation(internal.wallet.storePinResetOtp, {
+      userId: user._id,
+      otp,
+      expiresAt,
+    });
+
+    // Send via Resend
+    const res: any = await ctx.runAction(api.emails.sendOtpEmail, {
+      to: email,
+      otp,
+      purpose: "reset your transaction security PIN",
+    });
+
+    return {
+      success: true,
+      email: email.replace(/(.{2})(.*)(?=@)/, (_gp: string, a: string, b: string) => a + "*".repeat(b.length)),
+      mock: res?.mock,
+    };
+  },
+});
+
+export const resetWalletPinWithOtp = mutation({
+  args: {
+    otp: v.string(),
+    newPin: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    if (!/^\d{4}$/.test(args.newPin)) {
+      throw new Error("PIN must be exactly 4 numeric digits.");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) throw new Error("User not found");
+
+    const wallet = await ctx.db
+      .query("userWallets")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .first();
+
+    if (!wallet) throw new Error("Wallet not found");
+
+    if (!wallet.pinResetOtp || !wallet.pinResetExpiresAt || Date.now() > wallet.pinResetExpiresAt) {
+      throw new Error("Verification code has expired. Please request a new code.");
+    }
+
+    if (wallet.pinResetOtp.trim() !== args.otp.trim()) {
+      throw new Error("Invalid verification code. Please check your email and try again.");
+    }
+
+    await ctx.db.patch(wallet._id, {
+      walletPin: args.newPin,
+      pinResetOtp: undefined,
+      pinResetExpiresAt: undefined,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true, message: "Your transaction PIN has been successfully reset!" };
+  },
+});
+
+export const initializeWallet = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) throw new Error("User not found");
+
+    let wallet = await ctx.db
+      .query("userWallets")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .first();
+
+    if (!wallet) {
+      const walletId = await ctx.db.insert("userWallets", {
+        userId: user._id,
+        balance: 0,
+        currency: "LC",
+        accountNumber: "LC-" + Math.floor(100000 + Math.random() * 900000).toString(),
+        accountName: user.name || "Lalao User",
+        bankName: "LaLao Platform",
+        updatedAt: Date.now(),
+      });
+      wallet = await ctx.db.get(walletId);
+    }
+    return wallet;
+  },
+});
+
+// Top up wallet (legacy mock)
+export const topUp = mutation({
+  args: {
+    amount: v.number(),
+    method: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) throw new Error("User not found");
+
+    const wallet = await ctx.db
+      .query("userWallets")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .first();
+
+    if (!wallet) throw new Error("Wallet not found. Please initialize wallet first.");
+
+    await ctx.db.patch(wallet._id, {
+      balance: wallet.balance + args.amount,
+      updatedAt: Date.now(),
+    });
+
+    await ctx.db.insert("walletTransactions", {
+      walletId: wallet._id,
+      userId: user._id,
+      amount: args.amount,
+      type: "deposit",
+      status: "completed",
+      description: `Wallet Top-Up via ${args.method}`,
+      createdAt: Date.now(),
+    });
+
+    return { success: true, newBalance: wallet.balance + args.amount };
+  },
+});
+
+export const createPendingFunding = internalMutation({
+  args: {
+    amount: v.number(),
+    reference: v.string(),
+    userId: v.id("users"),
+    walletId: v.id("userWallets"),
+  },
+  handler: async (ctx, args) => {
+    // Check if reference already exists (prevent duplicate pending records)
+    const existing = await ctx.db
+      .query("walletTransactions")
+      .withIndex("by_reference", (q) => q.eq("reference", args.reference))
+      .first();
+    if (existing) {
+      return existing._id;
+    }
+
+    const txId = await ctx.db.insert("walletTransactions", {
+      walletId: args.walletId,
+      userId: args.userId,
+      amount: args.amount,
+      type: "deposit",
+      status: "pending",
+      paymentProvider: "paystack",
+      reference: args.reference,
+      description: `Wallet funded via Paystack (₦${args.amount.toLocaleString()} -> ${args.amount.toLocaleString()} LC)`,
+      currency: "LC",
+      assetType: "LALAO_CREDITS",
+      createdAt: Date.now(),
+    });
+    return txId;
+  }
+});
+
+export const initializeFunding = action({
+  args: {
+    amount: v.number(),
+    reference: v.string(),
+    userId: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<any> => {
+    // 1. Validation: Minimum funding is 100 LC (₦100), maximum is 500,000 LC (₦500,000)
+    if (typeof args.amount !== "number" || isNaN(args.amount) || args.amount < 100) {
+      throw new Error("Minimum funding amount is ₦100 (100 LC).");
+    }
+    if (args.amount > 500000) {
+      throw new Error("Maximum funding amount is ₦500,000 (500,000 LC) per transaction.");
+    }
+
+    const identity = await ctx.auth.getUserIdentity();
+    const user = await ctx.runQuery(internal.wallet.getUserByIdentity, { 
+      tokenIdentifier: identity?.tokenIdentifier,
+      userId: args.userId,
+    });
+    if (!user) throw new Error("User profile not found. Please sign in to fund your wallet.");
+
+    const wallet = await ctx.runMutation(internal.wallet.getOrCreateUserWallet, { 
+      userId: user._id,
+      userName: user.name,
+    });
+    if (!wallet) throw new Error("Wallet could not be initialized.");
+
+    // 2. Insert pending funding record in ledger
+    await ctx.runMutation(internal.wallet.createPendingFunding, {
+      amount: args.amount,
+      reference: args.reference,
+      userId: user._id,
+      walletId: wallet._id,
+    });
+
+    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    if (!secretKey) {
+      // If secret key is not yet set in environment, return a helpful development status
+      return {
+        success: true,
+        reference: args.reference,
+        isDevelopmentMode: true,
+        message: "Paystack secret key is not configured in backend environment variables. Frontend popup or webhook will process payment verification."
+      };
+    }
+    
+    // Amount to send to Paystack is in kobo (1 NGN = 100 kobo)
+    const amountKobo = Math.round(args.amount * 100);
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VITE_APP_URL || "http://localhost:3000";
+    const callbackUrl = `${appUrl}/api/payments/paystack/callback`;
+
+    const res = await fetch("https://api.paystack.co/transaction/initialize", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        email: user.email || 'user@lalao.app',
+        amount: amountKobo,
+        reference: args.reference,
+        currency: "NGN",
+        callback_url: callbackUrl,
+        metadata: {
+          userId: user._id,
+          type: "wallet_funding",
+          fundingReference: args.reference
+        }
+      })
+    });
+
+    const data = await res.json();
+    if (!data.status) {
+      throw new Error(`Paystack initialization failed: ${data.message}`);
+    }
+
+    return { 
+      success: true, 
+      authorizationUrl: data.data.authorization_url,
+      accessCode: data.data.access_code,
+      reference: data.data.reference
+    };
+  }
+});
+
+export const settleWalletFunding = internalMutation({
+  args: {
+    reference: v.string(),
+    paystackAmount: v.number(), // The amount confirmed by Paystack API in regular currency (NGN, not kobo)
+    paystackTransactionId: v.optional(v.string())
+  },
+  handler: async (ctx, args) => {
+    // 1. Find the pending transaction using the indexed 'by_reference'
+    const pendingTx = await ctx.db
+      .query("walletTransactions")
+      .withIndex("by_reference", (q) => q.eq("reference", args.reference))
+      .first();
+
+    if (!pendingTx) throw new Error(`Funding transaction with reference ${args.reference} not found.`);
+
+    if (pendingTx.status === "completed") {
+      // Idempotency: already settled once
+      return { success: true, alreadySettled: true, amount: pendingTx.amount };
+    }
+
+    if (pendingTx.status !== "pending") {
+      throw new Error(`Transaction is already in status: ${pendingTx.status}`);
+    }
+
+    if (pendingTx.amount !== args.paystackAmount) {
+      throw new Error(`Amount mismatch. Expected ${pendingTx.amount} NGN, but Paystack verified ${args.paystackAmount} NGN.`);
+    }
+
+    const wallet = await ctx.db.get(pendingTx.walletId);
+    if (!wallet) throw new Error("Wallet not found.");
+
+    // 2. Mark transaction as completed with provider transaction ID
+    await ctx.db.patch(pendingTx._id, {
+      status: "completed",
+      providerTransactionId: args.paystackTransactionId,
+    });
+
+    // 3. Atomically update user's wallet balance
+    const updatedBalance = wallet.balance + pendingTx.amount;
+    await ctx.db.patch(wallet._id, {
+      balance: updatedBalance,
+      updatedAt: Date.now()
+    });
+
+    return { success: true, newBalance: updatedBalance };
+  }
+});
+
+export const verifyPaystackFunding = action({
+  args: {
+    reference: v.string(),
+  },
+  handler: async (ctx, args): Promise<any> => {
+    // Verify with Paystack API
+    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    if (!secretKey) {
+      // In development mode without secret key, check if pending transaction exists
+      // and allow safe test verification
+      return { 
+        success: false, 
+        isDevelopmentMode: true,
+        message: "PAYSTACK_SECRET_KEY is not configured in backend environment variables. Set this secret in your Convex dashboard to enable live backend verification." 
+      };
+    }
+
+    try {
+      const res = await fetch(`https://api.paystack.co/transaction/verify/${args.reference}`, {
+        headers: {
+          Authorization: `Bearer ${secretKey}`,
+        },
+      });
+
+      const data = await res.json();
+      
+      if (data.status !== true || data.data?.status !== "success") {
+        return { 
+          success: false, 
+          status: data.data?.status || "failed",
+          message: data.message || "Payment verification failed with provider." 
+        };
+      }
+
+      // Verify currency
+      if (data.data.currency !== "NGN") {
+        return { success: false, message: "Invalid payment currency. Expected NGN." };
+      }
+
+      const paystackAmountNGN = data.data.amount / 100;
+
+      // Call idempotent settlement mutation
+      const result = await ctx.runMutation(internal.wallet.settleWalletFunding, {
+        reference: args.reference,
+        paystackAmount: paystackAmountNGN,
+        paystackTransactionId: data.data.id?.toString()
+      });
+
+      return result;
+    } catch (e: any) {
+      return { success: false, message: e.message || "Network error verifying payment." };
+    }
+  }
+});
+
+
+export const getTransactions = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const user = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("tokenIdentifier"), identity.tokenIdentifier))
+      .first();
+
+    if (!user) return null;
+
+    const transactions = await ctx.db
+      .query("walletTransactions")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .order("desc")
+      .take(50);
+
+    return transactions;
+  },
+});
+
+export const transferCredits = mutation({
+  args: {
+    amount: v.number(),
+    recipientPageId: v.id("pages"),
+    pin: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const sender = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("tokenIdentifier"), identity.tokenIdentifier))
+      .first();
+
+    if (!sender) throw new Error("User not found");
+
+    const recipientPage = await ctx.db.get(args.recipientPageId);
+    if (!recipientPage) throw new Error("Recipient business not found");
+
+    if (recipientPage.type !== "business") {
+      throw new Error("LaLao Credits cannot be transferred to personal accounts.");
+    }
+    
+    // In a real app we might verify business.acceptsLaLaoCredits here.
+
+    if (sender._id === recipientPage.ownerId) throw new Error("Cannot transfer to your own business");
+
+    const senderWallet = await ctx.db
+      .query("userWallets")
+      .withIndex("by_user", (q) => q.eq("userId", sender._id))
+      .first();
+
+    if (!senderWallet || senderWallet.balance < args.amount) {
+      throw new Error("Insufficient balance");
+    }
+
+    // Validate PIN if wallet has a configured PIN
+    if (senderWallet.walletPin) {
+      if (!args.pin || args.pin !== senderWallet.walletPin) {
+        throw new Error("Incorrect wallet security PIN.");
+      }
+    }
+
+    const recipientOwner = await ctx.db.get(recipientPage.ownerId);
+    
+    let recipientWallet = await ctx.db
+      .query("userWallets")
+      .withIndex("by_user", (q) => q.eq("userId", recipientPage.ownerId))
+      .first();
+
+    if (!recipientWallet) {
+      const walletId = await ctx.db.insert("userWallets", {
+        userId: recipientPage.ownerId,
+        balance: 0,
+        currency: "LC",
+        accountNumber: "LC-" + Math.floor(100000 + Math.random() * 900000).toString(),
+        accountName: recipientOwner?.name || "Business Owner",
+        bankName: "LaLao Platform",
+        updatedAt: Date.now(),
+      });
+      recipientWallet = await ctx.db.get(walletId);
+    }
+
+    if (!recipientWallet) {
+      throw new Error("Recipient wallet could not be found or initialized.");
+    }
+    
+    await ctx.db.patch(senderWallet._id, {
+      balance: senderWallet.balance - args.amount,
+      updatedAt: Date.now(),
+    });
+
+    await ctx.db.patch(recipientWallet._id, {
+      balance: recipientWallet.balance + args.amount,
+      updatedAt: Date.now(),
+    });
+
+    const txId = `TXN-${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
+
+    const senderTx = await ctx.db.insert("walletTransactions", {
+      walletId: senderWallet._id,
+      userId: sender._id,
+      relatedUserId: recipientOwner?._id, // Owner of business
+      relatedUserName: recipientPage.name, // Business name
+      relatedUserUsername: recipientPage.username,
+      amount: args.amount,
+      fee: 0,
+      currency: "LC",
+      assetType: "LALAO_CREDITS",
+      type: "transfer_out",
+      status: "completed",
+      description: `Payment to Partner Business`,
+      reference: txId,
+      createdAt: Date.now(),
+    });
+
+    await ctx.db.insert("walletTransactions", {
+      walletId: recipientWallet._id,
+      userId: recipientPage.ownerId,
+      relatedUserId: sender._id,
+      relatedUserName: sender.name || "Unknown",
+      relatedUserUsername: sender.username || "unknown",
+      amount: args.amount,
+      fee: 0,
+      currency: "LC",
+      assetType: "LALAO_CREDITS",
+      type: "deposit",
+      status: "completed",
+      description: `Payment from ${sender.name || sender.username}`,
+      reference: txId,
+      createdAt: Date.now(),
+    });
+
+    const finalTx = await ctx.db.get(senderTx);
+    return { success: true, newBalance: senderWallet.balance - args.amount, transaction: finalTx };
+  },
+});
+
+export const transferCrypto = mutation({
+  args: {
+    amount: v.number(),
+    recipientId: v.id("users"), // Crypto can be P2P
+    cryptoSymbol: v.string(), // e.g. "USDC", "ETH"
+    blockchainNetwork: v.string(), // e.g. "Polygon"
+    txHash: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const sender = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("tokenIdentifier"), identity.tokenIdentifier))
+      .first();
+
+    if (!sender) throw new Error("User not found");
+    
+    const recipient = await ctx.db.get(args.recipientId);
+    if (!recipient) throw new Error("Recipient not found");
+
+    const senderWallet = await ctx.db
+      .query("userWallets")
+      .withIndex("by_user", (q) => q.eq("userId", sender._id))
+      .first();
+      
+    if(!senderWallet) throw new Error("Wallet not initialized");
+
+    // In a real app we don't modify local balance for external crypto, we just log the transaction.
+    const senderTx = await ctx.db.insert("walletTransactions", {
+      walletId: senderWallet._id,
+      userId: sender._id,
+      relatedUserId: recipient._id,
+      relatedUserName: recipient.name || "Unknown",
+      relatedUserUsername: recipient.username || "unknown",
+      amount: args.amount,
+      fee: 0,
+      currency: args.cryptoSymbol,
+      assetType: "CRYPTO",
+      blockchainNetwork: args.blockchainNetwork,
+      transactionHash: args.txHash,
+      type: "transfer_out",
+      status: "completed",
+      description: `Payment to @${recipient.username}`,
+      reference: args.txHash,
+      createdAt: Date.now(),
+    });
+
+    const finalTx = await ctx.db.get(senderTx);
+    return { success: true, transaction: finalTx };
+  }
+});

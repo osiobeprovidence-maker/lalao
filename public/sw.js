@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lalao-shell-v2';
+const CACHE_NAME = 'lalao-shell-v3';
 const STATIC_ASSETS = [
   '/index.html',
   '/manifest.json',

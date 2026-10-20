@@ -1,0 +1,751 @@
+import React, { useState, useMemo } from 'react';
+import {
+  MapPin,
+  Calendar,
+  Share2,
+  Settings,
+  Heart,
+  Plus,
+  Clock,
+  Users,
+  Search,
+  X,
+  CheckCircle2,
+  ChevronRight,
+  Lightbulb,
+  Building2,
+  BadgeCheck,
+  Compass,
+  TrendingUp,
+} from 'lucide-react';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { useLalao } from '../../context/LalaoContext';
+import { Avatar } from '../common/Avatar';
+import { Badge } from '../common/Badge';
+import { VerificationBadge } from '../common/VerificationBadge';
+import { getPublicIdentityLabel } from '../common/UserIdentity';
+import { PostItem } from '../feed/PostItem';
+import { User } from '../../types';
+import { SuggestCommunityModal } from './SuggestCommunityModal';
+
+type ProfileTab = 'posts' | 'replies' | 'media' | 'reposts';
+type ConnectionTab = 'followers' | 'following';
+
+export const ProfileView: React.FC = () => {
+  const {
+    currentUser,
+    posts,
+    cycles,
+    openCycleStory,
+    setIsCreateCycleOpen,
+    triggerShareToast,
+    setIsEditProfileOpen,
+    openCreatorHub,
+    openCreatorSubscription,
+    setIsNotificationsOpen,
+    setActiveTab,
+    unreadNotifsCount,
+    setActiveUserProfile,
+    toggleFollowUser,
+    subscription,
+  } = useLalao();
+
+  const [profileTab, setProfileTab] = useState<ProfileTab>('posts');
+  const [isConnectionsOpen, setIsConnectionsOpen] = useState(false);
+  const [connectionTab, setConnectionTab] = useState<ConnectionTab>('followers');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Fetch this user's posts directly — querying strictly posts authored by this profile
+  const myPostsQuery = useQuery(
+    api.social.listUserPosts,
+    currentUser?.id
+      ? { userId: currentUser.id, username: currentUser.username }
+      : {}
+  );
+  const backendPosts = (myPostsQuery as any[]) ?? [];
+  const isPostsLoading = myPostsQuery === undefined;
+
+  // Merge backend posts with any locally created posts authored by currentUser
+  const userPosts = useMemo(() => {
+    const backendIds = new Set(backendPosts.map((p) => p.id));
+    const localPosts = (posts || []).filter(
+      (p) =>
+        (p.author?.id === currentUser?.id ||
+         p.author?.username === currentUser?.username) &&
+        !backendIds.has(p.id)
+    );
+    return [...localPosts, ...backendPosts];
+  }, [backendPosts, posts, currentUser?.id, currentUser?.username]);
+
+  const userMediaPosts = userPosts.filter((p: any) => Boolean(p.mediaUrl));
+  const userReposts = userPosts.filter((p: any) => p.isReposted);
+
+  // User's total cumulative likes across all authored posts & comments
+  const myLikesQuery = useQuery(
+    (api.users as any).getUserTotalLikes,
+    currentUser?.id ? { userId: currentUser.id, username: currentUser.username } : {}
+  );
+  const myTotalLikes = myLikesQuery?.totalLikes ?? 0;
+
+  const formatLikes = (count: number) => {
+    if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+    if (count >= 1_000) return `${(count / 1000).toFixed(1).replace(/\.0$/, '')}K`;
+    return count.toLocaleString();
+  };
+
+
+  const myCycle = cycles.find(
+    (c) => c.user?.id === currentUser.id || c.id === 'cycle_user_me'
+  );
+  const myHasItems = myCycle && myCycle.items && myCycle.items.length > 0;
+
+  const [isSuggestOpen, setIsSuggestOpen] = useState(false);
+
+  // Real connection data from Convex
+  const myFollowers = useQuery(api.social.getMyFollowers) ?? [];
+  const myFollowing = useQuery(api.social.getMyFollowing);
+  const followingData = myFollowing ?? { people: [], pages: [], peopleCt: 0, pagesCt: 0 };
+  const totalFollowingCount = followingData.peopleCt + followingData.pagesCt;
+
+  const tabs: { id: ProfileTab; label: string }[] = [
+    { id: 'posts', label: 'Posts' },
+    { id: 'replies', label: 'Replies' },
+    { id: 'media', label: 'Media' },
+    { id: 'reposts', label: 'Reposts' },
+  ];
+
+  // Context-aware search placeholder
+  const searchPlaceholder = connectionTab === 'followers'
+    ? 'Search followers...'
+    : 'Search following...';
+
+  const handleOpenUserProfile = (user: User) => {
+    setIsConnectionsOpen(false);
+    setActiveUserProfile(user);
+  };
+
+  return (
+    <div id="profile-view-container" className="min-h-screen bg-theme-base pb-24">
+      {/* Top Header */}
+      <div className="sticky top-0 z-20 bg-theme-base/95 backdrop-blur-md border-b border-theme-divider/80 px-4 py-2.5 flex items-center justify-between">
+        <h1 className="text-xl font-black tracking-tight text-theme-primary font-sans">
+          Profile
+        </h1>
+        <div className="flex items-center gap-1">
+
+          {/* Notifications Button */}
+          <button
+            id="btn-profile-notifications"
+            onClick={() => {
+              setIsNotificationsOpen(false);
+              setActiveTab('notifications');
+            }}
+            className="relative p-2 rounded-full text-theme-primary hover:bg-theme-surface-hover active:scale-95 transition-all cursor-pointer"
+            title="Notifications & Activity"
+          >
+            <Heart className="w-5 h-5 stroke-[1.8]" />
+            {unreadNotifsCount > 0 && (
+              <span
+                id="badge-profile-unread-notif"
+                className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#5E43F3] rounded-full ring-[2.5px] ring-theme-base"
+              />
+            )}
+          </button>
+
+          <button
+            onClick={() => triggerShareToast('Profile link copied to clipboard')}
+            className="p-2 rounded-full text-theme-secondary hover:text-theme-primary hover:bg-theme-surface-hover transition-colors cursor-pointer"
+            title="Share profile"
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setIsEditProfileOpen(true)}
+            className="p-2 rounded-full text-theme-secondary hover:text-theme-primary hover:bg-theme-surface-hover transition-colors cursor-pointer"
+            title="Settings / Edit profile"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Main Profile Info Card */}
+      <div className="p-4 space-y-3">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0 space-y-2">
+            {/* 1. Public identity label (Name OR Username) and verification badge */}
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-xl font-bold text-theme-primary leading-tight">
+                  {getPublicIdentityLabel(currentUser)}
+                </h2>
+                <VerificationBadge
+                  user={currentUser}
+                  tier={
+                    subscription.status === 'active' && subscription.tier !== 'none'
+                      ? subscription.tier
+                      : currentUser.verificationTier
+                  }
+                  size="sm"
+                />
+                {currentUser.badge && <Badge type={currentUser.badge} />}
+              </div>
+              {currentUser.username && (
+                <p className="text-xs text-theme-tertiary font-medium mt-0.5">
+                  @{currentUser.username.replace(/^@+/, '')}
+                </p>
+              )}
+            </div>
+
+            {/* 3. Bio or description */}
+            <p className="text-xs text-theme-primary leading-relaxed">
+              {currentUser.bio || 'No bio yet. Add a few details to introduce yourself.'}
+            </p>
+
+            {/* 4. Profile location */}
+            {currentUser.location && (() => {
+              const cleanLoc = currentUser.location.replace(/\s*\(Detected\)\s*/i, '').replace(/^GPS Detected$/i, '').trim();
+              return cleanLoc ? (
+                <div className="flex items-center gap-1.5 text-xs text-theme-secondary font-medium">
+                  <MapPin className="w-3.5 h-3.5 text-[#5E43F3] shrink-0" />
+                  <span className="truncate">{cleanLoc}</span>
+                </div>
+              ) : null;
+            })()}
+
+            {/* Birthday / Age if visible */}
+            {currentUser.dateOfBirth && currentUser.birthDateVisibility && currentUser.birthDateVisibility !== 'private' && (() => {
+              try {
+                const birth = new Date(currentUser.dateOfBirth);
+                const now = new Date();
+                let age = now.getFullYear() - birth.getFullYear();
+                const m = now.getMonth() - birth.getMonth();
+                if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+
+                let label = '';
+                if (currentUser.birthDateVisibility === 'public') {
+                  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                  label = `Born ${months[birth.getMonth()]} ${birth.getDate()}`;
+                  if (!isNaN(age) && age >= 0) label += ` (${age} yrs)`;
+                } else if (currentUser.birthDateVisibility === 'age_only') {
+                  label = !isNaN(age) && age >= 0 ? `${age} years old` : '';
+                }
+
+                return label ? (
+                  <div className="flex items-center gap-1.5 text-xs text-theme-secondary font-medium">
+                    <Calendar className="w-3.5 h-3.5 text-[#5E43F3] shrink-0" />
+                    <span>{label}</span>
+                  </div>
+                ) : null;
+              } catch {
+                return null;
+              }
+            })()}
+
+            {/* 5. Connected community information (On one line with graceful mobile wrap/truncation) */}
+            <div className="flex items-center gap-1.5 text-xs text-theme-tertiary min-w-0 whitespace-nowrap overflow-hidden text-ellipsis">
+              <Compass className="w-3.5 h-3.5 text-[#5E43F3] shrink-0" />
+              <span className="truncate">
+                Connected via {currentUser.communityName || currentUser.connectedCommunity || 'Lalao West Africa Community'}
+              </span>
+            </div>
+
+            {/* 6. Creator Level and Ranked Creator badges */}
+            {currentUser.verificationTier === 'creator' && (
+              <div className="flex items-center gap-1.5 pt-0.5 flex-wrap">
+                <span className="px-2.5 py-0.5 rounded-full bg-[#5E43F3]/10 text-[#5E43F3] border border-[#5E43F3]/20 text-[10px] font-black uppercase tracking-wider inline-flex items-center">
+                  {currentUser.creatorCategory || 'CREATOR'} · LEVEL {currentUser.creatorLevel || 1}
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-theme-surface text-theme-secondary border border-theme-divider-light text-[10px] font-bold inline-flex items-center gap-1">
+                  <TrendingUp className="w-2.5 h-2.5 text-[#5E43F3]" />
+                  Ranked Creator
+                </span>
+              </div>
+            )}
+
+            {/* 7. Followers and likes counts */}
+            <div className="flex items-center gap-4 text-xs pt-0.5">
+              <button
+                id="btn-profile-open-followers"
+                type="button"
+                onClick={() => {
+                  setConnectionTab('followers');
+                  setIsConnectionsOpen(true);
+                }}
+                className="text-theme-tertiary hover:text-theme-primary transition-colors cursor-pointer"
+              >
+                <strong className="text-theme-primary font-bold">{currentUser.followersCount}</strong>{' '}
+                followers
+              </button>
+              <button
+                id="btn-profile-open-following"
+                type="button"
+                onClick={() => {
+                  setConnectionTab('following');
+                  setIsConnectionsOpen(true);
+                }}
+                className="text-theme-tertiary hover:text-theme-primary transition-colors cursor-pointer"
+              >
+                <strong className="text-theme-primary font-bold">{currentUser.followingCount}</strong>{' '}
+                following
+              </button>
+              <span className="text-theme-tertiary">
+                <strong className="text-theme-primary font-bold">{formatLikes(myTotalLikes)}</strong>{' '}
+                {myTotalLikes === 1 ? 'Like' : 'Likes'}
+              </span>
+            </div>
+          </div>
+
+          {/* 24-hour Cycle Avatar ring */}
+          <div className="relative shrink-0 pt-0.5">
+            <div
+              onClick={() => {
+                if (myHasItems) openCycleStory('cycle_user_me', 0);
+                else setIsCreateCycleOpen(true);
+              }}
+              className="cursor-pointer group relative"
+              title={myHasItems ? 'View your 24h Cycle' : 'Add status to your Cycle'}
+            >
+              <div
+                className={`p-[2.5px] rounded-full transition-all duration-300 ${
+                  myHasItems
+                    ? 'bg-gradient-to-tr from-[#5E43F3] via-fuchsia-500 to-amber-400 group-hover:scale-105 shadow-md shadow-[#5E43F3]/20'
+                    : 'border-2 border-dashed border-theme-divider-strong group-hover:border-[#5E43F3]'
+                }`}
+              >
+                <div className="bg-theme-surface p-[2px] rounded-full">
+                  <Avatar
+                    src={currentUser.avatar}
+                    alt={currentUser.name}
+                    size="lg"
+                    className="w-16 h-16"
+                  />
+                </div>
+              </div>
+
+              <div
+                className={`absolute bottom-0 right-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-black shadow-md border-[1.5px] border-theme-base ${
+                  myHasItems ? 'bg-[#5E43F3] text-white' : 'bg-theme-inverse text-theme-text-inverse'
+                }`}
+              >
+                {myHasItems ? <Clock className="w-3 h-3" /> : <Plus className="w-3 h-3 stroke-[3]" />}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Buttons: Edit Profile & Share Profile */}
+        <div className="pt-2 grid grid-cols-2 gap-2.5">
+          <button
+            id="btn-edit-profile"
+            onClick={() => setIsEditProfileOpen(true)}
+            className="w-full py-2 px-4 rounded-xl border border-theme-divider hover:bg-theme-surface-hover text-xs font-bold text-theme-primary transition-colors cursor-pointer"
+          >
+            Edit Profile
+          </button>
+          <button
+            id="btn-share-profile"
+            onClick={() => triggerShareToast('Profile link copied!')}
+            className="w-full py-2 px-4 rounded-xl border border-theme-divider hover:bg-theme-surface-hover text-xs font-bold text-theme-primary transition-colors cursor-pointer"
+          >
+            Share Profile
+          </button>
+        </div>
+
+        {/* Verification / Subscription entry (Profile → Verification) */}
+        <button
+          id="btn-profile-verification"
+          type="button"
+          onClick={() => {
+            setActiveTab('verification');
+            const mainEl = document.querySelector('main');
+            if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'instant' });
+          }}
+          className="w-full p-3 rounded-2xl border border-theme-divider bg-theme-surface hover:bg-theme-surface-hover flex items-center justify-between gap-3 transition-colors cursor-pointer text-left"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-[#5E43F3]/10 flex items-center justify-center text-[#5E43F3] shrink-0">
+              <BadgeCheck className="w-4 h-4 stroke-[2.2]" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-theme-primary">Verification</span>
+                {subscription.status === 'active' && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-[#5E43F3]/10 text-[#5E43F3]">
+                    Active
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-theme-tertiary truncate">
+                {subscription.status === 'active'
+                  ? `${
+                      subscription.tier === 'creator_premium' || subscription.tier === 'creator'
+                        ? 'Tier 5 — Creator Premium'
+                        : subscription.tier === 'priority'
+                        ? 'Tier 4 — Priority Verified'
+                        : 'Tier 3 — Standard Verified'
+                    } · Manage or cancel`
+                  : 'Get verified, algorithmic priority & creator tools'}
+              </p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-theme-tertiary shrink-0" />
+        </button>
+
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-theme-divider-light flex items-center justify-around px-2 mt-2">
+        {tabs.map((tab) => {
+          const isActive = profileTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setProfileTab(tab.id)}
+              className={`flex-1 py-3 text-center text-xs font-bold transition-all relative cursor-pointer ${
+                isActive ? 'text-theme-primary' : 'text-theme-tertiary hover:text-theme-secondary'
+              }`}
+            >
+              <span>{tab.label}</span>
+              {isActive && (
+                <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-theme-inverse rounded-full" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tab Contents */}
+      <div className="divide-y divide-neutral-100">
+        {profileTab === 'posts' && (
+          isPostsLoading ? (
+            <div className="flex justify-center p-10">
+              <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-[#5E43F3]" />
+            </div>
+          ) : userPosts.length > 0 ? (
+            userPosts.map((post: any) => <PostItem key={post.id} post={post} compactMedia={true} />)
+          ) : (
+            <div className="p-8 text-center text-theme-tertiary text-xs">
+              You haven&apos;t posted yet. Tap the center + button to share with your local community.
+            </div>
+          )
+        )}
+
+        {profileTab === 'replies' && (
+          <div className="p-4 space-y-3">
+            <div className="p-3.5 rounded-2xl bg-theme-base border border-theme-divider-light text-xs space-y-1">
+              <p className="font-bold text-theme-primary">
+                Replied to @subteenwear in Udu Express Junction:
+              </p>
+              <p className="text-theme-secondary italic">
+                &ldquo;The cut on the sage green version is top tier! Coming by after work.&rdquo;
+              </p>
+            </div>
+          </div>
+        )}
+
+        {profileTab === 'media' && (
+          userMediaPosts.length > 0 ? (
+            <div className="grid grid-cols-2 gap-2 p-3">
+              {userMediaPosts.map((p) => (
+                <div key={p.id} className="relative aspect-square rounded-xl overflow-hidden bg-theme-surface-hover">
+                  <img
+                    src={p.mediaUrl}
+                    alt="User media"
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-8 text-center text-theme-tertiary text-xs">
+              No photos or videos shared yet.
+            </div>
+          )
+        )}
+
+        {profileTab === 'reposts' && (
+          userReposts.length > 0 ? (
+            userReposts.map((post) => <PostItem key={post.id} post={post} compactMedia={true} />)
+          ) : (
+            <div className="p-8 text-center text-theme-tertiary text-xs">
+              No reposts yet.
+            </div>
+          )
+        )}
+      </div>
+
+      {isConnectionsOpen && (
+        <div
+          id="community-page-overlay"
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex justify-end animate-in fade-in duration-200"
+          onClick={() => setIsConnectionsOpen(false)}
+        >
+          <div
+            id="community-page-screen"
+            className="bg-theme-surface w-full sm:max-w-md md:max-w-lg h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 relative z-10 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 z-20 bg-theme-surface/95 backdrop-blur-md border-b border-theme-divider-light px-4 py-3 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3">
+              <button
+                id="btn-back-community-page"
+                type="button"
+                onClick={() => setIsConnectionsOpen(false)}
+                className="p-1.5 -ml-1 rounded-full text-theme-secondary hover:text-theme-primary hover:bg-theme-surface-hover transition-colors cursor-pointer"
+                title="Go back"
+                aria-label="Back"
+              >
+                <ChevronRight className="w-5 h-5 rotate-180" />
+              </button>
+              <div>
+                <h1 className="font-bold text-base text-theme-primary">Community</h1>
+                <p className="text-[11px] text-theme-tertiary">Your communities, profiles and connections</p>
+              </div>
+            </div>
+
+            <button
+              id="btn-close-community-page"
+              type="button"
+              onClick={() => setIsConnectionsOpen(false)}
+              className="p-1.5 rounded-full text-theme-tertiary hover:text-theme-secondary hover:bg-theme-surface-hover transition-colors cursor-pointer"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="flex-1 max-w-xl mx-auto w-full p-4 sm:p-6 space-y-5 pb-24 overflow-y-auto">
+            {/* Tabs */}
+            <div className="flex border-b border-theme-divider-light">
+              <button
+                onClick={() => { setConnectionTab('followers'); setSearchQuery(''); }}
+                className={`py-2.5 px-3 text-xs font-bold transition-all relative cursor-pointer ${
+                  connectionTab === 'followers'
+                    ? 'text-[#5E43F3]'
+                    : 'text-theme-tertiary hover:text-theme-primary'
+                }`}
+              >
+                Followers ({myFollowers.length})
+                {connectionTab === 'followers' && (
+                  <span className="absolute bottom-0 inset-x-3 h-0.5 bg-[#5E43F3] rounded-full" />
+                )}
+              </button>
+
+              <button
+                onClick={() => { setConnectionTab('following'); setSearchQuery(''); }}
+                className={`py-2.5 px-3 text-xs font-bold transition-all relative cursor-pointer ${
+                  connectionTab === 'following'
+                    ? 'text-[#5E43F3]'
+                    : 'text-theme-tertiary hover:text-theme-primary'
+                }`}
+              >
+                Following ({totalFollowingCount})
+                {connectionTab === 'following' && (
+                  <span className="absolute bottom-0 inset-x-3 h-0.5 bg-[#5E43F3] rounded-full" />
+                )}
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="rounded-2xl border border-theme-divider bg-theme-base p-3">
+              <div className="flex items-center gap-2">
+                <Search className="w-4 h-4 text-theme-tertiary" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={searchPlaceholder}
+                  className="w-full bg-transparent text-xs text-theme-primary placeholder:text-theme-tertiary focus:outline-none"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery('')} className="text-theme-tertiary hover:text-theme-secondary cursor-pointer">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+
+            {/* === FOLLOWERS TAB === */}
+            {connectionTab === 'followers' && (
+              <div className="space-y-2">
+                {(() => {
+                  const sq = searchQuery.toLowerCase();
+                  const filtered = sq
+                    ? myFollowers.filter((u: any) =>
+                        u.name.toLowerCase().includes(sq) ||
+                        u.username.toLowerCase().includes(sq) ||
+                        (u.bio && u.bio.toLowerCase().includes(sq))
+                      )
+                    : myFollowers;
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="rounded-2xl border border-dashed border-theme-divider bg-theme-base p-8 text-center text-xs text-theme-tertiary">
+                        <Users className="w-8 h-8 mx-auto text-theme-tertiary mb-3" />
+                        <p className="font-bold text-theme-secondary">
+                          {sq ? 'No followers matching your search.' : "You don't have any followers yet."}
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return filtered.map((user: any) => (
+                    <div
+                      key={user.id}
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-theme-divider bg-theme-surface p-3 transition-colors hover:bg-theme-base"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleOpenUserProfile(user as User)}
+                        className="flex min-w-0 flex-1 items-center gap-3 text-left cursor-pointer"
+                      >
+                        <div className="relative">
+                          <Avatar src={user.avatar} alt={user.name} size="md" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="truncate text-xs sm:text-sm font-bold text-theme-primary block">{user.name}</span>
+                          <span className="block truncate text-[11px] text-theme-tertiary">@{user.username}{user.location ? ` · ${user.location}` : ''}</span>
+                          {user.bio && <p className="mt-0.5 line-clamp-1 text-[11px] text-theme-secondary">{user.bio}</p>}
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleFollowUser(user.id)}
+                        className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                          user.isFollowing
+                            ? 'bg-theme-surface-hover text-theme-secondary hover:bg-theme-surface-active'
+                            : 'bg-[#5E43F3] text-white hover:bg-[#4E34E0]'
+                        }`}
+                      >
+                        {user.isFollowing ? 'Following' : 'Follow back'}
+                      </button>
+                    </div>
+                  ));
+                })()}
+              </div>
+            )}
+
+            {/* === FOLLOWING TAB === */}
+            {connectionTab === 'following' && (
+              <div className="space-y-4">
+                {totalFollowingCount === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-theme-divider bg-theme-base p-8 text-center text-xs text-theme-tertiary">
+                    <Users className="w-8 h-8 mx-auto text-theme-tertiary mb-3" />
+                    <p className="font-bold text-theme-secondary">You&apos;re not following anyone yet.</p>
+                    <p className="mt-1 text-theme-tertiary">Follow people, Pages, or communities to build your Lalao circle.</p>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('discover')}
+                      className="mt-4 inline-flex rounded-full bg-[#5E43F3] px-4 py-2.5 text-[11px] font-bold text-white cursor-pointer hover:bg-[#4E34E0] transition-colors"
+                    >
+                      Explore
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Breakdown */}
+                    <div className="flex items-center gap-3 text-[11px] text-theme-tertiary font-medium">
+                      <span>{totalFollowingCount} total</span>
+                      <span>·</span>
+                      <span>People {followingData.peopleCt}</span>
+                      <span>·</span>
+                      <span>Pages {followingData.pagesCt}</span>
+                    </div>
+
+                    {/* People section */}
+                    {followingData.people.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-[11px] font-bold text-theme-tertiary uppercase tracking-wider">People</h4>
+                        {(() => {
+                          const sq = searchQuery.toLowerCase();
+                          const filtered = sq
+                            ? followingData.people.filter((u: any) =>
+                                u.name.toLowerCase().includes(sq) ||
+                                u.username.toLowerCase().includes(sq)
+                              )
+                            : followingData.people;
+                          return filtered.map((user: any) => (
+                            <div
+                              key={user.id}
+                              className="flex items-center justify-between gap-3 rounded-2xl border border-theme-divider bg-theme-surface p-3 transition-colors hover:bg-theme-base"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => handleOpenUserProfile(user as User)}
+                                className="flex min-w-0 flex-1 items-center gap-3 text-left cursor-pointer"
+                              >
+                                <Avatar src={user.avatar} alt={user.name} size="md" />
+                                <div className="min-w-0 flex-1">
+                                  <span className="truncate text-xs sm:text-sm font-bold text-theme-primary block">{user.name}</span>
+                                  <span className="block truncate text-[11px] text-theme-tertiary">@{user.username}</span>
+                                </div>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => toggleFollowUser(user.id)}
+                                className="rounded-full px-3 py-1.5 text-xs font-bold bg-theme-surface-hover text-theme-secondary hover:bg-theme-surface-active transition-all cursor-pointer shrink-0"
+                              >
+                                Following
+                              </button>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    )}
+
+                    {/* Pages section */}
+                    {followingData.pages.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-[11px] font-bold text-theme-tertiary uppercase tracking-wider">Pages</h4>
+                        {(() => {
+                          const sq = searchQuery.toLowerCase();
+                          const filtered = sq
+                            ? followingData.pages.filter((p: any) =>
+                                p.name.toLowerCase().includes(sq) ||
+                                p.username.toLowerCase().includes(sq)
+                              )
+                            : followingData.pages;
+                          return filtered.map((page: any) => (
+                            <div
+                              key={page.id}
+                              className="flex items-center justify-between gap-3 rounded-2xl border border-theme-divider bg-theme-surface p-3 transition-colors hover:bg-theme-base"
+                            >
+                              <div className="flex min-w-0 flex-1 items-center gap-3">
+                                <Avatar src={page.avatar} alt={page.name} size="md" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="truncate text-xs sm:text-sm font-bold text-theme-primary">{page.name}</span>
+                                    {page.badge && <Badge type={page.badge} />}
+                                  </div>
+                                  <span className="block truncate text-[11px] text-theme-tertiary">@{page.username}{page.location ? ` · ${page.location}` : ''}</span>
+                                  <span className="text-[10px] text-theme-tertiary">{page.followersCount} followers</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="rounded-full px-3 py-1.5 text-xs font-bold bg-theme-surface-hover text-theme-secondary">
+                                  Following
+                                </span>
+                              </div>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      )}
+
+      {/* Suggest a Community Modal */}
+      <SuggestCommunityModal isOpen={isSuggestOpen} onClose={() => setIsSuggestOpen(false)} />
+    </div>
+  );
+};

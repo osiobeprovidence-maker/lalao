@@ -1,0 +1,2940 @@
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { useMutation, useQuery, useAction } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { getOrRequestWebPushSubscription } from '../lib/push';
+import { setOneSignalUser, requestOneSignalPushPermission } from '../lib/onesignal';
+import { useAuth } from './AuthContext';
+import {
+  User,
+  Post,
+  PostComment,
+  CommentReply,
+  Rally,
+  Page,
+  Cycle,
+  CycleStoryItem,
+  Conversation,
+  DirectMessage,
+  NotificationItem,
+  LocationConfig,
+  LocationPrivacySettings,
+  DevicePermissions,
+  PermissionState,
+  PermissionPromptType,
+  ShopProduct,
+  CartItem,
+  Order,
+  OrgEvent,
+  EventTicket,
+  TeamRegistration,
+  PlayerTeam,
+  WalletTransaction,
+  UserWallet,
+  PageMonetization,
+  PageAnalytics,
+  VerificationTier,
+  UserSubscription,
+  SubscriptionStatus,
+} from '../types';
+
+import { HOK_EVENTS, HOK_SEED_TICKETS, HOK_ORGANIZATION_PAGE } from '../data/honorOfKingsData';
+import {
+  calculateDistanceMeters,
+  getCoordinatesForLocation,
+  KNOWN_LOCATION_HUBS,
+} from '../utils/locationUtils';
+import { resolvePostCreationLocation } from '../utils/postLocation';
+import { resolvePostMediaUrl } from '../utils/postMedia';
+
+export type NavTab =
+  | 'home'
+  | 'discover'
+  | 'create'
+  | 'create-post'
+  | 'messages'
+  | 'notifications'
+  | 'profile'
+  | 'following'
+  | 'saved'
+  | 'create-page'
+  | 'my-pages'
+  | 'liked'
+  | 'events'
+  | 'location'
+  | 'pages'
+  | 'verification'
+  | 'beta-tester'
+  | 'creator-hub'
+  | 'sounds'
+  | 'plum'
+  | 'recent-searches'
+  | 'ads';
+export type FeedTab = 'for_you' | 'following' | 'community' | 'nearby' | (string & {});
+export type CreateOption = 'post' | 'rally' | 'page' | 'cycle' | 'group-chat' | 'group-cycle' | null;
+
+interface LalaoContextType {
+  currentUser: User;
+  setCurrentUser: React.Dispatch<React.SetStateAction<User>>;
+  activeTab: NavTab;
+  setActiveTab: (tab: NavTab) => void;
+  feedTab: FeedTab;
+  setFeedTab: (tab: FeedTab) => void;
+  location: LocationConfig;
+  setLocation: (loc: LocationConfig) => void;
+  radiusKm: number;
+  setRadiusKm: (radiusKm: number) => void;
+  locationPrivacy: LocationPrivacySettings;
+  setLocationPrivacy: React.Dispatch<React.SetStateAction<LocationPrivacySettings>>;
+  updateRadius: (radiusKm: number) => void;
+  nearbySort: 'closest' | 'recent';
+  setNearbySort: (sort: 'closest' | 'recent') => void;
+  detectGpsLocation: () => Promise<{ success: boolean; error?: string }>;
+  isDetectingGps: boolean;
+  
+  // Content state
+  isFeedLoading: boolean;
+  posts: Post[];
+  rallies: Rally[];
+  pages: Page[];
+  cycles: Cycle[];
+  conversations: Conversation[];
+  messageContacts: User[];
+  notifications: NotificationItem[];
+  unreadNotifsCount: number;
+
+  // Actions
+  toggleLikePost: (postId: string) => void;
+  toggleRepostPost: (postId: string) => void;
+  deletePost: (postId: string) => Promise<void>;
+  addComment: (postId: string, text: string, parentCommentId?: string, mediaStorageId?: string, mediaType?: 'image' | 'voice' | 'gif' | 'sticker') => Promise<void>;
+  toggleLikeComment: (postId: string, commentId: string, replyId?: string) => void;
+  markAllNotificationsRead: () => void;
+  markNotificationRead: (id: string) => void;
+  createPost: (post: { 
+    text: string; 
+    mediaUrl?: string; 
+    mediaStorageId?: string; 
+    mediaType?: 'image' | 'video'; 
+    mediaWidth?: number; 
+    mediaHeight?: number; 
+    location?: string; 
+    latitude?: number;
+    longitude?: number;
+    locationAccuracy?: number;
+    locationCapturedAt?: number;
+    locationCountry?: string;
+    locationState?: string;
+    locationCity?: string;
+    locationNeighborhood?: string;
+    nearbyEnabled?: boolean;
+    audience?: string; 
+    replyPermission?: string; 
+    gifUrl?: string; 
+    pollQuestion?: string; 
+    pollOptions?: string[]; 
+    rallyRefId?: string; 
+    pageRefId?: string; 
+    groupRefId?: string; 
+    contentTopics?: string[];
+    // Sounds & Music integration
+    soundId?: string;
+    soundTitle?: string;
+    soundAuthorName?: string;
+    soundAudioUrl?: string;
+    soundStartOffset?: number;
+    soundVolume?: number;
+    originalAudioVolume?: number;
+    rallyData?: {
+      type: 'ASK' | 'HELP' | 'JOIN';
+      title: string;
+      description: string;
+      location: string;
+      eventDate: string;
+      eventTime: string;
+      peopleNeeded?: number;
+      compensationType?: 'free' | 'paying' | 'charging' | 'other';
+      compensationAmount?: string;
+    };
+  }) => Promise<any>;
+  saveDraft: (draft: any) => Promise<any>;
+  getDrafts: () => Promise<any>;
+  deleteDraft: (draftId: string) => Promise<any>;
+  
+  toggleJoinRally: (rallyId: string) => void;
+  joinRally: (rallyId: string) => void;
+  createRally: (rally: { title: string; description: string; location: string; timeDate: string; category: Rally['category'] }) => void;
+
+  toggleFollowPage: (pageId: string) => void;
+  createPage: (pageData: { name: string; username: string; category: string; description: string; type: Page['type']; location: string; avatar?: string; coverImage?: string; activeTools?: string[]; teamInvites?: { username: string; role: string }[] }) => void;
+  updatePage: (pageId: string, updatedData: Partial<Page>) => void;
+  deletePage: (pageId: string) => Promise<void>;
+  createPagePost: (pageId: string, postData: { text: string; mediaUrl?: string; mediaType?: 'image' | 'video'; location?: string }) => void;
+  createPageEvent: (pageId: string, eventData: Partial<OrgEvent>) => void;
+  updatePageEvent: (eventId: string, eventData: Partial<OrgEvent>) => void;
+  deletePageEvent: (eventId: string) => void;
+  updatePageMonetization: (pageId: string, monetization: Partial<PageMonetization>) => void;
+  addPageProduct: (pageId: string, product: Partial<ShopProduct>) => void;
+  deletePageProduct: (pageId: string, productId: string) => void;
+
+  toggleJoinCycle: (cycleId: string) => void;
+  createCycle: (cycleData: { name: string; description: string; category: string; location: string }) => void;
+  sendCycleMessage: (cycleId: string, text: string) => void;
+
+  // Device & App Permissions
+  permissions: DevicePermissions;
+  activePermissionPrompt: PermissionPromptType;
+  setActivePermissionPrompt: (prompt: PermissionPromptType) => void;
+  isPermissionsModalOpen: boolean;
+  setIsPermissionsModalOpen: (open: boolean) => void;
+  requestPermission: (type: PermissionPromptType, options?: { precise?: boolean }) => Promise<boolean>;
+  updatePermission: (type: keyof DevicePermissions, value: PermissionState | boolean) => void;
+  pushEnabled: boolean;
+  enablePushNotifications: () => Promise<boolean>;
+
+  // Cycle (Status / Story) Actions
+  activeStoryIndex: number;
+  setActiveStoryIndex: (index: number) => void;
+  openCycleStory: (cycleId: string, itemIndex?: number) => void;
+  closeCycleStory: () => void;
+  postCycleStory: (data: {
+    mediaType: 'image' | 'video' | 'audio' | 'text';
+    mediaUrl?: string;
+    mediaStorageId?: string;
+    text?: string;
+    backgroundColor?: string;
+    caption?: string;
+    audience?: 'community' | 'nearby' | 'friends';
+    location?: string;
+    duration?: number;
+  }) => void;
+  reactToCycleStory: (cycleId: string, itemId: string, emoji: string) => void;
+  replyToCycleStory: (cycleId: string, itemId: string, messageText: string) => void;
+  deleteCycleStoryItem: (itemId: string) => void;
+  isCreateCycleOpen: boolean;
+  setIsCreateCycleOpen: (open: boolean) => void;
+
+  activeVideoFeedPostId: string | null;
+  setActiveVideoFeedPostId: (id: string | null) => void;
+
+  sendDirectMessage: (
+    conversationId: string, 
+    text: string, 
+    stickerId?: string, 
+    replyToMessageId?: string, 
+    audioStorageId?: string, 
+    audioDuration?: number,
+    options?: {
+      type?: 'text' | 'image' | 'video';
+      mediaStorageId?: string;
+      mimeType?: string;
+      fileName?: string;
+      fileSize?: number;
+      viewOnce?: boolean;
+    }
+  ) => void;
+  editMessage: (messageId: string, newText: string) => void;
+  deleteMessage: (messageId: string) => void;
+  markConversationRead: (conversationId: string) => void;
+  markNotificationsAsRead: () => void;
+
+  // Modal / Navigation Overlay States
+  isCreateSheetOpen: boolean;
+  setIsCreateSheetOpen: (open: boolean) => void;
+  createFlowType: CreateOption;
+  setCreateFlowType: (type: CreateOption) => void;
+  isCreateGroupChatOpen: boolean;
+  setIsCreateGroupChatOpen: (open: boolean) => void;
+  isCreateGroupCycleOpen: boolean;
+  setIsCreateGroupCycleOpen: (open: boolean) => void;
+  isLocationModalOpen: boolean;
+  setIsLocationModalOpen: (open: boolean) => void;
+  isNotificationsOpen: boolean;
+  setIsNotificationsOpen: (open: boolean) => void;
+  
+  // Drilldown modals
+  activeChatId: string | null;
+  setActiveChatId: (id: string | null) => void;
+  openChatWithUser: (user: User, initialMessage?: string) => void;
+  activeCycleId: string | null;
+  setActiveCycleId: (id: string | null) => void;
+  activePageId: string | null;
+  setActivePageId: (id: string | null) => void;
+  activeGroupId: string | null;
+  setActiveGroupId: (id: string | null) => void;
+  isManageGroupOpen: boolean;
+  setIsManageGroupOpen: (open: boolean) => void;
+  activeUserProfile: User | null;
+  setActiveUserProfile: (user: User | null) => void;
+  toggleFollowUser: (userId: string) => void;
+  composerInitialText: string;
+  setComposerInitialText: (text: string) => void;
+  activeCommentsPostId: string | null;
+  setActiveCommentsPostId: (id: string | null) => void;
+
+  // Search integration
+  discoverSearchQuery: string;
+  setDiscoverSearchQuery: (query: string) => void;
+
+  // Sounds & Music Library
+  activeSoundId: string | null;
+  setActiveSoundId: (id: string | null) => void;
+  isCreateSoundOpen: boolean;
+  setIsCreateSoundOpen: (open: boolean) => void;
+  openSoundDetail: (soundId: string) => void;
+  openCreateSound: () => void;
+
+  // Shopping & Cart
+  cart: CartItem[];
+  cartCount: number;
+  addToCart: (
+    product: ShopProduct,
+    quantity: number,
+    options?: Record<string, string>,
+    store?: { id: string; name: string }
+  ) => void;
+  removeFromCart: (cartItemId: string) => void;
+  updateCartQuantity: (cartItemId: string, quantity: number) => void;
+  clearCart: () => void;
+  isCartOpen: boolean;
+  setIsCartOpen: (open: boolean) => void;
+  savedProductIds: string[];
+  toggleSaveProduct: (productId: string) => void;
+  isProductSaved: (productId: string) => boolean;
+  selectedShopProduct: ShopProduct | null;
+  setSelectedShopProduct: (product: ShopProduct | null) => void;
+  selectedProductStore: Page | null;
+  setSelectedProductStore: (store: Page | null) => void;
+
+  // Shopping History & Orders
+  orders: Order[];
+  userOrders: Order[];
+  addOrder: (order: Order) => void;
+  isShoppingHistoryOpen: boolean;
+  setIsShoppingHistoryOpen: (open: boolean) => void;
+  selectedOrderForDetail: Order | null;
+  setSelectedOrderForDetail: (order: Order | null) => void;
+
+  // Events & Ticketing Ecosystem
+  events: OrgEvent[];
+  tickets: EventTicket[];
+  activeTickets: EventTicket[];
+  ticketHistory: EventTicket[];
+  activeTicketsCount: number;
+  addTicket: (ticket: EventTicket) => void;
+  isMyTicketsOpen: boolean;
+  setIsMyTicketsOpen: (open: boolean) => void;
+  selectedTicketForPass: EventTicket | null;
+  setSelectedTicketForPass: (ticket: EventTicket | null) => void;
+  selectedEventForDetail: OrgEvent | null;
+  setSelectedEventForDetail: (event: OrgEvent | null) => void;
+  isEventDetailOpen: boolean;
+  setIsEventDetailOpen: (open: boolean) => void;
+  isTournamentRegisterOpen: boolean;
+  setIsTournamentRegisterOpen: (open: boolean) => void;
+  registeringEvent: OrgEvent | null;
+  setRegisteringEvent: (event: OrgEvent | null) => void;
+  isTicketPurchaseOpen: boolean;
+  setIsTicketPurchaseOpen: (open: boolean) => void;
+  purchasingEvent: OrgEvent | null;
+  setPurchasingEvent: (event: OrgEvent | null) => void;
+  teamRegistrations: TeamRegistration[];
+  addTeamRegistration: (reg: TeamRegistration) => void;
+  openHonorOfKingsPage: () => void;
+
+  // Teams & Roster Storage
+  savedTeams: PlayerTeam[];
+  saveTeam: (team: PlayerTeam) => void;
+  deleteTeam: (teamId: string) => void;
+
+  // User Wallet Ecosystem
+  wallet: UserWallet;
+  isWalletModalOpen: boolean;
+  setIsWalletModalOpen: (open: boolean) => void;
+  topUpWallet: (amount: number, method?: string) => void;
+  payWithWallet: (amount: number, description: string, reference?: string) => boolean;
+
+  // Creator Ecosystem & Subscriptions
+  subscription: UserSubscription;
+  isCreatorPremiumActive: boolean;
+  cancelUserSubscription: () => Promise<void>;
+  subscribeUserToTier: (tier: VerificationTier, paystackRef?: string) => Promise<void>;
+  isCreatorHubOpen: boolean;
+  setIsCreatorHubOpen: (open: boolean) => void;
+  isCreatorSubscriptionOpen: boolean;
+  setIsCreatorSubscriptionOpen: (open: boolean) => void;
+  creatorSubscriptionInitialTier: VerificationTier | undefined;
+  setCreatorSubscriptionInitialTier: (tier: VerificationTier | undefined) => void;
+  openCreatorSubscription: (initialTier?: VerificationTier) => void;
+  openCreatorHub: () => void;
+
+  // Utilities
+  shareToast: string | null;
+  triggerShareToast: (message?: string) => void;
+  isEditProfileOpen: boolean;
+  setIsEditProfileOpen: (open: boolean) => void;
+  isAuthPromptOpen: boolean;
+  authPromptMessage: string;
+  showAuthPrompt: (message?: string) => void;
+  closeAuthPrompt: () => void;
+  requireAuth: (action: () => void, message?: string) => void;
+  [key: string]: any;
+  featureFlags: { communityEnabled: boolean; ralliesEnabled: boolean; cyclesEnabled: boolean; roomyEnabled?: boolean; };
+}
+
+const LalaoContext = createContext<LalaoContextType | undefined>(undefined);
+
+const DEFAULT_LOCATION: LocationConfig = {
+  name: 'Udu',
+  subArea: 'Delta State',
+  radiusKm: 5,
+  latitude: 5.8912,
+  longitude: 5.7532,
+  isGpsDetected: false,
+};
+
+const DEFAULT_LOCATION_PRIVACY: LocationPrivacySettings = {
+  approximateDistance: true,
+  ghostMode: false,
+  showNeighborhoodOnly: true,
+  shareLocationOnPosts: true,
+};
+
+const EMPTY_CURRENT_USER: User = {
+  id: 'local-user',
+  name: 'New user',
+  username: 'newuser',
+  avatar: '',
+  userType: 'person',
+  followersCount: 0,
+  followingCount: 0,
+  location: '',
+  bio: '',
+};
+
+const EMPTY_POSTS: Post[] = [];
+const EMPTY_RALLIES: Rally[] = [];
+const EMPTY_PAGES: Page[] = [];
+const EMPTY_CYCLES: Cycle[] = [];
+const EMPTY_CONVERSATIONS: Conversation[] = [];
+const EMPTY_NOTIFICATIONS: NotificationItem[] = [];
+const EMPTY_ORDERS: Order[] = [];
+
+const normalizeConvexUser = (user: Record<string, any> | null | undefined): User => {
+  if (!user) return EMPTY_CURRENT_USER;
+
+  const rawTier = user.verificationTier || user.tier || user.creatorTier;
+  const status = user.verificationStatus;
+  const isExp = user.verificationExpiresAt && user.verificationExpiresAt <= Date.now();
+  const isVerified = Boolean(
+    user.isVerified ||
+    user.verified ||
+    (rawTier && rawTier !== 'none' && (!status || status === 'active') && !isExp)
+  );
+
+  return {
+    id: user._id ?? user.id ?? EMPTY_CURRENT_USER.id,
+    name: user.name ?? 'New user',
+    username: user.username ?? 'newuser',
+    avatar: user.avatarUrl ?? user.avatar ?? EMPTY_CURRENT_USER.avatar,
+    userType: (user.userType ?? 'person') as User['userType'],
+    bio: user.bio ?? undefined,
+    location: (user.locationName ?? user.location ?? EMPTY_CURRENT_USER.location).replace(/\s*\(Detected\)\s*/i, '').replace(/^GPS Detected$/i, '').trim(),
+    latitude: user.latitude ?? undefined,
+    longitude: user.longitude ?? undefined,
+    followersCount: typeof user.followersCount === 'number' ? user.followersCount : 0,
+    followingCount: typeof user.followingCount === 'number' ? user.followingCount : 0,
+    isFollowing: typeof user.isFollowing === 'boolean' ? user.isFollowing : false,
+    isVerified,
+    verificationTier: isVerified ? (rawTier || 'verified') : 'none',
+    verificationStatus: user.verificationStatus,
+    verificationStartedAt: user.verificationStartedAt,
+    verificationExpiresAt: user.verificationExpiresAt,
+    creatorCategory: user.creatorCategory,
+    creatorLevel: user.creatorLevel,
+    creatorEarnings: user.creatorEarnings,
+    creatorPendingEarnings: user.creatorPendingEarnings,
+    creatorAchievements: user.creatorAchievements,
+    badge: user.badge,
+    phoneSetupCompleted: user.phoneSetupCompleted,
+    accessStatus: user.accessStatus,
+    publicIdentityType: (user.publicIdentityType as "display_name" | "username") ?? "display_name",
+    dateOfBirth: user.dateOfBirth ?? undefined,
+    birthDateVisibility: (user.birthDateVisibility as "public" | "age_only" | "private") ?? "private",
+  };
+};
+
+export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const currentUserQuery = useQuery(api.users.getCurrentUser);
+  const featureFlags = useQuery(api.platformSettings.getFeatureFlags) || { communityEnabled: false, ralliesEnabled: true, cyclesEnabled: true, roomyEnabled: true };
+  const pushEnabledQuery = useQuery(api.push.hasActivePushToken, currentUserQuery ? {} : "skip");
+  const upsertWebPushSubscription = useMutation(api.push.upsertWebPushSubscription);
+  const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
+  const toggleFollowUserMutation = useMutation(api.social.toggleFollowUser);
+  const toggleFollowPageMutation = useMutation(api.pages.toggleFollowPage);
+  const toggleRepostPostMutation = useMutation(api.social.toggleRepost);
+  const deletePostMutation = useMutation(api.social.deletePost);
+  const createPostMutation = useMutation(api.social.createPost);
+  const addCommentToPostMutation = useMutation(api.social.addCommentToPost);
+  const toggleLikeCommentMutation = useMutation(api.social.toggleLikeComment);
+  const saveDraftMutation = useMutation(api.social.saveDraft);
+  const deleteDraftMutation = useMutation(api.social.deleteDraft);
+  
+  // ---- Rallies ----
+  const createRallyMutation = useMutation(api.rallies.createRally);
+  const toggleJoinRallyMutation = useMutation(api.rallies.toggleJoinRally);
+  const activeRalliesQuery = useQuery(api.rallies.listActiveRallies) || [];
+
+  // ---- Topics / Home Feed Preferences ----
+  const activeTopics = useQuery(api.topics.listActiveTopics) ?? [];
+  const updateHomePreferenceMutation = useMutation(api.topics.updateUserHomePreference);
+  const updateHomePreference = (slug: string, enabled: boolean) => {
+    updateHomePreferenceMutation({ slug, enabled });
+  };
+
+  // ---- Profile Update ----
+  const updateUserProfileMutation = useMutation(api.users.updateUserProfile);
+  const updateUserProfile = async (args: {
+    name?: string;
+    username?: string;
+    bio?: string;
+    locationName?: string;
+    avatarUrl?: string;
+    avatarStorageId?: any;
+    publicIdentityType?: "display_name" | "username";
+    dateOfBirth?: string;
+    birthDateVisibility?: "public" | "age_only" | "private";
+  }) => {
+    return await updateUserProfileMutation(args);
+  };
+
+  // ---- Cloudinary Signature ----
+  const generateCloudinarySignatureAction = useAction(api.cloudinary.generateSignature);
+  const generateCloudinarySignature = async (folder?: string) => {
+    return await generateCloudinarySignatureAction({ folder });
+  };
+  
+  // ---- Page Mutations ----
+  const createPageMutation = useMutation(api.pages.createPage);
+  const updatePageMutation = useMutation(api.pages.updatePage);
+  const deletePageMutation = useMutation(api.pages.deletePage);
+  const createPageEventMutation = useMutation(api.pageEvents.createPageEvent);
+  
+  // ---- Cycles / Stories Mutations ----
+  const postCycleStoryMutation = useMutation(api.cycles.postCycleStory);
+  const viewStoryMutation = useMutation(api.cycles.viewStory);
+  const toggleLikeStoryMutation = useMutation(api.cycles.toggleLikeStory);
+  const replyToStoryMutation = useMutation(api.cycles.replyToStory);
+  const deleteStoryItemMutation = useMutation(api.cycles.deleteStoryItem);
+
+  // ---- Ecommerce / Cart Mutations ----
+  const cartQuery = useQuery(api.ecommerce.getCart) || [];
+  const addToCartMutation = useMutation(api.ecommerce.addToCart);
+  const updateCartQuantityMutation = useMutation(api.ecommerce.updateCartQuantity);
+  const removeFromCartMutation = useMutation(api.ecommerce.removeFromCart);
+  const clearCartMutation = useMutation(api.ecommerce.clearCart);
+
+  const messageContactsQuery = useQuery(api.social.getMessageContacts);
+  const sendMessageMutation = useMutation(api.social.sendMessage);
+  const editMessageMutation = useMutation(api.social.editMessage);
+  const deleteMessageMutation = useMutation(api.social.deleteMessage);
+  const markConversationReadMutation = useMutation(api.social.markConversationRead);
+  const getOrCreateConversationMutation = useMutation(api.social.getOrCreateConversation);
+  const markAllNotificationsReadMutation = useMutation(api.social.markAllNotificationsRead);
+  const markNotificationReadMutation = useMutation(api.social.markNotificationRead);
+  const backendNotifications = useQuery(api.social.listNotifications) as unknown as NotificationItem[] | undefined;
+  const [pushEnabled, setPushEnabled] = useState<boolean>(false);
+
+  useEffect(() => {
+    setPushEnabled(Boolean(pushEnabledQuery));
+  }, [pushEnabledQuery]);
+
+  const enablePushNotifications = async (): Promise<boolean> => {
+    if (typeof window === 'undefined' || !( 'Notification' in window ) || !( 'serviceWorker' in navigator )) {
+      updatePermission('notifications', 'denied');
+      return false;
+    }
+
+    if (Notification.permission === 'denied') {
+      updatePermission('notifications', 'denied');
+      return false;
+    }
+
+    try {
+      const granted = await requestPermission('notifications');
+      if (!granted) return false;
+
+      const subscription = await getOrRequestWebPushSubscription();
+      if (!subscription) {
+        updatePermission('notifications', 'denied');
+        return false;
+      }
+
+      const subJson: any = subscription.toJSON();
+      const p256dh = subJson.keys?.p256dh || (subscription as any).keys?.p256dh;
+      const auth = subJson.keys?.auth || (subscription as any).keys?.auth;
+
+      await upsertWebPushSubscription({
+        endpoint: subscription.endpoint,
+        p256dh,
+        auth,
+        userAgent: navigator.userAgent,
+      });
+
+      // Synchronize OneSignal push subscription if OneSignal is enabled
+      try {
+        await requestOneSignalPushPermission();
+      } catch (osErr) {
+        console.warn('[LalaoContext] OneSignal permission opt-in warning:', osErr);
+      }
+
+      setPushEnabled(true);
+      updatePermission('notifications', 'granted');
+      return true;
+    } catch (err) {
+      console.error('[LalaoContext] Failed to enable push notifications:', err);
+      updatePermission('notifications', 'prompt');
+      return false;
+    }
+  };
+
+  const [currentUser, setCurrentUser] = useState<User>(() => {
+    try {
+      const saved = localStorage.getItem('lalao_current_user');
+      if (saved) {
+        const parsed = JSON.parse(saved) as User;
+        if (parsed && parsed.id) return parsed;
+      }
+    } catch {
+      // ignore storage issues
+    }
+    return EMPTY_CURRENT_USER;
+  });
+
+  const hydratedCurrentUser = useMemo(
+    () => normalizeConvexUser(currentUserQuery),
+    [currentUserQuery]
+  );
+
+  useEffect(() => {
+    if (currentUserQuery) {
+      setCurrentUser((prev) => ({
+        ...prev,
+        ...hydratedCurrentUser,
+        id: hydratedCurrentUser.id || prev.id,
+      }));
+    }
+  }, [currentUserQuery, hydratedCurrentUser]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('lalao_current_user', JSON.stringify(currentUser));
+    } catch {
+      // ignore storage issues
+    }
+
+    if (currentUser && currentUser.id && currentUser.id !== EMPTY_CURRENT_USER.id) {
+      setOneSignalUser(currentUser.id).catch((err) => {
+        console.warn('[LalaoContext] Failed to associate OneSignal user:', err);
+      });
+    }
+  }, [currentUser]);
+
+  const [activeTab, setRawActiveTab] = useState<NavTab>('home');
+  const [discoverSearchQuery, setDiscoverSearchQuery] = useState<string>('');
+  const [activeSoundId, setActiveSoundId] = useState<string | null>(null);
+  const [isCreateSoundOpen, setIsCreateSoundOpen] = useState(false);
+
+  const openSoundDetail = (soundId: string) => {
+    setActiveSoundId(soundId);
+  };
+
+  const openCreateSound = () => {
+    setIsCreateSoundOpen(true);
+  };
+
+  const { isAuthenticated } = useAuth();
+
+  const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
+  const [authPromptMessage, setAuthPromptMessage] = useState('');
+
+  const showAuthPrompt = (message = 'Sign in to continue') => {
+    setAuthPromptMessage(message);
+    setIsAuthPromptOpen(true);
+  };
+
+  const closeAuthPrompt = () => {
+    setIsAuthPromptOpen(false);
+  };
+
+  const requireAuth = (action: () => void, message?: string) => {
+    if (isAuthenticated) {
+      action();
+    } else {
+      showAuthPrompt(message);
+    }
+  };
+
+  const setActiveTab = (tab: NavTab) => {
+    const protectedTabs = ['messages', 'profile', 'notifications', 'create-post', 'following', 'saved', 'liked', 'create-page'];
+    if (protectedTabs.includes(tab) && !isAuthenticated) {
+      showAuthPrompt(`Sign in to view ${tab.replace('-', ' ')}`);
+      return;
+    }
+    setRawActiveTab(tab);
+  };
+  const [feedTab, setFeedTab] = useState<FeedTab>('for_you');
+  const [nearbySort, setNearbySort] = useState<'closest' | 'recent'>('closest');
+  const [isDetectingGps, setIsDetectingGps] = useState(false);
+
+  const [location, setLocation] = useState<LocationConfig>(() => {
+    try {
+      const saved = localStorage.getItem('lalao_location');
+      return saved ? JSON.parse(saved) : DEFAULT_LOCATION;
+    } catch {
+      return DEFAULT_LOCATION;
+    }
+  });
+
+  const feedPostsQuery = useQuery(api.social.listFeedPosts, {
+    feedType: feedTab,
+    latitude: location.latitude,
+    longitude: location.longitude,
+    radiusKm: location.radiusKm,
+    locationName: location.name,
+  });
+
+  const activeCyclesQuery = useQuery(api.cycles.listActiveCycles, {
+    locationName: location.name,
+    latitude: location.latitude,
+    longitude: location.longitude,
+  });
+
+  const [locationPrivacy, setLocationPrivacy] = useState<LocationPrivacySettings>(() => {
+    try {
+      const saved = localStorage.getItem('lalao_location_privacy');
+      return saved ? JSON.parse(saved) : DEFAULT_LOCATION_PRIVACY;
+    } catch {
+      return DEFAULT_LOCATION_PRIVACY;
+    }
+  });
+
+  const [posts, setPosts] = useState<Post[]>(EMPTY_POSTS);
+
+  const rallies = (activeRalliesQuery as unknown as Rally[]) || EMPTY_RALLIES;
+
+  const [pages, setPages] = useState<Page[]>(EMPTY_PAGES);
+
+  // Fetch live discoverable pages from Convex and sync with local state
+  const backendPages = useQuery(api.pages.listDiscoverablePages);
+  useEffect(() => {
+    if (backendPages && backendPages.length > 0) {
+      const userCoords = {
+        lat: location.latitude ?? getCoordinatesForLocation(location.name).lat,
+        lng: location.longitude ?? getCoordinatesForLocation(location.name).lng,
+      };
+
+      setPages((prev) => {
+        const merged = [...prev];
+        for (const bp of backendPages) {
+          const coords =
+            bp.latitude && bp.longitude
+              ? { lat: bp.latitude, lng: bp.longitude }
+              : getCoordinatesForLocation(bp.location);
+          const dist = calculateDistanceMeters(userCoords.lat, userCoords.lng, coords.lat, coords.lng);
+          const pageWithDist = { ...bp, distanceMeters: dist };
+
+          // Prevent duplicates by ID
+          if (!merged.find(p => p.id === bp.id)) {
+            merged.push(pageWithDist as any);
+          } else {
+            // Update existing with fresh backend data
+            const idx = merged.findIndex(p => p.id === bp.id);
+            merged[idx] = { ...merged[idx], ...pageWithDist };
+          }
+        }
+        return merged;
+      });
+    }
+  }, [backendPages, location.latitude, location.longitude, location.name]);
+
+  const [cycles, setCycles] = useState<Cycle[]>(EMPTY_CYCLES);
+
+  useEffect(() => {
+    if (activeCyclesQuery) {
+      setCycles(activeCyclesQuery as Cycle[]);
+    }
+  }, [activeCyclesQuery]);
+
+  const backendConversations = useQuery(api.social.listConversations);
+  const [conversations, setConversations] = useState<Conversation[]>(EMPTY_CONVERSATIONS);
+
+  useEffect(() => {
+    if (backendConversations) {
+      setConversations(backendConversations as any);
+    }
+  }, [backendConversations]);
+
+  const [messageContacts, setMessageContacts] = useState<User[]>([]);
+
+  useEffect(() => {
+    if (messageContactsQuery !== undefined) {
+      setMessageContacts(messageContactsQuery as User[]);
+    }
+  }, [messageContactsQuery]);
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>(EMPTY_NOTIFICATIONS);
+
+  const seenNotificationIds = React.useRef<Set<string>>(new Set());
+  const initialLoadDone = React.useRef(false);
+
+  const playNotificationSound = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+
+      gainNode.gain.setValueAtTime(0, ctx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.3);
+    } catch (e) {
+      console.warn("Could not play notification sound", e);
+    }
+  };
+
+  useEffect(() => {
+    if (backendNotifications) {
+      setNotifications(backendNotifications);
+      
+      let newUnreadCount = 0;
+      backendNotifications.forEach((n) => {
+        if (!seenNotificationIds.current.has(n.id)) {
+          seenNotificationIds.current.add(n.id);
+          if (!n.isRead && n.actor?.id !== currentUser?.id) {
+            if (n.type !== 'message') {
+              newUnreadCount++;
+            } else if (n.type === 'message' && n.conversationId !== activeChatId) {
+              newUnreadCount++;
+            }
+          }
+        }
+      });
+
+      if (initialLoadDone.current && newUnreadCount > 0) {
+        // Respect settings: if push is enabled (as an indicator of user wanting notifications), or if we don't have a separate sound setting, play it.
+        playNotificationSound();
+      }
+
+      initialLoadDone.current = true;
+    }
+  }, [backendNotifications, currentUser?.id]);
+
+  useEffect(() => {
+    if (feedPostsQuery) {
+      setPosts(feedPostsQuery as Post[]);
+    }
+  }, [feedPostsQuery]);
+
+  const deletePost = async (postId: string) => {
+    if (!currentUser) return;
+    try {
+      await deletePostMutation({ postId: postId as any });
+      
+      // Update local state immediately so feed reflects deletion
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+      
+      triggerShareToast('Post deleted successfully');
+    } catch (err: any) {
+      console.error('Error deleting post:', err);
+      triggerShareToast('Failed to delete post: ' + err.message);
+    }
+  };
+
+  // Modal States
+  const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
+  const [createFlowType, setCreateFlowType] = useState<CreateOption>(null);
+  const [isCreateGroupChatOpen, setIsCreateGroupChatOpen] = useState(false);
+  const [isCreateGroupCycleOpen, setIsCreateGroupCycleOpen] = useState(false);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+
+  // Device Permissions State
+  const [permissions, setPermissions] = useState<DevicePermissions>(() => {
+    try {
+      const saved = localStorage.getItem('lalao_device_permissions');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      location: 'prompt',
+      preciseLocation: true,
+      notifications: 'prompt',
+      camera: 'prompt',
+      microphone: 'prompt',
+      photos: 'prompt',
+    };
+  });
+  const [activePermissionPrompt, setActivePermissionPrompt] = useState<PermissionPromptType>(null);
+  const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
+
+  const updatePermission = (type: keyof DevicePermissions, value: PermissionState | boolean) => {
+    setPermissions((prev) => {
+      const updated = { ...prev, [type]: value };
+      try {
+        localStorage.setItem('lalao_device_permissions', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const requestPermission = async (
+    type: PermissionPromptType,
+    options?: { precise?: boolean }
+  ): Promise<boolean> => {
+    if (!type) return false;
+
+    if (type === 'location') {
+      try {
+        if (typeof window !== 'undefined' && navigator.geolocation) {
+          return new Promise((resolve) => {
+            navigator.geolocation.getCurrentPosition(
+              () => {
+                updatePermission('location', 'granted');
+                if (options?.precise !== undefined) {
+                  updatePermission('preciseLocation', options.precise);
+                }
+                resolve(true);
+              },
+              () => {
+                updatePermission('location', 'denied');
+                resolve(false);
+              },
+              { timeout: 8000, enableHighAccuracy: options?.precise ?? true }
+            );
+          });
+        }
+      } catch {
+        updatePermission('location', 'granted');
+        return true;
+      }
+    } else if (type === 'notifications') {
+      try {
+        if (typeof window !== 'undefined' && 'Notification' in window) {
+          const res = await Notification.requestPermission();
+          const state: PermissionState = res === 'granted' ? 'granted' : res === 'denied' ? 'denied' : 'prompt';
+          updatePermission('notifications', state);
+          return state === 'granted';
+        }
+      } catch {
+        updatePermission('notifications', 'granted');
+        return true;
+      }
+    } else if (type === 'camera') {
+      try {
+        if (typeof window !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          stream.getTracks().forEach((t) => t.stop());
+          updatePermission('camera', 'granted');
+          return true;
+        }
+      } catch {
+        updatePermission('camera', 'granted');
+        return true;
+      }
+    } else if (type === 'microphone') {
+      try {
+        if (typeof window !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach((t) => t.stop());
+          updatePermission('microphone', 'granted');
+          return true;
+        }
+      } catch {
+        updatePermission('microphone', 'granted');
+        return true;
+      }
+    } else if (type === 'photos') {
+      updatePermission('photos', 'granted');
+      return true;
+    }
+
+    return false;
+  };
+
+  // Drilldowns
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [activeCycleId, setActiveCycleId] = useState<string | null>(null);
+  const [activeStoryIndex, setActiveStoryIndex] = useState<number>(0);
+  const [isCreateCycleOpen, setIsCreateCycleOpen] = useState(false);
+  const [activeVideoFeedPostId, setActiveVideoFeedPostId] = useState<string | null>(null);
+  const [activePageId, setActivePageId] = useState<string | null>(null);
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const [isManageGroupOpen, setIsManageGroupOpen] = useState(false);
+  const [activeUserProfile, setActiveUserProfile] = useState<User | null>(null);
+  const [composerInitialText, setComposerInitialText] = useState<string>('');
+  const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [shareToast, setShareToast] = useState<string | null>(null);
+
+  // Creator Ecosystem modals & Subscriptions
+  const [isCreatorHubOpen, setIsCreatorHubOpen] = useState(false);
+  const [isCreatorSubscriptionOpen, setIsCreatorSubscriptionOpen] = useState(false);
+  const [creatorSubscriptionInitialTier, setCreatorSubscriptionInitialTier] = useState<VerificationTier | undefined>(undefined);
+
+  const backendSubscription = useQuery(api.creators.getMyCreatorSubscription);
+  const subscribeToTierMutation = useMutation(api.creators.subscribeToTier);
+  const cancelSubscriptionMutation = useMutation(api.creators.cancelSubscription);
+
+  // Local subscription cache
+  const [localSubscriptionState, setLocalSubscriptionState] = useState<UserSubscription | null>(() => {
+    try {
+      const saved = localStorage.getItem('lalao_user_subscription');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  });
+
+  useEffect(() => {
+    if (localSubscriptionState) {
+      try {
+        localStorage.setItem('lalao_user_subscription', JSON.stringify(localSubscriptionState));
+      } catch {}
+    } else {
+      localStorage.removeItem('lalao_user_subscription');
+    }
+  }, [localSubscriptionState]);
+
+  // Reliable single source of truth for subscription
+  const subscription: UserSubscription = useMemo(() => {
+    // 1. If backend reports active subscription
+    if (backendSubscription && backendSubscription.status === 'active') {
+      const tier = (backendSubscription.tier === 'creator' ? 'creator_premium' : backendSubscription.tier) as VerificationTier;
+      const isCreatorTier = tier === 'creator_premium' || tier === 'creator';
+      const defaultPrice = isCreatorTier ? 3500 : tier === 'priority' ? 1700 : 800;
+      const startDate = backendSubscription.subscription?.startedAt || (backendSubscription.expiresAt ? backendSubscription.expiresAt - 30 * 86400000 : Date.now());
+      const nextBillingDate = backendSubscription.subscription?.expiresAt || backendSubscription.expiresAt || (Date.now() + 30 * 86400000);
+      return {
+        status: 'active',
+        tier,
+        startDate,
+        nextBillingDate,
+        price: backendSubscription.subscription?.price || defaultPrice,
+        currency: backendSubscription.subscription?.currency || 'NGN',
+        paymentMethod: backendSubscription.subscription?.paymentMethod || 'paystack',
+        cancelAtPeriodEnd: backendSubscription.cancelAtPeriodEnd ?? false,
+      };
+    }
+
+    // 2. If local explicit active state
+    if (localSubscriptionState && localSubscriptionState.status === 'active') {
+      return localSubscriptionState;
+    }
+
+    // 3. If currentUser has active verification profile
+    if (
+      currentUser?.verificationTier &&
+      currentUser.verificationTier !== 'none' &&
+      currentUser.verificationStatus === 'active' &&
+      (!currentUser.verificationExpiresAt || currentUser.verificationExpiresAt > Date.now())
+    ) {
+      const tier = (currentUser.verificationTier === 'creator' ? 'creator_premium' : currentUser.verificationTier) as VerificationTier;
+      const isCreatorTier = tier === 'creator_premium' || tier === 'creator';
+      const price = isCreatorTier ? 3500 : tier === 'priority' ? 1700 : 800;
+      return {
+        status: 'active',
+        tier,
+        startDate: currentUser.verificationStartedAt || Date.now(),
+        nextBillingDate: currentUser.verificationExpiresAt || (Date.now() + 30 * 86400000),
+        price,
+        currency: 'NGN',
+        paymentMethod: 'paystack',
+        cancelAtPeriodEnd: false,
+      };
+    }
+
+    // 4. If marked cancelled
+    if (localSubscriptionState?.status === 'cancelled' || currentUser?.verificationStatus === 'cancelled') {
+      return {
+        status: 'cancelled',
+        tier: 'none',
+      };
+    }
+
+    return {
+      status: 'inactive',
+      tier: 'none',
+    };
+  }, [backendSubscription, localSubscriptionState, currentUser?.verificationTier, currentUser?.verificationStatus, currentUser?.verificationExpiresAt, currentUser?.verificationStartedAt]);
+
+  // Effective current user enriched with active subscription status
+  const effectiveCurrentUser = useMemo<User>(() => {
+    const isSubActive = subscription.status === 'active' && subscription.tier !== 'none';
+    const subTier = (subscription.tier === 'creator_premium' ? 'creator' : subscription.tier) as VerificationTier;
+
+    if (isSubActive) {
+      return {
+        ...currentUser,
+        isVerified: true,
+        verificationTier: subTier,
+        verificationStatus: 'active',
+        verificationExpiresAt: subscription.nextBillingDate || currentUser.verificationExpiresAt,
+        subscription,
+      };
+    }
+    return {
+      ...currentUser,
+      subscription,
+    };
+  }, [currentUser, subscription]);
+
+  const isCreatorPremiumActive = Boolean(
+    subscription.status === 'active' &&
+    (subscription.tier === 'creator' || subscription.tier === 'creator_premium')
+  );
+
+  // Auto-close Creator Hub if subscription is no longer active
+  useEffect(() => {
+    if (!isCreatorPremiumActive && isCreatorHubOpen) {
+      setIsCreatorHubOpen(false);
+    }
+  }, [isCreatorPremiumActive, isCreatorHubOpen]);
+
+  const openCreatorSubscription = (initialTier?: VerificationTier) => {
+    setCreatorSubscriptionInitialTier(initialTier);
+    setIsCreatorSubscriptionOpen(false);
+    setActiveTab('verification');
+    const mainEl = document.querySelector('main');
+    if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'instant' });
+  };
+
+  const openCreatorHub = () => {
+    if (!isCreatorPremiumActive) {
+      triggerShareToast('Creator Hub is exclusive to Creator Premium subscribers.');
+      return;
+    }
+    setIsCreatorHubOpen(true);
+  };
+
+  const cancelUserSubscription = async () => {
+    try {
+      await cancelSubscriptionMutation({});
+    } catch (e: any) {
+      console.warn('[LalaoContext] cancelSubscription error:', e);
+    }
+
+    const cancelledState: UserSubscription = {
+      status: 'cancelled',
+      tier: 'none',
+      cancelAtPeriodEnd: true,
+    };
+
+    setLocalSubscriptionState(cancelledState);
+    setCurrentUser((prev) => ({
+      ...prev,
+      isVerified: false,
+      verificationTier: 'none',
+      verificationStatus: 'cancelled',
+      verificationExpiresAt: undefined,
+      subscription: cancelledState,
+    }));
+    setIsCreatorHubOpen(false);
+    triggerShareToast('Subscription cancelled successfully.');
+  };
+
+  const subscribeUserToTier = async (tier: VerificationTier, paystackRef?: string) => {
+    const backendTier = (tier === 'creator_premium' ? 'creator' : tier) as 'verified' | 'priority' | 'creator';
+    const isCreatorTier = backendTier === 'creator';
+    const price = isCreatorTier ? 3500 : backendTier === 'priority' ? 1700 : 800;
+    const now = Date.now();
+    const expiresAt = now + 30 * 24 * 60 * 60 * 1000;
+
+    try {
+      await subscribeToTierMutation({
+        tier: backendTier,
+        paymentMethod: 'paystack',
+        paystackReference: paystackRef,
+      });
+    } catch (e: any) {
+      console.warn('[LalaoContext] subscribeToTier error:', e);
+    }
+
+    const newSub: UserSubscription = {
+      status: 'active',
+      tier: tier === 'creator' ? 'creator_premium' : tier,
+      startDate: now,
+      nextBillingDate: expiresAt,
+      price,
+      currency: 'NGN',
+      paymentMethod: 'paystack',
+      cancelAtPeriodEnd: false,
+    };
+
+    setLocalSubscriptionState(newSub);
+    setCurrentUser((prev) => ({
+      ...prev,
+      isVerified: true,
+      verificationTier: backendTier,
+      verificationStatus: 'active',
+      verificationStartedAt: now,
+      verificationExpiresAt: expiresAt,
+      subscription: newSub,
+    }));
+
+    triggerShareToast(
+      isCreatorTier
+        ? 'Welcome to Creator Premium! Creator Hub unlocked.'
+        : `Welcome to ${backendTier === 'priority' ? 'Priority' : 'Standard'} Verified! Your badge is active.`
+    );
+  };
+
+  // Shopping, Cart & Saved Products
+  const cart = (cartQuery as unknown as CartItem[]) || [];
+
+  const [savedProductIds, setSavedProductIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('lalao_saved_products');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [selectedShopProduct, setSelectedShopProduct] = useState<ShopProduct | null>(null);
+  const [selectedProductStore, setSelectedProductStore] = useState<Page | null>(null);
+
+  // Cart is synced via backend now.
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('lalao_saved_products', JSON.stringify(savedProductIds));
+    } catch {}
+  }, [savedProductIds]);
+
+  const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
+
+  const addToCart = async (
+    product: ShopProduct,
+    quantity: number,
+    options?: Record<string, string>,
+    store?: { id: string; name: string }
+  ) => {
+    try {
+      await addToCartMutation({
+        productId: product.id as any,
+        quantity,
+        selectedOptions: options,
+      });
+      triggerShareToast(`Added ${quantity}x ${product.name} to cart`);
+    } catch (err) {
+      console.error("Failed to add to cart", err);
+      triggerShareToast("Sign in to add items to cart");
+    }
+  };
+
+  const removeFromCart = async (cartItemId: string) => {
+    try {
+      await removeFromCartMutation({ cartItemId: cartItemId as any });
+      triggerShareToast('Item removed from cart');
+    } catch (err) {
+      console.error("Failed to remove from cart", err);
+    }
+  };
+
+  const updateCartQuantity = async (cartItemId: string, quantity: number) => {
+    try {
+      await updateCartQuantityMutation({ cartItemId: cartItemId as any, quantity });
+    } catch (err) {
+      console.error("Failed to update cart quantity", err);
+    }
+  };
+
+  const clearCart = async () => {
+    try {
+      await clearCartMutation();
+    } catch (err) {
+      console.error("Failed to clear cart", err);
+    }
+  };
+
+  const toggleSaveProduct = (productId: string) => {
+    setSavedProductIds((prev) => {
+      const isSaved = prev.includes(productId);
+      if (isSaved) {
+        triggerShareToast('Removed from saved items');
+        return prev.filter((id) => id !== productId);
+      } else {
+        triggerShareToast('Saved to your wishlist');
+        return [...prev, productId];
+      }
+    });
+  };
+
+  const isProductSaved = (productId: string) => {
+    return savedProductIds.includes(productId);
+  };
+
+  // Orders & Shopping History (User-specific persistence)
+  const [orders, setOrders] = useState<Order[]>(() => {
+    try {
+      const saved = localStorage.getItem(`lalao_orders_${currentUser.id}`);
+      return saved ? JSON.parse(saved) : EMPTY_ORDERS;
+    } catch {
+      return EMPTY_ORDERS;
+    }
+  });
+
+  const [isShoppingHistoryOpen, setIsShoppingHistoryOpen] = useState(false);
+  const [selectedOrderForDetail, setSelectedOrderForDetail] = useState<Order | null>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`lalao_orders_${currentUser.id}`, JSON.stringify(orders));
+    } catch {}
+  }, [orders, currentUser.id]);
+
+  const userOrders = orders.filter((o) => o.userId === currentUser.id);
+
+  const addOrder = (newOrder: Order) => {
+    setOrders((prev) => [newOrder, ...prev]);
+  };
+
+  // Events & Ticketing Ecosystem State
+  const initialOrgEvents: OrgEvent[] = [];
+
+  const [events, setEvents] = useState<OrgEvent[]>(() => {
+    try {
+      const saved = localStorage.getItem('lalao_events');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [tickets, setTickets] = useState<EventTicket[]>(() => {
+    try {
+      const saved = localStorage.getItem(`lalao_tickets_${currentUser.id}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [teamRegistrations, setTeamRegistrations] = useState<TeamRegistration[]>(() => {
+    try {
+      const saved = localStorage.getItem(`lalao_team_regs_${currentUser.id}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`lalao_tickets_${currentUser.id}`, JSON.stringify(tickets));
+    } catch {}
+  }, [tickets, currentUser.id]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`lalao_team_regs_${currentUser.id}`, JSON.stringify(teamRegistrations));
+    } catch {}
+  }, [teamRegistrations, currentUser.id]);
+
+  const activeTickets = tickets.filter((t) => t.status === 'active');
+  const ticketHistory = tickets.filter((t) => t.status !== 'active');
+  const activeTicketsCount = activeTickets.length;
+
+  const addTicket = (newTicket: EventTicket) => {
+    setTickets((prev) => [newTicket, ...prev]);
+  };
+
+  const addTeamRegistration = (reg: TeamRegistration) => {
+    setTeamRegistrations((prev) => [reg, ...prev]);
+    setEvents((prev) =>
+      prev.map((ev) =>
+        ev.id === reg.eventId
+          ? {
+              ...ev,
+              registeredTeamsCount: Math.min(
+                ev.maxTeams || 32,
+                (ev.registeredTeamsCount || 0) + 1
+              ),
+              registeredTeams: [
+                {
+                  id: reg.id,
+                  name: reg.teamName,
+                  tag: reg.teamTag,
+                  logo: reg.teamLogo,
+                  captain: reg.captain.name,
+                  membersCount: reg.players?.length || 0,
+                },
+                ...(ev.registeredTeams || []),
+              ],
+            }
+          : ev
+      )
+    );
+  };
+
+  const [isMyTicketsOpen, setIsMyTicketsOpen] = useState(false);
+  const [selectedTicketForPass, setSelectedTicketForPass] = useState<EventTicket | null>(null);
+  const [selectedEventForDetail, setSelectedEventForDetail] = useState<OrgEvent | null>(null);
+  const [isEventDetailOpen, setIsEventDetailOpen] = useState(false);
+  const [isTournamentRegisterOpen, setIsTournamentRegisterOpen] = useState(false);
+  const [registeringEvent, setRegisteringEvent] = useState<OrgEvent | null>(null);
+
+  // Saved Player Teams
+  const [savedTeams, setSavedTeams] = useState<PlayerTeam[]>(() => {
+    try {
+      const saved = localStorage.getItem(`lalao_saved_teams_${currentUser.id}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`lalao_saved_teams_${currentUser.id}`, JSON.stringify(savedTeams));
+    } catch {}
+  }, [savedTeams, currentUser.id]);
+
+  const saveTeam = (team: PlayerTeam) => {
+    setSavedTeams((prev) => {
+      const exists = prev.some((t) => t.id === team.id);
+      if (exists) {
+        return prev.map((t) => (t.id === team.id ? team : t));
+      }
+      return [team, ...prev];
+    });
+  };
+
+  const deleteTeam = (teamId: string) => {
+    setSavedTeams((prev) => prev.filter((t) => t.id !== teamId));
+  };
+
+  // User Wallet Ecosystem
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [wallet, setWallet] = useState<UserWallet>(() => {
+    try {
+      const saved = localStorage.getItem(`lalao_wallet_${currentUser.id}`);
+      return saved
+        ? JSON.parse(saved)
+        : {
+            balance: 0,
+            currency: 'NGN',
+            accountNumber: '',
+            bankName: '',
+            transactions: [],
+          };
+    } catch {
+      return {
+        balance: 0,
+        currency: 'NGN',
+        accountNumber: '',
+        bankName: '',
+        transactions: [],
+      };
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`lalao_wallet_${currentUser.id}`, JSON.stringify(wallet));
+    } catch {}
+  }, [wallet, currentUser.id]);
+
+  const topUpWallet = (amount: number, method = 'paystack') => {
+    if (amount <= 0) return;
+    const newTx: WalletTransaction = {
+      id: `tx_topup_${Date.now()}`,
+      type: 'deposit',
+      amount,
+      description: `Wallet Top-Up via ${method === 'paystack' ? 'Paystack (Card)' : 'Direct Bank Transfer'}`,
+      reference: `LLW-TOP-${Math.floor(100000 + Math.random() * 900000)}`,
+      status: 'successful',
+      date: new Date().toISOString(),
+      paymentMethod: method as any,
+    };
+
+    setWallet((prev) => ({
+      ...prev,
+      balance: prev.balance + amount,
+      transactions: [newTx, ...prev.transactions],
+    }));
+    triggerShareToast(`₦${amount.toLocaleString()} funded into your wallet!`);
+  };
+
+  const payWithWallet = (amount: number, description: string, reference?: string): boolean => {
+    if (wallet.balance < amount) {
+      return false;
+    }
+
+    const newTx: WalletTransaction = {
+      id: `tx_pay_${Date.now()}`,
+      type: 'tournament_fee',
+      amount,
+      description,
+      reference: reference || `LLW-PAY-${Math.floor(100000 + Math.random() * 900000)}`,
+      status: 'successful',
+      date: new Date().toISOString(),
+      paymentMethod: 'wallet',
+    };
+
+    setWallet((prev) => ({
+      ...prev,
+      balance: prev.balance - amount,
+      transactions: [newTx, ...prev.transactions],
+    }));
+    return true;
+  };
+  const [isTicketPurchaseOpen, setIsTicketPurchaseOpen] = useState(false);
+  const [purchasingEvent, setPurchasingEvent] = useState<OrgEvent | null>(null);
+
+  const openHonorOfKingsPage = () => {
+    setPages((prev) => {
+      if (!prev.some((p) => p.id === 'page_honorofkings')) {
+        return [HOK_ORGANIZATION_PAGE, ...prev];
+      }
+      return prev;
+    });
+    setActivePageId('page_honorofkings');
+  };
+
+  // Helper to quickly adjust radius
+  const updateRadius = (radiusKm: number) => {
+    const clamped = Math.max(1, Math.min(50, Math.round(radiusKm)));
+    setLocation((prev) => ({ ...prev, radiusKm: clamped }));
+  };
+
+  // GPS Detection with graceful fallback
+  const detectGpsLocation = async (): Promise<{ success: boolean; error?: string }> => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      return { success: false, error: 'Geolocation is not supported by your browser' };
+    }
+    setIsDetectingGps(true);
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude, accuracy } = position.coords;
+
+          // Reject inaccurate readings (>100m threshold)
+          if (typeof accuracy === 'number' && accuracy > 100) {
+            setIsDetectingGps(false);
+            resolve({
+              success: false,
+              error: `Location accuracy (${Math.round(accuracy)}m) is insufficient (must be within 100m). Please retry or move outdoors.`,
+            });
+            return;
+          }
+
+          let locName = 'Current Location';
+          let subArea = '';
+          let country = '';
+          let state = '';
+          let city = '';
+          let neighborhood = '';
+
+          try {
+            // Real reverse geocode via OpenStreetMap Nominatim (free, no key)
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=12&addressdetails=1`,
+              { headers: { 'Accept-Language': 'en' } }
+            );
+            const data = await res.json();
+            const addr = data.address || {};
+            neighborhood =
+              addr.neighbourhood ||
+              addr.suburb ||
+              addr.village ||
+              addr.town ||
+              addr.county ||
+              addr.city_district ||
+              '';
+            city = addr.city || addr.town || addr.municipality || addr.county || '';
+            state = addr.state || addr.region || '';
+            country = addr.country || '';
+
+            if (neighborhood) {
+              locName = neighborhood;
+              subArea = [city || state].filter(Boolean).join(', ') || state;
+            } else if (city) {
+              locName = city;
+              subArea = state;
+            } else {
+              locName = state || `GPS Location (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`;
+            }
+          } catch {
+            // Fallback: find closest known hub
+            let closestHub = null;
+            let minDistance = Infinity;
+            for (const hub of Object.values(KNOWN_LOCATION_HUBS)) {
+              const d = calculateDistanceMeters(latitude, longitude, hub.coords.lat, hub.coords.lng);
+              if (d < minDistance) {
+                minDistance = d;
+                closestHub = hub;
+              }
+            }
+            if (closestHub && minDistance < 12000) {
+              locName = closestHub.name;
+              subArea = closestHub.subArea;
+            } else {
+              locName = `GPS Location (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`;
+            }
+          }
+
+          const newLoc: LocationConfig = {
+            name: locName,
+            subArea,
+            radiusKm: location.radiusKm || 5,
+            latitude,
+            longitude,
+            accuracy: accuracy ?? undefined,
+            capturedAt: Date.now(),
+            country: country || undefined,
+            state: state || undefined,
+            city: city || undefined,
+            neighborhood: neighborhood || undefined,
+            isGpsDetected: true,
+          };
+          setLocation(newLoc);
+          setIsDetectingGps(false);
+          triggerShareToast(`Location detected: ${locName}`);
+          resolve({ success: true });
+        },
+        (err) => {
+          setIsDetectingGps(false);
+          let errorMsg = 'Could not access your location.';
+          if (err.code === err.PERMISSION_DENIED) {
+            errorMsg = 'Location permission was denied. You can select a neighborhood manually.';
+          } else if (err.code === err.POSITION_UNAVAILABLE) {
+            errorMsg = 'Location position unavailable. Please choose from popular areas.';
+          }
+          resolve({ success: false, error: errorMsg });
+        },
+        { timeout: 10000, enableHighAccuracy: true }
+      );
+    });
+  };
+
+
+  // Recompute distance to all items dynamically whenever user location changes
+  useEffect(() => {
+    const hasUserCoords = typeof location.latitude === 'number' && typeof location.longitude === 'number';
+    const userCoords = hasUserCoords ? {
+      lat: location.latitude!,
+      lng: location.longitude!,
+    } : null;
+
+    setPosts((prev) =>
+      prev.map((post) => {
+        if (!userCoords) {
+          return { ...post, distanceMeters: undefined };
+        }
+        if (typeof post.latitude === 'number' && typeof post.longitude === 'number') {
+          const dist = calculateDistanceMeters(userCoords.lat, userCoords.lng, post.latitude, post.longitude);
+          return { ...post, distanceMeters: dist };
+        }
+        return { ...post, distanceMeters: undefined };
+      })
+    );
+
+    // Rallies distance update is handled by the backend / frontend on render.
+
+    setPages((prev) =>
+      prev.map((page) => {
+        if (!userCoords) return { ...page, distanceMeters: undefined };
+        const coords =
+          typeof page.latitude === 'number' && typeof page.longitude === 'number'
+            ? { lat: page.latitude, lng: page.longitude }
+            : (page.location ? getCoordinatesForLocation(page.location) : null);
+        if (!coords) return { ...page, distanceMeters: undefined };
+        const dist = calculateDistanceMeters(userCoords.lat, userCoords.lng, coords.lat, coords.lng);
+        return { ...page, distanceMeters: dist };
+      })
+    );
+
+    setCycles((prev) =>
+      prev.map((cycle) => {
+        if (!userCoords) return { ...cycle, distanceMeters: undefined };
+        const coords =
+          typeof cycle.latitude === 'number' && typeof cycle.longitude === 'number'
+            ? { lat: cycle.latitude, lng: cycle.longitude }
+            : (cycle.location ? getCoordinatesForLocation(cycle.location) : null);
+        if (!coords) return { ...cycle, distanceMeters: undefined };
+        const dist = calculateDistanceMeters(userCoords.lat, userCoords.lng, coords.lat, coords.lng);
+        return { ...cycle, distanceMeters: dist };
+      })
+    );
+  }, [location.name, location.latitude, location.longitude]);
+
+  // Persistence
+  useEffect(() => {
+    try {
+      localStorage.setItem('lalao_location', JSON.stringify(location));
+      localStorage.setItem('lalao_location_privacy', JSON.stringify(locationPrivacy));
+    } catch {
+      // ignore storage quota errors
+    }
+  }, [location, locationPrivacy]);
+
+  const triggerShareToast = (msg = 'Link copied to clipboard!') => {
+    setShareToast(msg);
+    setTimeout(() => setShareToast(null), 2500);
+  };
+
+  const toggleLikePost = (postId: string) => requireAuth(() => {
+    setPosts((prev) =>
+      prev.map((post) => {
+        if (post.id === postId) {
+          const isLiked = !post.isLiked;
+          return {
+            ...post,
+            isLiked,
+            likesCount: isLiked ? post.likesCount + 1 : Math.max(0, post.likesCount - 1),
+          };
+        }
+        return post;
+      })
+    );
+    toggleLikePostMutation({ postId: postId as any }).catch(console.error);
+  }, 'Sign in to like this post');
+
+  const toggleRepostPost = (postId: string) => requireAuth(() => {
+    setPosts((prev) =>
+      prev.map((post) => {
+        if (post.id === postId) {
+          const isReposted = !post.isReposted;
+          return {
+            ...post,
+            isReposted,
+            repostsCount: isReposted ? post.repostsCount + 1 : Math.max(0, post.repostsCount - 1),
+          };
+        }
+        return post;
+      })
+    );
+    triggerShareToast('Reposted to your local feed');
+  }, 'Sign in to repost this');
+
+  const addComment = async (
+    postId: string,
+    text: string,
+    parentCommentId?: string,
+    mediaStorageId?: string,
+    mediaType?: 'image' | 'voice' | 'gif' | 'sticker'
+  ) => {
+    if (!isAuthenticated) {
+      showAuthPrompt('Sign in to comment');
+      return;
+    }
+    
+    if (!text.trim() && !mediaStorageId) return;
+
+    try {
+      await addCommentToPostMutation({
+        postId: postId as any,
+        text: text.trim(),
+        parentCommentId: parentCommentId as any,
+        mediaStorageId: mediaStorageId as any,
+        mediaType
+      });
+    } catch (err) {
+      console.error('Failed to add comment:', err);
+      throw err;
+    }
+  };
+
+  const toggleLikeComment = async (postId: string, commentId: string, replyId?: string) => {
+    if (!isAuthenticated) {
+      showAuthPrompt('Sign in to like this comment');
+      return;
+    }
+    try {
+      // If replyId is provided, we're liking a reply (this matches the old signature, though the UI just passes comment.id to commentId now)
+      const targetId = replyId || commentId;
+      await toggleLikeCommentMutation({ commentId: targetId as any });
+    } catch (err) {
+      console.error('Failed to toggle like on comment:', err);
+    }
+  };
+
+  const createPost = async (args: {
+    text: string;
+    mediaUrl?: string;
+    mediaStorageId?: string;
+    mediaType?: 'image' | 'video';
+    mediaWidth?: number;
+    mediaHeight?: number;
+    location?: string;
+    latitude?: number;
+    longitude?: number;
+    locationAccuracy?: number;
+    locationCapturedAt?: number;
+    locationCountry?: string;
+    locationState?: string;
+    locationCity?: string;
+    locationNeighborhood?: string;
+    nearbyEnabled?: boolean;
+    audience?: string;
+    replyPermission?: string;
+    gifUrl?: string;
+    pollQuestion?: string;
+    pollOptions?: string[];
+    rallyRefId?: string;
+    pageRefId?: string;
+    groupRefId?: string;
+    visibility?: string;
+    contentTopics?: string[];
+    // Sounds & Music integration
+    soundId?: string;
+    soundTitle?: string;
+    soundAuthorName?: string;
+    soundAudioUrl?: string;
+    soundStartOffset?: number;
+    soundVolume?: number;
+    originalAudioVolume?: number;
+    rallyData?: {
+      type: 'ASK' | 'HELP' | 'JOIN';
+      title: string;
+      description: string;
+      location: string;
+      eventDate: string;
+      eventTime: string;
+      peopleNeeded?: number;
+      compensationType?: 'free' | 'paying' | 'charging' | 'other';
+      compensationAmount?: string;
+    };
+  }) => {
+    if (!isAuthenticated) {
+      showAuthPrompt('Sign in to create a post');
+      return;
+    }
+    try {
+      const resolvedLocation = resolvePostCreationLocation({
+        authorLocationSnapshot: args.location,
+      });
+
+      const response = await createPostMutation({
+        text: args.text,
+        mediaUrl: args.mediaUrl,
+        mediaStorageId: args.mediaStorageId as any,
+        mediaType: args.mediaType as 'image' | 'video' | undefined,
+        location: resolvedLocation,
+        latitude: args.latitude,
+        longitude: args.longitude,
+        locationAccuracy: args.locationAccuracy,
+        locationCapturedAt: args.locationCapturedAt,
+        locationCountry: args.locationCountry,
+        locationState: args.locationState,
+        locationCity: args.locationCity,
+        locationNeighborhood: args.locationNeighborhood,
+        nearbyEnabled: args.nearbyEnabled,
+        audience: args.audience as any,
+        replyPermission: args.replyPermission as any,
+        gifUrl: args.gifUrl,
+        pollQuestion: args.pollQuestion,
+        pollOptions: args.pollOptions,
+        rallyRefId: args.rallyRefId,
+        pageRefId: args.pageRefId,
+        groupRefId: args.groupRefId,
+        contentTopics: args.contentTopics,
+        rallyData: args.rallyData,
+        soundId: args.soundId as any,
+        soundTitle: args.soundTitle,
+        soundAuthorName: args.soundAuthorName,
+        soundAudioUrl: args.soundAudioUrl,
+        soundStartOffset: args.soundStartOffset,
+        soundVolume: args.soundVolume,
+        originalAudioVolume: args.originalAudioVolume,
+      });
+
+      const postIdStr = typeof response === 'object' && response !== null ? response.id : response;
+      const resolvedMediaUrl = resolvePostMediaUrl({
+        mediaUrl: response.mediaUrl ?? args.mediaUrl,
+        mediaStorageId: response.mediaStorageId ?? args.mediaStorageId,
+        getUrl: () => response.mediaUrl,
+      });
+
+      // Create a local post object to push to feed instantly
+      const newPost: Post = {
+        id: postIdStr as string,
+        author: currentUser,
+        text: args.text,
+        mediaUrl: resolvedMediaUrl,
+        mediaStorageId: response.mediaStorageId ?? args.mediaStorageId,
+        mediaType: args.mediaType as 'image' | 'video' | undefined,
+        location: response.location ?? resolvedLocation,
+        latitude: response.latitude ?? args.latitude,
+        longitude: response.longitude ?? args.longitude,
+        distanceMeters: 0, // User's own posts are 0m from themselves; feed recalculates for others
+        createdAt: 'Just now',
+        likesCount: 0,
+        repostsCount: 0,
+        commentsCount: 0,
+        isLiked: false,
+        isReposted: false,
+        comments: [],
+        rallyRefId: args.rallyRefId,
+        pageRefId: args.pageRefId,
+      };
+
+      setPosts((prev) => [newPost, ...prev]);
+
+      setCreateFlowType(null);
+      setIsCreateSheetOpen(false);
+      setActiveTab('home');
+      triggerShareToast('Post published!');
+      return { id: postIdStr };
+    } catch (error) {
+      console.error('Failed to create post:', error);
+      throw error;
+    }
+  };
+
+  const saveDraft = async (draft: any) => {
+    return await saveDraftMutation(draft);
+  };
+
+  const getDrafts = async () => {
+    // Actually, getDrafts is better as a useQuery or just fetched directly, but we can return empty for now, or the component can use useQuery(api.social.getDrafts) directly.
+    return [];
+  };
+
+  const deleteDraft = async (draftId: string) => {
+    return await deleteDraftMutation({ draftId: draftId as any });
+  };
+
+  const toggleJoinRally = async (rallyId: string) => {
+    requireAuth(async () => {
+      try {
+        const isJoined = await toggleJoinRallyMutation({ rallyId: rallyId as any });
+        triggerShareToast(isJoined ? "You joined the Rally!" : "You left the Rally.");
+      } catch (err) {
+        console.error("Failed to toggle join rally", err);
+      }
+    }, 'Sign in to join this rally');
+  };
+
+  const createRally = async ({
+    title,
+    description,
+    location: rallyLoc,
+    timeDate,
+    category,
+  }: {
+    title: string;
+    description: string;
+    location: string;
+    timeDate: string;
+    category: Rally['category'];
+  }) => {
+    try {
+      await createRallyMutation({
+        title,
+        description,
+        location: rallyLoc || `${location.name} Center`,
+        timeDate: timeDate || 'Today · Soon',
+        category,
+      });
+
+      setCreateFlowType(null);
+      setIsCreateSheetOpen(false);
+      setActiveTab('home');
+      triggerShareToast('Rally created! Broadcasting to people nearby');
+    } catch (err) {
+      console.error("Failed to create rally", err);
+      triggerShareToast("Failed to create Rally.");
+    }
+  };
+
+  const toggleFollowPage = (pageId: string) => requireAuth(() => {
+    setPages((prev) =>
+      prev.map((page) => {
+        if (page.id === pageId) {
+          const isFollowing = !page.isFollowing;
+          return {
+            ...page,
+            isFollowing,
+            followersCount: isFollowing
+              ? page.followersCount + 1
+              : Math.max(0, page.followersCount - 1),
+          };
+        }
+        return page;
+      })
+    );
+    toggleFollowPageMutation({ pageId: pageId as any }).catch(console.error);
+  }, 'Sign in to follow this page');
+
+  const toggleFollowUser = (userId: string) => requireAuth(() => {
+    let nowFollowing = false;
+    let targetUsername = '';
+
+    setActiveUserProfile((prev) => {
+      if (prev && prev.id === userId) {
+        nowFollowing = !prev.isFollowing;
+        targetUsername = prev.username;
+        return {
+          ...prev,
+          isFollowing: nowFollowing,
+          followersCount: nowFollowing
+            ? (prev.followersCount || 0) + 1
+            : Math.max(0, (prev.followersCount || 0) - 1),
+        };
+      }
+      return prev;
+    });
+
+    setPosts((prev) =>
+      prev.map((p) => {
+        if (p.author.id === userId) {
+          if (!targetUsername) targetUsername = p.author.username;
+          const updatedFollowing = !p.author.isFollowing;
+          nowFollowing = updatedFollowing;
+          return {
+            ...p,
+            author: {
+              ...p.author,
+              isFollowing: updatedFollowing,
+              followersCount: updatedFollowing
+                ? (p.author.followersCount || 0) + 1
+                : Math.max(0, (p.author.followersCount || 0) - 1),
+            },
+          };
+        }
+        return p;
+      })
+    );
+
+    setConversations((prev) =>
+      prev.map((c) => {
+        if (c.participant.id === userId) {
+          return {
+            ...c,
+            participant: {
+              ...c.participant,
+              isFollowing: !c.participant.isFollowing,
+            },
+          };
+        }
+        return c;
+      })
+    );
+
+    setCurrentUser((prev) => ({
+      ...prev,
+      followingCount: nowFollowing
+        ? (prev.followingCount ?? 0) + 1
+        : Math.max(0, (prev.followingCount ?? 0) - 1),
+    }));
+
+    triggerShareToast(nowFollowing ? `Following @${targetUsername || 'user'}` : `Unfollowed @${targetUsername || 'user'}`);
+    toggleFollowUserMutation({ targetUserId: userId as any }).catch(console.error);
+  }, 'Sign in to follow this user');
+
+  const createPage = async ({
+    name,
+    username,
+    category,
+    description,
+    type,
+    location: pageLoc,
+    avatar,
+    coverImage,
+    activeTools,
+    teamInvites,
+  }: {
+    name: string;
+    username: string;
+    category: string;
+    description: string;
+    type: Page['type'];
+    location: string;
+    avatar?: string;
+    coverImage?: string;
+    activeTools?: string[];
+    teamInvites?: { username: string; role: string }[];
+  }) => {
+    try {
+      const newPageId = await createPageMutation({
+        name,
+        username,
+        category,
+        description,
+        type,
+        location: pageLoc || `${location.name}, ${location.subArea}`,
+        avatar,
+        coverImage,
+        activeTools: activeTools ?? [],
+        teamInvites: (teamInvites ?? []).map(t => ({ username: t.username, role: t.role as any })),
+      });
+      setCreateFlowType(null);
+      setIsCreateSheetOpen(false);
+      setActivePageId(newPageId);
+      triggerShareToast(`Page "${name}" successfully created!`);
+      return newPageId;
+    } catch (err) {
+      console.error("Failed to create page", err);
+      triggerShareToast(`Failed to create page.`);
+      throw err;
+    }
+  };
+
+  const updatePage = async (pageId: string, updatedData: Partial<Page>) => {
+    try {
+      await updatePageMutation({
+        pageId: pageId as any,
+        name: updatedData.name,
+        username: updatedData.username,
+        type: updatedData.type as any,
+        badge: updatedData.badge as any,
+        category: updatedData.category,
+        description: updatedData.description,
+        location: updatedData.location,
+        avatar: updatedData.avatar,
+        coverImage: updatedData.coverImage,
+        aboutInfo: updatedData.aboutInfo,
+        globalDiscoveryStatus: updatedData.globalDiscoveryStatus,
+        serviceAreas: updatedData.serviceAreas,
+        isOnlineBusiness: updatedData.isOnlineBusiness,
+      });
+      setPages((prev) =>
+        prev.map((p) => (p.id === pageId ? { ...p, ...updatedData } : p))
+      );
+      triggerShareToast('Page details updated successfully!');
+    } catch (err) {
+      console.error("Failed to update page", err);
+      triggerShareToast('Failed to update page.');
+    }
+  };
+
+  const deletePage = async (pageId: string) => {
+    try {
+      await deletePageMutation({ pageId: pageId as any });
+      triggerShareToast('Page deleted successfully.');
+      setActivePageId(null);
+    } catch (err) {
+      console.error("Failed to delete page", err);
+      triggerShareToast('Failed to delete page.');
+      throw err;
+    }
+  };
+
+  const createPagePost = (
+    pageId: string,
+    postData: {
+      text: string;
+      mediaUrl?: string;
+      mediaType?: 'image' | 'video';
+      location?: string;
+    }
+  ) => {
+    const targetPage = pages.find((p) => p.id === pageId);
+    if (!targetPage) return;
+
+    const newPost: Post = {
+      id: `post_page_${Date.now()}`,
+      author: {
+        id: targetPage.id,
+        name: targetPage.name,
+        username: targetPage.username,
+        avatar: targetPage.avatar,
+        userType: targetPage.type || 'business',
+        badge: targetPage.badge,
+        followersCount: targetPage.followersCount || 0,
+        followingCount: 0,
+        isVerified: true,
+        location: targetPage.location,
+      },
+      text: postData.text,
+      mediaUrl: postData.mediaUrl,
+      mediaType: postData.mediaType || 'image',
+      location: postData.location || targetPage.location,
+      distanceMeters: 0,
+      pageRefId: targetPage.id,
+      createdAt: 'Just now',
+      likesCount: 0,
+      repostsCount: 0,
+      commentsCount: 0,
+      isLiked: false,
+      isReposted: false,
+      comments: [],
+    };
+
+    setPosts((prev) => [newPost, ...prev]);
+    triggerShareToast(`Post published to ${targetPage.name}!`);
+  };
+
+  const createPageEvent = async (pageId: string, eventData: Partial<OrgEvent>) => {
+    try {
+      await createPageEventMutation({
+        pageId: pageId as any,
+        title: eventData.title,
+        type: eventData.type,
+        coverImage: eventData.coverImage,
+        date: eventData.date,
+        time: eventData.time,
+        location: eventData.location,
+        isOnline: eventData.isOnline,
+        registrationStatus: eventData.registrationStatus,
+        isTournament: eventData.isTournament,
+        isTicketed: eventData.isTicketed,
+        ticketPrice: eventData.ticketPrice,
+        prizePool: eventData.prizePool,
+        prizeCurrency: eventData.prizeCurrency,
+        description: eventData.description,
+        availableTickets: eventData.availableTickets,
+        totalTickets: eventData.totalTickets,
+        rules: eventData.rules,
+        schedule: eventData.schedule,
+      });
+      triggerShareToast('Event created successfully!');
+    } catch (err) {
+      console.error("Failed to create page event", err);
+      triggerShareToast('Failed to create event.');
+    }
+  };
+
+  const updatePageEvent = (eventId: string, eventData: Partial<OrgEvent>) => {
+    setEvents((prev) =>
+      prev.map((e) => (e.id === eventId ? { ...e, ...eventData } : e))
+    );
+    setPages((prev) =>
+      prev.map((p) => ({
+        ...p,
+        events: (p.events || []).map((e) =>
+          e.id === eventId ? { ...e, ...eventData } : e
+        ),
+      }))
+    );
+    triggerShareToast('Event updated successfully!');
+  };
+
+  const deletePageEvent = (eventId: string) => {
+    setEvents((prev) => prev.filter((e) => e.id !== eventId));
+    setPages((prev) =>
+      prev.map((p) => ({
+        ...p,
+        events: (p.events || []).filter((e) => e.id !== eventId),
+      }))
+    );
+    triggerShareToast('Event cancelled/removed');
+  };
+
+  const updatePageMonetization = (
+    pageId: string,
+    monetizationUpdate: Partial<PageMonetization>
+  ) => {
+    setPages((prev) =>
+      prev.map((p) => {
+        if (p.id !== pageId) return p;
+        const currentMon = p.monetization || {
+          enabled: true,
+          totalEarnings: 0,
+          availableBalance: 0,
+          pendingPayout: 0,
+        };
+        return {
+          ...p,
+          monetization: {
+            ...currentMon,
+            ...monetizationUpdate,
+          },
+        };
+      })
+    );
+    triggerShareToast('Monetization settings saved!');
+  };
+
+  const addPageProduct = (pageId: string, productData: Partial<ShopProduct>) => {
+    const newProduct: ShopProduct = {
+      id: `prod_${Date.now()}`,
+      name: productData.name || 'New Product',
+      price: productData.price || 0,
+      currency: productData.currency || 'NGN',
+      image:
+        productData.image ||
+        'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80',
+      description: productData.description || '',
+      category: productData.category || 'General',
+      inStock: productData.inStock ?? true,
+      rating: 5.0,
+      reviewsCount: 1,
+    };
+
+    setPages((prev) =>
+      prev.map((p) =>
+        p.id === pageId
+          ? { ...p, products: [newProduct, ...(p.products || [])] }
+          : p
+      )
+    );
+    triggerShareToast('Product added to storefront!');
+  };
+
+  const deletePageProduct = (pageId: string, productId: string) => {
+    setPages((prev) =>
+      prev.map((p) =>
+        p.id === pageId
+          ? {
+              ...p,
+              products: (p.products || []).filter((prod) => prod.id !== productId),
+            }
+          : p
+      )
+    );
+    triggerShareToast('Product removed from storefront');
+  };
+
+  const toggleJoinCycle = (cycleId: string) => {
+    setCycles((prev) =>
+      prev.map((c) => {
+        if (c.id === cycleId) {
+          const cycleMembers = c.members ?? [];
+          const isMember = !c.isMember;
+          const members = isMember
+            ? [...cycleMembers, { ...currentUser, role: 'member' as const }]
+            : cycleMembers.filter((m) => m.id !== currentUser.id);
+          const nextCount = (c.memberCount ?? cycleMembers.length) || 0;
+
+          return {
+            ...c,
+            isMember,
+            memberCount: isMember ? nextCount + 1 : Math.max(1, nextCount - 1),
+            members,
+          };
+        }
+        return c;
+      })
+    );
+  };
+
+  const createCycle = ({
+    name,
+    description,
+    category,
+    location: cycleLoc,
+  }: {
+    name: string;
+    description: string;
+    category: string;
+    location: string;
+  }) => {
+    const newCycle: Cycle = {
+      id: `cycle_${Date.now()}`,
+      name,
+      description,
+      avatar: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&auto=format&fit=crop&q=80',
+      user: currentUser,
+      items: [
+        {
+          id: `item_${Date.now()}`,
+          mediaType: 'text',
+          text: `Welcome to my new cycle "${name}"! ${description}`,
+          backgroundColor: '#5E43F3',
+          textColor: '#ffffff',
+          createdAt: 'Just now',
+          timeRemaining: '24h left',
+          location: cycleLoc || location.name,
+          viewsCount: 0,
+          viewers: [],
+          likesCount: 0,
+        },
+      ],
+      hasUnseen: false,
+      updatedAt: 'Just now',
+      memberCount: 1,
+      members: [{ ...currentUser, role: 'admin' }],
+      lastActive: 'Just now',
+      recentMessagesCount: 0,
+      isMember: true,
+      category,
+      location: cycleLoc || location.name,
+      messages: [
+        {
+          id: `cm_${Date.now()}`,
+          senderId: currentUser.id,
+          senderName: currentUser.name,
+          senderAvatar: currentUser.avatar,
+          text: `Welcome to ${name}! Let's build something great together.`,
+          timestamp: 'Just now',
+          isMine: true,
+        },
+      ],
+    };
+
+    setCycles([newCycle, ...cycles]);
+    setActiveCycleId(newCycle.id);
+    setActiveTab('messages');
+    triggerShareToast(`Cycle "${name}" created!`);
+  };
+
+  const sendCycleMessage = (cycleId: string, text: string) => {
+    if (!text.trim()) return;
+    const newMsg = {
+      id: `cm_${Date.now()}`,
+      senderId: currentUser.id,
+      senderName: currentUser.name,
+      senderAvatar: currentUser.avatar,
+      text: text.trim(),
+      timestamp: 'Just now',
+      isMine: true,
+    };
+
+    setCycles((prev) =>
+      prev.map((c) => {
+        if (c.id === cycleId) {
+          return {
+            ...c,
+            lastActive: 'Just now',
+            messages: c.messages ? [...c.messages, newMsg] : [newMsg],
+          };
+        }
+        return c;
+      })
+    );
+  };
+
+  // Cycle (WhatsApp-Status / Instagram-Story with Hyperlocal twist)
+  const openCycleStory = (cycleId: string, itemIndex: number = 0) => {
+    setActiveCycleId(cycleId);
+    setActiveStoryIndex(itemIndex);
+    // Mark cycle as viewed in local state
+    setCycles((prev) =>
+      prev.map((c) => (c.id === cycleId ? { ...c, hasUnseen: false } : c))
+    );
+
+    const targetCycle = cycles.find((c) => c.id === cycleId);
+    const storyItem = targetCycle?.items?.[itemIndex];
+    if (storyItem && !storyItem.id.startsWith('si_') && !storyItem.id.startsWith('item_')) {
+      viewStoryMutation({ storyId: storyItem.id as any }).catch(console.error);
+    }
+  };
+
+  const closeCycleStory = () => {
+    setActiveCycleId(null);
+    setActiveStoryIndex(0);
+  };
+
+  const postCycleStory = async ({
+    mediaType,
+    mediaUrl,
+    mediaStorageId,
+    text,
+    backgroundColor,
+    caption,
+    audience,
+    location: storyLoc,
+    duration,
+  }: {
+    mediaType: 'image' | 'video' | 'audio' | 'text';
+    mediaUrl?: string;
+    mediaStorageId?: string;
+    text?: string;
+    backgroundColor?: string;
+    caption?: string;
+    audience?: 'community' | 'nearby' | 'friends';
+    location?: string;
+    duration?: number;
+  }) => {
+    const newItem: CycleStoryItem = {
+      id: `si_${Date.now()}`,
+      mediaType,
+      mediaUrl,
+      text,
+      backgroundColor: backgroundColor || 'from-violet-600 to-indigo-700',
+      caption,
+      audience,
+      createdAt: 'Just now',
+      timeRemaining: '24h left',
+      location: storyLoc || location.name,
+      distanceMeters: 0,
+      viewsCount: 0,
+      likesCount: 0,
+      isLiked: false,
+      viewers: [],
+    };
+
+    setCycles((prev) => {
+      const myIndex = prev.findIndex((c) => c.user?.id === currentUser.id || c.id === 'cycle_user_me');
+      if (myIndex >= 0) {
+        const updated = [...prev];
+        updated[myIndex] = {
+          ...updated[myIndex],
+          updatedAt: 'Just now',
+          items: [newItem, ...updated[myIndex].items],
+        };
+        return updated;
+      } else {
+        const newCycle: Cycle = {
+          id: `cycle_user_${currentUser.id}`,
+          user: currentUser,
+          name: currentUser.name,
+          avatar: currentUser.avatar,
+          description: 'My 24-hour Cycle status updates',
+          location: storyLoc || location.name,
+          distanceMeters: 0,
+          hasUnseen: false,
+          updatedAt: 'Just now',
+          items: [newItem],
+        };
+        return [newCycle, ...prev];
+      }
+    });
+
+    setIsCreateCycleOpen(false);
+    triggerShareToast('Status posted to your 24h Cycle!');
+
+    try {
+      await postCycleStoryMutation({
+        mediaType,
+        mediaUrl: mediaStorageId ? undefined : mediaUrl,
+        mediaStorageId: mediaStorageId as any,
+        text,
+        backgroundColor,
+        caption,
+        audience,
+        location: storyLoc || location.name,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        duration,
+      });
+    } catch (err) {
+      console.error('Failed to persist cycle story to Convex:', err);
+    }
+  };
+
+  const reactToCycleStory = (cycleId: string, itemId: string, emoji: string) => {
+    setCycles((prev) =>
+      prev.map((c) => {
+        if (c.id !== cycleId) return c;
+        return {
+          ...c,
+          items: c.items.map((item) => {
+            if (item.id !== itemId) return item;
+            const isLiked = !item.isLiked;
+            return {
+              ...item,
+              isLiked,
+              likesCount: (item.likesCount || 0) + (isLiked ? 1 : -1),
+            };
+          }),
+        };
+      })
+    );
+    triggerShareToast(`Reacted ${emoji} to status`);
+
+    if (!itemId.startsWith('si_') && !itemId.startsWith('item_')) {
+      toggleLikeStoryMutation({ storyId: itemId as any }).catch(console.error);
+    }
+  };
+
+  const replyToCycleStory = (cycleId: string, itemId: string, messageText: string) => {
+    if (!messageText.trim()) return;
+    const cycle = cycles.find((c) => c.id === cycleId);
+    if (!cycle) return;
+
+    const targetUser = cycle.user;
+    const dmText = `Replied to your Cycle status: "${messageText.trim()}"`;
+
+    // Add reply to cycle item state
+    const newReply = {
+      id: `rep_${Date.now()}`,
+      user: {
+        id: currentUser.id,
+        name: currentUser.name,
+        username: currentUser.username,
+        avatar: currentUser.avatar,
+      },
+      text: messageText.trim(),
+      createdAt: 'Just now',
+    };
+
+    setCycles((prev) =>
+      prev.map((c) => {
+        if (c.id !== cycleId) return c;
+        return {
+          ...c,
+          items: c.items.map((item) => {
+            if (item.id !== itemId) return item;
+            const prevReplies = item.replies || [];
+            return {
+              ...item,
+              repliesCount: (item.repliesCount || prevReplies.length) + 1,
+              replies: [newReply, ...prevReplies],
+            };
+          }),
+        };
+      })
+    );
+
+    if (!itemId.startsWith('si_') && !itemId.startsWith('item_')) {
+      replyToStoryMutation({ storyId: itemId as any, replyText: messageText.trim() }).catch(console.error);
+    }
+
+    // Route through backend: get or create a real conversation, then send the message
+    if (targetUser.id && !targetUser.id.startsWith('user_')) {
+      getOrCreateConversationMutation({ otherUserId: targetUser.id as any })
+        .then((convId) => {
+          sendMessageMutation({ conversationId: convId, text: dmText, pageSenderId: undefined }).catch(console.error);
+        })
+        .catch(console.error);
+    } else {
+      // Fallback for local-only users
+      let conv = conversations.find((c) => c.participant.id === targetUser.id);
+      if (conv) {
+        sendDirectMessage(conv.id, dmText);
+      }
+    }
+    triggerShareToast(`Comment sent to @${targetUser.username || targetUser.name}!`);
+  };
+
+  const deleteCycleStoryItem = (itemId: string) => {
+    setCycles((prev) =>
+      prev
+        .map((c) => ({
+          ...c,
+          items: (c.items || []).filter((item) => item.id !== itemId),
+        }))
+        .filter((c) => (c.items?.length || 0) > 0 || c.user?.id !== currentUser?.id)
+    );
+    triggerShareToast('Status removed from Cycle');
+
+    if (!itemId.startsWith('si_') && !itemId.startsWith('item_')) {
+      deleteStoryItemMutation({ storyId: itemId as any }).catch(console.error);
+    }
+  };
+
+  const sendDirectMessage = (
+    conversationId: string, 
+    text: string, 
+    stickerId?: string, 
+    replyToMessageId?: string, 
+    audioStorageId?: string, 
+    audioDuration?: number,
+    options?: {
+      type?: 'text' | 'image' | 'video';
+      mediaStorageId?: string;
+      mimeType?: string;
+      fileName?: string;
+      fileSize?: number;
+      viewOnce?: boolean;
+    }
+  ) => {
+    if (!text.trim() && !stickerId && !audioStorageId && !options?.mediaStorageId) return;
+    
+    let msgText = text.trim();
+    if (audioStorageId) msgText = '🎙️ Voice note';
+    else if (options?.type === 'image') msgText = text.trim() || '📷 Photo';
+    else if (options?.type === 'video') msgText = text.trim() || '🎥 Video';
+    else if (stickerId) msgText = text.trim() || 'Sent a sticker';
+
+    // Always send through the backend — the reactive useQuery(listConversations)
+    // will automatically deliver the message to both sender and recipient.
+    if (!conversationId.startsWith('conv_') && !conversationId.startsWith('mock_')) {
+      sendMessageMutation({
+        conversationId: conversationId as any,
+        text: msgText,
+        pageSenderId: undefined,
+        replyToMessageId: replyToMessageId as any,
+        audioStorageId: audioStorageId as any,
+        audioDuration,
+        type: options?.type,
+        mediaStorageId: options?.mediaStorageId as any,
+        mimeType: options?.mimeType,
+        fileName: options?.fileName,
+        fileSize: options?.fileSize,
+        viewOnce: options?.viewOnce,
+      }).catch(console.error);
+    }
+  };
+
+  const editMessage = (messageId: string, newText: string) => {
+    editMessageMutation({ messageId: messageId as any, text: newText }).catch(console.error);
+  };
+
+  const deleteMessage = (messageId: string) => {
+    deleteMessageMutation({ messageId: messageId as any }).catch(console.error);
+  };
+
+  const markConversationRead = (conversationId: string) => {
+    // Call the backend mutation to mark messages and notifications as read
+    if (!conversationId.startsWith('conv_') && !conversationId.startsWith('mock_')) {
+      markConversationReadMutation({ conversationId: conversationId as any }).catch(console.error);
+    }
+  };
+
+  const markNotificationsAsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  };
+
+  const markAllNotificationsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    markAllNotificationsReadMutation().catch(console.error);
+  };
+
+  const markNotificationRead = (id: string) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+    markNotificationReadMutation({ id: id as any }).catch(console.error);
+  };
+
+  const openChatWithUser = async (user: User, initialMessage?: string) => {
+    // Check if there's already a backend conversation in local state
+    const existing = conversations.find(
+      (c) => c.participant.id === user.id || c.participant.username === user.username
+    );
+
+    if (existing) {
+      setActiveChatId(existing.id);
+      if (initialMessage) {
+        sendDirectMessage(existing.id, initialMessage);
+      }
+      setActiveTab('messages');
+      return;
+    }
+
+    // Create or find the conversation via backend mutation
+    try {
+      const convId = await getOrCreateConversationMutation({ otherUserId: user.id as any });
+      setActiveChatId(convId as string);
+      if (initialMessage) {
+        sendDirectMessage(convId as string, initialMessage);
+      }
+      setActiveTab('messages');
+    } catch (err) {
+      console.error('Failed to create conversation:', err);
+      // Fallback: still navigate to messages
+      setActiveTab('messages');
+    }
+  };
+
+  const unreadNotifsCount = notifications.filter((n) => !n.isRead && n.type !== 'message').length;
+
+  return (
+    <LalaoContext.Provider
+      value={{
+        currentUser: effectiveCurrentUser,
+        setCurrentUser,
+        activeTab,
+        setActiveTab,
+        isAuthPromptOpen,
+        authPromptMessage,
+        showAuthPrompt,
+        closeAuthPrompt,
+        requireAuth,
+        feedTab,
+        setFeedTab,
+        location,
+        setLocation,
+        radiusKm: location.radiusKm,
+        setRadiusKm: updateRadius,
+        locationPrivacy,
+        setLocationPrivacy,
+        updateRadius,
+        nearbySort,
+        setNearbySort,
+        detectGpsLocation,
+        isDetectingGps,
+        isFeedLoading: feedPostsQuery === undefined,
+        posts,
+        rallies,
+        pages,
+        cycles,
+        conversations,
+        messageContacts,
+        notifications,
+        unreadNotifsCount,
+        toggleLikePost,
+        toggleRepostPost,
+        deletePost,
+        addComment,
+        toggleLikeComment,
+        createPost,
+        saveDraft,
+        getDrafts,
+        deleteDraft,
+        toggleJoinRally,
+        joinRally: toggleJoinRally,
+        createRally,
+        toggleFollowPage,
+        createPage,
+        updatePage,
+        deletePage,
+        createPagePost,
+        createPageEvent,
+        updatePageEvent,
+        deletePageEvent,
+        updatePageMonetization,
+        addPageProduct,
+        deletePageProduct,
+        toggleJoinCycle,
+        createCycle,
+        sendCycleMessage,
+        permissions,
+        activePermissionPrompt,
+        setActivePermissionPrompt,
+        isPermissionsModalOpen,
+        setIsPermissionsModalOpen,
+        requestPermission,
+        updatePermission,
+        pushEnabled,
+        enablePushNotifications,
+        activeStoryIndex,
+        setActiveStoryIndex,
+        openCycleStory,
+        closeCycleStory,
+        postCycleStory,
+        reactToCycleStory,
+        replyToCycleStory,
+        deleteCycleStoryItem,
+        isCreateCycleOpen,
+        setIsCreateCycleOpen,
+        activeVideoFeedPostId,
+        setActiveVideoFeedPostId,
+        sendDirectMessage,
+        editMessage,
+        deleteMessage,
+        markConversationRead,
+        markNotificationsAsRead,
+        markAllNotificationsRead,
+        markNotificationRead,
+        isCreateSheetOpen,
+        setIsCreateSheetOpen,
+        createFlowType,
+        setCreateFlowType,
+        isCreateGroupChatOpen,
+        setIsCreateGroupChatOpen,
+        isCreateGroupCycleOpen,
+        setIsCreateGroupCycleOpen,
+        isLocationModalOpen,
+        setIsLocationModalOpen,
+        isNotificationsOpen,
+        setIsNotificationsOpen,
+        activeChatId,
+        setActiveChatId,
+        openChatWithUser,
+        activeCycleId,
+        setActiveCycleId,
+        activePageId,
+        setActivePageId,
+        activeGroupId,
+        setActiveGroupId,
+        isManageGroupOpen,
+        setIsManageGroupOpen,
+        activeUserProfile,
+        setActiveUserProfile,
+        toggleFollowUser,
+        composerInitialText,
+        setComposerInitialText,
+        activeCommentsPostId,
+        setActiveCommentsPostId,
+        shareToast,
+        triggerShareToast,
+        isEditProfileOpen,
+        setIsEditProfileOpen,
+        cart,
+        cartCount,
+        addToCart,
+        removeFromCart,
+        updateCartQuantity,
+        clearCart,
+        isCartOpen,
+        setIsCartOpen,
+        savedProductIds,
+        toggleSaveProduct,
+        isProductSaved,
+        selectedShopProduct,
+        setSelectedShopProduct,
+        selectedProductStore,
+        setSelectedProductStore,
+        orders,
+        userOrders,
+        addOrder,
+        isShoppingHistoryOpen,
+        setIsShoppingHistoryOpen,
+        selectedOrderForDetail,
+        setSelectedOrderForDetail,
+        events,
+        tickets,
+        activeTickets,
+        ticketHistory,
+        activeTicketsCount,
+        addTicket,
+        isMyTicketsOpen,
+        setIsMyTicketsOpen,
+        selectedTicketForPass,
+        setSelectedTicketForPass,
+        selectedEventForDetail,
+        setSelectedEventForDetail,
+        isEventDetailOpen,
+        setIsEventDetailOpen,
+        isTournamentRegisterOpen,
+        setIsTournamentRegisterOpen,
+        registeringEvent,
+        setRegisteringEvent,
+        isTicketPurchaseOpen,
+        setIsTicketPurchaseOpen,
+        purchasingEvent,
+        setPurchasingEvent,
+        teamRegistrations,
+        addTeamRegistration,
+        openHonorOfKingsPage,
+        savedTeams,
+        saveTeam,
+        deleteTeam,
+        wallet,
+        isWalletModalOpen,
+        setIsWalletModalOpen,
+        topUpWallet,
+        payWithWallet,
+        subscription,
+        isCreatorPremiumActive,
+        cancelUserSubscription,
+        subscribeUserToTier,
+        isCreatorHubOpen,
+        setIsCreatorHubOpen,
+        isCreatorSubscriptionOpen,
+        setIsCreatorSubscriptionOpen,
+        creatorSubscriptionInitialTier,
+        setCreatorSubscriptionInitialTier,
+        openCreatorSubscription,
+        openCreatorHub,
+        activeTopics,
+        updateHomePreference,
+        updateUserProfile,
+        generateCloudinarySignature,
+        featureFlags,
+        discoverSearchQuery,
+        setDiscoverSearchQuery,
+        activeSoundId,
+        setActiveSoundId,
+        isCreateSoundOpen,
+        setIsCreateSoundOpen,
+        openSoundDetail,
+        openCreateSound,
+      }}
+    >
+      {children}
+    </LalaoContext.Provider>
+  );
+};
+
+export const useLalao = () => {
+  const context = useContext(LalaoContext);
+  if (!context) {
+    throw new Error('useLalao must be used within a LalaoProvider');
+  }
+  return context;
+};

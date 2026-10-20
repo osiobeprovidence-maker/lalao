@@ -1,0 +1,6 @@
+{
+  "name": "Lalao",
+  "description": "A modern local-first social platform combining clean social-feed UX, local communities, location discovery, Cycles, and actionable Rallies.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
