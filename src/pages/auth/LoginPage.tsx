@@ -226,11 +226,11 @@ export const LoginPage: React.FC = () => {
               className="w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border border-black/10 dark:border-white/15 bg-black text-white hover:bg-neutral-900 text-sm font-semibold transition-all cursor-pointer active:scale-[0.98] shadow-sm"
             >
               <img 
-                src="https://one.playsole.xyz/logo.svg" 
-                alt="Playsole One" 
+                src="https://one.playsole.xyz/brand/playsole-logo.png" 
+                alt="Playsole" 
                 className="w-4 h-4 object-contain" 
                 onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = 'https://one.playsole.xyz/brand/logo-icon-256.png';
+                  (e.currentTarget as HTMLImageElement).src = 'https://one.playsole.xyz/brand/playsole-logo.png';
                 }} 
               />
               <span>Sign in with Playsole</span>

@@ -176,14 +176,14 @@ export const SignUpPage: React.FC = () => {
                 className="w-full py-3.5 rounded-xl border border-black/10 dark:border-white/15 bg-black text-white hover:bg-neutral-900 font-bold text-base flex items-center justify-center gap-3 active:scale-[0.98] transition-all cursor-pointer shadow-sm"
               >
                 <img 
-                  src="https://one.playsole.xyz/logo.svg" 
-                  alt="Playsole One" 
+                  src="https://one.playsole.xyz/brand/playsole-logo.png" 
+                  alt="Playsole" 
                   className="w-5 h-5 object-contain" 
                   onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src = 'https://one.playsole.xyz/brand/logo-icon-256.png';
+                    (e.currentTarget as HTMLImageElement).src = 'https://one.playsole.xyz/brand/playsole-logo.png';
                   }} 
                 />
-                <span>Continue with Playsole</span>
+                <span>Sign in with Playsole</span>
               </button>
 
               <button
