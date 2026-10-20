@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { handlePlaysoleCallback } from '../../lib/playsoleAuth';
+import { handlePlaysoleCallback, initiatePlaysoleLogin } from '../../lib/playsoleAuth';
 import { AppIcon } from '../../components/common/AppIcon';
 import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 
@@ -113,10 +113,19 @@ export const PlaysoleCallbackPage: React.FC = () => {
               <h2 className="text-xl font-bold text-theme-primary">Sign-In Failed</h2>
               <p className="text-sm text-theme-secondary mt-1 max-w-xs mx-auto">{error}</p>
             </div>
-            <div className="pt-2">
+            <div className="pt-2 space-y-2.5">
+              <button
+                type="button"
+                onClick={() => initiatePlaysoleLogin()}
+                className="w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border border-black/10 dark:border-white/15 bg-black text-white hover:bg-neutral-900 text-sm font-semibold transition-all cursor-pointer active:scale-[0.98] shadow-md"
+              >
+                <img src="https://one.playsole.xyz/brand/playsole-logo.png" alt="Playsole" className="w-4 h-4 object-contain" />
+                <span>Re-authorize with Playsole</span>
+              </button>
+
               <Link
                 to="/login"
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#5E43F3] hover:bg-[#4E34E0] text-white text-sm font-semibold transition-all shadow-md active:scale-95 cursor-pointer"
+                className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-theme-divider hover:bg-theme-surface-hover text-theme-secondary text-sm font-medium transition-all cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span>Back to Sign In</span>

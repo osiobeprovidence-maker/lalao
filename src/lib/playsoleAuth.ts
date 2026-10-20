@@ -209,15 +209,31 @@ export async function handlePlaysoleCallback(
   let userProfile: PlaysoleUserProfile = { sub: '' };
 
   if (exchangeFn) {
-    try {
-      const serverResult = await exchangeFn({ code, codeVerifier: verifier, redirectUri });
-      tokenData = serverResult.tokens;
-      if (serverResult.userProfile) {
-        userProfile = serverResult.userProfile;
+    let lastError: any = null;
+    let serverResult: any = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        serverResult = await exchangeFn({ code, codeVerifier: verifier, redirectUri });
+        break;
+      } catch (serverErr: any) {
+        lastError = serverErr;
+        const msg = String(serverErr?.message || serverErr);
+        if (msg.includes('Connection lost') && attempt === 1) {
+          // Wait 500ms and retry once if the connection was briefly interrupted
+          await new Promise((r) => setTimeout(r, 500));
+          continue;
+        }
+        break;
       }
-    } catch (serverErr: any) {
-      console.warn('Backend exchange failed, attempting direct PKCE exchange:', serverErr);
-      tokenData = await directTokenExchange(code, verifier, redirectUri);
+    }
+
+    if (!serverResult) {
+      throw new Error(lastError?.message || 'Server failed to exchange Playsole authorization code.');
+    }
+
+    tokenData = serverResult.tokens;
+    if (serverResult.userProfile) {
+      userProfile = serverResult.userProfile;
     }
   } else {
     tokenData = await directTokenExchange(code, verifier, redirectUri);
