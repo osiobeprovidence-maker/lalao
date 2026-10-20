@@ -31,6 +31,8 @@ export const PushNotificationSettings: React.FC = () => {
             body: 'Desktop notifications are appearing on this device.',
             icon: '/icon-192.png',
             tag: 'lalao-local-notification-test',
+            requireInteraction: true,
+            renotify: true,
           });
         } catch (notificationError) {
           // Still run the server push test if the browser blocks page-created notifications.

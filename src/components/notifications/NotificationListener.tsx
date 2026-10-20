@@ -38,18 +38,13 @@ export const NotificationListener: React.FC = () => {
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = useCallback((payload: PushNotificationPayload) => {
-    // Already looking at the notifications list: it updates live, no toast needed.
-    if (resolveNotificationTab(payload.url) === 'notifications' && activeTabRef.current === 'notifications') {
-      return;
-    }
-
     if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
     setToast(payload);
-    // Auto-dismiss after 5 seconds
+    // Keep toast visible for 7 seconds
     dismissTimerRef.current = setTimeout(() => {
       dismissTimerRef.current = null;
       setToast(null);
-    }, 5000);
+    }, 7000);
   }, []);
 
   useEffect(() => {
@@ -134,7 +129,7 @@ export const NotificationListener: React.FC = () => {
   return (
     <div
       onClick={handleToastClick}
-      className="fixed top-4 right-4 sm:top-6 sm:right-6 z-50 w-full max-w-sm cursor-pointer animate-in fade-in slide-in-from-top-4 duration-300"
+      className="fixed top-4 right-4 sm:top-6 sm:right-6 z-[9999] w-full max-w-sm cursor-pointer animate-in fade-in slide-in-from-top-4 duration-300"
     >
       <div className="bg-theme-surface border border-theme-divider-strong shadow-2xl rounded-2xl p-4 flex items-start gap-3 hover:bg-theme-surface-hover transition-colors">
         {toast.icon && (

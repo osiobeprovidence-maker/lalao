@@ -91,11 +91,14 @@ self.addEventListener('push', (event) => {
       const conversationId = data.conversationId || clickData.conversationId;
       const targetUrl = data.url || clickData.url || (conversationId ? `/app?chat=${conversationId}` : '/app');
 
+      const tag = data.tag || (conversationId ? `chat-${conversationId}` : undefined);
       const options = {
         body: data.body || data.title,
         icon: data.icon || '/icon-192.png',
         badge: data.badge || '/icon-192.png',
-        tag: data.tag || (conversationId ? `chat-${conversationId}` : undefined),
+        tag,
+        renotify: Boolean(tag),
+        requireInteraction: true,
         data: {
           url: targetUrl,
           conversationId,
