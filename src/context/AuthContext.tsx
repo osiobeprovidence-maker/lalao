@@ -66,11 +66,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
-  // Determine active user (Firebase prioritized if present, otherwise Playsole)
-  const isPlaysole = !firebaseUser && !!playsoleSession;
-  const unifiedUser: User | UnifiedAuthUser | null = firebaseUser
-    ? firebaseUser
-    : playsoleSession
+  // Determine active user (Playsole prioritized if active, otherwise Firebase)
+  const isPlaysole = !!playsoleSession;
+  const unifiedUser: User | UnifiedAuthUser | null = playsoleSession
     ? {
         uid: playsoleSession.user.sub,
         email: playsoleSession.user.email ?? null,
@@ -79,26 +77,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         provider: 'playsole',
         getIdToken: async () => refreshPlaysoleTokenIfNeeded(),
       }
-    : null;
+    : firebaseUser;
 
   const fetchAccessToken = async ({ forceRefreshToken }: { forceRefreshToken: boolean }) => {
-    // 1. If Firebase user is active
+    // 1. If Playsole One session is active, prioritize Playsole OIDC token
+    if (playsoleSession) {
+      try {
+        const token = await refreshPlaysoleTokenIfNeeded();
+        if (token) return token;
+      } catch (error) {
+        console.warn('Error fetching Playsole token:', error);
+      }
+    }
+
+    // 2. Fallback to Firebase user if active
     if (firebaseUser ?? auth.currentUser) {
       try {
         const u = firebaseUser ?? auth.currentUser;
         return await u!.getIdToken(forceRefreshToken);
       } catch (error) {
         console.warn('Error fetching Firebase token:', error);
-      }
-    }
-
-    // 2. If Playsole One session is active
-    if (playsoleSession) {
-      try {
-        const token = await refreshPlaysoleTokenIfNeeded();
-        return token;
-      } catch (error) {
-        console.warn('Error fetching Playsole token:', error);
       }
     }
 

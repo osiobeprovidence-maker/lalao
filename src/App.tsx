@@ -57,6 +57,7 @@ import { CreatorHubView } from './components/creators/CreatorHubModal';
 import { VerificationPageView } from './components/creators/VerificationPageView';
 import { BetaTesterView } from './components/beta/BetaTesterView';
 import { AdvertiserDashboard } from './components/ads/AdvertiserDashboard';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { InstallAppModal } from './components/common/InstallAppModal';
 import { Check, Plus } from 'lucide-react';
 
@@ -458,7 +459,14 @@ const LalaoAppContent: React.FC = () => {
             )}
             {activeTab === 'ads' && (
               <div key="tab-ads" className="animate-in fade-in duration-200 w-full bg-transparent pb-24">
-                <AdvertiserDashboard />
+                <ErrorBoundary fallback={
+                  <div className="p-8 text-center max-w-lg mx-auto bg-theme-surface rounded-2xl border border-theme-divider mt-6 space-y-3">
+                    <p className="font-semibold text-theme-primary">Advertiser Dashboard</p>
+                    <p className="text-sm text-theme-secondary">Preparing advertising analytics and campaign tools...</p>
+                  </div>
+                }>
+                  <AdvertiserDashboard />
+                </ErrorBoundary>
               </div>
             )}
             {activeTab === 'following' && (

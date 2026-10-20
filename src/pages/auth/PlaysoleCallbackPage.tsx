@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { useMutation, useAction } from 'convex/react';
+import { useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { handlePlaysoleCallback, initiatePlaysoleLogin } from '../../lib/playsoleAuth';
 import { AppIcon } from '../../components/common/AppIcon';
@@ -9,7 +9,6 @@ import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 export const PlaysoleCallbackPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const createUserRecord = useMutation(api.users.createUserRecord);
   const exchangeAuthCode = useAction((api as any).playsole?.exchangeAuthCode || 'skip');
 
   const [statusMessage, setStatusMessage] = useState('Verifying credentials with Playsole One...');
@@ -68,15 +67,13 @@ export const PlaysoleCallbackPage: React.FC = () => {
           }
         }
 
-        // Best-effort client mutation in case WebSocket identity has completed
+        // Clean up any stale Firebase session so tokens do not conflict
         try {
-          await createUserRecord({
-            email: session.user.email ?? undefined,
-            name: session.user.name ?? undefined,
-            avatarUrl: session.user.picture ?? undefined,
-          });
+          const { signOut } = await import('firebase/auth');
+          const { auth } = await import('../../lib/firebase');
+          await signOut(auth);
         } catch {
-          // Ignore - the user record is already created and indexed on the server by exchangeAuthCode
+          // ignore
         }
 
         setStatusMessage('Welcome! Redirecting to Lalao...');
@@ -88,7 +85,7 @@ export const PlaysoleCallbackPage: React.FC = () => {
     };
 
     processAuth();
-  }, [searchParams, createUserRecord, navigate]);
+  }, [searchParams, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-theme-surface px-4 py-12">

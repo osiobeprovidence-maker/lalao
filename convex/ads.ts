@@ -70,7 +70,16 @@ export function automatedContentScreening(text: string): { flagged: boolean; rea
 export const getMyCampaigns = query({
   args: {},
   handler: async (ctx) => {
-    const user = await getAuthUser(ctx);
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) return [];
+
     const campaigns = await ctx.db
       .query("adCampaigns")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
@@ -87,7 +96,16 @@ export const getMyCampaigns = query({
 export const getCampaignById = query({
   args: { campaignId: v.id("adCampaigns") },
   handler: async (ctx, args) => {
-    const user = await getAuthUser(ctx);
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) return null;
+
     const campaign = await ctx.db.get(args.campaignId);
     if (!campaign) return null;
 

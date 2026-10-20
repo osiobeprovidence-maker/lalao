@@ -103,8 +103,12 @@ export async function initOneSignal(options?: {
             }
 
             resolve(OneSignal);
-          } catch (initErr) {
-            console.warn("[OneSignal] Error during OneSignal.init():", initErr);
+          } catch (initErr: any) {
+            if (String(initErr?.message || initErr).includes("Can only be used on:")) {
+              console.info("[OneSignal] Push notifications enabled for production domain (https://lalao.website). Local domain skipped.");
+            } else {
+              console.warn("[OneSignal] Error during OneSignal.init():", initErr);
+            }
             resolve(OneSignal);
           }
         });
