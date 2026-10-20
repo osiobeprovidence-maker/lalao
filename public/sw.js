@@ -105,11 +105,9 @@ self.addEventListener('push', (event) => {
       };
 
       return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-        const focusedClient = clients.find((client) => client.focused);
-        if (focusedClient) {
-          focusedClient.postMessage({ type: 'PUSH_RECEIVED', payload: { ...data, url: targetUrl } });
-          return;
-        }
+        clients.forEach((client) => {
+          client.postMessage({ type: 'PUSH_RECEIVED', payload: { ...data, url: targetUrl } });
+        });
         return self.registration.showNotification(data.title || 'Lalao', options);
       });
     }).catch((error) => console.error('Invalid push payload:', error)),

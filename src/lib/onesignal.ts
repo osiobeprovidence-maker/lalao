@@ -77,11 +77,7 @@ export async function initOneSignal(options?: {
               await OneSignal.init({
                 appId: ONESIGNAL_APP_ID,
                 allowLocalhostAsSecureOrigin: import.meta.env.DEV,
-                // Custom worker path and scope to avoid collision with /sw.js
-                serviceWorkerPath: "onesignal/OneSignalSDKWorker.js",
-                serviceWorkerParam: {
-                  scope: "/onesignal/",
-                },
+                serviceWorkerPath: "OneSignalSDKWorker.js",
               });
 
               window.__onesignal_initialized__ = true;

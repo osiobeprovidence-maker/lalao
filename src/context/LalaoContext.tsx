@@ -636,6 +636,25 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setOneSignalUser(currentUser.id).catch((err) => {
         console.warn('[LalaoContext] Failed to associate OneSignal user:', err);
       });
+
+      // Automatically sync native Web Push subscription to Convex if permission is already granted
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        getOrRequestWebPushSubscription().then((sub) => {
+          if (sub) {
+            const subJson: any = sub.toJSON();
+            const p256dh = subJson.keys?.p256dh || (sub as any).keys?.p256dh;
+            const auth = subJson.keys?.auth || (sub as any).keys?.auth;
+            if (p256dh && auth) {
+              upsertWebPushSubscription({
+                endpoint: sub.endpoint,
+                p256dh,
+                auth,
+                userAgent: navigator.userAgent,
+              }).catch((err) => console.warn('[LalaoContext] Auto-sync web push subscription error:', err));
+            }
+          }
+        }).catch((err) => console.warn('[LalaoContext] Auto-fetch web push subscription error:', err));
+      }
     }
   }, [currentUser]);
 
