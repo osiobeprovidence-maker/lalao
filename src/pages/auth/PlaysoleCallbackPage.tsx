@@ -51,32 +51,32 @@ export const PlaysoleCallbackPage: React.FC = () => {
 
         setStatusMessage('Syncing your account with Lalao...');
 
-        // Wait a small moment for token identifier propagation into Convex auth headers
-        await new Promise((r) => setTimeout(r, 600));
-
-        let attempts = 0;
-        let success = false;
-        while (attempts < 15) {
+        // Populate local state immediately for instant app responsiveness
+        if (session.user) {
           try {
-            await createUserRecord({
-              email: session.user.email ?? undefined,
-              name: session.user.name ?? undefined,
-              avatarUrl: session.user.picture ?? undefined,
-            });
-            success = true;
-            break;
-          } catch (e: any) {
-            if (e.message?.includes('Not authenticated')) {
-              await new Promise((r) => setTimeout(r, 600));
-              attempts++;
-            } else {
-              throw e;
-            }
+            const currentUser = {
+              id: (session as any).userRecord?._id || session.user.sub,
+              name: session.user.name || 'Playsole User',
+              email: session.user.email || '',
+              avatarUrl: session.user.picture || '',
+              username: session.user.email ? session.user.email.split('@')[0] : 'user',
+              role: 'user',
+            };
+            localStorage.setItem('lalao_current_user', JSON.stringify(currentUser));
+          } catch {
+            // ignore storage errors
           }
         }
 
-        if (!success) {
-          throw new Error('Connection timeout while establishing user session.');
+        // Best-effort client mutation in case WebSocket identity has completed
+        try {
+          await createUserRecord({
+            email: session.user.email ?? undefined,
+            name: session.user.name ?? undefined,
+            avatarUrl: session.user.picture ?? undefined,
+          });
+        } catch {
+          // Ignore - the user record is already created and indexed on the server by exchangeAuthCode
         }
 
         setStatusMessage('Welcome! Redirecting to Lalao...');
