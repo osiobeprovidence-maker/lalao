@@ -836,28 +836,79 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (backendNotifications) {
       setNotifications(backendNotifications);
       
-      let newUnreadCount = 0;
+      const newItems: NotificationItem[] = [];
       backendNotifications.forEach((n) => {
         if (!seenNotificationIds.current.has(n.id)) {
           seenNotificationIds.current.add(n.id);
           if (!n.isRead && n.actor?.id !== currentUser?.id) {
             if (n.type !== 'message') {
               newUnreadCount++;
+              newItems.push(n);
             } else if (n.type === 'message' && n.conversationId !== activeChatId) {
               newUnreadCount++;
+              newItems.push(n);
             }
           }
         }
       });
 
       if (initialLoadDone.current && newUnreadCount > 0) {
-        // Respect settings: if push is enabled (as an indicator of user wanting notifications), or if we don't have a separate sound setting, play it.
+        // 1. Audio sound alert (separate from external notifications)
         playNotificationSound();
+
+        // 2. External native browser/OS notification when page is in background or another tab
+        const prefs = (currentUser as any)?.notificationPrefs;
+        const desktopAllowed = prefs?.desktop !== false;
+
+        if (
+          desktopAllowed &&
+          typeof window !== 'undefined' &&
+          'Notification' in window &&
+          Notification.permission === 'granted' &&
+          document.visibilityState === 'hidden'
+        ) {
+          newItems.slice(0, 3).forEach((item) => {
+            const cat = item.type === 'message' ? 'messages' : item.type === 'follow' ? 'follows' : item.type === 'like' ? 'likes' : item.type === 'comment' ? 'comments' : undefined;
+            if (cat && prefs && prefs[cat] === false) {
+              return; // Category disabled by user
+            }
+
+            try {
+              const notifTitle = item.type === 'message'
+                ? `Message from ${item.actor?.name || 'Someone'}`
+                : item.type === 'follow'
+                ? 'New follower on Lalao'
+                : 'Lalao Notification';
+              const notifBody = item.text || item.targetExcerpt || 'You have a new alert on Lalao';
+              const notifTag = item.conversationId ? `chat-${item.conversationId}` : `notif-${item.id}`;
+
+              const externalNotif = new Notification(notifTitle, {
+                body: notifBody,
+                icon: item.actor?.avatar || '/icon-192.png',
+                badge: '/icon-192.png',
+                tag: notifTag,
+              });
+
+              externalNotif.onclick = () => {
+                window.focus();
+                if (item.conversationId) {
+                  setActiveChatId(item.conversationId);
+                  setActiveTab('messages');
+                } else {
+                  setActiveTab('notifications');
+                }
+                externalNotif.close();
+              };
+            } catch (notifErr) {
+              console.warn('[LalaoContext] Could not trigger native browser notification:', notifErr);
+            }
+          });
+        }
       }
 
       initialLoadDone.current = true;
     }
-  }, [backendNotifications, currentUser?.id]);
+  }, [backendNotifications, currentUser?.id, activeChatId]);
 
   useEffect(() => {
     if (feedPostsQuery) {

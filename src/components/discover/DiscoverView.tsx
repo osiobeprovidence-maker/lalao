@@ -73,7 +73,7 @@ export const DiscoverView: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'ranking' | 'people' | 'pages' | 'shop' | 'events' | 'videos'>('ranking');
+  const [activeFilter, setActiveFilter] = useState<'ranking' | 'pages' | 'shop' | 'events' | 'videos'>('ranking');
   const [locationMode, setLocationMode] = useState<'current' | 'selected' | 'global'>('current');
   const [isLocationModeMenuOpen, setIsLocationModeMenuOpen] = useState(false);
   const [isPlumMenuOpen, setIsPlumMenuOpen] = useState(false);
@@ -417,7 +417,7 @@ export const DiscoverView: React.FC = () => {
 
         {/* Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-          {['ranking', 'people', 'pages', 'shop', 'events', 'videos'].map((filter) => (
+          {['ranking', 'pages', 'shop', 'events', 'videos'].map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter as any)}
@@ -550,65 +550,6 @@ export const DiscoverView: React.FC = () => {
               </div>
             ) : (
               <>
-                {/* Search Results: People */}
-                {activeFilter === 'people' && searchResults.people.length > 0 && (
-                  <section className="px-4">
-                    <div className="flex items-center gap-1.5 mb-3">
-                      <Users className="w-4 h-4 text-[#5E43F3]" />
-                      <h2 className="text-sm font-bold text-theme-primary tracking-tight">People</h2>
-                    </div>
-                    <div className="divide-y divide-neutral-200/80">
-                      {searchResults.people.map((user: any) => (
-                        <div key={user.id} className="py-3.5 flex items-center justify-between gap-3">
-                          <div
-                            onClick={() => handleSelectPerson(user)}
-                            className="flex items-center gap-2.5 min-w-0 cursor-pointer"
-                          >
-                            <Avatar src={user?.avatar} alt={getPublicIdentityLabel(user)} size="md" />
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1">
-                                <span className="font-bold text-sm text-theme-primary truncate">{getPublicIdentityLabel(user)}</span>
-                                <VerificationBadge user={user} size="xs" />
-                              </div>
-                              {user.location && (
-                                <div className="flex items-center gap-1.5 text-xs text-theme-tertiary mt-0.5">
-                                  <span>{user.location}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => toggleFollowUser(user.id)}
-                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shrink-0 ml-2 flex items-center gap-1 ${
-                              user.relationship === 'friends'
-                                ? 'border border-theme-divider-strong text-theme-secondary hover:bg-theme-surface-hover'
-                                : user.relationship === 'follower'
-                                ? 'bg-[#5E43F3] hover:bg-[#4E34E0] text-white'
-                                : user.isFollowing
-                                ? 'border border-theme-divider-strong text-theme-secondary hover:bg-theme-surface-hover'
-                                : 'bg-theme-inverse text-theme-text-inverse hover:bg-theme-inverse'
-                            }`}
-                          >
-                            {user.relationship === 'friends' ? (
-                              <>
-                                Friends <Check className="w-3 h-3" />
-                              </>
-                            ) : user.relationship === 'follower' ? (
-                              <>
-                                Follow Back <UserPlus className="w-3 h-3" />
-                              </>
-                            ) : user.isFollowing ? (
-                              'Following'
-                            ) : (
-                              'Follow'
-                            )}
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
                 {/* Search Results: Pages & Shop */}
                 {(activeFilter === 'pages' || activeFilter === 'shop') && searchResults.pages.length > 0 && (
                   <section className="px-4">
@@ -752,94 +693,6 @@ export const DiscoverView: React.FC = () => {
              ========================================= */
           <>
 
-
-            {/* People Near You */}
-            {activeFilter === 'people' && (
-              <section className="px-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-1.5">
-                    <Users className="w-4 h-4 text-[#5E43F3]" />
-                    <h2 className="text-sm font-bold text-theme-primary tracking-tight">People Near You</h2>
-                    <span className="text-xs text-theme-tertiary">({filteredPeople.length})</span>
-                  </div>
-                </div>
-
-                {filteredPeople.length > 0 ? (
-                  <div className="divide-y divide-neutral-200/80">
-                    {filteredPeople.map((user) => {
-                      const distFormatted = formatDistance(user.distanceMeters, locationPrivacy?.approximateDistance);
-                      const prox = getProximityCategory(user.distanceMeters);
-
-                      return (
-                        <div key={user.id} className="py-3.5 flex items-center justify-between gap-3">
-                          <div
-                            onClick={() => setActiveUserProfile(user)}
-                            className="flex items-center gap-2.5 min-w-0 cursor-pointer"
-                          >
-                            <Avatar src={user?.avatar} alt={getPublicIdentityLabel(user)} size="md" />
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1">
-                                <span className="font-bold text-sm text-theme-primary truncate">{getPublicIdentityLabel(user)}</span>
-                                <VerificationBadge user={user} size="xs" />
-                                {(user as any).badge && <Badge type={(user as any).badge} />}
-                              </div>
-                              <div className="flex items-center gap-1.5 text-xs text-theme-tertiary mt-0.5">
-                                <span className="inline-flex items-center gap-1 text-theme-secondary font-semibold text-[11px]">
-                                  <span className={`w-1.5 h-1.5 rounded-full ${prox.dotColor}`} />
-                                  {distFormatted}
-                                </span>
-                              </div>
-                              {user.bio && (
-                                <p className="text-xs text-theme-secondary truncate mt-0.5 max-w-[200px]">{user.bio}</p>
-                              )}
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => toggleFollowUser(user.id)}
-                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shrink-0 ml-2 flex items-center gap-1 ${
-                              user.relationship === 'friends'
-                                ? 'border border-theme-divider-strong text-theme-secondary hover:bg-theme-surface-hover'
-                                : user.relationship === 'follower'
-                                ? 'bg-[#5E43F3] hover:bg-[#4E34E0] text-white'
-                                : user.isFollowing
-                                ? 'border border-theme-divider-strong text-theme-secondary hover:bg-theme-surface-hover'
-                                : 'bg-theme-inverse text-theme-text-inverse hover:bg-theme-inverse'
-                            }`}
-                          >
-                            {user.relationship === 'friends' ? (
-                              <>
-                                Friends <Check className="w-3 h-3" />
-                              </>
-                            ) : user.relationship === 'follower' ? (
-                              <>
-                                Follow Back <UserPlus className="w-3 h-3" />
-                              </>
-                            ) : user.isFollowing ? (
-                              'Following'
-                            ) : (
-                              'Follow'
-                            )}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="p-5 rounded-2xl bg-theme-base text-center border border-theme-divider-light space-y-2">
-                    <p className="text-xs text-theme-secondary">
-                      No people found within {location.radiusKm} km of {location.name}.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setLocationMode('global')}
-                      className="text-xs font-bold text-[#5E43F3] hover:underline cursor-pointer"
-                    >
-                      Show people everywhere
-                    </button>
-                  </div>
-                )}
-              </section>
-            )}
 
             {/* Local Pages or Shop */}
             {(activeFilter === 'pages' || activeFilter === 'shop') && (

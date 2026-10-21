@@ -168,6 +168,13 @@ export const hasActivePushToken = query({
    INTERNAL TOKEN HELPERS (used by the dispatch action)
    ───────────────────────────────────────────────────────────────────────────── */
 
+export const getRecipientForPush = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    return await ctx.db.get(userId);
+  },
+});
+
 export const getWebPushSubscriptionsForUser = internalQuery({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {

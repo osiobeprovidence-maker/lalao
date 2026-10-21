@@ -196,7 +196,6 @@ export const CreatorRankingsView: React.FC<CreatorRankingsViewProps> = ({
         ) : (
           <div className="p-3.5 rounded-2xl bg-[#5E43F3]/5 border border-[#5E43F3]/15 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <Sparkles className="w-4 h-4 text-[#5E43F3] shrink-0" />
               <p className="text-xs text-theme-secondary">
                 Get verified with <strong>Creator Premium</strong> to unlock analytics and compete on the leaderboard.
               </p>

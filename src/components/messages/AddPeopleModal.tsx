@@ -5,8 +5,11 @@ import {
   X,
   MessageSquare,
   MapPin,
-  Sparkles,
+  Check,
+  UserCheck,
 } from 'lucide-react';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { VerificationBadge } from '../common/VerificationBadge';
@@ -24,27 +27,31 @@ export const AddPeopleModal: React.FC<AddPeopleModalProps> = ({ isOpen, onClose 
     messageContacts,
     conversations,
     openChatWithUser,
+    triggerShareToast,
   } = useLalao();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [followingStates, setFollowingStates] = useState<Record<string, boolean>>({});
 
-  // Combine known message contacts and active conversation participants
+  // Query real discoverable people from the backend
+  const discoverablePeople = useQuery(api.social.getDiscoverablePeople, { limit: 50 }) as User[] | undefined;
+  const toggleFollowUser = useMutation(api.social.toggleFollowUser);
+
+  // Combine discoverable people with existing message contacts for searchability
   const availablePeople = useMemo(() => {
     const map = new Map<string, User>();
 
-    // 1. Add message contacts (friends/mutuals)
-    (messageContacts || []).forEach((c) => {
-      if (c.id !== currentUser?.id) {
-        map.set(c.id, c);
+    // 1. First add discoverable people (new members)
+    (discoverablePeople || []).forEach((u) => {
+      if (u.id !== currentUser?.id) {
+        map.set(u.id, u);
       }
     });
 
-    // 2. Add conversation participants
-    (conversations || []).forEach((conv) => {
-      if (conv.participant && conv.participant.id !== currentUser?.id) {
-        if (!map.has(conv.participant.id)) {
-          map.set(conv.participant.id, conv.participant);
-        }
+    // 2. Also include message contacts so searching can find friends
+    (messageContacts || []).forEach((c) => {
+      if (c.id !== currentUser?.id && !map.has(c.id)) {
+        map.set(c.id, c);
       }
     });
 
@@ -62,7 +69,7 @@ export const AddPeopleModal: React.FC<AddPeopleModalProps> = ({ isOpen, onClose 
       const matchLoc = user.location?.toLowerCase().includes(q);
       return matchName || matchUsername || matchBio || matchLoc;
     });
-  }, [messageContacts, conversations, currentUser, searchQuery]);
+  }, [discoverablePeople, messageContacts, currentUser, searchQuery]);
 
   const existingConvoUserIds = useMemo(() => {
     return new Set(conversations.map((c) => c.participant?.id));
@@ -73,6 +80,18 @@ export const AddPeopleModal: React.FC<AddPeopleModalProps> = ({ isOpen, onClose 
   const handleStartChat = (user: User) => {
     openChatWithUser(user);
     onClose();
+  };
+
+  const handleToggleFollow = async (user: User) => {
+    try {
+      const res = await toggleFollowUser({ targetUserId: user.id as any });
+      setFollowingStates((prev) => ({ ...prev, [user.id]: res.following }));
+      if (res.following) {
+        triggerShareToast(`Followed ${user.name}`);
+      }
+    } catch (err: any) {
+      triggerShareToast(err.message || 'Could not update follow status');
+    }
   };
 
   return (
@@ -162,6 +181,7 @@ export const AddPeopleModal: React.FC<AddPeopleModalProps> = ({ isOpen, onClose 
           ) : (
             availablePeople.map((user) => {
               const hasExistingChat = existingConvoUserIds.has(user.id);
+              const isCurrentlyFollowing = followingStates[user.id] ?? user.isFollowing ?? false;
 
               return (
                 <div
@@ -202,27 +222,39 @@ export const AddPeopleModal: React.FC<AddPeopleModalProps> = ({ isOpen, onClose 
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleStartChat(user)}
-                    className={`ml-3 px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs ${
-                      hasExistingChat
-                        ? 'bg-theme-surface-hover dark:bg-[#202020] text-theme-primary border border-theme-divider hover:border-theme-divider-strong'
-                        : 'bg-[#5E43F3] hover:bg-[#4E34E0] text-white'
-                    }`}
-                  >
-                    {hasExistingChat ? (
-                      <>
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        Chat
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="w-3.5 h-3.5" />
-                        Add
-                      </>
-                    )}
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0 ml-3">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleFollow(user)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs ${
+                        isCurrentlyFollowing
+                          ? 'bg-theme-surface-hover dark:bg-[#202020] text-theme-primary border border-theme-divider hover:border-theme-divider-strong'
+                          : 'bg-[#5E43F3] hover:bg-[#4E34E0] text-white'
+                      }`}
+                    >
+                      {isCurrentlyFollowing ? (
+                        <>
+                          <UserCheck className="w-3.5 h-3.5" />
+                          Following
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-3.5 h-3.5" />
+                          {user.relationship === 'follower' ? 'Follow Back' : 'Follow'}
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleStartChat(user)}
+                      className="px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs bg-theme-surface-hover dark:bg-[#202020] text-theme-primary border border-theme-divider hover:border-theme-divider-strong"
+                      title={hasExistingChat ? 'Continue chat' : 'Start chat'}
+                    >
+                      <MessageSquare className="w-3.5 h-3.5 text-[#5E43F3]" />
+                      Chat
+                    </button>
+                  </div>
                 </div>
               );
             })

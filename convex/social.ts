@@ -1077,6 +1077,87 @@ export const listSuggestedUsers = query({
   },
 });
 
+/**
+ * Discoverable People for Messages.
+ * Returns users eligible to be discovered (excluding self, blocked, and existing friends/followed).
+ */
+export const getDiscoverablePeople = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return [];
+
+    const relSets = await getRelationshipSets(ctx, currentUser);
+    const followingIds = new Set(relSets.followingIds);
+    followingIds.add(currentUser._id as string);
+
+    const allUsers = await ctx.db.query("users").collect();
+    const currentInterests = new Set<string>(currentUser.interests ?? []);
+
+    const eligible = allUsers
+      .filter((u: any) => {
+        if (!u || !u._id) return false;
+        if (followingIds.has(u._id)) return false;
+        if (u.accessStatus === "country_restricted" || u.accessStatus === "waitlisted") return false;
+        if (u.isSuspended || u.isBanned) return false;
+        return true;
+      })
+      .map((u: any) => {
+        const sharedInterests = (u.interests ?? []).filter((i: string) =>
+          currentInterests.has(i)
+        ).length;
+        return { user: u, sharedInterests };
+      })
+      .sort((a: any, b: any) =>
+        b.sharedInterests !== a.sharedInterests
+          ? b.sharedInterests - a.sharedInterests
+          : (b.user.followersCount ?? 0) - (a.user.followersCount ?? 0)
+      );
+
+    const count = args.limit ?? 25;
+    return eligible.slice(0, count).map(({ user }: any) => ({
+      id: user._id,
+      name: user.name ?? "User",
+      username: user.username ?? "user",
+      avatar: user.avatarUrl ?? "",
+      userType: user.userType ?? "person",
+      bio: user.bio ?? "",
+      location: (user.locationName ?? "").replace(/\s*\(Detected\)\s*/i, "").replace(/^GPS Detected$/i, "").trim(),
+      followersCount: user.followersCount ?? 0,
+      followingCount: user.followingCount ?? 0,
+      isFollowing: false,
+      relationship: resolveRelationship(user._id, relSets),
+      ...resolveUserVerification(user),
+    }));
+  },
+});
+
+/**
+ * Count of discoverable people for Messages discovery badge.
+ */
+export const getDiscoverablePeopleCount = query({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return 0;
+
+    const relSets = await getRelationshipSets(ctx, currentUser);
+    const followingIds = new Set(relSets.followingIds);
+    followingIds.add(currentUser._id as string);
+
+    const allUsers = await ctx.db.query("users").collect();
+    return allUsers.filter((u: any) => {
+      if (!u || !u._id) return false;
+      if (followingIds.has(u._id)) return false;
+      if (u.accessStatus === "country_restricted" || u.accessStatus === "waitlisted") return false;
+      if (u.isSuspended || u.isBanned) return false;
+      return true;
+    }).length;
+  },
+});
+
 /* ─────────────────────────────────────────────────────────────────────────────
    PAGES
    ───────────────────────────────────────────────────────────────────────────── */

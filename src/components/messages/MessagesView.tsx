@@ -16,7 +16,7 @@ import {
   History,
   Users,
 } from 'lucide-react';
-import { useMutation } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
@@ -40,6 +40,8 @@ export const MessagesView: React.FC = () => {
     openChatWithUser,
     setIsCreateGroupChatOpen,
   } = useLalao();
+
+  const discoverableCount = useQuery(api.social.getDiscoverablePeopleCount) ?? 0;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -311,11 +313,19 @@ export const MessagesView: React.FC = () => {
             <button
               id="btn-messages-add-people"
               onClick={() => setIsAddPeopleOpen(true)}
-              className="p-1.5 rounded-full text-[#707070] dark:text-[#707070] hover:text-[#5E43F3] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
+              className="relative p-1.5 rounded-full text-[#707070] dark:text-[#707070] hover:text-[#5E43F3] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
               title="Add people"
               aria-label="Add people"
             >
               <UserPlus className="w-5 h-5" />
+              {discoverableCount > 0 && (
+                <span
+                  id="badge-discover-people-count"
+                  className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full text-[10px] font-black bg-[#5E43F3] text-white border-2 border-theme-base shadow-xs animate-in zoom-in-75 duration-200"
+                >
+                  {discoverableCount}
+                </span>
+              )}
             </button>
             <button
               onClick={() => setIsCreateGroupChatOpen(true)}
@@ -494,10 +504,46 @@ export const MessagesView: React.FC = () => {
 
       {/* Chats Section */}
       <div className="pt-3">
-        <div className="px-4 mb-1">
+        {/* Discover People Action Banner */}
+        {discoverableCount > 0 && (
+          <div className="px-4 mb-3">
+            <div
+              id="banner-discover-people"
+              onClick={() => setIsAddPeopleOpen(true)}
+              className="p-3.5 rounded-2xl bg-gradient-to-r from-[#5E43F3]/10 via-[#5E43F3]/5 to-transparent border border-[#5E43F3]/20 flex items-center justify-between cursor-pointer hover:bg-[#5E43F3]/15 transition-all group shadow-2xs"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-full bg-[#5E43F3] text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                  <UserPlus className="w-4 h-4 stroke-[2.5]" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-theme-primary truncate">
+                      Discover People
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#5E43F3] text-white">
+                      {discoverableCount} new
+                    </span>
+                  </div>
+                  <p className="text-xs text-theme-secondary truncate mt-0.5">
+                    Connect and follow new members in your community
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-theme-tertiary group-hover:text-[#5E43F3] transition-colors shrink-0 ml-2" />
+            </div>
+          </div>
+        )}
+
+        <div className="px-4 mb-1 flex items-center justify-between">
           <h2 className="text-xs font-bold uppercase tracking-wider text-[#707070] dark:text-[#707070]">
             Direct Chats
           </h2>
+          {unifiedChats.matchedContacts.length > 0 && (
+            <span className="text-[11px] font-semibold text-theme-tertiary">
+              {unifiedChats.matchedContacts.length} {unifiedChats.matchedContacts.length === 1 ? 'friend' : 'friends'} to chat
+            </span>
+          )}
         </div>
 
         <div className="divide-y divide-black/[0.04] dark:divide-white/[0.06]">

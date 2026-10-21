@@ -20,6 +20,7 @@ export const dispatchPush = internalAction({
     conversationId: v.optional(v.string()),
     messageId: v.optional(v.string()),
     tag: v.optional(v.string()),
+    category: v.optional(v.string()),
     actions: v.optional(v.array(v.object({
       action: v.string(),
       title: v.string(),
@@ -27,7 +28,24 @@ export const dispatchPush = internalAction({
       placeholder: v.optional(v.string()),
     }))),
   },
-  handler: async (ctx, { recipientId, title, body, url, icon, badge, conversationId, messageId, tag, actions }) => {
+  handler: async (ctx, { recipientId, title, body, url, icon, badge, conversationId, messageId, tag, category, actions }) => {
+    // Check recipient user existence and notification preferences
+    const recipient: any = await ctx.runQuery(internal.push.getRecipientForPush, {
+      userId: recipientId,
+    });
+    if (!recipient) return;
+
+    const prefs = recipient.notificationPrefs;
+    if (prefs) {
+      if (prefs.desktop === false) {
+        return; // User disabled all push/desktop notifications
+      }
+      const cat = category || (conversationId ? 'messages' : undefined);
+      if (cat && (prefs as any)[cat] === false) {
+        return; // Specific category (messages, follows, likes, etc.) disabled by user
+      }
+    }
+
     let pushDelivered = false;
 
     // 1. OneSignal REST API dispatch (preferred when ONESIGNAL_REST_API_KEY is configured)
