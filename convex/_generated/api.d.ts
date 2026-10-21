@@ -12,6 +12,7 @@ import type * as adActions from "../adActions.js";
 import type * as admin from "../admin.js";
 import type * as ads from "../ads.js";
 import type * as apiPartners from "../apiPartners.js";
+import type * as bachs from "../bachs.js";
 import type * as beta from "../beta.js";
 import type * as callActions from "../callActions.js";
 import type * as calls from "../calls.js";
@@ -69,6 +70,7 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   ads: typeof ads;
   apiPartners: typeof apiPartners;
+  bachs: typeof bachs;
   beta: typeof beta;
   callActions: typeof callActions;
   calls: typeof calls;

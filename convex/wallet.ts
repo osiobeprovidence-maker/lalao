@@ -350,6 +350,7 @@ export const createPendingFunding = internalMutation({
     reference: v.string(),
     userId: v.id("users"),
     walletId: v.id("userWallets"),
+    provider: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Check if reference already exists (prevent duplicate pending records)
@@ -361,15 +362,18 @@ export const createPendingFunding = internalMutation({
       return existing._id;
     }
 
+    const providerName = args.provider || "bachs";
+    const providerLabel = providerName === "bachs" ? "BACHS" : "Paystack";
+
     const txId = await ctx.db.insert("walletTransactions", {
       walletId: args.walletId,
       userId: args.userId,
       amount: args.amount,
       type: "deposit",
       status: "pending",
-      paymentProvider: "paystack",
+      paymentProvider: providerName,
       reference: args.reference,
-      description: `Wallet funded via Paystack (₦${args.amount.toLocaleString()} -> ${args.amount.toLocaleString()} LC)`,
+      description: `Wallet funded via ${providerLabel} (₦${args.amount.toLocaleString()} -> ${args.amount.toLocaleString()} LC)`,
       currency: "LC",
       assetType: "LALAO_CREDITS",
       createdAt: Date.now(),
@@ -385,91 +389,23 @@ export const initializeFunding = action({
     userId: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<any> => {
-    // 1. Validation: Minimum funding is 100 LC (₦100), maximum is 500,000 LC (₦500,000)
-    if (typeof args.amount !== "number" || isNaN(args.amount) || args.amount < 100) {
-      throw new Error("Minimum funding amount is ₦100 (100 LC).");
-    }
-    if (args.amount > 500000) {
-      throw new Error("Maximum funding amount is ₦500,000 (500,000 LC) per transaction.");
-    }
-
-    const identity = await ctx.auth.getUserIdentity();
-    const user = await ctx.runQuery(internal.wallet.getUserByIdentity, { 
-      tokenIdentifier: identity?.tokenIdentifier,
-      userId: args.userId,
-    });
-    if (!user) throw new Error("User profile not found. Please sign in to fund your wallet.");
-
-    const wallet = await ctx.runMutation(internal.wallet.getOrCreateUserWallet, { 
-      userId: user._id,
-      userName: user.name,
-    });
-    if (!wallet) throw new Error("Wallet could not be initialized.");
-
-    // 2. Insert pending funding record in ledger
-    await ctx.runMutation(internal.wallet.createPendingFunding, {
+    // Forward to BACHS funding flow
+    return await ctx.runAction(api.bachs.initializeBachsFunding, {
       amount: args.amount,
       reference: args.reference,
-      userId: user._id,
-      walletId: wallet._id,
+      userId: args.userId,
     });
-
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
-    if (!secretKey) {
-      // If secret key is not yet set in environment, return a helpful development status
-      return {
-        success: true,
-        reference: args.reference,
-        isDevelopmentMode: true,
-        message: "Paystack secret key is not configured in backend environment variables. Frontend popup or webhook will process payment verification."
-      };
-    }
-    
-    // Amount to send to Paystack is in kobo (1 NGN = 100 kobo)
-    const amountKobo = Math.round(args.amount * 100);
-
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VITE_APP_URL || "http://localhost:3000";
-    const callbackUrl = `${appUrl}/api/payments/paystack/callback`;
-
-    const res = await fetch("https://api.paystack.co/transaction/initialize", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${secretKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        email: user.email || 'user@lalao.app',
-        amount: amountKobo,
-        reference: args.reference,
-        currency: "NGN",
-        callback_url: callbackUrl,
-        metadata: {
-          userId: user._id,
-          type: "wallet_funding",
-          fundingReference: args.reference
-        }
-      })
-    });
-
-    const data = await res.json();
-    if (!data.status) {
-      throw new Error(`Paystack initialization failed: ${data.message}`);
-    }
-
-    return { 
-      success: true, 
-      authorizationUrl: data.data.authorization_url,
-      accessCode: data.data.access_code,
-      reference: data.data.reference
-    };
   }
 });
 
 export const settleWalletFunding = internalMutation({
   args: {
     reference: v.string(),
-    paystackAmount: v.number(), // The amount confirmed by Paystack API in regular currency (NGN, not kobo)
-    paystackTransactionId: v.optional(v.string())
+    verifiedAmount: v.optional(v.number()), // Generalized verified amount in NGN
+    paystackAmount: v.optional(v.number()), // Legacy fallback support for Paystack
+    providerTransactionId: v.optional(v.string()),
+    paystackTransactionId: v.optional(v.string()),
+    provider: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // 1. Find the pending transaction using the indexed 'by_reference'
@@ -481,7 +417,7 @@ export const settleWalletFunding = internalMutation({
     if (!pendingTx) throw new Error(`Funding transaction with reference ${args.reference} not found.`);
 
     if (pendingTx.status === "completed") {
-      // Idempotency: already settled once
+      // Idempotency: already settled once, do not double-credit wallet
       return { success: true, alreadySettled: true, amount: pendingTx.amount };
     }
 
@@ -489,17 +425,26 @@ export const settleWalletFunding = internalMutation({
       throw new Error(`Transaction is already in status: ${pendingTx.status}`);
     }
 
-    if (pendingTx.amount !== args.paystackAmount) {
-      throw new Error(`Amount mismatch. Expected ${pendingTx.amount} NGN, but Paystack verified ${args.paystackAmount} NGN.`);
+    const settledAmount = args.verifiedAmount ?? args.paystackAmount;
+    if (settledAmount === undefined || isNaN(settledAmount)) {
+      throw new Error("Payment verification amount is missing or invalid.");
+    }
+
+    if (pendingTx.amount !== settledAmount) {
+      throw new Error(`Amount mismatch. Expected ${pendingTx.amount} NGN, but provider verified ${settledAmount} NGN.`);
     }
 
     const wallet = await ctx.db.get(pendingTx.walletId);
     if (!wallet) throw new Error("Wallet not found.");
 
+    const finalTxId = args.providerTransactionId || args.paystackTransactionId;
+    const finalProvider = args.provider || pendingTx.paymentProvider || "bachs";
+
     // 2. Mark transaction as completed with provider transaction ID
     await ctx.db.patch(pendingTx._id, {
       status: "completed",
-      providerTransactionId: args.paystackTransactionId,
+      providerTransactionId: finalTxId,
+      paymentProvider: finalProvider,
     });
 
     // 3. Atomically update user's wallet balance

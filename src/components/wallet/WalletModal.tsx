@@ -98,8 +98,8 @@ export const WalletModal: React.FC = () => {
   const [forgotPinConfirmPin, setForgotPinConfirmPin] = useState('');
   const [forgotPinEmailMasked, setForgotPinEmailMasked] = useState('');
   const [isRequestingOtp, setIsRequestingOtp] = useState(false);
-  const performInitializeFunding = useAction(api.wallet.initializeFunding);
-  const performVerifyFunding = useAction(api.wallet.verifyPaystackFunding);
+  const performInitializeFunding = useAction((api as any).bachs?.initializeBachsFunding || api.wallet.initializeFunding);
+  const performVerifyFunding = useAction((api as any).bachs?.verifyBachsFunding || api.wallet.verifyPaystackFunding);
   const performPurchaseService = useAction(api.market.purchaseService);
   const fetchVariations = useAction(api.market.getVariations);
   const fetchCablePackages = useAction(api.market.getCablePackages);
@@ -215,28 +215,19 @@ export const WalletModal: React.FC = () => {
   const [jambPackagesList, setJambPackagesList] = useState<any[]>([]);
   const [isFetchingJAMBPackages, setIsFetchingJAMBPackages] = useState(false);
 
-  // Generate a stable reference for the current flow
-  const currentPaystackReference = useMemo(() => {
-    return activePaymentRef || `LAL_FUND_${Date.now()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+  // Generate a stable reference for the current BACHS funding flow
+  const currentFundingReference = useMemo(() => {
+    return activePaymentRef || `BACHS_FUND_${Date.now()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
   }, [activePaymentRef, currentView === 'fund_review']);
 
-  const paystackConfig = {
-    reference: currentPaystackReference, userId: currentUser?.id,
-    email: currentUser?.email || 'user@lalao.app',
-    amount: Math.round((parseFloat(flowAmount) || 0) * 100), // Paystack amount is in kobo (1 NGN = 100 kobo)
-    publicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_1e3e4134a6324bd82248c28828b24f8a835e9f0f',
-  };
-
-  const initializePayment = usePaystackPayment(paystackConfig as any);
-
-  const handlePaystackSuccess = async (response: any) => {
+  const handleVerifyBachsPayment = async (referenceToVerify: string, sessionId?: string) => {
     setIsProcessing(true);
-    setFundingStatusMessage('Verifying payment with Paystack...');
+    setFundingStatusMessage('Verifying payment with BACHS gateway...');
     navigateTo('fund_pending');
     try {
-      const verifiedRef = response?.reference || currentPaystackReference;
       const result = await performVerifyFunding({
-        reference: verifiedRef
+        reference: referenceToVerify,
+        sessionId,
       });
       
       if (result.success) {
@@ -246,17 +237,12 @@ export const WalletModal: React.FC = () => {
         navigateTo('fund_failed');
       }
     } catch (e: any) {
-      console.error("Error verifying payment:", e);
+      console.error("Error verifying BACHS payment:", e);
       setFundingError(e.message || 'Payment verification encountered a network error. Checking transactions...');
       navigateTo('fund_failed');
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const handlePaystackClose = () => {
-    setIsProcessing(false);
-    setFundingStatusMessage('Payment window was closed before completion.');
   };
 
   const navigateTo = (view: WalletView) => {
@@ -1633,12 +1619,12 @@ export const WalletModal: React.FC = () => {
                     <div className="border-t border-theme-divider-light"></div>
                     <div className="flex justify-between items-center">
                       <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Payment Method</div>
-                      <div className="font-bold text-theme-primary">Paystack (Card, Bank, USSD, Transfer)</div>
+                      <div className="font-bold text-theme-primary">BACHS (Card, Bank Transfer, USSD & Multi-Currency)</div>
                     </div>
                     <div className="border-t border-theme-divider-light"></div>
                     <div className="flex justify-between items-center">
                       <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Payment Reference</div>
-                      <div className="font-mono text-xs text-theme-secondary truncate max-w-[180px]">{currentPaystackReference}</div>
+                      <div className="font-mono text-xs text-theme-secondary truncate max-w-[180px]">{currentFundingReference}</div>
                     </div>
                   </div>
                 </div>
@@ -1650,21 +1636,39 @@ export const WalletModal: React.FC = () => {
                    <button 
                      onClick={async () => {
                        setIsProcessing(true);
-                       setFundingStatusMessage('Initializing payment with backend...');
+                       setFundingStatusMessage('Initializing secure BACHS checkout...');
                        try {
                          const initRes = await performInitializeFunding({
                            amount: parseFloat(flowAmount),
-                           reference: currentPaystackReference, userId: currentUser?.id
+                           reference: currentFundingReference,
+                           userId: currentUser?.id,
                          });
 
                          if (initRes && initRes.reference) {
                            setActivePaymentRef(initRes.reference);
                          }
 
-                         // Open Paystack checkout popup
-                         initializePayment({ onSuccess: handlePaystackSuccess, onClose: handlePaystackClose } as any);
+                         if (initRes?.checkoutUrl) {
+                           // Navigate to pending while opening BACHS hosted checkout
+                           setFundingStatusMessage('Redirecting to BACHS payment page...');
+                           navigateTo('fund_pending');
+                           
+                           // Open checkout session in same or popup window
+                           const checkoutWindow = window.open(initRes.checkoutUrl, '_blank');
+                           if (!checkoutWindow) {
+                             window.location.href = initRes.checkoutUrl;
+                           } else {
+                             // Monitor verification with a button or auto check
+                             setFundingStatusMessage('Payment window opened. Waiting for completion...');
+                           }
+                         } else if (initRes?.isDevelopmentMode) {
+                           // In dev without credentials, auto verify or display instructions
+                           await handleVerifyBachsPayment(initRes.reference || currentFundingReference, initRes.sessionId);
+                         } else {
+                           throw new Error(initRes?.message || 'Could not obtain checkout session from BACHS.');
+                         }
                        } catch (e: any) {
-                         console.error("Failed to initialize funding:", e);
+                         console.error("Failed to initialize BACHS funding:", e);
                          setFundingError(e.message || "Failed to initialize payment.");
                          navigateTo('fund_failed');
                        } finally {
@@ -1672,7 +1676,7 @@ export const WalletModal: React.FC = () => {
                        }
                      }}
                      disabled={isProcessing}
-                     className="flex-[2] py-4 rounded-xl bg-[#0BA4DB] text-white font-bold hover:bg-[#098bbd] transition-colors shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
+                     className="flex-[2] py-4 rounded-xl bg-[#5E43F3] text-white font-bold hover:bg-indigo-600 transition-colors shadow-lg shadow-[#5E43F3]/20 disabled:opacity-50 flex items-center justify-center gap-2"
                    >
                      {isProcessing ? (
                        <>
@@ -1680,7 +1684,7 @@ export const WalletModal: React.FC = () => {
                          Initializing...
                        </>
                      ) : (
-                       'Pay with Paystack'
+                       'Pay with BACHS'
                      )}
                    </button>
                 </div>
@@ -1696,11 +1700,19 @@ export const WalletModal: React.FC = () => {
                  </div>
                  <h3 className="font-black text-theme-primary text-2xl mb-2">Verifying Payment</h3>
                  <p className="text-theme-secondary font-medium text-sm max-w-[280px] mb-4 mx-auto">
-                   {fundingStatusMessage || 'Please hold on while we verify your transaction with Paystack.'}
+                   {fundingStatusMessage || 'Please hold on while we verify your transaction with BACHS.'}
                  </p>
-                 <div className="font-mono text-xs text-theme-tertiary bg-theme-surface px-3 py-1.5 rounded-full border border-theme-divider-light">
-                   Ref: {currentPaystackReference}
+                 <div className="font-mono text-xs text-theme-tertiary bg-theme-surface px-3 py-1.5 rounded-full border border-theme-divider-light mb-6">
+                   Ref: {currentFundingReference}
                  </div>
+
+                 <button
+                   onClick={() => handleVerifyBachsPayment(currentFundingReference)}
+                   disabled={isProcessing}
+                   className="px-6 py-3 rounded-xl bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider text-theme-primary font-bold text-sm transition-all"
+                 >
+                   {isProcessing ? 'Verifying...' : 'Check Payment Status'}
+                 </button>
                </div>
              </div>
           )}
@@ -1715,7 +1727,7 @@ export const WalletModal: React.FC = () => {
                  <h3 className="font-black text-theme-primary text-2xl mb-2">Funding Successful!</h3>
                  <div className="font-black text-4xl text-[#5E43F3] mb-4">+{parseFloat(flowAmount || '0').toLocaleString()} LC</div>
                  <p className="text-theme-secondary font-medium text-sm max-w-[280px] mb-4 mx-auto">
-                   Your payment of ₦{parseFloat(flowAmount || '0').toLocaleString()} has been verified and added to your balance.
+                   Your payment of ₦{parseFloat(flowAmount || '0').toLocaleString()} has been verified with BACHS and added to your balance.
                  </p>
                  <div className="bg-theme-surface p-4 rounded-2xl border border-theme-divider-light w-full max-w-[320px] mb-8 text-left space-y-2">
                    <div className="flex justify-between text-xs">
@@ -1724,7 +1736,11 @@ export const WalletModal: React.FC = () => {
                    </div>
                    <div className="flex justify-between text-xs">
                      <span className="text-theme-tertiary">Reference</span>
-                     <span className="font-mono text-theme-secondary truncate max-w-[160px]">{currentPaystackReference}</span>
+                     <span className="font-mono text-theme-secondary truncate max-w-[160px]">{currentFundingReference}</span>
+                   </div>
+                   <div className="flex justify-between text-xs">
+                     <span className="text-theme-tertiary">Provider</span>
+                     <span className="font-semibold text-emerald-600">BACHS</span>
                    </div>
                  </div>
                  
