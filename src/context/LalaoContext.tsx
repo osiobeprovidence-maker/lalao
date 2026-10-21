@@ -802,6 +802,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [messageContactsQuery]);
 
   const [notifications, setNotifications] = useState<NotificationItem[]>(EMPTY_NOTIFICATIONS);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
 
   const seenNotificationIds = React.useRef<Set<string>>(new Set());
   const initialLoadDone = React.useRef(false);
@@ -835,7 +836,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (backendNotifications) {
       setNotifications(backendNotifications);
-      
+
+      let newUnreadCount = 0;
       const newItems: NotificationItem[] = [];
       backendNotifications.forEach((n) => {
         if (!seenNotificationIds.current.has(n.id)) {
@@ -868,7 +870,15 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           document.visibilityState === 'hidden'
         ) {
           newItems.slice(0, 3).forEach((item) => {
-            const cat = item.type === 'message' ? 'messages' : item.type === 'follow' ? 'follows' : item.type === 'like' ? 'likes' : item.type === 'comment' ? 'comments' : undefined;
+            const cat = item.type === 'message'
+              ? 'messages'
+              : item.type === 'follow'
+                ? 'follows'
+                : item.type === 'like'
+                  ? 'likes'
+                  : item.type === 'reply'
+                    ? 'comments'
+                    : undefined;
             if (cat && prefs && prefs[cat] === false) {
               return; // Category disabled by user
             }
@@ -1042,7 +1052,6 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Drilldowns
-  const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [activeCycleId, setActiveCycleId] = useState<string | null>(null);
   const [activeStoryIndex, setActiveStoryIndex] = useState<number>(0);
   const [isCreateCycleOpen, setIsCreateCycleOpen] = useState(false);

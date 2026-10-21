@@ -783,6 +783,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [messageContactsQuery]);
 
   const [notifications, setNotifications] = useState<NotificationItem[]>(EMPTY_NOTIFICATIONS);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
 
   const seenNotificationIds = React.useRef<Set<string>>(new Set());
   const initialLoadDone = React.useRef(false);
@@ -972,7 +973,6 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Drilldowns
-  const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [activeCycleId, setActiveCycleId] = useState<string | null>(null);
   const [activeStoryIndex, setActiveStoryIndex] = useState<number>(0);
   const [isCreateCycleOpen, setIsCreateCycleOpen] = useState(false);
