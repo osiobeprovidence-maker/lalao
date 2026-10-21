@@ -4,6 +4,11 @@ import {
   getClubkonnectNetworkCode,
   getClubkonnectDiscoCode,
   getClubkonnectCableCode,
+  getClubkonnectBettingCode,
+  getClubkonnectSmileCode,
+  getClubkonnectSpectranetCode,
+  getClubkonnectWAECCode,
+  getClubkonnectJAMBCode,
 } from '../../convex/market';
 import { DEFAULT_SERVICE_SETTINGS } from '../../convex/clubkonnect';
 
@@ -47,6 +52,35 @@ describe('Lalao Bill Payments — ClubKonnect Parameter Codes & Configurations',
     assert.strictEqual(DEFAULT_SERVICE_SETTINGS.electricity.fee, 100);
     assert.strictEqual(DEFAULT_SERVICE_SETTINGS.cable.enabled, true);
     assert.strictEqual(DEFAULT_SERVICE_SETTINGS.cable.fee, 100);
+    assert.strictEqual(DEFAULT_SERVICE_SETTINGS.betting.enabled, true);
+    assert.strictEqual(DEFAULT_SERVICE_SETTINGS.betting.fee, 50);
+    assert.strictEqual(DEFAULT_SERVICE_SETTINGS.smile.enabled, true);
+    assert.strictEqual(DEFAULT_SERVICE_SETTINGS.spectranet.enabled, true);
+    assert.strictEqual(DEFAULT_SERVICE_SETTINGS.waec.enabled, true);
+    assert.strictEqual(DEFAULT_SERVICE_SETTINGS.jamb.enabled, true);
+  });
+
+  it('Correctly translates Betting companies to ClubKonnect codes', () => {
+    assert.strictEqual(getClubkonnectBettingCode('SportyBet'), 'prd-sporty-bet');
+    assert.strictEqual(getClubkonnectBettingCode('BetKing'), 'product-bet-king');
+    assert.strictEqual(getClubkonnectBettingCode('1xBet'), 'product-1x-bet');
+    assert.strictEqual(getClubkonnectBettingCode('NairaBet'), 'product-nairabet');
+    assert.strictEqual(getClubkonnectBettingCode('BangBet'), 'product-bang-bet');
+    assert.strictEqual(getClubkonnectBettingCode('BetWay'), 'product-bet-way');
+    assert.strictEqual(getClubkonnectBettingCode('MerryBet'), 'product-merry-bet');
+  });
+
+  it('Correctly translates Smile and Spectranet codes', () => {
+    assert.strictEqual(getClubkonnectSmileCode(), 'smile-direct');
+    assert.strictEqual(getClubkonnectSpectranetCode(), 'spectranet');
+  });
+
+  it('Correctly translates WAEC and JAMB exam types to provider codes', () => {
+    assert.strictEqual(getClubkonnectWAECCode('waecdirect'), 'waecdirect');
+    assert.strictEqual(getClubkonnectWAECCode('WAEC Registration'), 'waec-registration');
+    assert.strictEqual(getClubkonnectJAMBCode('UTME (Mock)'), 'utme-mock');
+    assert.strictEqual(getClubkonnectJAMBCode('UTME (No-Mock)'), 'utme-no-mock');
+    assert.strictEqual(getClubkonnectJAMBCode('Direct Entry'), 'de');
   });
 
   it('Calculates total customer charge accurately including convenience fee', () => {
@@ -58,6 +92,10 @@ describe('Lalao Bill Payments — ClubKonnect Parameter Codes & Configurations',
     const airtimeAmount = 1500;
     const airtimeFee = DEFAULT_SERVICE_SETTINGS.airtime.fee; // 0
     assert.strictEqual(airtimeAmount + airtimeFee, 1500);
+
+    const bettingAmount = 2000;
+    const bettingFee = DEFAULT_SERVICE_SETTINGS.betting.fee; // 50
+    assert.strictEqual(bettingAmount + bettingFee, 2050);
   });
 
   it('Validates 4-digit wallet security PIN format', () => {

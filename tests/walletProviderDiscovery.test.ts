@@ -47,6 +47,60 @@ test("keeps the legacy window.ethereum provider when no registry is exposed", ()
   assert.equal(discovered[0].id, "metamask");
 });
 
+test("discovers providers announced via standard EIP-6963 events", () => {
+  const metamask = makeProvider("MetaMask", "metamask");
+  const phantom = makeProvider("Phantom", "phantom");
+
+  const discovered = discoverWalletProviders(
+    {},
+    [
+      {
+        info: {
+          uuid: "1111-2222",
+          name: "MetaMask",
+          icon: "data:image/svg+xml;base64,mock",
+          rdns: "io.metamask",
+        },
+        provider: metamask,
+      },
+      {
+        info: {
+          uuid: "3333-4444",
+          name: "Phantom",
+          icon: "data:image/svg+xml;base64,mock",
+          rdns: "app.phantom",
+        },
+        provider: phantom,
+      },
+    ]
+  );
+
+  assert.equal(discovered.length, 2);
+  assert.equal(discovered[0].name, "MetaMask");
+  assert.equal(discovered[0].id, "io.metamask");
+  assert.equal(discovered[0].isMetaMask, true);
+  assert.equal(discovered[1].name, "Phantom");
+  assert.equal(discovered[1].id, "app.phantom");
+});
+
+test("discovers multiple injected providers from window.ethereum.providers array", () => {
+  const metamask = makeProvider("MetaMask", "metamask");
+  const coinbase = makeProvider("Coinbase Wallet", "coinbasewallet");
+
+  const windowEthereum = {
+    ...metamask,
+    providers: [metamask, coinbase],
+  };
+
+  const discovered = discoverWalletProviders({
+    ethereum: windowEthereum,
+  });
+
+  assert.equal(discovered.length, 2);
+  assert.equal(discovered[0].name, "MetaMask");
+  assert.equal(discovered[1].name, "Coinbase Wallet");
+});
+
 test("deduplicates providers that appear in both discovery paths", () => {
   const provider = makeProvider("MetaMask", "metamask");
   const discovered = discoverWalletProviders({

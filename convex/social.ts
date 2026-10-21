@@ -617,6 +617,129 @@ export const listFeedPosts = query({
   },
 });
 
+export const listVideoPosts = query({
+  args: {
+    cursor: v.optional(v.number()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    const currentUserId = currentUser?._id;
+    const limit = args.limit ?? 24;
+
+    // Fetch recent posts with by_created index descending
+    let candidatePosts = await ctx.db
+      .query("posts")
+      .withIndex("by_created")
+      .order("desc")
+      .take(200);
+
+    if (args.cursor) {
+      candidatePosts = candidatePosts.filter((p) => p.createdAt < args.cursor!);
+    }
+
+    // Filter strictly for eligible video posts
+    const videoDocs = candidatePosts.filter((p) => {
+      // Must not be moderated/removed
+      if (p.moderationStatus === "removed") return false;
+
+      // Must be a video post: either mediaType === 'video' or has muxPlaybackId
+      const isVideo = p.mediaType === "video" || Boolean(p.muxPlaybackId);
+      if (!isVideo) return false;
+
+      // Audience & visibility check
+      if (p.audience === "closeFriends" && p.authorId !== currentUserId) {
+        return false;
+      }
+
+      return true;
+    });
+
+    const paginatedDocs = videoDocs.slice(0, limit);
+    const results: any[] = [];
+
+    for (const post of paginatedDocs) {
+      let author;
+
+      if (post.pageRefId) {
+        const pageDoc: any = await ctx.db.get(post.pageRefId as any);
+        if (pageDoc) {
+          author = {
+            id: pageDoc._id,
+            name: pageDoc.name,
+            username: pageDoc.username,
+            avatar: pageDoc.avatar || "",
+            userType: pageDoc.type || "business",
+            followersCount: pageDoc.followersCount || 0,
+            followingCount: 0,
+            isFollowing: false,
+            isVerified: true,
+            location: pageDoc.location,
+          };
+        } else {
+          const authorDoc = post.authorId ? await ctx.db.get(post.authorId) : null;
+          author = await resolveAuthor(ctx, authorDoc, currentUserId || null);
+        }
+      } else {
+        const authorDoc = post.authorId ? await ctx.db.get(post.authorId) : null;
+        author = await resolveAuthor(ctx, authorDoc, currentUserId || null);
+      }
+
+      let isLiked = false;
+      if (currentUserId) {
+        const postLike = await ctx.db
+          .query("likes")
+          .withIndex("by_user_target", (q: any) =>
+            q.eq("userId", currentUserId).eq("targetType", "post").eq("targetId", post._id)
+          )
+          .unique();
+        isLiked = !!postLike;
+      }
+
+      const mediaUrl = post.mediaUrl || (post.mediaStorageId ? await ctx.storage.getUrl(post.mediaStorageId) : undefined);
+
+      results.push({
+        id: post._id,
+        author,
+        text: post.text,
+        mediaUrl,
+        mediaStorageId: post.mediaStorageId,
+        muxUploadId: post.muxUploadId,
+        muxAssetId: post.muxAssetId,
+        muxPlaybackId: post.muxPlaybackId,
+        mediaType: post.mediaType,
+        location: post.location,
+        createdAt: formatRelativeTime(post.createdAt),
+        createdAtMs: post.createdAt,
+        likesCount: post.likesCount ?? 0,
+        commentsCount: post.commentsCount ?? 0,
+        repostsCount: post.repostsCount ?? 0,
+        isLiked,
+        isReposted: false,
+        audience: post.audience ?? "everyone",
+        replyPermission: post.replyPermission ?? "everyone",
+        contentTopics: post.contentTopics || [],
+        rallyRefId: post.rallyRefId,
+        pageRefId: post.pageRefId,
+        soundId: post.soundId,
+        soundTitle: post.soundTitle,
+        soundAuthorName: post.soundAuthorName,
+        soundAudioUrl: post.soundAudioUrl,
+        soundStartOffset: post.soundStartOffset,
+        soundVolume: post.soundVolume,
+        originalAudioVolume: post.originalAudioVolume,
+      });
+    }
+
+    const nextCursor = paginatedDocs.length === limit ? paginatedDocs[paginatedDocs.length - 1].createdAt : null;
+
+    return {
+      posts: results,
+      nextCursor,
+    };
+  },
+});
+
 /* ─────────────────────────────────────────────────────────────────────────────
    PROFILE POSTS
    ───────────────────────────────────────────────────────────────────────────── */

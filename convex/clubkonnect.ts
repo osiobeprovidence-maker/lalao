@@ -57,6 +57,69 @@ export const DEFAULT_SERVICE_SETTINGS = {
       { id: "startimes", name: "StarTimes", code: "StarTimes" },
     ],
   },
+  betting: {
+    enabled: true,
+    label: "Betting Wallet Funding",
+    fee: 50,
+    markupPercent: 0,
+    minAmount: 100,
+    maxAmount: 100000,
+    supportedProviders: [
+      { id: "prd-sporty-bet", name: "SportyBet", code: "prd-sporty-bet" },
+      { id: "product-bet-king", name: "BetKing", code: "product-bet-king" },
+      { id: "product-1x-bet", name: "1xBet", code: "product-1x-bet" },
+      { id: "product-nairabet", name: "NairaBet", code: "product-nairabet" },
+      { id: "product-bang-bet", name: "BangBet", code: "product-bang-bet" },
+      { id: "product-bet-way", name: "BetWay", code: "product-bet-way" },
+      { id: "product-merry-bet", name: "MerryBet", code: "product-merry-bet" },
+      { id: "product-naija-bet", name: "NaijaBet", code: "product-naija-bet" },
+      { id: "product-bet-land", name: "BetLand", code: "product-bet-land" },
+    ],
+  },
+  smile: {
+    enabled: true,
+    label: "Smile Internet",
+    fee: 0,
+    markupPercent: 0,
+    minAmount: 500,
+    maxAmount: 100000,
+    supportedProviders: [
+      { id: "smile-direct", name: "Smile Direct", code: "smile-direct" },
+    ],
+  },
+  spectranet: {
+    enabled: true,
+    label: "Spectranet 4G LTE",
+    fee: 0,
+    markupPercent: 0,
+    minAmount: 1000,
+    maxAmount: 100000,
+    supportedProviders: [
+      { id: "spectranet", name: "Spectranet", code: "spectranet" },
+    ],
+  },
+  waec: {
+    enabled: true,
+    label: "WAEC Examination",
+    fee: 0,
+    markupPercent: 0,
+    minAmount: 3500,
+    maxAmount: 50000,
+    supportedProviders: [
+      { id: "waec", name: "West African Examinations Council", code: "waec" },
+    ],
+  },
+  jamb: {
+    enabled: true,
+    label: "JAMB e-PIN",
+    fee: 0,
+    markupPercent: 0,
+    minAmount: 4700,
+    maxAmount: 50000,
+    supportedProviders: [
+      { id: "jamb", name: "Joint Admissions and Matriculation Board", code: "jamb" },
+    ],
+  },
 };
 
 /**

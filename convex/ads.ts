@@ -226,7 +226,15 @@ export const createCampaign = mutation({
       }
     }
 
-    // 5. Automated Screening
+    // 5. Image Ad Media Verification & Blob Protection
+    if (args.format === "image_ad" && !args.creative.mediaUrl && !args.creative.mediaStorageId) {
+      throw new Error("An image creative is required for image advertisements.");
+    }
+    if (args.creative.mediaUrl && args.creative.mediaUrl.startsWith("blob:")) {
+      throw new Error("Invalid media reference: temporary local blob URLs cannot be persisted.");
+    }
+
+    // 6. Automated Screening
     const screening = automatedContentScreening(`${args.creative.headline} ${args.creative.description || ""}`);
     const moderationStatus = screening.flagged ? "auto_flagged" : "pending_admin";
 

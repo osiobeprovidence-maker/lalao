@@ -196,12 +196,12 @@ export const globalSearch = query({
     }
 
     // CONTENT / VIDEO SEARCH
-    if (filter === 'all' || filter === 'content' || filter === 'video') {
+    if (filter === 'all' || filter === 'content' || filter === 'video' || filter === 'videos') {
       const rawPosts = await ctx.db.query("posts").withSearchIndex("search_text", (q2: any) => q2.search("text", q)).take(20);
       
       for (const p of rawPosts) {
         if (p.moderationStatus === "removed") continue;
-        if (filter === 'video' && p.mediaType !== 'video') continue;
+        const isVideo = p.mediaType === 'video' || Boolean(p.muxPlaybackId); if ((filter === 'video' || filter === 'videos') && !isVideo) continue;
         
         const resolved = await resolvePost(ctx, p, currentUser);
         if (resolved) {

@@ -65,7 +65,7 @@ export const SettingsPageView: React.FC = () => {
   } = useLalao();
 
   const { theme } = useTheme();
-  const { setIsInstallModalOpen } = usePWA();
+  const { isInstalled, setIsInstallModalOpen } = usePWA();
   const { logout } = useAuth();
 
   const [activeView, setActiveView] = useState<SettingsActiveView>('hub');
@@ -505,16 +505,18 @@ export const SettingsPageView: React.FC = () => {
                   </h3>
                 </div>
 
-                <SettingsRow
-                  id="row-settings-download-app"
-                  icon={Download}
-                  title="Download App"
-                  description="Install the native Lalao PWA app on your device"
-                  onClick={() => {
-                    handleClose();
-                    setIsInstallModalOpen(true);
-                  }}
-                />
+                {!isInstalled && (
+                  <SettingsRow
+                    id="row-settings-download-app"
+                    icon={Download}
+                    title="Install LALAO"
+                    description="Install LALAO on your PC, mobile, or tablet"
+                    onClick={() => {
+                      handleClose();
+                      setIsInstallModalOpen(true);
+                    }}
+                  />
+                )}
 
                 <SettingsRow
                   id="row-settings-logout"

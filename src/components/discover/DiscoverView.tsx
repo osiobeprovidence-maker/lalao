@@ -32,6 +32,7 @@ import { Badge } from '../common/Badge';
 import { VerificationBadge } from '../common/VerificationBadge';
 import { getPublicIdentityLabel } from '../common/UserIdentity';
 import { CreatorRankingsView } from '../creators/CreatorRankingsView';
+import { VideosDiscoveryView } from './VideosDiscoveryView';
 import { PostItem } from '../feed/PostItem';
 import {
   calculateDistanceMeters,
@@ -64,6 +65,7 @@ export const DiscoverView: React.FC = () => {
     featureFlags,
     discoverSearchQuery,
     setDiscoverSearchQuery,
+    setActiveVideoFeedPostId,
   } = useLalao();
 
   const rawUsers = useQuery(api.social.listUsersForExplore);
@@ -71,7 +73,7 @@ export const DiscoverView: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'people' | 'pages' | 'shop' | 'events' | 'ranking'>('people');
+  const [activeFilter, setActiveFilter] = useState<'ranking' | 'people' | 'pages' | 'shop' | 'events' | 'videos'>('ranking');
   const [locationMode, setLocationMode] = useState<'current' | 'selected' | 'global'>('current');
   const [isLocationModeMenuOpen, setIsLocationModeMenuOpen] = useState(false);
   const [isPlumMenuOpen, setIsPlumMenuOpen] = useState(false);
@@ -415,7 +417,7 @@ export const DiscoverView: React.FC = () => {
 
         {/* Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-          {['people', 'pages', 'shop', 'events', 'ranking'].map((filter) => (
+          {['ranking', 'people', 'pages', 'shop', 'events', 'videos'].map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter as any)}
@@ -518,69 +520,6 @@ export const DiscoverView: React.FC = () => {
           <span>
             <strong>Ghost Mode is active:</strong> You are invisible in &ldquo;People Near You&rdquo; while exploring.
           </span>
-        </div>
-      )}
-
-      {/* Roomy Banner - Only show if not searching and roomyEnabled is true */}
-      {!isSearching && featureFlags.roomyEnabled && (
-        <div className="px-4 mt-4">
-          <div 
-            onClick={() => {
-              navigate('/app/page/roomy');
-            }}
-            className="bg-gradient-to-br from-[#5E43F3] to-[#4E34E0] rounded-2xl p-5 cursor-pointer hover:shadow-lg hover:shadow-indigo-500/20 transition-all flex items-center justify-between group overflow-hidden relative"
-          >
-            {/* Background decoration */}
-            <div className="absolute -right-6 -top-6 w-32 h-32 bg-theme-surface opacity-10 rounded-full blur-2xl group-hover:scale-110 transition-transform"></div>
-            
-            <div>
-              <h3 className="text-white font-black text-xl mb-1 flex items-center gap-2">
-                <Home className="w-5 h-5" />
-                Roomy
-              </h3>
-              <p className="text-indigo-100 text-xs max-w-[200px] leading-relaxed">
-                Find rooms, roommates, and housing around you.
-              </p>
-            </div>
-            
-            <div className="w-10 h-10 rounded-full bg-theme-surface/20 flex items-center justify-center shrink-0 backdrop-blur-sm group-hover:bg-theme-surface/30 transition-colors">
-              <ChevronRight className="w-5 h-5 text-white" />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* JointheQ Subscriptions Banner */}
-      {!isSearching && (
-        <div className="px-4 mt-3">
-          <div 
-            onClick={() => {
-              navigate('/app/page/jointheq');
-            }}
-            className="bg-gradient-to-br from-[#1E1B4B] via-[#312E81] to-[#4338CA] rounded-2xl p-5 cursor-pointer hover:shadow-lg hover:shadow-indigo-900/30 transition-all flex items-center justify-between group overflow-hidden relative border border-indigo-500/20"
-          >
-            {/* Background decoration */}
-            <div className="absolute -right-6 -top-6 w-32 h-32 bg-[#818CF8] opacity-15 rounded-full blur-2xl group-hover:scale-110 transition-transform"></div>
-            
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
-                  Shared Subscriptions
-                </span>
-              </div>
-              <h3 className="text-white font-black text-xl mb-1 flex items-center gap-2">
-                <Crown className="w-5 h-5 text-amber-400" />
-                JointheQ
-              </h3>
-              <p className="text-indigo-200 text-xs max-w-[220px] leading-relaxed">
-                Spotify, Netflix & Apple Music groups at group rates.
-              </p>
-            </div>
-            
-            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0 backdrop-blur-sm group-hover:bg-white/20 transition-colors relative z-10">
-              <ChevronRight className="w-5 h-5 text-white" />
-            </div>
-          </div>
         </div>
       )}
 
@@ -744,6 +683,63 @@ export const DiscoverView: React.FC = () => {
                           </button>
                         </div>
                       ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* Search Results: Videos */}
+                {activeFilter === 'videos' && searchResults.content.length > 0 && (
+                  <section className="px-4">
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <Play className="w-4 h-4 text-[#5E43F3]" />
+                      <h2 className="text-sm font-bold text-theme-primary tracking-tight">Videos</h2>
+                      <span className="text-xs text-theme-tertiary">({searchResults.content.length})</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {searchResults.content.map((post: any) => {
+                        const thumbnailUrl = post.muxPlaybackId
+                          ? `https://image.mux.com/${post.muxPlaybackId}/thumbnail.jpg?time=0`
+                          : post.mediaUrl;
+                        return (
+                          <div
+                            key={post.id}
+                            onClick={() => setActiveVideoFeedPostId(post.id)}
+                            className="group relative aspect-[9/16] rounded-2xl overflow-hidden bg-theme-surface border border-theme-divider/70 cursor-pointer shadow-2xs hover:shadow-md hover:border-[#5E43F3]/50 transition-all"
+                          >
+                            {thumbnailUrl ? (
+                              <img
+                                src={thumbnailUrl}
+                                alt={post.text || 'Video'}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-indigo-900/60 via-purple-900/40 to-black/80 flex items-center justify-center">
+                                <Play className="w-10 h-10 text-white/40" />
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/10 group-hover:from-black/90 transition-colors pointer-events-none" />
+                            <div className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white shadow-sm group-hover:bg-[#5E43F3] group-hover:scale-110 transition-all pointer-events-none">
+                              <Play className="w-3.5 h-3.5 fill-white translate-x-0.5" />
+                            </div>
+                            <div className="absolute inset-x-0 bottom-0 p-2.5 text-white pointer-events-none">
+                              {post.author && (
+                                <div className="flex items-center gap-1.5 mb-1 min-w-0">
+                                  <Avatar src={post.author.avatar} alt={getPublicIdentityLabel(post.author)} size="xs" />
+                                  <span className="text-[11px] font-semibold text-white/95 truncate">{getPublicIdentityLabel(post.author)}</span>
+                                </div>
+                              )}
+                              {post.text && <p className="text-[11px] text-white/80 line-clamp-2 leading-tight mb-1 font-normal">{post.text}</p>}
+                              <div className="flex items-center gap-3 text-[10px] text-white/75 font-medium">
+                                <div className="flex items-center gap-1">
+                                  <Heart className="w-3 h-3 fill-white/60 text-white/60" />
+                                  <span>{post.likesCount || 0}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </section>
                 )}
@@ -1051,6 +1047,7 @@ export const DiscoverView: React.FC = () => {
             )}
             {activeFilter === 'events' && <EventsView locationMode={locationMode} maxRadiusMeters={maxRadiusMeters} />}
             {activeFilter === 'ranking' && <CreatorRankingsView />}
+            {activeFilter === 'videos' && <VideosDiscoveryView />}
           </>
         )}
       </div>

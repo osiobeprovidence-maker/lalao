@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   discoverWalletProviders,
   type DiscoveredWalletProvider,
+  type EIP6963ProviderDetail,
   type WalletProviderLike,
   type WalletProviderWindow,
 } from '../lib/walletProviderDiscovery';
@@ -18,6 +19,8 @@ export const SUPPORTED_CHAINS: Record<number, { name: string; currency: string; 
 
 // The primary recommended chain for LaLao
 export const DEFAULT_CHAIN_ID = 137; // Polygon
+
+export const STORAGE_LAST_CONNECTED_KEY = 'lalao_connected_provider_id';
 
 export type WalletProvider = 'metamask' | 'injected' | 'other';
 export type WalletStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -53,9 +56,7 @@ function truncateAddress(address: string): string {
 }
 
 /**
- * Get the current provider registry. EIP-6963 is preferred, with window.ethereum
- * retained as the legacy fallback for wallets that still expose only one global
- * provider.
+ * Get the current provider registry window.
  */
 function getWalletProviderWindow(): WalletProviderWindow | null {
   if (typeof window === 'undefined') return null;
@@ -66,13 +67,13 @@ function getWalletProviderWindow(): WalletProviderWindow | null {
  * useWeb3Wallet – production-ready hook for multiple EVM wallet providers.
  *
  * Features:
- * - EIP-6963 and legacy provider discovery
+ * - Full EIP-6963 provider announcement and discovery
+ * - Legacy window.ethereum and multi-provider (window.ethereum.providers) fallback
  * - Explicit provider selection
- * - Account-change and chain-change detection
- * - Unsupported network warnings
- * - Graceful error handling for rejected connections, locked wallets, etc.
- * - Balance fetching
- * - Network switching
+ * - Account-change, chain-change, and disconnect event synchronization
+ * - Persistent auto-reconnection on refresh via eth_accounts
+ * - Unsupported network warnings and dynamic network switching
+ * - Non-crashing graceful error handling
  */
 export function useWeb3Wallet(): UseWeb3WalletReturn {
   const [state, setState] = useState<Web3WalletState>({
@@ -88,8 +89,10 @@ export function useWeb3Wallet(): UseWeb3WalletReturn {
     isUnsupportedNetwork: false,
   });
   const [availableProviders, setAvailableProviders] = useState<DiscoveredWalletProvider[]>([]);
+  const eip6963ProvidersRef = useRef<Map<string, EIP6963ProviderDetail>>(new Map());
   const activeProviderRef = useRef<WalletProviderLike | null>(null);
   const mountedRef = useRef(true);
+  const autoConnectAttemptedRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -97,17 +100,41 @@ export function useWeb3Wallet(): UseWeb3WalletReturn {
   }, []);
 
   const refreshProviders = useCallback(() => {
-    const providers = discoverWalletProviders(getWalletProviderWindow() ?? undefined);
-    setAvailableProviders(providers);
+    const eventProviders = Array.from(eip6963ProvidersRef.current.values());
+    const providers = discoverWalletProviders(getWalletProviderWindow() ?? undefined, eventProviders);
+    if (mountedRef.current) {
+      setAvailableProviders(providers);
+    }
     return providers;
   }, []);
 
+  // Listen for EIP-6963 standard announcements and request providers
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleEIP6963Announce = (event: Event) => {
+      const customEvent = event as CustomEvent<EIP6963ProviderDetail>;
+      if (customEvent.detail && customEvent.detail.info && customEvent.detail.provider) {
+        const key = customEvent.detail.info.rdns || customEvent.detail.info.uuid;
+        eip6963ProvidersRef.current.set(key, customEvent.detail);
+        refreshProviders();
+      }
+    };
+
+    // Standard EIP-6963 event is "eip6963:announceProvider"
+    window.addEventListener('eip6963:announceProvider', handleEIP6963Announce);
+    // Legacy / backward-compatible event alias
+    window.addEventListener('eip6963:announce', handleEIP6963Announce);
+
+    // Prompt existing extensions to announce themselves
+    window.dispatchEvent(new Event('eip6963:requestProvider'));
+
+    // Initial discovery
     refreshProviders();
-    const windowLike = getWalletProviderWindow();
-    windowLike?.addEventListener?.("eip6963:announce", refreshProviders);
+
     return () => {
-      windowLike?.removeEventListener?.("eip6963:announce", refreshProviders);
+      window.removeEventListener('eip6963:announceProvider', handleEIP6963Announce);
+      window.removeEventListener('eip6963:announce', handleEIP6963Announce);
     };
   }, [refreshProviders]);
 
@@ -154,42 +181,54 @@ export function useWeb3Wallet(): UseWeb3WalletReturn {
   }, []);
 
   // ── Connect ────────────────────────────────────────────────────────
-  const connect = useCallback(async (providerSelection?: DiscoveredWalletProvider | string) => {
+  const connect = useCallback(async (providerSelection?: DiscoveredWalletProvider | string, isSilent = false) => {
+    // Refresh the list to catch any recently injected providers
+    const currentList = availableProviders.length > 0
+      ? availableProviders
+      : discoverWalletProviders(getWalletProviderWindow() ?? undefined, Array.from(eip6963ProvidersRef.current.values()));
+
     const selected = typeof providerSelection === "string"
-      ? availableProviders.find((entry) => entry.id === providerSelection || entry.name.toLowerCase().replace(/\s+/g, "-") === providerSelection)
+      ? currentList.find((entry) => entry.id === providerSelection || entry.name.toLowerCase().replace(/\s+/g, "-") === providerSelection)
       : providerSelection;
-    const discovered = selected ?? availableProviders.find((entry) => entry.isMetaMask) ?? availableProviders[0];
+    const discovered = selected ?? currentList.find((entry) => entry.isMetaMask) ?? currentList[0];
     const eth = discovered?.provider;
 
     if (!eth) {
-      setState(prev => ({
-        ...prev,
-        status: 'error',
-        error: 'No supported wallet was detected. Install a compatible wallet to continue.',
-      }));
+      if (!isSilent) {
+        setState(prev => ({
+          ...prev,
+          status: 'error',
+          error: 'No supported wallet was detected. Install a compatible wallet to continue.',
+        }));
+      }
       return;
     }
 
     activeProviderRef.current = eth;
-    setState(prev => ({
-      ...prev,
-      status: 'connecting',
-      error: null,
-      providerId: discovered.id,
-      providerName: discovered.name,
-    }));
+    if (!isSilent) {
+      setState(prev => ({
+        ...prev,
+        status: 'connecting',
+        error: null,
+        providerId: discovered.id,
+        providerName: discovered.name,
+      }));
+    }
 
     try {
+      // Use eth_accounts for silent auto-reconnect to avoid popping up an approval dialog unnecessarily
       const accounts = await eth.request<string[]>({
-        method: 'eth_requestAccounts',
+        method: isSilent ? 'eth_accounts' : 'eth_requestAccounts',
       });
 
       if (!accounts || accounts.length === 0) {
-        setState(prev => ({
-          ...prev,
-          status: 'error',
-          error: 'No accounts found. Please unlock your wallet.',
-        }));
+        if (!isSilent) {
+          setState(prev => ({
+            ...prev,
+            status: 'error',
+            error: 'No accounts found. Please unlock your wallet.',
+          }));
+        }
         return;
       }
 
@@ -199,6 +238,13 @@ export function useWeb3Wallet(): UseWeb3WalletReturn {
       const chainIdHex = await eth.request<string>({ method: 'eth_chainId' });
       const chainId = parseInt(chainIdHex, 16);
       const chainInfo = SUPPORTED_CHAINS[chainId];
+
+      // Persist chosen provider id for refresh restoration
+      try {
+        localStorage.setItem(STORAGE_LAST_CONNECTED_KEY, discovered.id);
+      } catch {
+        // Ignore localStorage errors
+      }
 
       if (mountedRef.current) {
         setState({
@@ -219,6 +265,8 @@ export function useWeb3Wallet(): UseWeb3WalletReturn {
       fetchBalance(address);
 
     } catch (err: any) {
+      if (isSilent) return;
+
       if (mountedRef.current) {
         // EIP-1193 error codes
         if (err.code === 4001) {
@@ -244,11 +292,41 @@ export function useWeb3Wallet(): UseWeb3WalletReturn {
         }
       }
     }
-  }, [fetchBalance]);
+  }, [availableProviders, fetchBalance]);
+
+  // ── Auto-Reconnect on refresh ──────────────────────────────────────
+  useEffect(() => {
+    if (autoConnectAttemptedRef.current || typeof window === 'undefined') return;
+
+    let savedProviderId: string | null = null;
+    try {
+      savedProviderId = localStorage.getItem(STORAGE_LAST_CONNECTED_KEY);
+    } catch {
+      // Ignore
+    }
+
+    if (!savedProviderId) return;
+
+    autoConnectAttemptedRef.current = true;
+
+    // Small delay to allow extensions and EIP-6963 announcements to settle
+    const timer = setTimeout(() => {
+      if (mountedRef.current && state.status === 'disconnected') {
+        void connect(savedProviderId ?? undefined, true);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [connect, state.status]);
 
   // ── Disconnect ─────────────────────────────────────────────────────
   const disconnect = useCallback(() => {
     activeProviderRef.current = null;
+    try {
+      localStorage.removeItem(STORAGE_LAST_CONNECTED_KEY);
+    } catch {
+      // Ignore
+    }
     setState({
       status: 'disconnected',
       address: null,

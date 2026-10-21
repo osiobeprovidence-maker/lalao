@@ -172,7 +172,7 @@ export const DesktopSidebar: React.FC = () => {
     { id: 'ads', label: 'Lalao Ads', icon: Megaphone },
     { id: 'wallet', label: 'Wallet', icon: Wallet },
     { id: 'orders', label: 'Order History', icon: ShoppingBag },
-    { id: 'install-app', label: 'Install App', icon: Download },
+    ...(!isInstalled ? [{ id: 'install-app', label: 'Install App', icon: Download }] : []),
   ] as const;
 
   const isMenuItemActive = (id: string) =>

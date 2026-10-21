@@ -18,6 +18,7 @@ import {
   Calendar,
   Music,
   Disc,
+  TrendingUp,
 } from 'lucide-react';
 import { Post, Rally, User } from '../../types';
 import { Avatar } from '../common/Avatar';
@@ -428,6 +429,16 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                     {isAuthor && post && (
                       <>
                         <div className="h-px bg-theme-surface-hover my-1" />
+                        <button
+                          onClick={() => {
+                            setShowOptions(false);
+                            setActiveTab('ads');
+                          }}
+                          className="w-full text-left px-3.5 py-2 hover:bg-theme-base text-[#5E43F3] font-medium flex items-center gap-2 cursor-pointer"
+                        >
+                          <TrendingUp className="w-3.5 h-3.5" />
+                          <span>Promote post</span>
+                        </button>
                         <button
                           onClick={() => {
                             setShowOptions(false);

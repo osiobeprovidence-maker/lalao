@@ -41,6 +41,46 @@ export function getClubkonnectCableCode(cable?: string): string {
   return 'dstv';
 }
 
+// ClubKonnect Betting Company Codes
+export function getClubkonnectBettingCode(company?: string): string {
+  const c = (company || '').toLowerCase();
+  if (c.includes('sporty') || c === 'prd-sporty-bet') return 'prd-sporty-bet';
+  if (c.includes('king') || c === 'product-bet-king') return 'product-bet-king';
+  if (c.includes('1x') || c === 'product-1x-bet') return 'product-1x-bet';
+  if (c.includes('naira') || c === 'product-nairabet') return 'product-nairabet';
+  if (c.includes('bang') || c === 'product-bang-bet') return 'product-bang-bet';
+  if (c.includes('way') || c === 'product-bet-way') return 'product-bet-way';
+  if (c.includes('merry') || c === 'product-merry-bet') return 'product-merry-bet';
+  if (c.includes('naija') || c === 'product-naija-bet') return 'product-naija-bet';
+  if (c.includes('land') || c === 'product-bet-land') return 'product-bet-land';
+  return company || 'prd-sporty-bet';
+}
+
+// ClubKonnect Smile Network Code
+export function getClubkonnectSmileCode(): string {
+  return 'smile-direct';
+}
+
+// ClubKonnect Spectranet Service Code
+export function getClubkonnectSpectranetCode(): string {
+  return 'spectranet';
+}
+
+// ClubKonnect WAEC Exam Type Code
+export function getClubkonnectWAECCode(examType?: string): string {
+  const e = (examType || '').toLowerCase();
+  if (e.includes('registration')) return 'waec-registration';
+  return 'waecdirect'; // default WAEC Result Checker PIN
+}
+
+// ClubKonnect JAMB Exam Type Code
+export function getClubkonnectJAMBCode(examType?: string): string {
+  const j = (examType || '').toLowerCase();
+  if (j === 'de' || j.includes('direct')) return 'de';
+  if (j.includes('no-mock') || j === 'utme-no-mock') return 'utme-no-mock';
+  return 'utme-mock';
+}
+
 /**
  * Fetch Data Bundles from Live ClubKonnect Feed
  */
@@ -221,11 +261,14 @@ export const verifyElectricityMeter = action({
 });
 
 /**
- * Verify Cable TV Smartcard / IUC Number via ClubKonnect
+ * Verify Betting Customer ID via ClubKonnect
+ */
+/**
+ * Verify Cable Smartcard / IUC Number via ClubKonnect
  */
 export const verifyCableSmartcard = action({
   args: {
-    cableProvider: v.string(), // 'dstv', 'gotv', 'startimes'
+    cableProvider: v.string(), // "dstv", "gotv", "startimes"
     smartcardNumber: v.string(),
   },
   handler: async (ctx, args) => {
@@ -243,7 +286,7 @@ export const verifyCableSmartcard = action({
 
     try {
       const cableId = getClubkonnectCableCode(args.cableProvider);
-      const url = `https://www.nellobytesystems.com/APIVerifyCableTVV1.asp?UserID=${encodeURIComponent(userId)}&APIKey=${encodeURIComponent(apiKey)}&CableTV=${cableId}&SmartCardNo=${encodeURIComponent(args.smartcardNumber)}`;
+      const url = `https://www.nellobytesystems.com/APIVerifyCableTVV1.asp?UserID=${encodeURIComponent(userId)}&APIKey=${encodeURIComponent(apiKey)}&CableTV=${encodeURIComponent(cableId)}&SmartCardNo=${encodeURIComponent(args.smartcardNumber)}`;
       const res = await fetch(url);
       const data = await res.json();
 
@@ -255,11 +298,181 @@ export const verifyCableSmartcard = action({
           cableProvider: cableId,
         };
       } else {
-        throw new Error(data?.status || data?.msg || "Invalid smartcard / IUC number for selected provider.");
+        throw new Error(data?.status || data?.msg || "Could not verify smartcard number with operator.");
       }
     } catch (e: any) {
       throw new Error(e.message || "Failed to verify smartcard with provider.");
     }
+  }
+});
+
+export const verifyBettingCustomer = action({
+  args: {
+    bettingCompany: v.string(), // e.g. "prd-sporty-bet"
+    customerId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = process.env.CLUBKONNECT_USER_ID;
+    const apiKey = process.env.CLUBKONNECT_API_KEY;
+
+    if (!userId || !apiKey) {
+      return {
+        verified: true,
+        customerName: `Customer #${args.customerId.slice(-4)} (Test Mode)`,
+        customerId: args.customerId,
+        bettingCompany: args.bettingCompany,
+      };
+    }
+
+    try {
+      const companyCode = getClubkonnectBettingCode(args.bettingCompany);
+      const url = `https://www.nellobytesystems.com/APIVerifyBettingV1.asp?UserID=${encodeURIComponent(userId)}&APIKey=${encodeURIComponent(apiKey)}&BettingCompany=${encodeURIComponent(companyCode)}&CustomerID=${encodeURIComponent(args.customerId)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data && (data.customer_name || data.name || data.status === "ORDER_RECEIVED")) {
+        return {
+          verified: true,
+          customerName: data.customer_name || data.name || "Verified Bettor",
+          customerId: args.customerId,
+          bettingCompany: companyCode,
+        };
+      } else {
+        throw new Error(data?.status || data?.msg || "Could not verify betting account ID with provider.");
+      }
+    } catch (e: any) {
+      throw new Error(e.message || "Failed to verify betting customer ID.");
+    }
+  }
+});
+
+/**
+ * Fetch Smile packages from live ClubKonnect feed
+ */
+export const getSmilePackages = action({
+  args: {},
+  handler: async (ctx) => {
+    try {
+      const url = `https://www.nellobytesystems.com/APISmilePackagesV2.asp`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const productList = data?.PRODUCT || data?.TV_ID?.Smile?.[0]?.PRODUCT || data?.MOBILE_NETWORK?.Smile?.[0]?.PRODUCT;
+      if (Array.isArray(productList)) {
+        return productList.map((p: any) => ({
+          packageId: p.PACKAGE_ID || p.PRODUCT_ID || p.PRODUCT_CODE,
+          packageName: p.PACKAGE_NAME || p.PRODUCT_NAME,
+          price: Math.ceil(parseFloat(p.PACKAGE_AMOUNT || p.PRODUCT_AMOUNT) || 0),
+        }));
+      }
+    } catch (e) {
+      console.warn("Error fetching Smile packages:", e);
+    }
+
+    // Default curated fallback packages for Smile
+    return [
+      { packageId: '624', packageName: 'Smile 1.5GB Monthly', price: 1200 },
+      { packageId: '625', packageName: 'Smile 2GB Monthly', price: 1500 },
+      { packageId: '626', packageName: 'Smile 3GB Monthly', price: 2000 },
+      { packageId: '627', packageName: 'Smile 5GB Monthly', price: 3000 },
+      { packageId: '628', packageName: 'Smile 7GB Monthly', price: 4000 },
+      { packageId: '629', packageName: 'Smile 10GB Monthly', price: 5000 },
+      { packageId: '630', packageName: 'Smile 15GB Monthly', price: 7000 },
+      { packageId: '631', packageName: 'Smile 20GB Monthly', price: 9000 },
+    ];
+  }
+});
+
+/**
+ * Fetch Spectranet packages from live ClubKonnect feed
+ */
+export const getSpectranetPackages = action({
+  args: {},
+  handler: async (ctx) => {
+    try {
+      const url = `https://www.nellobytesystems.com/APISpectranetPackagesV2.asp`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const productList = data?.PRODUCT || data?.TV_ID?.Spectranet?.[0]?.PRODUCT;
+      if (Array.isArray(productList)) {
+        return productList.map((p: any) => ({
+          packageId: p.PACKAGE_ID || p.PRODUCT_ID || p.PRODUCT_CODE,
+          packageName: p.PACKAGE_NAME || p.PRODUCT_NAME,
+          price: Math.ceil(parseFloat(p.PACKAGE_AMOUNT || p.PRODUCT_AMOUNT) || 0),
+        }));
+      }
+    } catch (e) {
+      console.warn("Error fetching Spectranet packages:", e);
+    }
+
+    // Default curated fallback packages for Spectranet
+    return [
+      { packageId: 'spectranet-5gb', packageName: 'Spectranet 5GB Unified Plan', price: 3500 },
+      { packageId: 'spectranet-10gb', packageName: 'Spectranet 10GB Unified Plan', price: 6500 },
+      { packageId: 'spectranet-20gb', packageName: 'Spectranet 20GB Unified Plan', price: 11000 },
+      { packageId: 'spectranet-40gb', packageName: 'Spectranet 40GB Mega Value', price: 15500 },
+      { packageId: 'spectranet-unlimited', packageName: 'Spectranet Unlimited Monthly', price: 22000 },
+    ];
+  }
+});
+
+/**
+ * Fetch WAEC e-PIN packages
+ */
+export const getWAECPackages = action({
+  args: {},
+  handler: async (ctx) => {
+    try {
+      const url = `https://www.nellobytesystems.com/APIWAECPackagesV2.asp`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const list = data?.PRODUCT || data?.EXAM;
+      if (Array.isArray(list)) {
+        return list.map((p: any) => ({
+          packageId: p.PACKAGE_ID || p.PRODUCT_CODE || p.PRODUCT_ID,
+          packageName: p.PACKAGE_NAME || p.PRODUCT_NAME,
+          price: Math.ceil(parseFloat(p.PACKAGE_AMOUNT || p.PRODUCT_AMOUNT) || 0),
+        }));
+      }
+    } catch (e) {
+      console.warn("Error fetching WAEC packages:", e);
+    }
+
+    // Standard WAEC products on ClubKonnect
+    return [
+      { packageId: 'waecdirect', packageName: 'WAEC Result Checker e-PIN', price: 3800 },
+      { packageId: 'waec-registration', packageName: 'WAEC Registration e-PIN', price: 19500 },
+    ];
+  }
+});
+
+/**
+ * Fetch JAMB e-PIN packages
+ */
+export const getJAMBPackages = action({
+  args: {},
+  handler: async (ctx) => {
+    try {
+      const url = `https://www.nellobytesystems.com/APIJAMBPackagesV2.asp`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const list = data?.PRODUCT || data?.EXAM;
+      if (Array.isArray(list)) {
+        return list.map((p: any) => ({
+          packageId: p.PACKAGE_ID || p.PRODUCT_CODE || p.PRODUCT_ID,
+          packageName: p.PACKAGE_NAME || p.PRODUCT_NAME,
+          price: Math.ceil(parseFloat(p.PACKAGE_AMOUNT || p.PRODUCT_AMOUNT) || 0),
+        }));
+      }
+    } catch (e) {
+      console.warn("Error fetching JAMB packages:", e);
+    }
+
+    // Standard JAMB products on ClubKonnect
+    return [
+      { packageId: 'utme-no-mock', packageName: 'JAMB UTME PIN (Without Mock)', price: 6500 },
+      { packageId: 'utme-mock', packageName: 'JAMB UTME PIN (With Mock)', price: 7700 },
+      { packageId: 'de', packageName: 'JAMB Direct Entry (DE) PIN', price: 6500 },
+    ];
   }
 });
 
@@ -613,6 +826,21 @@ export const purchaseService = action({
           const cableCode = getClubkonnectCableCode(args.provider);
           const packageId = args.variationId || 'dstv-padi';
           apiUrl = `https://www.nellobytesystems.com/APICableTVV1.asp?UserID=${encodeURIComponent(CLUBKONNECT_USER_ID)}&APIKey=${encodeURIComponent(CLUBKONNECT_API_KEY)}&CableTV=${cableCode}&Package=${encodeURIComponent(packageId)}&SmartCardNo=${encodeURIComponent(args.customerIdentifier)}&RequestID=${encodeURIComponent(requestId)}`;
+        } else if (args.serviceCategory === 'betting') {
+          const bettingCode = getClubkonnectBettingCode(args.provider);
+          apiUrl = `https://www.nellobytesystems.com/APIBettingV1.asp?UserID=${encodeURIComponent(CLUBKONNECT_USER_ID)}&APIKey=${encodeURIComponent(CLUBKONNECT_API_KEY)}&BettingCompany=${encodeURIComponent(bettingCode)}&CustomerID=${encodeURIComponent(args.customerIdentifier)}&Amount=${args.amount}&RequestID=${encodeURIComponent(requestId)}`;
+        } else if (args.serviceCategory === 'smile') {
+          const planCode = args.variationId || '624';
+          apiUrl = `https://www.nellobytesystems.com/APISmileV1.asp?UserID=${encodeURIComponent(CLUBKONNECT_USER_ID)}&APIKey=${encodeURIComponent(CLUBKONNECT_API_KEY)}&MobileNetwork=smile-direct&DataPlan=${encodeURIComponent(planCode)}&MobileNumber=${encodeURIComponent(args.customerIdentifier)}&RequestID=${encodeURIComponent(requestId)}`;
+        } else if (args.serviceCategory === 'spectranet') {
+          const planCode = args.variationId || 'spectranet-5gb';
+          apiUrl = `https://www.nellobytesystems.com/APISpectranetV1.asp?UserID=${encodeURIComponent(CLUBKONNECT_USER_ID)}&APIKey=${encodeURIComponent(CLUBKONNECT_API_KEY)}&ServiceID=spectranet&VariationCode=${encodeURIComponent(planCode)}&AccountNo=${encodeURIComponent(args.customerIdentifier)}&PhoneNo=${encodeURIComponent(args.customerIdentifier)}&Amount=${args.amount}&RequestID=${encodeURIComponent(requestId)}`;
+        } else if (args.serviceCategory === 'waec') {
+          const examCode = getClubkonnectWAECCode(args.variationId || args.product);
+          apiUrl = `https://www.nellobytesystems.com/APIWAECV1.asp?UserID=${encodeURIComponent(CLUBKONNECT_USER_ID)}&APIKey=${encodeURIComponent(CLUBKONNECT_API_KEY)}&ExamType=${encodeURIComponent(examCode)}&PhoneNo=${encodeURIComponent(args.customerIdentifier)}&Amount=${args.amount}&RequestID=${encodeURIComponent(requestId)}`;
+        } else if (args.serviceCategory === 'jamb') {
+          const examCode = getClubkonnectJAMBCode(args.variationId || args.product);
+          apiUrl = `https://www.nellobytesystems.com/APIJAMBV1.asp?UserID=${encodeURIComponent(CLUBKONNECT_USER_ID)}&APIKey=${encodeURIComponent(CLUBKONNECT_API_KEY)}&ExamType=${encodeURIComponent(examCode)}&PhoneNo=${encodeURIComponent(args.customerIdentifier)}&Amount=${args.amount}&RequestID=${encodeURIComponent(requestId)}`;
         } else {
           throw new Error(`Unsupported service category: ${args.serviceCategory}`);
         }
@@ -630,7 +858,7 @@ export const purchaseService = action({
         const isSuccess = statusCode === '100' || statusCode === '200' || statusText.includes('ORDER_RECEIVED') || statusText.includes('ORDER_COMPLETED');
 
         if (isSuccess) {
-          const token = ckResponse?.metertoken || ckResponse?.token;
+          const token = ckResponse?.pin || ckResponse?.epin || ckResponse?.metertoken || ckResponse?.token;
           const units = ckResponse?.units;
           await ctx.runMutation(internal.market.updatePurchaseStatus, {
             userId: user._id, marketTxId, walletTxId, status: "COMPLETED",

@@ -32,8 +32,7 @@ export const PushNotificationSettings: React.FC = () => {
             icon: '/icon-192.png',
             tag: 'lalao-local-notification-test',
             requireInteraction: true,
-            renotify: true,
-          });
+          } as NotificationOptions);
         } catch (notificationError) {
           // Still run the server push test if the browser blocks page-created notifications.
           console.warn('Could not show local browser notification:', notificationError);
@@ -69,31 +68,9 @@ export const PushNotificationSettings: React.FC = () => {
   }
 
   // ── Already Enabled / Active Token ──────────────────────────────────────────
+  // Hide prompt banner completely when notifications are already on
   if (hasActivePushToken || status === 'success' || browserPermission === 'granted') {
-    return (
-      <div
-        id="push-settings-active"
-        className="mx-4 mt-3 rounded-2xl border border-[#5E43F3]/20 bg-theme-surface-hover/50 px-4 py-3 flex items-center gap-3"
-      >
-        <div className="w-9 h-9 rounded-full bg-[#5E43F3]/10 text-[#5E43F3] flex items-center justify-center shrink-0">
-          <CheckCircle2 className="w-4.5 h-4.5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[12px] font-bold text-theme-primary">Push notifications are on</p>
-          <p className="text-[11px] text-theme-tertiary mt-0.5">
-            You&apos;ll get alerts for likes, replies, follows &amp; more — even when the app is closed.
-          </p>
-        </div>
-        <button
-          onClick={handleTestPush}
-          disabled={isTesting}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider text-theme-primary text-[11px] font-bold transition-colors disabled:opacity-50 shrink-0"
-        >
-          {isTesting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3 text-[#5E43F3]" />}
-          <span>Test</span>
-        </button>
-      </div>
-    );
+    return null;
   }
 
   // ── Browser Permission Denied ────────────────────────────────────────────────

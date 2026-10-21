@@ -15,6 +15,7 @@ import {
   XCircle,
   ExternalLink,
   ChevronRight,
+  TrendingUp,
   Sparkles,
   ArrowLeft,
   Upload,
@@ -32,6 +33,8 @@ import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
 import { useLalao } from '../../context/LalaoContext';
+import { AppIcon } from '../common/AppIcon';
+import { CampaignImageUploader } from './CampaignImageUploader';
 
 export const AdvertiserDashboard: React.FC = () => {
   const { currentUser, location } = useLalao();
@@ -53,9 +56,9 @@ export const AdvertiserDashboard: React.FC = () => {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-theme-divider">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-[#5E43F3]/10 text-[#5E43F3]">
-              <Megaphone className="w-5 h-5" />
+          <div className="flex items-center gap-2.5">
+            <span className="p-1 rounded-xl bg-[#5E43F3]/10 flex items-center justify-center shrink-0">
+              <AppIcon className="w-7 h-7 rounded-lg shrink-0 object-contain" />
             </span>
             <h1 className="text-xl sm:text-2xl font-black text-theme-primary tracking-tight">
               Lalao Ads Manager
@@ -251,9 +254,9 @@ const CampaignRowItem: React.FC<{ campaign: any; onSelect: () => void }> = ({ ca
           ) : campaign.format === 'image_ad' ? (
             <ImageIcon className="w-5 h-5" />
           ) : campaign.format === 'promoted_post' ? (
-            <Sparkles className="w-5 h-5" />
+            <TrendingUp className="w-5 h-5 text-[#5E43F3]" />
           ) : (
-            <Megaphone className="w-5 h-5" />
+            <AppIcon className="w-6 h-6 rounded-md object-contain shrink-0" />
           )}
         </div>
 
@@ -318,6 +321,7 @@ const CampaignCreationWizard: React.FC<{ onSuccess: (id: any) => void; onCancel:
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isImageUploading, setIsImageUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Form State
@@ -356,6 +360,14 @@ const CampaignCreationWizard: React.FC<{ onSuccess: (id: any) => void; onCancel:
     } else if (step === 2) {
       if (!headline.trim()) {
         setError('Ad headline is required.');
+        return;
+      }
+      if (isImageUploading) {
+        setError('Please wait for your image creative to finish uploading before continuing.');
+        return;
+      }
+      if (format === 'image_ad' && !mediaUrl.trim()) {
+        setError('Please select and upload an ad creative image before continuing.');
         return;
       }
       if (!destinationUrl.startsWith('http://') && !destinationUrl.startsWith('https://') && !destinationUrl.startsWith('/')) {
@@ -465,13 +477,13 @@ const CampaignCreationWizard: React.FC<{ onSuccess: (id: any) => void; onCancel:
                 id: 'sponsored_post',
                 title: 'Sponsored Feed Post',
                 desc: 'Native sponsored card with headline, custom media, and strong CTA button.',
-                icon: Megaphone,
+                isBrand: true,
               },
               {
                 id: 'promoted_post',
                 title: 'Promote Existing Post',
                 desc: 'Boost one of your authentic Lalao posts to gain viral local reach.',
-                icon: Sparkles,
+                icon: TrendingUp,
               },
               {
                 id: 'image_ad',
@@ -499,7 +511,11 @@ const CampaignCreationWizard: React.FC<{ onSuccess: (id: any) => void; onCancel:
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <Icon className={`w-5 h-5 ${isSelected ? 'text-[#5E43F3]' : 'text-theme-tertiary'}`} />
+                    {fmt.isBrand ? (
+                      <AppIcon className="w-5 h-5 rounded-md shrink-0 object-contain" />
+                    ) : (
+                      Icon && <Icon className={`w-5 h-5 ${isSelected ? 'text-[#5E43F3]' : 'text-theme-tertiary'}`} />
+                    )}
                     <h3 className="font-bold text-sm text-theme-primary">{fmt.title}</h3>
                   </div>
                   <p className="text-xs text-theme-tertiary leading-relaxed">{fmt.desc}</p>
@@ -606,18 +622,27 @@ const CampaignCreationWizard: React.FC<{ onSuccess: (id: any) => void; onCancel:
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-theme-primary">
-              Media URL ({format === 'video_ad' ? 'Video MP4 / HLS' : 'Image JPG / PNG / WebP'})
-            </label>
-            <input
-              type="url"
-              value={mediaUrl}
-              onChange={(e) => setMediaUrl(e.target.value)}
-              placeholder="https://example.com/creative.jpg"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-theme-base border border-theme-divider text-xs text-theme-primary focus:border-[#5E43F3] outline-hidden"
+          {format === 'video_ad' ? (
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-theme-primary">
+                Video Stream URL (MP4 / HLS) *
+              </label>
+              <input
+                type="url"
+                value={mediaUrl}
+                onChange={(e) => setMediaUrl(e.target.value)}
+                placeholder="https://example.com/creative.mp4"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-theme-base border border-theme-divider text-xs text-theme-primary focus:border-[#5E43F3] outline-hidden"
+              />
+            </div>
+          ) : (
+            <CampaignImageUploader
+              mediaUrl={mediaUrl}
+              onMediaUrlChange={(url) => setMediaUrl(url)}
+              onUploadStateChange={(uploading) => setIsImageUploading(uploading)}
+              disabled={isSubmitting}
             />
-          </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <div className="space-y-1.5">

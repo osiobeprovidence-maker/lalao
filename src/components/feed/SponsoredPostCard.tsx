@@ -5,6 +5,7 @@ import { api } from '../../../convex/_generated/api';
 import { Avatar } from '../common/Avatar';
 import { VerificationBadge } from '../common/VerificationBadge';
 import { PostImage } from '../common/PostImage';
+import { AppIcon } from '../common/AppIcon';
 import { VideoPlayer } from './VideoPlayer';
 
 interface SponsoredPostCardProps {
@@ -139,8 +140,8 @@ export const SponsoredPostCard: React.FC<SponsoredPostCardProps> = ({
         </div>
 
         {/* Distinct Sponsored Pill */}
-        <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[11px] font-bold shrink-0">
-          <Sparkles className="w-3 h-3" />
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[11px] font-bold shrink-0">
+          <AppIcon className="w-3.5 h-3.5 rounded-xs shrink-0 object-contain" />
           <span>Sponsored</span>
         </div>
       </div>

@@ -1,12 +1,15 @@
 {
-  "name": "Lalao",
-  "short_name": "Lalao",
-  "description": "A modern local-first social platform combining clean social-feed UX, local communities, location discovery, Cycles, and actionable Rallies.",
+  "id": "/app",
+  "name": "LALAO",
+  "short_name": "LALAO",
+  "description": "Install LALAO for quick access to your communities, messages, and discoveries.",
   "start_url": "/app",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
   "background_color": "#0B0F19",
   "theme_color": "#5E43F3",
+  "categories": ["social", "communication"],
   "icons": [
     {
       "src": "/icon-192.png",

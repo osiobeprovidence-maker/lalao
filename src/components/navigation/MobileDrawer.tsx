@@ -37,7 +37,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
   const accountItems = [
     { id: 'wallet', label: 'Wallet', icon: Wallet },
     { id: 'orders', label: 'Order History', icon: ShoppingBag },
-    { id: 'install-app', label: 'Install App', icon: Download },
+    ...(!isInstalled ? [{ id: 'install-app', label: 'Install App', icon: Download }] : []),
   ] as const;
 
   const myPagesItems = [

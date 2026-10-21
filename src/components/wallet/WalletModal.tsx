@@ -5,7 +5,8 @@ import {
   ArrowLeft, ArrowUpRight, Copy, Plus, Check, Settings, 
   MoreHorizontal, Wallet, ChevronRight, X, Search, History, 
   Shield, Lock, CreditCard, Banknote, Building, AlertCircle, Receipt,
-  Bitcoin, Smartphone, Wifi, Tv, ExternalLink, Unplug, Link2, Mail, KeyRound
+  Bitcoin, Smartphone, Wifi, Tv, ExternalLink, Unplug, Link2, Mail, KeyRound, Zap,
+  Dices, GraduationCap, Globe, BookOpen
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
@@ -58,6 +59,11 @@ type WalletView =
   | 'market_bills'
   | 'market_electricity'
   | 'market_cable'
+  | 'market_betting'
+  | 'market_smile'
+  | 'market_spectranet'
+  | 'market_waec'
+  | 'market_jamb'
   | 'market_review'
   | 'market_pin'
   | 'market_success';
@@ -79,6 +85,7 @@ export const WalletModal: React.FC = () => {
   const performResetWalletPinWithOtp = useMutation(api.wallet.resetWalletPinWithOtp);
   
   // Settings / PIN State
+  const [isPinSectionExpanded, setIsPinSectionExpanded] = useState(false);
   const [oldWalletPinInput, setOldWalletPinInput] = useState('');
   const [newWalletPinInput, setNewWalletPinInput] = useState('');
   const [confirmWalletPinInput, setConfirmWalletPinInput] = useState('');
@@ -98,6 +105,11 @@ export const WalletModal: React.FC = () => {
   const fetchCablePackages = useAction(api.market.getCablePackages);
   const verifyElectricityMeter = useAction(api.market.verifyElectricityMeter);
   const verifyCableSmartcard = useAction(api.market.verifyCableSmartcard);
+  const verifyBettingCustomer = useAction(api.market.verifyBettingCustomer);
+  const fetchSmilePackages = useAction(api.market.getSmilePackages);
+  const fetchSpectranetPackages = useAction(api.market.getSpectranetPackages);
+  const fetchWAECPackages = useAction(api.market.getWAECPackages);
+  const fetchJAMBPackages = useAction(api.market.getJAMBPackages);
   const serviceSettings = useQuery(api.clubkonnect.getCustomerServiceSettings);
 
   // Crypto wallet — real Web3 connection
@@ -194,6 +206,14 @@ export const WalletModal: React.FC = () => {
   const [returnedToken, setReturnedToken] = useState<string>('');
   const [cablePackagesList, setCablePackagesList] = useState<any[]>([]);
   const [isFetchingCablePackages, setIsFetchingCablePackages] = useState(false);
+  const [smilePackagesList, setSmilePackagesList] = useState<any[]>([]);
+  const [isFetchingSmilePackages, setIsFetchingSmilePackages] = useState(false);
+  const [spectranetPackagesList, setSpectranetPackagesList] = useState<any[]>([]);
+  const [isFetchingSpectranetPackages, setIsFetchingSpectranetPackages] = useState(false);
+  const [waecPackagesList, setWaecPackagesList] = useState<any[]>([]);
+  const [isFetchingWAECPackages, setIsFetchingWAECPackages] = useState(false);
+  const [jambPackagesList, setJambPackagesList] = useState<any[]>([]);
+  const [isFetchingJAMBPackages, setIsFetchingJAMBPackages] = useState(false);
 
   // Generate a stable reference for the current flow
   const currentPaystackReference = useMemo(() => {
@@ -597,13 +617,13 @@ export const WalletModal: React.FC = () => {
                       </div>
                     ) : (
                       <p className="text-xs font-semibold text-theme-secondary mb-3">
-                        No EIP-6963 wallet was detected. Install a compatible wallet and refresh this page.
+                        MetaMask, Coinbase, Phantom, and other EIP-6963 compatible wallets supported.
                       </p>
                     )}
                     <button
                       type="button"
                       onClick={() => handleCryptoConnect()}
-                      disabled={web3.status === 'connecting' || web3.availableProviders.length === 0}
+                      disabled={web3.status === 'connecting'}
                       className="w-full py-3.5 rounded-xl bg-[#5E43F3] text-white font-bold text-sm hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-60 flex items-center justify-center gap-2"
                     >
                       {web3.status === 'connecting' ? (
@@ -645,23 +665,442 @@ export const WalletModal: React.FC = () => {
                 </button>
               </div>
               <div className="space-y-2">
-                <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-2">Crypto Wallet</div>
-                {web3.status === 'connected' ? (
-                  <>
-                    <button onClick={() => navigateTo('crypto_wallet_view')} className="w-full bg-theme-surface p-4 rounded-xl flex items-center justify-between border border-theme-divider-light hover:bg-theme-surface-hover transition-colors text-left">
-                      <div className="font-bold text-theme-primary">Connected wallets</div>
-                      <div className="text-sm font-semibold text-theme-secondary flex items-center gap-2">{web3.providerName ?? web3.providerId ?? 'Wallet'} <ChevronRight className="w-4 h-4" /></div>
-                    </button>
-                    <button onClick={() => navigateTo('crypto_disconnect')} className="w-full bg-theme-surface p-4 rounded-xl flex items-center justify-between border border-red-100 hover:bg-red-50 transition-colors text-left">
-                      <div className="font-bold text-red-500">Disconnect wallet</div>
-                    </button>
-                  </>
-                ) : (
-                  <button onClick={() => handleCryptoConnect()} disabled={web3.status === 'connecting'} className="w-full bg-theme-surface p-4 rounded-xl flex items-center justify-between border border-theme-divider-light hover:bg-theme-surface-hover transition-colors text-left">
-                    <div className="font-bold text-theme-primary">Connect a wallet</div>
-                    <ChevronRight className="w-4 h-4 text-theme-tertiary" />
+                <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-2">Security & PIN</div>
+                <div className="bg-theme-surface rounded-2xl border border-theme-divider-light overflow-hidden transition-all shadow-xs">
+                  <button
+                    type="button"
+                    onClick={() => setIsPinSectionExpanded((prev) => !prev)}
+                    className="w-full p-4 flex items-center justify-between hover:bg-theme-surface-hover transition-colors text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#5E43F3]/10 text-[#5E43F3] flex items-center justify-center shrink-0">
+                        <Lock className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-theme-primary flex items-center gap-2">
+                          <span>Transaction PIN</span>
+                          {(wallet as any)?.hasPin ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-black uppercase bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                              Active
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-black uppercase bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                              Not Set
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs font-medium text-theme-secondary mt-0.5">
+                          {(wallet as any)?.hasPin ? 'PIN protection is enabled' : 'Set up a 4-digit security PIN'}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight
+                      className={`w-4 h-4 text-theme-tertiary transition-transform duration-200 ${
+                        isPinSectionExpanded ? 'rotate-90' : ''
+                      }`}
+                    />
                   </button>
-                )}
+
+                  {/* Expanded Transaction PIN Interface */}
+                  {isPinSectionExpanded && (
+                    <div className="p-4 pt-1 border-t border-theme-divider-light space-y-4 animate-in fade-in duration-150">
+                      {pinChangeSuccess && (
+                        <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-600 dark:text-green-400 text-xs font-bold">
+                          <Check className="w-4 h-4 shrink-0" />
+                          <span>{pinChangeSuccess}</span>
+                        </div>
+                      )}
+
+                      {pinChangeError && (
+                        <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-600 dark:text-red-400 text-xs font-bold">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>{pinChangeError}</span>
+                        </div>
+                      )}
+
+                      {/* CASE 1: PIN is already set, showing clean active status card with action buttons */}
+                      {(wallet as any)?.hasPin && !isChangingPin && !isForgotPinMode && (
+                        <div className="space-y-4 pt-1">
+                          <div className="bg-theme-base/60 border border-theme-divider-light rounded-xl p-3.5 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                <Shield className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <span className="text-xs font-bold text-theme-primary">PIN Protection Enabled</span>
+                                <p className="text-[11px] text-theme-secondary font-medium">Required for outgoing transfers & purchases</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPinChangeError('');
+                                setPinChangeSuccess('');
+                                setIsChangingPin(true);
+                                setIsForgotPinMode(false);
+                              }}
+                              className="w-full py-2.5 px-3 rounded-xl bg-[#5E43F3] text-white font-bold text-xs hover:bg-indigo-600 transition-colors shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                              <KeyRound className="w-3.5 h-3.5" />
+                              Change PIN
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={isRequestingOtp}
+                              onClick={async () => {
+                                setPinChangeError('');
+                                setPinChangeSuccess('');
+                                setIsRequestingOtp(true);
+                                try {
+                                  const res = await performRequestPinResetOtp();
+                                  setForgotPinEmailMasked(res.email || '');
+                                  setIsForgotPinMode(true);
+                                  setIsChangingPin(false);
+                                  setPinChangeSuccess(`A 6-digit reset code has been sent to your email (${res.email || 'account email'}).`);
+                                } catch (err: any) {
+                                  setPinChangeError(err.message || 'Failed to send reset code. Please try again.');
+                                } finally {
+                                  setIsRequestingOtp(false);
+                                }
+                              }}
+                              className="w-full py-2.5 px-3 rounded-xl bg-theme-base hover:bg-theme-surface-hover border border-theme-divider-light text-theme-primary font-bold text-xs transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                            >
+                              <Mail className="w-3.5 h-3.5 text-[#5E43F3]" />
+                              {isRequestingOtp ? 'Sending...' : 'Forgot PIN?'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* CASE 2: Change PIN form (revealed when user clicks "Change PIN") */}
+                      {(wallet as any)?.hasPin && isChangingPin && !isForgotPinMode && (
+                        <div className="space-y-3 pt-1">
+                          <div className="flex items-center justify-between pb-1">
+                            <span className="text-xs font-black text-theme-primary uppercase tracking-wider">Change Security PIN</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsChangingPin(false);
+                                setOldWalletPinInput('');
+                                setNewWalletPinInput('');
+                                setConfirmWalletPinInput('');
+                                setPinChangeError('');
+                              }}
+                              className="text-xs text-theme-secondary hover:text-theme-primary font-bold underline cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1.5">Current PIN</label>
+                            <input 
+                              type="password"
+                              maxLength={4}
+                              placeholder="••••"
+                              value={oldWalletPinInput}
+                              onChange={(e) => setOldWalletPinInput(e.target.value.replace(/\D/g, ''))}
+                              className="w-full bg-theme-base border border-theme-divider-light rounded-xl px-4 py-2.5 font-mono font-bold text-base text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1.5">New 4-Digit PIN</label>
+                            <input 
+                              type="password"
+                              maxLength={4}
+                              placeholder="••••"
+                              value={newWalletPinInput}
+                              onChange={(e) => setNewWalletPinInput(e.target.value.replace(/\D/g, ''))}
+                              className="w-full bg-theme-base border border-theme-divider-light rounded-xl px-4 py-2.5 font-mono font-bold text-base text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1.5">Confirm New PIN</label>
+                            <input 
+                              type="password"
+                              maxLength={4}
+                              placeholder="••••"
+                              value={confirmWalletPinInput}
+                              onChange={(e) => setConfirmWalletPinInput(e.target.value.replace(/\D/g, ''))}
+                              className="w-full bg-theme-base border border-theme-divider-light rounded-xl px-4 py-2.5 font-mono font-bold text-base text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                            />
+                          </div>
+
+                          <div className="pt-2 flex gap-3">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsChangingPin(false);
+                                setOldWalletPinInput('');
+                                setNewWalletPinInput('');
+                                setConfirmWalletPinInput('');
+                                setPinChangeError('');
+                              }}
+                              className="w-1/3 py-2.5 rounded-xl bg-theme-base hover:bg-theme-surface-hover border border-theme-divider-light text-theme-primary font-bold text-xs transition-colors cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={isProcessing || oldWalletPinInput.length !== 4 || newWalletPinInput.length !== 4 || confirmWalletPinInput.length !== 4}
+                              onClick={async () => {
+                                setPinChangeError('');
+                                setPinChangeSuccess('');
+                                if (newWalletPinInput !== confirmWalletPinInput) {
+                                  setPinChangeError("New PIN and Confirm PIN do not match.");
+                                  return;
+                                }
+                                setIsProcessing(true);
+                                try {
+                                  const res = await performSetWalletPin({
+                                    pin: newWalletPinInput,
+                                    oldPin: oldWalletPinInput,
+                                  });
+                                  setPinChangeSuccess(res.message || "PIN updated successfully!");
+                                  setOldWalletPinInput('');
+                                  setNewWalletPinInput('');
+                                  setConfirmWalletPinInput('');
+                                  setIsChangingPin(false);
+                                } catch (err: any) {
+                                  setPinChangeError(err.message || "Failed to update PIN.");
+                                } finally {
+                                  setIsProcessing(false);
+                                }
+                              }}
+                              className="w-2/3 py-2.5 rounded-xl bg-[#5E43F3] text-white font-bold text-xs hover:bg-indigo-600 transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                            >
+                              {isProcessing ? 'Updating...' : 'Update PIN'}
+                            </button>
+                          </div>
+
+                          <div className="text-center pt-1">
+                            <button
+                              type="button"
+                              disabled={isRequestingOtp}
+                              onClick={async () => {
+                                setPinChangeError('');
+                                setPinChangeSuccess('');
+                                setIsRequestingOtp(true);
+                                try {
+                                  const res = await performRequestPinResetOtp();
+                                  setForgotPinEmailMasked(res.email || '');
+                                  setIsForgotPinMode(true);
+                                  setIsChangingPin(false);
+                                  setPinChangeSuccess(`Reset code sent to ${res.email || 'your email'}.`);
+                                } catch (err: any) {
+                                  setPinChangeError(err.message || 'Failed to send reset code.');
+                                } finally {
+                                  setIsRequestingOtp(false);
+                                }
+                              }}
+                              className="text-xs font-semibold text-[#5E43F3] hover:underline cursor-pointer"
+                            >
+                              Forgot current PIN? Reset via email
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* CASE 3: Forgot PIN mode (email reset OTP code) */}
+                      {isForgotPinMode && (
+                        <div className="space-y-3 pt-1">
+                          <div className="flex items-center justify-between pb-1">
+                            <span className="text-xs font-black text-theme-primary uppercase tracking-wider">Reset PIN via Email</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsForgotPinMode(false);
+                                setForgotPinOtp('');
+                                setForgotPinNewPin('');
+                                setForgotPinConfirmPin('');
+                                setPinChangeError('');
+                              }}
+                              className="text-xs text-theme-secondary hover:text-theme-primary font-bold underline cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+
+                          <p className="text-xs text-theme-secondary font-medium">
+                            Enter the 6-digit verification code sent to your email {forgotPinEmailMasked ? `(${forgotPinEmailMasked})` : ''} and choose a new 4-digit PIN.
+                          </p>
+
+                          <div>
+                            <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1.5">6-Digit Email Code</label>
+                            <input 
+                              type="text"
+                              maxLength={6}
+                              placeholder="123456"
+                              value={forgotPinOtp}
+                              onChange={(e) => setForgotPinOtp(e.target.value.replace(/\D/g, ''))}
+                              className="w-full bg-theme-base border border-theme-divider-light rounded-xl px-4 py-2.5 font-mono font-bold text-base text-theme-primary focus:outline-none focus:border-[#5E43F3] tracking-widest"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1.5">New 4-Digit PIN</label>
+                            <input 
+                              type="password"
+                              maxLength={4}
+                              placeholder="••••"
+                              value={forgotPinNewPin}
+                              onChange={(e) => setForgotPinNewPin(e.target.value.replace(/\D/g, ''))}
+                              className="w-full bg-theme-base border border-theme-divider-light rounded-xl px-4 py-2.5 font-mono font-bold text-base text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1.5">Confirm New PIN</label>
+                            <input 
+                              type="password"
+                              maxLength={4}
+                              placeholder="••••"
+                              value={forgotPinConfirmPin}
+                              onChange={(e) => setForgotPinConfirmPin(e.target.value.replace(/\D/g, ''))}
+                              className="w-full bg-theme-base border border-theme-divider-light rounded-xl px-4 py-2.5 font-mono font-bold text-base text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                            />
+                          </div>
+
+                          <div className="pt-2 flex gap-3">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsForgotPinMode(false);
+                                setForgotPinOtp('');
+                                setNewWalletPinInput('');
+                                setConfirmWalletPinInput('');
+                                setPinChangeError('');
+                              }}
+                              className="w-1/3 py-2.5 rounded-xl bg-theme-base hover:bg-theme-surface-hover border border-theme-divider-light text-theme-primary font-bold text-xs transition-colors cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={isProcessing || forgotPinOtp.length !== 6 || forgotPinNewPin.length !== 4 || forgotPinConfirmPin.length !== 4}
+                              onClick={async () => {
+                                setPinChangeError('');
+                                setPinChangeSuccess('');
+                                if (forgotPinNewPin !== forgotPinConfirmPin) {
+                                  setPinChangeError("New PIN and Confirm PIN do not match.");
+                                  return;
+                                }
+                                setIsProcessing(true);
+                                try {
+                                  const res = await performResetWalletPinWithOtp({
+                                    otp: forgotPinOtp,
+                                    newPin: forgotPinNewPin,
+                                  });
+                                  setPinChangeSuccess(res.message || "Your PIN has been successfully reset!");
+                                  setForgotPinOtp('');
+                                  setForgotPinNewPin('');
+                                  setForgotPinConfirmPin('');
+                                  setIsForgotPinMode(false);
+                                } catch (err: any) {
+                                  setPinChangeError(err.message || "Failed to reset PIN. Check the code and try again.");
+                                } finally {
+                                  setIsProcessing(false);
+                                }
+                              }}
+                              className="w-2/3 py-2.5 rounded-xl bg-[#5E43F3] text-white font-bold text-xs hover:bg-indigo-600 transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                            >
+                              {isProcessing ? 'Resetting...' : 'Save New PIN'}
+                            </button>
+                          </div>
+
+                          <div className="text-center pt-1">
+                            <button
+                              type="button"
+                              disabled={isRequestingOtp}
+                              onClick={async () => {
+                                setPinChangeError('');
+                                setPinChangeSuccess('');
+                                setIsRequestingOtp(true);
+                                try {
+                                  const res = await performRequestPinResetOtp();
+                                  setForgotPinEmailMasked(res.email || '');
+                                  setPinChangeSuccess(`New code sent to ${res.email || 'your email'}.`);
+                                } catch (err: any) {
+                                  setPinChangeError(err.message || 'Failed to resend code.');
+                                } finally {
+                                  setIsRequestingOtp(false);
+                                }
+                              }}
+                              className="text-xs font-semibold text-[#5E43F3] hover:underline cursor-pointer"
+                            >
+                              {isRequestingOtp ? 'Sending...' : 'Didn’t receive the code? Resend'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* CASE 4: Initial PIN setup when no PIN is yet configured */}
+                      {!(wallet as any)?.hasPin && !isForgotPinMode && (
+                        <div className="space-y-3 pt-1">
+                          <div>
+                            <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1.5">Create 4-Digit PIN</label>
+                            <input 
+                              type="password"
+                              maxLength={4}
+                              placeholder="••••"
+                              value={newWalletPinInput}
+                              onChange={(e) => setNewWalletPinInput(e.target.value.replace(/\D/g, ''))}
+                              className="w-full bg-theme-base border border-theme-divider-light rounded-xl px-4 py-2.5 font-mono font-bold text-base text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1.5">Confirm PIN</label>
+                            <input 
+                              type="password"
+                              maxLength={4}
+                              placeholder="••••"
+                              value={confirmWalletPinInput}
+                              onChange={(e) => setConfirmWalletPinInput(e.target.value.replace(/\D/g, ''))}
+                              className="w-full bg-theme-base border border-theme-divider-light rounded-xl px-4 py-2.5 font-mono font-bold text-base text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                            />
+                          </div>
+
+                          <button
+                            disabled={isProcessing || newWalletPinInput.length !== 4 || confirmWalletPinInput.length !== 4}
+                            onClick={async () => {
+                              setPinChangeError('');
+                              setPinChangeSuccess('');
+                              if (newWalletPinInput !== confirmWalletPinInput) {
+                                setPinChangeError("New PIN and Confirm PIN do not match.");
+                                return;
+                              }
+                              setIsProcessing(true);
+                              try {
+                                const res = await performSetWalletPin({
+                                  pin: newWalletPinInput,
+                                });
+                                setPinChangeSuccess(res.message || "PIN saved successfully!");
+                                setNewWalletPinInput('');
+                                setConfirmWalletPinInput('');
+                              } catch (err: any) {
+                                setPinChangeError(err.message || "Failed to save PIN.");
+                              } finally {
+                                setIsProcessing(false);
+                              }
+                            }}
+                            className="w-full py-3 rounded-xl bg-[#5E43F3] text-white font-bold text-xs hover:bg-indigo-600 transition-colors shadow-sm disabled:opacity-50 mt-2 flex items-center justify-center gap-2 cursor-pointer"
+                          >
+                            {isProcessing ? 'Saving PIN...' : 'Save PIN'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -801,424 +1240,7 @@ export const WalletModal: React.FC = () => {
             </div>
           )}
 
-          {/* WALLET SETTINGS - PIN & SECURITY */}
-          {currentView === 'settings' && (
-             <div className="p-4 space-y-6 pb-12">
-               <div className="bg-theme-surface rounded-3xl p-6 border border-theme-divider-light shadow-sm">
-                 <div className="flex items-center gap-3 mb-4">
-                   <div className="w-10 h-10 rounded-full bg-[#5E43F3]/10 text-[#5E43F3] flex items-center justify-center shrink-0">
-                     <Lock className="w-5 h-5" />
-                   </div>
-                   <div>
-                     <h3 className="font-black text-theme-primary text-lg">Transaction PIN</h3>
-                     <p className="text-xs font-semibold text-theme-secondary">
-                       {(wallet as any)?.hasPin ? 'Your 4-digit security PIN is active' : 'Set a 4-digit security PIN to authorize transfers & market payments'}
-                     </p>
-                   </div>
-                 </div>
 
-                 {pinChangeSuccess && (
-                   <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-600 dark:text-green-400 text-xs font-bold mb-4">
-                     <Check className="w-4 h-4 shrink-0" />
-                     <span>{pinChangeSuccess}</span>
-                   </div>
-                 )}
-
-                 {pinChangeError && (
-                   <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-600 dark:text-red-400 text-xs font-bold mb-4">
-                     <AlertCircle className="w-4 h-4 shrink-0" />
-                     <span>{pinChangeError}</span>
-                   </div>
-                 )}
-
-                 {/* CASE 1: PIN is already set, showing clean active status card with action buttons */}
-                 {(wallet as any)?.hasPin && !isChangingPin && !isForgotPinMode && (
-                   <div className="space-y-4 pt-1">
-                     <div className="bg-theme-base/60 border border-theme-divider-light rounded-2xl p-4 flex items-center justify-between">
-                       <div className="flex items-center gap-3">
-                         <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                           <Shield className="w-5 h-5" />
-                         </div>
-                         <div>
-                           <div className="flex items-center gap-1.5">
-                             <span className="text-sm font-bold text-theme-primary">PIN Protection Enabled</span>
-                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-black uppercase bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-                               Saved
-                             </span>
-                           </div>
-                           <p className="text-xs text-theme-secondary font-medium mt-0.5">Required for outgoing transfers & purchases</p>
-                         </div>
-                       </div>
-                     </div>
-
-                     <div className="grid grid-cols-2 gap-3 pt-2">
-                       <button
-                         type="button"
-                         onClick={() => {
-                           setPinChangeError('');
-                           setPinChangeSuccess('');
-                           setIsChangingPin(true);
-                           setIsForgotPinMode(false);
-                         }}
-                         className="w-full py-3 px-4 rounded-xl bg-[#5E43F3] text-white font-bold text-xs hover:bg-indigo-600 transition-colors shadow-sm flex items-center justify-center gap-2"
-                       >
-                         <KeyRound className="w-4 h-4" />
-                         Change PIN
-                       </button>
-
-                       <button
-                         type="button"
-                         disabled={isRequestingOtp}
-                         onClick={async () => {
-                           setPinChangeError('');
-                           setPinChangeSuccess('');
-                           setIsRequestingOtp(true);
-                           try {
-                             const res = await performRequestPinResetOtp();
-                             setForgotPinEmailMasked(res.email || '');
-                             setIsForgotPinMode(true);
-                             setIsChangingPin(false);
-                             setPinChangeSuccess(`A 6-digit reset code has been sent to your email (${res.email || 'account email'}).`);
-                           } catch (err: any) {
-                             setPinChangeError(err.message || 'Failed to send reset code. Please try again.');
-                           } finally {
-                             setIsRequestingOtp(false);
-                           }
-                         }}
-                         className="w-full py-3 px-4 rounded-xl bg-theme-base hover:bg-theme-surface-hover border border-theme-divider-light text-theme-primary font-bold text-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                       >
-                         <Mail className="w-4 h-4 text-[#5E43F3]" />
-                         {isRequestingOtp ? 'Sending code...' : 'Forgot PIN?'}
-                       </button>
-                     </div>
-                   </div>
-                 )}
-
-                 {/* CASE 2: Change PIN form (revealed when user clicks "Change PIN") */}
-                 {(wallet as any)?.hasPin && isChangingPin && !isForgotPinMode && (
-                   <div className="space-y-4 pt-2">
-                     <div className="flex items-center justify-between pb-1">
-                       <span className="text-xs font-black text-theme-primary uppercase tracking-wider">Change Security PIN</span>
-                       <button
-                         type="button"
-                         onClick={() => {
-                           setIsChangingPin(false);
-                           setOldWalletPinInput('');
-                           setNewWalletPinInput('');
-                           setConfirmWalletPinInput('');
-                           setPinChangeError('');
-                         }}
-                         className="text-xs text-theme-secondary hover:text-theme-primary font-bold underline"
-                       >
-                         Cancel
-                       </button>
-                     </div>
-
-                     <div>
-                       <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-2">Current PIN</label>
-                       <input 
-                         type="password"
-                         maxLength={4}
-                         placeholder="••••"
-                         value={oldWalletPinInput}
-                         onChange={(e) => setOldWalletPinInput(e.target.value.replace(/\D/g, ''))}
-                         className="w-full bg-theme-base border border-theme-divider-light rounded-xl px-4 py-3 font-mono font-bold text-lg text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                       />
-                     </div>
-
-                     <div>
-                       <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-2">New 4-Digit PIN</label>
-                       <input 
-                         type="password"
-                         maxLength={4}
-                         placeholder="••••"
-                         value={newWalletPinInput}
-                         onChange={(e) => setNewWalletPinInput(e.target.value.replace(/\D/g, ''))}
-                         className="w-full bg-theme-base border border-theme-divider-light rounded-xl px-4 py-3 font-mono font-bold text-lg text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                       />
-                     </div>
-
-                     <div>
-                       <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-2">Confirm New PIN</label>
-                       <input 
-                         type="password"
-                         maxLength={4}
-                         placeholder="••••"
-                         value={confirmWalletPinInput}
-                         onChange={(e) => setConfirmWalletPinInput(e.target.value.replace(/\D/g, ''))}
-                         className="w-full bg-theme-base border border-theme-divider-light rounded-xl px-4 py-3 font-mono font-bold text-lg text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                       />
-                     </div>
-
-                     <div className="pt-2 flex gap-3">
-                       <button
-                         type="button"
-                         onClick={() => {
-                           setIsChangingPin(false);
-                           setOldWalletPinInput('');
-                           setNewWalletPinInput('');
-                           setConfirmWalletPinInput('');
-                           setPinChangeError('');
-                         }}
-                         className="w-1/3 py-3.5 rounded-xl bg-theme-base hover:bg-theme-surface-hover border border-theme-divider-light text-theme-primary font-bold text-sm transition-colors"
-                       >
-                         Cancel
-                       </button>
-
-                       <button
-                         type="button"
-                         disabled={isProcessing || oldWalletPinInput.length !== 4 || newWalletPinInput.length !== 4 || confirmWalletPinInput.length !== 4}
-                         onClick={async () => {
-                           setPinChangeError('');
-                           setPinChangeSuccess('');
-                           if (newWalletPinInput !== confirmWalletPinInput) {
-                             setPinChangeError("New PIN and Confirm PIN do not match.");
-                             return;
-                           }
-                           setIsProcessing(true);
-                           try {
-                             const res = await performSetWalletPin({
-                               pin: newWalletPinInput,
-                               oldPin: oldWalletPinInput,
-                             });
-                             setPinChangeSuccess(res.message || "PIN updated successfully!");
-                             setOldWalletPinInput('');
-                             setNewWalletPinInput('');
-                             setConfirmWalletPinInput('');
-                             setIsChangingPin(false);
-                           } catch (err: any) {
-                             setPinChangeError(err.message || "Failed to update PIN.");
-                           } finally {
-                             setIsProcessing(false);
-                           }
-                         }}
-                         className="w-2/3 py-3.5 rounded-xl bg-[#5E43F3] text-white font-bold text-sm hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
-                       >
-                         {isProcessing ? 'Updating...' : 'Update PIN'}
-                       </button>
-                     </div>
-
-                     <div className="text-center pt-2">
-                       <button
-                         type="button"
-                         disabled={isRequestingOtp}
-                         onClick={async () => {
-                           setPinChangeError('');
-                           setPinChangeSuccess('');
-                           setIsRequestingOtp(true);
-                           try {
-                             const res = await performRequestPinResetOtp();
-                             setForgotPinEmailMasked(res.email || '');
-                             setIsForgotPinMode(true);
-                             setIsChangingPin(false);
-                             setPinChangeSuccess(`Reset code sent to ${res.email || 'your email'}.`);
-                           } catch (err: any) {
-                             setPinChangeError(err.message || 'Failed to send reset code.');
-                           } finally {
-                             setIsRequestingOtp(false);
-                           }
-                         }}
-                         className="text-xs font-semibold text-[#5E43F3] hover:underline"
-                       >
-                         Forgot current PIN? Reset via email
-                       </button>
-                     </div>
-                   </div>
-                 )}
-
-                 {/* CASE 3: Forgot PIN mode (email reset OTP code) */}
-                 {isForgotPinMode && (
-                   <div className="space-y-4 pt-2">
-                     <div className="flex items-center justify-between pb-1">
-                       <span className="text-xs font-black text-theme-primary uppercase tracking-wider">Reset PIN via Email</span>
-                       <button
-                         type="button"
-                         onClick={() => {
-                           setIsForgotPinMode(false);
-                           setForgotPinOtp('');
-                           setForgotPinNewPin('');
-                           setForgotPinConfirmPin('');
-                           setPinChangeError('');
-                         }}
-                         className="text-xs text-theme-secondary hover:text-theme-primary font-bold underline"
-                       >
-                         Cancel
-                       </button>
-                     </div>
-
-                     <p className="text-xs text-theme-secondary font-medium">
-                       Enter the 6-digit verification code sent to your email {forgotPinEmailMasked ? `(${forgotPinEmailMasked})` : ''} and choose a new 4-digit PIN.
-                     </p>
-
-                     <div>
-                       <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-2">6-Digit Email Code</label>
-                       <input 
-                         type="text"
-                         maxLength={6}
-                         placeholder="123456"
-                         value={forgotPinOtp}
-                         onChange={(e) => setForgotPinOtp(e.target.value.replace(/\D/g, ''))}
-                         className="w-full bg-theme-base border border-theme-divider-light rounded-xl px-4 py-3 font-mono font-bold text-lg text-theme-primary focus:outline-none focus:border-[#5E43F3] tracking-widest"
-                       />
-                     </div>
-
-                     <div>
-                       <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-2">New 4-Digit PIN</label>
-                       <input 
-                         type="password"
-                         maxLength={4}
-                         placeholder="••••"
-                         value={forgotPinNewPin}
-                         onChange={(e) => setForgotPinNewPin(e.target.value.replace(/\D/g, ''))}
-                         className="w-full bg-theme-base border border-theme-divider-light rounded-xl px-4 py-3 font-mono font-bold text-lg text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                       />
-                     </div>
-
-                     <div>
-                       <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-2">Confirm New PIN</label>
-                       <input 
-                         type="password"
-                         maxLength={4}
-                         placeholder="••••"
-                         value={forgotPinConfirmPin}
-                         onChange={(e) => setForgotPinConfirmPin(e.target.value.replace(/\D/g, ''))}
-                         className="w-full bg-theme-base border border-theme-divider-light rounded-xl px-4 py-3 font-mono font-bold text-lg text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                       />
-                     </div>
-
-                     <div className="pt-2 flex gap-3">
-                       <button
-                         type="button"
-                         onClick={() => {
-                           setIsForgotPinMode(false);
-                           setForgotPinOtp('');
-                           setForgotPinNewPin('');
-                           setForgotPinConfirmPin('');
-                           setPinChangeError('');
-                         }}
-                         className="w-1/3 py-3.5 rounded-xl bg-theme-base hover:bg-theme-surface-hover border border-theme-divider-light text-theme-primary font-bold text-sm transition-colors"
-                       >
-                         Cancel
-                       </button>
-
-                       <button
-                         type="button"
-                         disabled={isProcessing || forgotPinOtp.length !== 6 || forgotPinNewPin.length !== 4 || forgotPinConfirmPin.length !== 4}
-                         onClick={async () => {
-                           setPinChangeError('');
-                           setPinChangeSuccess('');
-                           if (forgotPinNewPin !== forgotPinConfirmPin) {
-                             setPinChangeError("New PIN and Confirm PIN do not match.");
-                             return;
-                           }
-                           setIsProcessing(true);
-                           try {
-                             const res = await performResetWalletPinWithOtp({
-                               otp: forgotPinOtp,
-                               newPin: forgotPinNewPin,
-                             });
-                             setPinChangeSuccess(res.message || "Your PIN has been successfully reset!");
-                             setForgotPinOtp('');
-                             setForgotPinNewPin('');
-                             setForgotPinConfirmPin('');
-                             setIsForgotPinMode(false);
-                           } catch (err: any) {
-                             setPinChangeError(err.message || "Failed to reset PIN. Check the code and try again.");
-                           } finally {
-                             setIsProcessing(false);
-                           }
-                         }}
-                         className="w-2/3 py-3.5 rounded-xl bg-[#5E43F3] text-white font-bold text-sm hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
-                       >
-                         {isProcessing ? 'Resetting...' : 'Save New PIN'}
-                       </button>
-                     </div>
-
-                     <div className="text-center pt-2">
-                       <button
-                         type="button"
-                         disabled={isRequestingOtp}
-                         onClick={async () => {
-                           setPinChangeError('');
-                           setPinChangeSuccess('');
-                           setIsRequestingOtp(true);
-                           try {
-                             const res = await performRequestPinResetOtp();
-                             setForgotPinEmailMasked(res.email || '');
-                             setPinChangeSuccess(`New code sent to ${res.email || 'your email'}.`);
-                           } catch (err: any) {
-                             setPinChangeError(err.message || 'Failed to resend code.');
-                           } finally {
-                             setIsRequestingOtp(false);
-                           }
-                         }}
-                         className="text-xs font-semibold text-[#5E43F3] hover:underline"
-                       >
-                         {isRequestingOtp ? 'Sending...' : 'Didn’t receive the code? Resend'}
-                       </button>
-                     </div>
-                   </div>
-                 )}
-
-                 {/* CASE 4: Initial PIN setup when no PIN is yet configured */}
-                 {!(wallet as any)?.hasPin && !isForgotPinMode && (
-                   <div className="space-y-4 pt-2">
-                     <div>
-                       <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-2">Create 4-Digit PIN</label>
-                       <input 
-                         type="password"
-                         maxLength={4}
-                         placeholder="••••"
-                         value={newWalletPinInput}
-                         onChange={(e) => setNewWalletPinInput(e.target.value.replace(/\D/g, ''))}
-                         className="w-full bg-theme-base border border-theme-divider-light rounded-xl px-4 py-3 font-mono font-bold text-lg text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                       />
-                     </div>
-
-                     <div>
-                       <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-2">Confirm PIN</label>
-                       <input 
-                         type="password"
-                         maxLength={4}
-                         placeholder="••••"
-                         value={confirmWalletPinInput}
-                         onChange={(e) => setConfirmWalletPinInput(e.target.value.replace(/\D/g, ''))}
-                         className="w-full bg-theme-base border border-theme-divider-light rounded-xl px-4 py-3 font-mono font-bold text-lg text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                       />
-                     </div>
-
-                     <button
-                       disabled={isProcessing || newWalletPinInput.length !== 4 || confirmWalletPinInput.length !== 4}
-                       onClick={async () => {
-                         setPinChangeError('');
-                         setPinChangeSuccess('');
-                         if (newWalletPinInput !== confirmWalletPinInput) {
-                           setPinChangeError("New PIN and Confirm PIN do not match.");
-                           return;
-                         }
-                         setIsProcessing(true);
-                         try {
-                           const res = await performSetWalletPin({
-                             pin: newWalletPinInput,
-                           });
-                           setPinChangeSuccess(res.message || "PIN saved successfully!");
-                           setNewWalletPinInput('');
-                           setConfirmWalletPinInput('');
-                         } catch (err: any) {
-                           setPinChangeError(err.message || "Failed to save PIN.");
-                         } finally {
-                           setIsProcessing(false);
-                         }
-                       }}
-                       className="w-full py-3.5 rounded-xl bg-[#5E43F3] text-white font-bold text-sm hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 mt-4 flex items-center justify-center gap-2"
-                     >
-                       {isProcessing ? 'Saving PIN...' : 'Save PIN'}
-                     </button>
-                   </div>
-                 )}
-               </div>
-             </div>
-           )}
 
           {/* PAY SELECT WALLET */}
           {currentView === 'pay_select_wallet' && (
@@ -2478,62 +2500,234 @@ export const WalletModal: React.FC = () => {
 
           {/* MARKET BILLS */}
           {currentView === 'market_bills' && (
-             <div className="p-4 flex flex-col h-full">
-                <div className="flex-1 space-y-4 pt-4">
-                  <h3 className="font-black text-theme-primary text-xl mb-4">Pay Bills</h3>
+             <div className="p-4 flex flex-col h-full overflow-y-auto">
+                <div className="flex-1 space-y-3 pt-2">
+                  <div className="mb-3">
+                    <h3 className="font-black text-theme-primary text-xl">Pay Bills & Utilities</h3>
+                    <p className="text-xs text-theme-tertiary">Select a service to pay with your Lalao wallet balance.</p>
+                  </div>
                   
-                  <button 
-                    onClick={() => {
-                      setMarketServiceType('electricity');
-                      setMarketProvider('01'); // EKEDC default
-                      setMarketCustomerIdentifier('');
-                      setMarketAmount('');
-                      setVerifiedCustomerName('');
-                      setMarketFee(serviceSettings?.electricity?.fee ?? 100);
-                      navigateTo('market_electricity');
-                    }} 
-                    className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active transition-colors group cursor-pointer w-full text-left"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
-                        <span className="font-bold text-yellow-600 text-lg">⚡</span>
+                  {/* Electricity */}
+                  {serviceSettings?.electricity?.enabled !== false && (
+                    <button 
+                      onClick={() => {
+                        setMarketServiceType('electricity');
+                        setMarketProvider('01'); // EKEDC default
+                        setMarketCustomerIdentifier('');
+                        setMarketAmount('');
+                        setVerifiedCustomerName('');
+                        setMarketFee(serviceSettings?.electricity?.fee ?? 100);
+                        navigateTo('market_electricity');
+                      }} 
+                      className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active border border-theme-divider-light transition-colors group cursor-pointer w-full text-left"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                          <Zap className="w-5 h-5 text-amber-500" />
+                        </div>
+                        <div>
+                          <span className="font-bold text-sm text-theme-primary block">Electricity Bills</span>
+                          <span className="text-xs text-theme-tertiary">EKEDC, IKEDC, AEDC, KEDCO, PHED & more</span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="font-bold text-theme-primary block">Electricity</span>
-                        <span className="text-xs text-theme-tertiary">Buy prepaid tokens or pay postpaid bills</span>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-theme-tertiary" />
-                  </button>
+                      <ChevronRight className="w-5 h-5 text-theme-tertiary group-hover:text-theme-primary transition-colors" />
+                    </button>
+                  )}
                   
-                  <button 
-                    onClick={() => {
-                      setMarketServiceType('cable');
-                      setMarketProvider('dstv');
-                      setMarketCustomerIdentifier('');
-                      setMarketAmount('');
-                      setMarketProduct(null);
-                      setVerifiedCustomerName('');
-                      setMarketFee(serviceSettings?.cable?.fee ?? 100);
-                      setIsFetchingCablePackages(true);
-                      fetchCablePackages({ provider: 'dstv' })
-                        .then(pkgs => setCablePackagesList(pkgs || []))
-                        .finally(() => setIsFetchingCablePackages(false));
-                      navigateTo('market_cable');
-                    }} 
-                    className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active transition-colors group cursor-pointer w-full text-left"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                        <span className="font-bold text-blue-600 text-lg">📺</span>
+                  {/* Cable TV */}
+                  {serviceSettings?.cable?.enabled !== false && (
+                    <button 
+                      onClick={() => {
+                        setMarketServiceType('cable');
+                        setMarketProvider('dstv');
+                        setMarketCustomerIdentifier('');
+                        setMarketAmount('');
+                        setMarketProduct(null);
+                        setVerifiedCustomerName('');
+                        setMarketFee(serviceSettings?.cable?.fee ?? 100);
+                        setIsFetchingCablePackages(true);
+                        fetchCablePackages({ provider: 'dstv' })
+                          .then(pkgs => setCablePackagesList(pkgs || []))
+                          .finally(() => setIsFetchingCablePackages(false));
+                        navigateTo('market_cable');
+                      }} 
+                      className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active border border-theme-divider-light transition-colors group cursor-pointer w-full text-left"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+                          <Tv className="w-5 h-5 text-blue-500" />
+                        </div>
+                        <div>
+                          <span className="font-bold text-sm text-theme-primary block">Cable TV Subscriptions</span>
+                          <span className="text-xs text-theme-tertiary">DStv, GOtv, and StarTimes instant renewal</span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="font-bold text-theme-primary block">Cable TV</span>
-                        <span className="text-xs text-theme-tertiary">DStv, GOtv, and StarTimes renewals</span>
+                      <ChevronRight className="w-5 h-5 text-theme-tertiary group-hover:text-theme-primary transition-colors" />
+                    </button>
+                  )}
+
+                  {/* Betting */}
+                  {serviceSettings?.betting?.enabled !== false && (
+                    <button 
+                      onClick={() => {
+                        setMarketServiceType('betting');
+                        setMarketProvider('prd-sporty-bet');
+                        setMarketCustomerIdentifier('');
+                        setMarketAmount('');
+                        setVerifiedCustomerName('');
+                        setMarketFee(serviceSettings?.betting?.fee ?? 50);
+                        navigateTo('market_betting');
+                      }} 
+                      className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active border border-theme-divider-light transition-colors group cursor-pointer w-full text-left"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
+                          <Dices className="w-5 h-5 text-rose-500" />
+                        </div>
+                        <div>
+                          <span className="font-bold text-sm text-theme-primary block">Betting Wallet Funding</span>
+                          <span className="text-xs text-theme-tertiary">SportyBet, BetKing, 1xBet, NairaBet, MerryBet</span>
+                        </div>
                       </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-theme-tertiary" />
-                  </button>
+                      <ChevronRight className="w-5 h-5 text-theme-tertiary group-hover:text-theme-primary transition-colors" />
+                    </button>
+                  )}
+
+                  {/* Smile */}
+                  {serviceSettings?.smile?.enabled !== false && (
+                    <button 
+                      onClick={() => {
+                        setMarketServiceType('smile');
+                        setMarketProvider('smile-direct');
+                        setMarketCustomerIdentifier('');
+                        setMarketAmount('');
+                        setMarketProduct(null);
+                        setMarketFee(serviceSettings?.smile?.fee ?? 0);
+                        setIsFetchingSmilePackages(true);
+                        fetchSmilePackages()
+                          .then(pkgs => setSmilePackagesList(pkgs || []))
+                          .finally(() => setIsFetchingSmilePackages(false));
+                        navigateTo('market_smile');
+                      }} 
+                      className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active border border-theme-divider-light transition-colors group cursor-pointer w-full text-left"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                          <Wifi className="w-5 h-5 text-emerald-500" />
+                        </div>
+                        <div>
+                          <span className="font-bold text-sm text-theme-primary block">Smile Internet</span>
+                          <span className="text-xs text-theme-tertiary">Recharge Smile 4G LTE broadband data plans</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-theme-tertiary group-hover:text-theme-primary transition-colors" />
+                    </button>
+                  )}
+
+                  {/* Spectranet */}
+                  {serviceSettings?.spectranet?.enabled !== false && (
+                    <button 
+                      onClick={() => {
+                        setMarketServiceType('spectranet');
+                        setMarketProvider('spectranet');
+                        setMarketCustomerIdentifier('');
+                        setMarketAmount('');
+                        setMarketProduct(null);
+                        setMarketFee(serviceSettings?.spectranet?.fee ?? 0);
+                        setIsFetchingSpectranetPackages(true);
+                        fetchSpectranetPackages()
+                          .then(pkgs => setSpectranetPackagesList(pkgs || []))
+                          .finally(() => setIsFetchingSpectranetPackages(false));
+                        navigateTo('market_spectranet');
+                      }} 
+                      className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active border border-theme-divider-light transition-colors group cursor-pointer w-full text-left"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
+                          <Globe className="w-5 h-5 text-indigo-500" />
+                        </div>
+                        <div>
+                          <span className="font-bold text-sm text-theme-primary block">Spectranet 4G LTE</span>
+                          <span className="text-xs text-theme-tertiary">Subscribe to Spectranet wireless internet bundles</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-theme-tertiary group-hover:text-theme-primary transition-colors" />
+                    </button>
+                  )}
+
+                  {/* WAEC Examination */}
+                  {serviceSettings?.waec?.enabled !== false && (
+                    <button 
+                      onClick={() => {
+                        setMarketServiceType('waec');
+                        setMarketProvider('waec');
+                        setMarketCustomerIdentifier('');
+                        setMarketAmount('');
+                        setMarketProduct(null);
+                        setMarketFee(serviceSettings?.waec?.fee ?? 0);
+                        setIsFetchingWAECPackages(true);
+                        fetchWAECPackages()
+                          .then(pkgs => {
+                            setWaecPackagesList(pkgs || []);
+                            if (pkgs && pkgs.length > 0) {
+                              setMarketProduct(pkgs[0]);
+                              setMarketAmount(pkgs[0].price.toString());
+                            }
+                          })
+                          .finally(() => setIsFetchingWAECPackages(false));
+                        navigateTo('market_waec');
+                      }} 
+                      className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active border border-theme-divider-light transition-colors group cursor-pointer w-full text-left"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0">
+                          <BookOpen className="w-5 h-5 text-purple-500" />
+                        </div>
+                        <div>
+                          <span className="font-bold text-sm text-theme-primary block">WAEC Examination e-PIN</span>
+                          <span className="text-xs text-theme-tertiary">Result Checker and Registration e-PINs</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-theme-tertiary group-hover:text-theme-primary transition-colors" />
+                    </button>
+                  )}
+
+                  {/* JAMB Examination */}
+                  {serviceSettings?.jamb?.enabled !== false && (
+                    <button 
+                      onClick={() => {
+                        setMarketServiceType('jamb');
+                        setMarketProvider('jamb');
+                        setMarketCustomerIdentifier('');
+                        setMarketAmount('');
+                        setMarketProduct(null);
+                        setMarketFee(serviceSettings?.jamb?.fee ?? 0);
+                        setIsFetchingJAMBPackages(true);
+                        fetchJAMBPackages()
+                          .then(pkgs => {
+                            setJambPackagesList(pkgs || []);
+                            if (pkgs && pkgs.length > 0) {
+                              setMarketProduct(pkgs[0]);
+                              setMarketAmount(pkgs[0].price.toString());
+                            }
+                          })
+                          .finally(() => setIsFetchingJAMBPackages(false));
+                        navigateTo('market_jamb');
+                      }} 
+                      className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active border border-theme-divider-light transition-colors group cursor-pointer w-full text-left"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0">
+                          <GraduationCap className="w-5 h-5 text-teal-500" />
+                        </div>
+                        <div>
+                          <span className="font-bold text-sm text-theme-primary block">JAMB e-PIN</span>
+                          <span className="text-xs text-theme-tertiary">UTME and Direct Entry (DE) registration PINs</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-theme-tertiary group-hover:text-theme-primary transition-colors" />
+                    </button>
+                  )}
                 </div>
              </div>
           )}
@@ -2794,20 +2988,420 @@ export const WalletModal: React.FC = () => {
             </div>
           )}
 
+          {/* MARKET BETTING */}
+          {currentView === 'market_betting' && (
+            <div className="p-4 flex flex-col h-full overflow-y-auto">
+              <div className="flex-1 space-y-4 pt-2">
+                <div className="flex justify-between items-center bg-theme-surface p-3.5 rounded-2xl border border-theme-divider-light">
+                  <div className="text-[11px] font-bold text-theme-secondary uppercase tracking-widest">Available Balance</div>
+                  <div className="font-mono font-black text-sm text-theme-primary">{internalBalance.toLocaleString()} LC</div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Betting Platform</label>
+                    <select
+                      value={marketProvider}
+                      onChange={(e) => {
+                        setMarketProvider(e.target.value);
+                        setVerifiedCustomerName('');
+                      }}
+                      className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                    >
+                      <option value="prd-sporty-bet">SportyBet</option>
+                      <option value="product-bet-king">BetKing</option>
+                      <option value="product-1x-bet">1xBet</option>
+                      <option value="product-nairabet">NairaBet</option>
+                      <option value="product-bang-bet">BangBet</option>
+                      <option value="product-bet-way">BetWay</option>
+                      <option value="product-merry-bet">MerryBet</option>
+                      <option value="product-naija-bet">NaijaBet</option>
+                      <option value="product-bet-land">BetLand</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">User ID / Customer Account Number</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={marketCustomerIdentifier}
+                        onChange={(e) => {
+                          setMarketCustomerIdentifier(e.target.value);
+                          setVerifiedCustomerName('');
+                        }}
+                        placeholder="Enter betting user ID"
+                        className="flex-1 bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3.5 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                      />
+                      <button
+                        type="button"
+                        disabled={!marketCustomerIdentifier || isVerifyingCustomer}
+                        onClick={async () => {
+                          setIsVerifyingCustomer(true);
+                          try {
+                            const res = await verifyBettingCustomer({
+                              bettingCompany: marketProvider,
+                              customerId: marketCustomerIdentifier,
+                            });
+                            setVerifiedCustomerName(res.customerName);
+                          } catch (err: any) {
+                            alert(err.message || 'Could not verify betting account');
+                          } finally {
+                            setIsVerifyingCustomer(false);
+                          }
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-theme-surface-hover hover:bg-theme-surface-active text-xs font-bold text-theme-primary transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        {isVerifyingCustomer ? 'Verifying...' : 'Verify'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {verifiedCustomerName && (
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-2">
+                      <Check className="w-4 h-4 shrink-0" />
+                      <span>Account Name: {verifiedCustomerName}</span>
+                    </div>
+                  )}
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Amount to Fund (₦)</label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={marketAmount}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || /^\d*$/.test(val)) setMarketAmount(val);
+                      }}
+                      placeholder="e.g. 1000"
+                      className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3.5 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                    />
+                    <div className="flex justify-between items-center text-[10px] text-theme-tertiary px-1">
+                      <span>Convenience fee: ₦{marketFee}</span>
+                      <span>Min: ₦100 · Max: ₦100,000</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="shrink-0 pt-4">
+                <button
+                  disabled={!marketCustomerIdentifier || !marketAmount || parseFloat(marketAmount) < 100 || (parseFloat(marketAmount) + marketFee) > internalBalance}
+                  onClick={() => navigateTo('market_review')}
+                  className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-base hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 cursor-pointer"
+                >
+                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue to Confirmation'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* MARKET SMILE */}
+          {currentView === 'market_smile' && (
+            <div className="p-4 flex flex-col h-full overflow-y-auto">
+              <div className="flex-1 space-y-4 pt-2">
+                <div className="flex justify-between items-center bg-theme-surface p-3.5 rounded-2xl border border-theme-divider-light">
+                  <div className="text-[11px] font-bold text-theme-secondary uppercase tracking-widest">Available Balance</div>
+                  <div className="font-mono font-black text-sm text-theme-primary">{internalBalance.toLocaleString()} LC</div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Smile Account / Phone Number</label>
+                    <input
+                      type="text"
+                      value={marketCustomerIdentifier}
+                      onChange={(e) => setMarketCustomerIdentifier(e.target.value)}
+                      placeholder="Enter 10-digit Smile number"
+                      className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3.5 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Select Bundle Plan</label>
+                    {isFetchingSmilePackages ? (
+                      <p className="text-xs text-theme-tertiary">Loading live Smile data packages...</p>
+                    ) : (
+                      <select
+                        value={marketProduct?.packageId || ''}
+                        onChange={(e) => {
+                          const chosen = smilePackagesList.find(pkg => pkg.packageId === e.target.value);
+                          if (chosen) {
+                            setMarketProduct({ planName: chosen.packageName, variationId: chosen.packageId });
+                            setMarketAmount(chosen.price.toString());
+                          }
+                        }}
+                        className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                      >
+                        <option value="">Select a Smile bundle</option>
+                        {smilePackagesList.map((pkg) => (
+                          <option key={pkg.packageId} value={pkg.packageId}>
+                            {pkg.packageName} — ₦{pkg.price.toLocaleString()}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  {marketProduct && (
+                    <div className="p-3.5 rounded-2xl bg-theme-surface border border-theme-divider-light space-y-1.5">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-theme-tertiary">Selected Plan</span>
+                        <span className="font-bold text-theme-primary">{marketProduct.planName}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-theme-tertiary">Price</span>
+                        <span className="font-bold text-[#5E43F3]">₦{parseFloat(marketAmount).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="shrink-0 pt-4">
+                <button
+                  disabled={!marketCustomerIdentifier || !marketProduct || parseFloat(marketAmount) <= 0 || (parseFloat(marketAmount) + marketFee) > internalBalance}
+                  onClick={() => navigateTo('market_review')}
+                  className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-base hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 cursor-pointer"
+                >
+                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue to Confirmation'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* MARKET SPECTRANET */}
+          {currentView === 'market_spectranet' && (
+            <div className="p-4 flex flex-col h-full overflow-y-auto">
+              <div className="flex-1 space-y-4 pt-2">
+                <div className="flex justify-between items-center bg-theme-surface p-3.5 rounded-2xl border border-theme-divider-light">
+                  <div className="text-[11px] font-bold text-theme-secondary uppercase tracking-widest">Available Balance</div>
+                  <div className="font-mono font-black text-sm text-theme-primary">{internalBalance.toLocaleString()} LC</div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Spectranet Account / Phone Number</label>
+                    <input
+                      type="text"
+                      value={marketCustomerIdentifier}
+                      onChange={(e) => setMarketCustomerIdentifier(e.target.value)}
+                      placeholder="Enter Spectranet account ID or phone"
+                      className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3.5 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Select Spectranet Package</label>
+                    {isFetchingSpectranetPackages ? (
+                      <p className="text-xs text-theme-tertiary">Loading live Spectranet plans...</p>
+                    ) : (
+                      <select
+                        value={marketProduct?.packageId || ''}
+                        onChange={(e) => {
+                          const chosen = spectranetPackagesList.find(pkg => pkg.packageId === e.target.value);
+                          if (chosen) {
+                            setMarketProduct({ planName: chosen.packageName, variationId: chosen.packageId });
+                            setMarketAmount(chosen.price.toString());
+                          }
+                        }}
+                        className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                      >
+                        <option value="">Select a package</option>
+                        {spectranetPackagesList.map((pkg) => (
+                          <option key={pkg.packageId} value={pkg.packageId}>
+                            {pkg.packageName} — ₦{pkg.price.toLocaleString()}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  {marketProduct && (
+                    <div className="p-3.5 rounded-2xl bg-theme-surface border border-theme-divider-light space-y-1.5">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-theme-tertiary">Package</span>
+                        <span className="font-bold text-theme-primary">{marketProduct.planName}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-theme-tertiary">Amount</span>
+                        <span className="font-bold text-[#5E43F3]">₦{parseFloat(marketAmount).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="shrink-0 pt-4">
+                <button
+                  disabled={!marketCustomerIdentifier || !marketProduct || parseFloat(marketAmount) <= 0 || (parseFloat(marketAmount) + marketFee) > internalBalance}
+                  onClick={() => navigateTo('market_review')}
+                  className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-base hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 cursor-pointer"
+                >
+                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue to Confirmation'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* MARKET WAEC */}
+          {currentView === 'market_waec' && (
+            <div className="p-4 flex flex-col h-full overflow-y-auto">
+              <div className="flex-1 space-y-4 pt-2">
+                <div className="flex justify-between items-center bg-theme-surface p-3.5 rounded-2xl border border-theme-divider-light">
+                  <div className="text-[11px] font-bold text-theme-secondary uppercase tracking-widest">Available Balance</div>
+                  <div className="font-mono font-black text-sm text-theme-primary">{internalBalance.toLocaleString()} LC</div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">WAEC Product</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {waecPackagesList.map((pkg) => {
+                        const isSelected = marketProduct?.variationId === pkg.packageId;
+                        return (
+                          <button
+                            key={pkg.packageId}
+                            type="button"
+                            onClick={() => {
+                              setMarketProduct({ planName: pkg.packageName, variationId: pkg.packageId });
+                              setMarketAmount(pkg.price.toString());
+                            }}
+                            className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-[#5E43F3]/10 border-[#5E43F3] text-theme-primary'
+                                : 'bg-theme-surface border-theme-divider-light text-theme-secondary hover:border-theme-primary/30'
+                            }`}
+                          >
+                            <span className="font-bold text-xs block text-theme-primary">{pkg.packageName}</span>
+                            <span className="font-mono font-black text-sm text-[#5E43F3] mt-1 block">₦{pkg.price.toLocaleString()}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Recipient Mobile Number (For PIN Delivery)</label>
+                    <input
+                      type="tel"
+                      value={marketCustomerIdentifier}
+                      onChange={(e) => setMarketCustomerIdentifier(e.target.value)}
+                      placeholder="e.g. 08012345678"
+                      className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3.5 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                    />
+                    <p className="text-[10px] text-theme-tertiary">The e-PIN & Serial Number will also be shown immediately on screen upon confirmation.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="shrink-0 pt-4">
+                <button
+                  disabled={!marketCustomerIdentifier || !marketProduct || parseFloat(marketAmount) <= 0 || (parseFloat(marketAmount) + marketFee) > internalBalance}
+                  onClick={() => navigateTo('market_review')}
+                  className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-base hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 cursor-pointer"
+                >
+                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue to Confirmation'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* MARKET JAMB */}
+          {currentView === 'market_jamb' && (
+            <div className="p-4 flex flex-col h-full overflow-y-auto">
+              <div className="flex-1 space-y-4 pt-2">
+                <div className="flex justify-between items-center bg-theme-surface p-3.5 rounded-2xl border border-theme-divider-light">
+                  <div className="text-[11px] font-bold text-theme-secondary uppercase tracking-widest">Available Balance</div>
+                  <div className="font-mono font-black text-sm text-theme-primary">{internalBalance.toLocaleString()} LC</div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">JAMB Registration Option</label>
+                    <div className="space-y-2">
+                      {jambPackagesList.map((pkg) => {
+                        const isSelected = marketProduct?.variationId === pkg.packageId;
+                        return (
+                          <button
+                            key={pkg.packageId}
+                            type="button"
+                            onClick={() => {
+                              setMarketProduct({ planName: pkg.packageName, variationId: pkg.packageId });
+                              setMarketAmount(pkg.price.toString());
+                            }}
+                            className={`w-full p-3.5 rounded-xl border flex items-center justify-between text-left transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-[#5E43F3]/10 border-[#5E43F3] text-theme-primary'
+                                : 'bg-theme-surface border-theme-divider-light text-theme-secondary hover:border-theme-primary/30'
+                            }`}
+                          >
+                            <span className="font-bold text-xs text-theme-primary">{pkg.packageName}</span>
+                            <span className="font-mono font-black text-sm text-[#5E43F3]">₦{pkg.price.toLocaleString()}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Candidate Profile Code / Phone</label>
+                    <input
+                      type="text"
+                      value={marketCustomerIdentifier}
+                      onChange={(e) => setMarketCustomerIdentifier(e.target.value)}
+                      placeholder="Enter 10-digit JAMB profile code or phone"
+                      className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3.5 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
+                    />
+                    <p className="text-[10px] text-theme-tertiary">e-PIN will be displayed on screen and can be used directly at any accredited CBT centre.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="shrink-0 pt-4">
+                <button
+                  disabled={!marketCustomerIdentifier || !marketProduct || parseFloat(marketAmount) <= 0 || (parseFloat(marketAmount) + marketFee) > internalBalance}
+                  onClick={() => navigateTo('market_review')}
+                  className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-base hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 cursor-pointer"
+                >
+                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue to Confirmation'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* MARKET REVIEW */}
           {currentView === 'market_review' && (
-             <div className="p-4 flex flex-col h-full">
-                <h3 className="font-black text-theme-primary text-2xl mb-6">Confirm {marketServiceType === 'airtime' ? 'Airtime' : marketServiceType === 'data' ? 'Data' : marketServiceType === 'electricity' ? 'Electricity' : 'Cable TV'}</h3>
+             <div className="p-4 flex flex-col h-full overflow-y-auto">
+                <h3 className="font-black text-theme-primary text-2xl mb-6">
+                  Confirm {
+                    marketServiceType === 'airtime' ? 'Airtime' : 
+                    marketServiceType === 'data' ? 'Data Bundle' : 
+                    marketServiceType === 'electricity' ? 'Electricity Bill' : 
+                    marketServiceType === 'cable' ? 'Cable TV Subscription' :
+                    marketServiceType === 'betting' ? 'Betting Wallet Funding' :
+                    marketServiceType === 'smile' ? 'Smile Internet' :
+                    marketServiceType === 'spectranet' ? 'Spectranet 4G LTE' :
+                    marketServiceType === 'waec' ? 'WAEC e-PIN' :
+                    marketServiceType === 'jamb' ? 'JAMB e-PIN' : 'Bill Payment'
+                  }
+                </h3>
                 
                 <div className="flex-1 space-y-4">
                   <div className="bg-theme-surface rounded-2xl p-5 border border-theme-divider-light space-y-4">
                     <div className="flex justify-between items-center">
-                      <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Provider / Biller</div>
+                      <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Provider / Service</div>
                       <div className="font-bold text-theme-primary uppercase">{marketProvider}</div>
                     </div>
                     <div className="border-t border-theme-divider-light"></div>
                     <div className="flex justify-between items-center">
-                      <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Recipient / Identifier</div>
+                      <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">
+                        {marketServiceType === 'waec' || marketServiceType === 'jamb' ? 'Recipient Mobile / Candidate' : 
+                         marketServiceType === 'betting' ? 'Customer Account ID' :
+                         marketServiceType === 'electricity' ? 'Meter Number' :
+                         marketServiceType === 'cable' ? 'Smartcard / IUC' : 'Recipient Phone'}
+                      </div>
                       <div className="font-bold text-theme-primary">{marketCustomerIdentifier}</div>
                     </div>
                     {verifiedCustomerName && (
@@ -2831,7 +3425,7 @@ export const WalletModal: React.FC = () => {
                     <div className="border-t border-theme-divider-light"></div>
                     <div className="flex justify-between items-center">
                       <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Amount</div>
-                      <div className="font-black text-theme-primary">₦{parseFloat(marketAmount).toLocaleString()}</div>
+                      <div className="font-black text-theme-primary">₦{parseFloat(marketAmount || '0').toLocaleString()}</div>
                     </div>
                     <div className="flex justify-between items-center">
                       <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Platform Fee</div>
@@ -2840,13 +3434,13 @@ export const WalletModal: React.FC = () => {
                     <div className="border-t border-theme-divider-light"></div>
                     <div className="flex justify-between items-center">
                       <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Total Payable</div>
-                      <div className="font-black text-base text-[#5E43F3]">₦{(parseFloat(marketAmount) + marketFee).toLocaleString()}</div>
+                      <div className="font-black text-base text-[#5E43F3]">₦{(parseFloat(marketAmount || '0') + marketFee).toLocaleString()}</div>
                     </div>
                   </div>
                   
                   <div className="flex justify-between items-center bg-theme-surface-hover p-4 rounded-xl border border-theme-divider-light">
                     <div className="text-xs font-bold text-theme-secondary uppercase tracking-widest">Balance after purchase</div>
-                    <div className="font-black text-theme-primary">₦{(internalBalance - (parseFloat(marketAmount) + marketFee)).toLocaleString()}</div>
+                    <div className="font-black text-theme-primary">₦{(internalBalance - (parseFloat(marketAmount || '0') + marketFee)).toLocaleString()}</div>
                   </div>
                 </div>
 
@@ -2929,14 +3523,14 @@ export const WalletModal: React.FC = () => {
 
           {/* MARKET SUCCESS */}
           {currentView === 'market_success' && (
-             <div className="p-4 flex flex-col h-full text-center pb-12">
+             <div className="p-4 flex flex-col h-full text-center pb-12 overflow-y-auto">
                <div className="flex-1 flex flex-col items-center justify-center pt-8">
                  <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-5 border border-emerald-500/20">
                    <Check className="w-10 h-10 text-emerald-600" />
                  </div>
                  <h3 className="font-black text-theme-primary text-2xl mb-2">Transaction Successful</h3>
                  <div className="font-black text-2xl text-[#5E43F3] mb-1">
-                   ₦{(parseFloat(marketAmount) + marketFee).toLocaleString()}
+                   ₦{(parseFloat(marketAmount || '0') + marketFee).toLocaleString()}
                  </div>
                  <p className="text-xs text-theme-tertiary uppercase font-bold tracking-wider mb-2">
                    {marketProvider} {marketServiceType.toUpperCase()}
@@ -2945,14 +3539,20 @@ export const WalletModal: React.FC = () => {
                    Delivered to {marketCustomerIdentifier}
                  </p>
 
-                 {/* Token Display for Electricity */}
+                 {/* Token / e-PIN Display */}
                  {returnedToken && (
                    <div className="w-full max-w-sm p-4 rounded-2xl bg-theme-surface border-2 border-emerald-500/30 text-center space-y-1 mb-6">
-                     <span className="text-[10px] font-bold uppercase tracking-wider text-theme-tertiary">Electricity Token</span>
+                     <span className="text-[10px] font-bold uppercase tracking-wider text-theme-tertiary">
+                       {marketServiceType === 'electricity' ? 'Electricity Meter Token' :
+                        marketServiceType === 'waec' ? 'WAEC e-PIN / Serial' :
+                        marketServiceType === 'jamb' ? 'JAMB Registration e-PIN' : 'Generated PIN / Token'}
+                     </span>
                      <p className="text-base sm:text-lg font-mono font-black text-emerald-600 tracking-wider select-all">
                        {returnedToken}
                      </p>
-                     <p className="text-[10px] text-theme-tertiary">Enter this token on your physical meter keypad</p>
+                     <p className="text-[10px] text-theme-tertiary">
+                       {marketServiceType === 'electricity' ? 'Enter this token on your physical meter keypad' : 'Keep this PIN safe for registration or result checking'}
+                     </p>
                    </div>
                  )}
                  
