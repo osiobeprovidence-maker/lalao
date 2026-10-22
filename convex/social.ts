@@ -1895,6 +1895,53 @@ export const createPost = mutation({
       await ctx.db.patch(finalRallyRefId as any, { postId });
     }
 
+    // Notify followers of new post from friends (standard social media notification)
+    try {
+      const followers = await ctx.db
+        .query("follows")
+        .withIndex("by_following", (q: any) => q.eq("followingId", currentUser._id))
+        .take(50); // Notify closest followers
+
+      let authorAvatar = currentUser.avatarUrl || (currentUser as any).avatar;
+      if (!authorAvatar && (currentUser as any).avatarStorageId) {
+        try {
+          const signed = await ctx.storage.getUrl((currentUser as any).avatarStorageId);
+          if (signed) authorAvatar = signed;
+        } catch (_) {}
+      }
+      if (authorAvatar && !authorAvatar.startsWith("https://") && !authorAvatar.startsWith("http://")) {
+        authorAvatar = undefined;
+      }
+
+      const postExcerpt = args.text && args.text.trim().length > 0
+        ? (args.text.trim().slice(0, 80) + (args.text.trim().length > 80 ? "..." : ""))
+        : args.mediaType === "video" ? "shared a new video" : "shared a new photo";
+
+      for (const f of followers) {
+        await ctx.db.insert("notifications", {
+          recipientId: f.followerId,
+          actorId: currentUser._id,
+          type: "system_alert",
+          postId,
+          targetExcerpt: postExcerpt,
+          isRead: false,
+          createdAt: now,
+        });
+
+        await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
+          recipientId: f.followerId,
+          title: `${currentUser.name ?? `@${currentUser.username ?? "Someone"}`} posted a new update`,
+          body: postExcerpt,
+          url: `/app?tab=home&post=${postId}`,
+          icon: authorAvatar,
+          tag: `post-${postId.toString()}`,
+          category: "posts",
+        });
+      }
+    } catch (notifErr) {
+      console.warn("[social] Failed to notify followers for new post:", notifErr);
+    }
+
     return {
       id: postId,
       author: {
@@ -2074,11 +2121,26 @@ export const toggleLikePost = mutation({
         isRead: false,
         createdAt: Date.now(),
       });
+
+      let actorAvatar = currentUser.avatarUrl || (currentUser as any).avatar;
+      if (!actorAvatar && (currentUser as any).avatarStorageId) {
+        try {
+          const signed = await ctx.storage.getUrl((currentUser as any).avatarStorageId);
+          if (signed) actorAvatar = signed;
+        } catch (_) {}
+      }
+      if (actorAvatar && !actorAvatar.startsWith("https://") && !actorAvatar.startsWith("http://")) {
+        actorAvatar = undefined;
+      }
+
       await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
         recipientId: post.authorId,
         title: `${currentUser.name ?? "Someone"} liked your post`,
         body: post.text ? post.text.slice(0, 100) : "Check it out on Lalao",
         url: `/app?tab=home&post=${postId}`,
+        icon: actorAvatar,
+        tag: `like-${postId.toString()}`,
+        category: "likes",
       });
     }
 
@@ -2274,6 +2336,17 @@ export const addCommentToPost = mutation({
       commentsCount: (post.commentsCount ?? 0) + 1,
     });
 
+    let actorAvatar = currentUser.avatarUrl || (currentUser as any).avatar;
+    if (!actorAvatar && (currentUser as any).avatarStorageId) {
+      try {
+        const signed = await ctx.storage.getUrl((currentUser as any).avatarStorageId);
+        if (signed) actorAvatar = signed;
+      } catch (_) {}
+    }
+    if (actorAvatar && !actorAvatar.startsWith("https://") && !actorAvatar.startsWith("http://")) {
+      actorAvatar = undefined;
+    }
+
     // Notify post author of comment/reply (not self)
     const notifType = parentCommentId ? "reply" : "comment";
     if (post.authorId !== currentUser._id) {
@@ -2292,6 +2365,9 @@ export const addCommentToPost = mutation({
         title: `${currentUser.name ?? "Someone"} ${parentCommentId ? "replied to your comment" : "commented on your post"}`,
         body: trimmed.slice(0, 100),
         url: `/app?tab=home&post=${postId}`,
+        icon: actorAvatar,
+        tag: `comment-${postId.toString()}`,
+        category: "comments",
       });
     }
 
@@ -2318,6 +2394,9 @@ export const addCommentToPost = mutation({
           title: `${currentUser.name ?? "Someone"} replied to your comment`,
           body: trimmed.slice(0, 100),
           url: `/app?tab=home&post=${postId}`,
+          icon: actorAvatar,
+          tag: `reply-${commentId.toString()}`,
+          category: "comments",
         });
       }
     }
@@ -2492,11 +2571,26 @@ export const toggleFollowUser = mutation({
       isRead: false,
       createdAt: Date.now(),
     });
+
+    let actorAvatar = currentUser.avatarUrl || (currentUser as any).avatar;
+    if (!actorAvatar && (currentUser as any).avatarStorageId) {
+      try {
+        const signed = await ctx.storage.getUrl((currentUser as any).avatarStorageId);
+        if (signed) actorAvatar = signed;
+      } catch (_) {}
+    }
+    if (actorAvatar && !actorAvatar.startsWith("https://") && !actorAvatar.startsWith("http://")) {
+      actorAvatar = undefined;
+    }
+
     await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
       recipientId: targetUserId,
       title: "New follower on Lalao",
       body: `${currentUser.name ?? "Someone"} started following you`,
-      url: "/app?tab=notifications",
+      url: `/app?tab=profile&user=${currentUser._id}`,
+      icon: actorAvatar,
+      tag: `follow-${currentUser._id.toString()}`,
+      category: "follows",
     });
 
     return { following: true };

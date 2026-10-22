@@ -162,14 +162,29 @@ export const initiateCall = mutation({
       createdAt: now,
     });
 
-    // Schedule background Web Push notification if recipient is offline / backgrounded
+    // Resolve caller avatar with storage fallback
+    let callerAvatar = currentUser.avatarUrl || (currentUser as any).avatar;
+    if (!callerAvatar && (currentUser as any).avatarStorageId) {
+      try {
+        const signed = await ctx.storage.getUrl((currentUser as any).avatarStorageId);
+        if (signed) callerAvatar = signed;
+      } catch (_) {}
+    }
+    if (callerAvatar && !callerAvatar.startsWith("https://") && !callerAvatar.startsWith("http://")) {
+      callerAvatar = undefined;
+    }
+
+    // Schedule background Web Push / OneSignal notification if recipient is offline / backgrounded
     try {
       await ctx.scheduler.runAfter(0, (internal as any).pushActions.dispatchPush, {
         recipientId: normRecipientId,
         title: `Incoming ${args.type === "video" ? "Video" : "Voice"} Call`,
         body: `${currentUser.name || "A Lalao user"} is calling you...`,
-        url: `/app/messages`,
-        icon: currentUser.avatarUrl || "/mascot.png",
+        url: args.conversationId ? `/app?chat=${args.conversationId}` : `/app?tab=messages`,
+        conversationId: args.conversationId ? args.conversationId.toString() : undefined,
+        icon: callerAvatar || "/icon-192.png",
+        tag: `call-${callId.toString()}`,
+        category: "calls",
       });
     } catch (_) {}
 
