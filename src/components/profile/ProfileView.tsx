@@ -30,7 +30,7 @@ import { User } from '../../types';
 import { SuggestCommunityModal } from './SuggestCommunityModal';
 
 type ProfileTab = 'posts' | 'replies' | 'media' | 'reposts';
-type ConnectionTab = 'followers' | 'following';
+type ConnectionTab = 'followers' | 'following' | 'suggested';
 
 export const ProfileView: React.FC = () => {
   const {
@@ -55,6 +55,9 @@ export const ProfileView: React.FC = () => {
   const [isConnectionsOpen, setIsConnectionsOpen] = useState(false);
   const [connectionTab, setConnectionTab] = useState<ConnectionTab>('followers');
   const [searchQuery, setSearchQuery] = useState('');
+  const [dismissedRecommendedIds, setDismissedRecommendedIds] = useState<Set<string>>(new Set());
+
+  const dismissRecMutation = useMutation(api.recommendations.dismissRecommendation);
 
   // Fetch this user's posts directly — querying strictly posts authored by this profile
   const myPostsQuery = useQuery(
@@ -103,10 +106,25 @@ export const ProfileView: React.FC = () => {
   const [isSuggestOpen, setIsSuggestOpen] = useState(false);
 
   // Real connection data from Convex
-  const myFollowers = useQuery(api.social.getMyFollowers) ?? [];
+  const myFollowersQuery = useQuery(api.social.getMyFollowers);
+  const myFollowers = myFollowersQuery ?? [];
   const myFollowing = useQuery(api.social.getMyFollowing);
   const followingData = myFollowing ?? { people: [], pages: [], peopleCt: 0, pagesCt: 0 };
   const totalFollowingCount = followingData.peopleCt + followingData.pagesCt;
+
+  // Real recommendations for suggested tab
+  const communityRecsQuery = useQuery(api.social.getCommunityRecommendations, { limit: 25 });
+  const rawRecommendations = communityRecsQuery ?? [];
+  const recommendedPeople = rawRecommendations.filter((r: any) => !dismissedRecommendedIds.has(r.id));
+
+  // Authoritative follower and following counts synchronized with live backend queries
+  const effectiveFollowersCount = myFollowersQuery !== undefined
+    ? myFollowers.length
+    : (currentUser.followersCount ?? 0);
+
+  const effectiveFollowingCount = myFollowing !== undefined
+    ? totalFollowingCount
+    : (currentUser.followingCount ?? 0);
 
   const tabs: { id: ProfileTab; label: string }[] = [
     { id: 'posts', label: 'Posts' },
@@ -116,13 +134,25 @@ export const ProfileView: React.FC = () => {
   ];
 
   // Context-aware search placeholder
-  const searchPlaceholder = connectionTab === 'followers'
-    ? 'Search followers...'
-    : 'Search following...';
+  const searchPlaceholder =
+    connectionTab === 'followers'
+      ? 'Search followers...'
+      : connectionTab === 'following'
+      ? 'Search following...'
+      : 'Search suggestions...';
 
   const handleOpenUserProfile = (user: User) => {
     setIsConnectionsOpen(false);
     setActiveUserProfile(user);
+  };
+
+  const handleDismissRecommendation = async (recId: string) => {
+    setDismissedRecommendedIds((prev) => new Set([...prev, recId]));
+    try {
+      await dismissRecMutation({ targetId: recId });
+    } catch (err) {
+      console.error('Failed to dismiss recommendation:', err);
+    }
   };
 
   return (
@@ -275,7 +305,7 @@ export const ProfileView: React.FC = () => {
                 }}
                 className="text-theme-tertiary hover:text-theme-primary transition-colors cursor-pointer"
               >
-                <strong className="text-theme-primary font-bold">{currentUser.followersCount}</strong>{' '}
+                <strong className="text-theme-primary font-bold">{effectiveFollowersCount}</strong>{' '}
                 followers
               </button>
               <button
@@ -287,7 +317,7 @@ export const ProfileView: React.FC = () => {
                 }}
                 className="text-theme-tertiary hover:text-theme-primary transition-colors cursor-pointer"
               >
-                <strong className="text-theme-primary font-bold">{currentUser.followingCount}</strong>{' '}
+                <strong className="text-theme-primary font-bold">{effectiveFollowingCount}</strong>{' '}
                 following
               </button>
               <span className="text-theme-tertiary">
@@ -547,6 +577,20 @@ export const ProfileView: React.FC = () => {
                   <span className="absolute bottom-0 inset-x-3 h-0.5 bg-[#5E43F3] rounded-full" />
                 )}
               </button>
+
+              <button
+                onClick={() => { setConnectionTab('suggested'); setSearchQuery(''); }}
+                className={`py-2.5 px-3 text-xs font-bold transition-all relative cursor-pointer ${
+                  connectionTab === 'suggested'
+                    ? 'text-[#5E43F3]'
+                    : 'text-theme-tertiary hover:text-theme-primary'
+                }`}
+              >
+                Suggested ({recommendedPeople.length})
+                {connectionTab === 'suggested' && (
+                  <span className="absolute bottom-0 inset-x-3 h-0.5 bg-[#5E43F3] rounded-full" />
+                )}
+              </button>
             </div>
 
             {/* Search */}
@@ -603,11 +647,15 @@ export const ProfileView: React.FC = () => {
                         onClick={() => handleOpenUserProfile(user as User)}
                         className="flex min-w-0 flex-1 items-center gap-3 text-left cursor-pointer"
                       >
-                        <div className="relative">
+                        <div className="relative shrink-0">
                           <Avatar src={user.avatar} alt={user.name} size="md" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <span className="truncate text-xs sm:text-sm font-bold text-theme-primary block">{user.name}</span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="truncate text-xs sm:text-sm font-bold text-theme-primary">{user.name}</span>
+                            <VerificationBadge user={user} size="xs" />
+                            {user.badge && <Badge type={user.badge} />}
+                          </div>
                           <span className="block truncate text-[11px] text-theme-tertiary">@{user.username}{user.location ? ` · ${user.location}` : ''}</span>
                           {user.bio && <p className="mt-0.5 line-clamp-1 text-[11px] text-theme-secondary">{user.bio}</p>}
                         </div>
@@ -678,10 +726,16 @@ export const ProfileView: React.FC = () => {
                                 onClick={() => handleOpenUserProfile(user as User)}
                                 className="flex min-w-0 flex-1 items-center gap-3 text-left cursor-pointer"
                               >
-                                <Avatar src={user.avatar} alt={user.name} size="md" />
+                                <div className="relative shrink-0">
+                                  <Avatar src={user.avatar} alt={user.name} size="md" />
+                                </div>
                                 <div className="min-w-0 flex-1">
-                                  <span className="truncate text-xs sm:text-sm font-bold text-theme-primary block">{user.name}</span>
-                                  <span className="block truncate text-[11px] text-theme-tertiary">@{user.username}</span>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="truncate text-xs sm:text-sm font-bold text-theme-primary">{user.name}</span>
+                                    <VerificationBadge user={user} size="xs" />
+                                    {user.badge && <Badge type={user.badge} />}
+                                  </div>
+                                  <span className="block truncate text-[11px] text-theme-tertiary">@{user.username}{user.location ? ` · ${user.location}` : ''}</span>
                                 </div>
                               </button>
                               <button
@@ -737,6 +791,95 @@ export const ProfileView: React.FC = () => {
                     )}
                   </>
                 )}
+              </div>
+            )}
+
+            {/* === SUGGESTED FOR YOU TAB === */}
+            {connectionTab === 'suggested' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-[11px] text-theme-tertiary font-medium px-0.5">
+                  <span>Suggested people you may know</span>
+                  {recommendedPeople.length > 0 && <span>{recommendedPeople.length} recommendations</span>}
+                </div>
+
+                {(() => {
+                  const sq = searchQuery.toLowerCase();
+                  const filtered = sq
+                    ? recommendedPeople.filter((u: any) =>
+                        u.name.toLowerCase().includes(sq) ||
+                        u.username.toLowerCase().includes(sq) ||
+                        (u.bio && u.bio.toLowerCase().includes(sq)) ||
+                        (u.reason && u.reason.toLowerCase().includes(sq))
+                      )
+                    : recommendedPeople;
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="rounded-2xl border border-dashed border-theme-divider bg-theme-base p-8 text-center text-xs text-theme-tertiary">
+                        <Users className="w-8 h-8 mx-auto text-theme-tertiary mb-3" />
+                        <p className="font-bold text-theme-secondary">
+                          {sq ? 'No suggestions matching your search.' : 'No new recommendations right now.'}
+                        </p>
+                        <p className="mt-1 text-theme-tertiary">
+                          Check back later as new members and mutual connections join Lalao.
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return filtered.map((user: any) => (
+                    <div
+                      key={user.id}
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-theme-divider bg-theme-surface p-3 transition-colors hover:bg-theme-base"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleOpenUserProfile(user as User)}
+                        className="flex min-w-0 flex-1 items-center gap-3 text-left cursor-pointer"
+                      >
+                        <div className="relative shrink-0">
+                          <Avatar src={user.avatar} alt={user.name} size="md" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="truncate text-xs sm:text-sm font-bold text-theme-primary">{user.name}</span>
+                            <VerificationBadge user={user} size="xs" />
+                            {user.badge && <Badge type={user.badge} />}
+                          </div>
+                          <span className="block truncate text-[11px] text-theme-tertiary">
+                            @{user.username}{user.location ? ` · ${user.location}` : ''}
+                          </span>
+                          {user.reason ? (
+                            <p className="mt-0.5 text-[10px] text-[#5E43F3] font-medium flex items-center gap-1">
+                              <span>•</span> {user.reason}
+                            </p>
+                          ) : user.bio ? (
+                            <p className="mt-0.5 line-clamp-1 text-[11px] text-theme-secondary">{user.bio}</p>
+                          ) : null}
+                        </div>
+                      </button>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => toggleFollowUser(user.id)}
+                          className="rounded-full px-3.5 py-1.5 text-xs font-bold bg-[#5E43F3] text-white hover:bg-[#4E34E0] transition-all cursor-pointer"
+                        >
+                          Follow
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDismissRecommendation(user.id)}
+                          title="Dismiss suggestion"
+                          className="p-1.5 rounded-full text-theme-tertiary hover:text-theme-secondary hover:bg-theme-surface-hover transition-colors cursor-pointer"
+                          aria-label="Dismiss suggestion"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ));
+                })()}
               </div>
             )}
           </div>

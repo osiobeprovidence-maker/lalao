@@ -2512,36 +2512,57 @@ export const toggleFollowUser = mutation({
  * Returns profile info + whether the current user follows them back.
  */
 export const getMyFollowers = query({
-  args: {},
-  handler: async (ctx) => {
-    const currentUser = await getAuthedUser(ctx);
-    if (!currentUser) return [];
+  args: {
+    userId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    let targetUser: any = null;
+    if (args.userId) {
+      targetUser = await ctx.db.get(args.userId);
+    } else {
+      targetUser = await getAuthedUser(ctx);
+    }
+    if (!targetUser) return [];
 
-    // People who follow me
+    const currentViewer = await getAuthedUser(ctx);
+
+    // People who follow targetUser
     const followerRecords = await ctx.db
       .query("follows")
-      .withIndex("by_following", (q: any) => q.eq("followingId", currentUser._id))
+      .withIndex("by_following", (q: any) => q.eq("followingId", targetUser._id))
       .collect();
 
-    // People I follow (for "follow back" state)
-    const myFollowing = await ctx.db
-      .query("follows")
-      .withIndex("by_follower", (q: any) => q.eq("followerId", currentUser._id))
-      .collect();
-    const myFollowingIds = new Set(myFollowing.map((f: any) => f.followingId));
+    // People the viewer follows (for "follow back" / following status)
+    const viewerFollowingIds = new Set<string>();
+    if (currentViewer) {
+      const viewerFollowing = await ctx.db
+        .query("follows")
+        .withIndex("by_follower", (q: any) => q.eq("followerId", currentViewer._id))
+        .collect();
+      viewerFollowing.forEach((f: any) => viewerFollowingIds.add(f.followingId));
+    }
 
     const followers = await Promise.all(
       followerRecords.map(async (f: any) => {
         const user = await ctx.db.get(f.followerId as Id<"users">);
-        if (!user) return null;
+        if (!user || user.suspended) return null;
+
+        let userAvatar = user.avatarUrl || (user as any).avatar || "";
+        if (!userAvatar && (user as any).avatarStorageId) {
+          try {
+            const url = await ctx.storage.getUrl((user as any).avatarStorageId);
+            if (url) userAvatar = url;
+          } catch (_) {}
+        }
+
         return {
           id: user._id,
           name: user.name ?? "User",
           username: user.username ?? "user",
-          avatar: user.avatarUrl || "",
+          avatar: userAvatar,
           bio: user.bio ?? "",
-          location: (user.locationName ?? "").replace(/\s*\(Detected\)\s*/i, "").replace(/^GPS Detected$/i, "").trim(),
-          isFollowing: myFollowingIds.has(user._id), // do I follow them back?
+          location: (user.locationName ?? (user as any).location ?? "").replace(/\s*\(Detected\)\s*/i, "").replace(/^GPS Detected$/i, "").trim(),
+          isFollowing: viewerFollowingIds.has(user._id),
           followersCount: user.followersCount ?? 0,
           followingCount: user.followingCount ?? 0,
           ...resolveUserVerification(user),
@@ -2555,59 +2576,97 @@ export const getMyFollowers = query({
 });
 
 /**
- * Get the people and pages the current user follows.
+ * Get the people and pages a user follows.
  * Returns { people: [...], pages: [...], peopleCt, pagesCt }.
  */
 export const getMyFollowing = query({
-  args: {},
-  handler: async (ctx) => {
-    const currentUser = await getAuthedUser(ctx);
-    if (!currentUser) return { people: [], pages: [], peopleCt: 0, pagesCt: 0 };
+  args: {
+    userId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    let targetUser: any = null;
+    if (args.userId) {
+      targetUser = await ctx.db.get(args.userId);
+    } else {
+      targetUser = await getAuthedUser(ctx);
+    }
+    if (!targetUser) return { people: [], pages: [], peopleCt: 0, pagesCt: 0 };
 
-    // Users I follow
+    const currentViewer = await getAuthedUser(ctx);
+
+    // Users targetUser follows
     const followingRecords = await ctx.db
       .query("follows")
-      .withIndex("by_follower", (q: any) => q.eq("followerId", currentUser._id))
+      .withIndex("by_follower", (q: any) => q.eq("followerId", targetUser._id))
       .collect();
+
+    // Check if the current viewer follows them
+    const viewerFollowingIds = new Set<string>();
+    if (currentViewer) {
+      const viewerFollowing = await ctx.db
+        .query("follows")
+        .withIndex("by_follower", (q: any) => q.eq("followerId", currentViewer._id))
+        .collect();
+      viewerFollowing.forEach((f: any) => viewerFollowingIds.add(f.followingId));
+    }
 
     const people = await Promise.all(
       followingRecords.map(async (f: any) => {
         const user: any = await ctx.db.get(f.followingId);
-        if (!user) return null;
+        if (!user || user.suspended) return null;
+
+        let userAvatar = user.avatarUrl || user.avatar || "";
+        if (!userAvatar && user.avatarStorageId) {
+          try {
+            const url = await ctx.storage.getUrl(user.avatarStorageId);
+            if (url) userAvatar = url;
+          } catch (_) {}
+        }
+
         return {
           id: user._id,
           type: "person" as const,
           name: user.name ?? "User",
           username: user.username ?? "user",
-          avatar: user.avatarUrl || user.avatar || "",
+          avatar: userAvatar,
           bio: user.bio ?? "",
-          location: user.locationName ?? "",
+          location: (user.locationName ?? user.location ?? "").replace(/\s*\(Detected\)\s*/i, "").replace(/^GPS Detected$/i, "").trim(),
           followersCount: user.followersCount ?? 0,
-          isFollowing: true,
+          followingCount: user.followingCount ?? 0,
+          isFollowing: currentViewer ? (currentViewer._id === targetUser._id ? true : viewerFollowingIds.has(user._id)) : false,
           ...resolveUserVerification(user),
           followedAt: f.createdAt,
         };
       })
     );
 
-    // Pages I follow
+    // Pages targetUser follows
     const pageFollowRecords = await ctx.db
       .query("pageFollowers")
-      .filter((q: any) => q.eq(q.field("userId"), currentUser._id))
+      .filter((q: any) => q.eq(q.field("userId"), targetUser._id))
       .collect();
 
     const pages = await Promise.all(
       pageFollowRecords.map(async (f: any) => {
         const page: any = await ctx.db.get(f.pageId);
         if (!page) return null;
+
+        let pageAvatar = page.avatar || "";
+        if (!pageAvatar && page.avatarStorageId) {
+          try {
+            const url = await ctx.storage.getUrl(page.avatarStorageId);
+            if (url) pageAvatar = url;
+          } catch (_) {}
+        }
+
         return {
           id: page._id,
           type: "page" as const,
           name: page.name ?? "Page",
           username: page.username ?? "page",
-          avatar: page.avatar || "",
+          avatar: pageAvatar,
           description: page.description ?? "",
-          location: page.location ?? "",
+          location: (page.location ?? "").trim(),
           followersCount: page.followersCount ?? 0,
           pageType: page.type,
           badge: page.badge,
@@ -2626,6 +2685,176 @@ export const getMyFollowing = query({
       peopleCt: filteredPeople.length,
       pagesCt: filteredPages.length,
     };
+  },
+});
+
+/**
+ * Get recommended people to follow in the Community panel.
+ * Discovers relevant accounts using mutual connections, shared community, and active discoverable accounts.
+ * Excludes self, accounts already followed, dismissed accounts, and suspended accounts.
+ */
+export const getCommunityRecommendations = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    const limit = args.limit ?? 25;
+
+    const followedUserIds = new Set<string>();
+    const dismissedIds = new Set<string>();
+
+    if (currentUser) {
+      followedUserIds.add(currentUser._id);
+
+      // Follows
+      const myFollows = await ctx.db
+        .query("follows")
+        .withIndex("by_follower", (q: any) => q.eq("followerId", currentUser._id))
+        .collect();
+      myFollows.forEach((f: any) => followedUserIds.add(f.followingId));
+
+      // Dismissals
+      const dismissals = await ctx.db
+        .query("recommendationDismissals")
+        .withIndex("by_user", (q: any) => q.eq("userId", currentUser._id))
+        .collect();
+      dismissals.forEach((d: any) => dismissedIds.add(d.targetId));
+
+      const interactions = await ctx.db
+        .query("recommendationInteractions")
+        .withIndex("by_user", (q: any) => q.eq("userId", currentUser._id))
+        .filter((q: any) => q.eq(q.field("action"), "dismissed"))
+        .collect();
+      interactions.forEach((i: any) => dismissedIds.add(i.targetId));
+    }
+
+    // 1. Calculate mutual connections: who do the people I follow, follow?
+    const candidateScores = new Map<string, { mutualCount: number; mutualUsers: string[]; reason?: string }>();
+
+    if (currentUser) {
+      const myFollowList = await ctx.db
+        .query("follows")
+        .withIndex("by_follower", (q: any) => q.eq("followerId", currentUser._id))
+        .take(100);
+
+      for (const followRecord of myFollowList) {
+        const friendFollowing = await ctx.db
+          .query("follows")
+          .withIndex("by_follower", (q: any) => q.eq("followerId", followRecord.followingId))
+          .take(50);
+
+        const friendUser = await ctx.db.get(followRecord.followingId as Id<"users">);
+        const friendName = friendUser?.name || `@${friendUser?.username || "friend"}`;
+
+        for (const ff of friendFollowing) {
+          const candidateId = ff.followingId as string;
+          if (followedUserIds.has(candidateId) || dismissedIds.has(candidateId)) continue;
+
+          const currentScore = candidateScores.get(candidateId) || { mutualCount: 0, mutualUsers: [] };
+          currentScore.mutualCount += 1;
+          if (currentScore.mutualUsers.length < 2 && friendName) {
+            currentScore.mutualUsers.push(friendName);
+          }
+          candidateScores.set(candidateId, currentScore);
+        }
+      }
+    }
+
+    // 2. Fetch candidate user accounts
+    const results: any[] = [];
+    const addedIds = new Set<string>();
+
+    // Add candidates with mutual connections first
+    const sortedMutualCandidateIds = Array.from(candidateScores.entries())
+      .sort((a, b) => b[1].mutualCount - a[1].mutualCount)
+      .slice(0, limit);
+
+    for (const [candidateId, info] of sortedMutualCandidateIds) {
+      const user = await ctx.db.get(candidateId as Id<"users">);
+      if (!user || user.suspended) continue;
+
+      let userAvatar = user.avatarUrl || (user as any).avatar || "";
+      if (!userAvatar && (user as any).avatarStorageId) {
+        try {
+          const url = await ctx.storage.getUrl((user as any).avatarStorageId);
+          if (url) userAvatar = url;
+        } catch (_) {}
+      }
+
+      let reason = "";
+      if (info.mutualCount === 1) {
+        reason = `Followed by ${info.mutualUsers[0]}`;
+      } else if (info.mutualCount > 1) {
+        reason = `${info.mutualCount} mutual connections`;
+      }
+
+      results.push({
+        id: user._id,
+        name: user.name ?? "User",
+        username: user.username ?? "user",
+        avatar: userAvatar,
+        bio: user.bio ?? "",
+        location: (user.locationName ?? (user as any).location ?? "").replace(/\s*\(Detected\)\s*/i, "").replace(/^GPS Detected$/i, "").trim(),
+        followersCount: user.followersCount ?? 0,
+        followingCount: user.followingCount ?? 0,
+        mutualCount: info.mutualCount,
+        reason,
+        isFollowing: false,
+        ...resolveUserVerification(user),
+      });
+      addedIds.add(user._id);
+    }
+
+    // 3. Fallback: discoverable recent/active accounts
+    if (results.length < limit) {
+      const discoverableUsers = await ctx.db
+        .query("users")
+        .order("desc")
+        .take(limit * 3);
+
+      for (const u of discoverableUsers) {
+        if (results.length >= limit) break;
+        if (addedIds.has(u._id) || followedUserIds.has(u._id) || dismissedIds.has(u._id) || u.suspended) continue;
+
+        let userAvatar = u.avatarUrl || (u as any).avatar || "";
+        if (!userAvatar && (u as any).avatarStorageId) {
+          try {
+            const url = await ctx.storage.getUrl((u as any).avatarStorageId);
+            if (url) userAvatar = url;
+          } catch (_) {}
+        }
+
+        let reason = "Suggested for you";
+        const currentComm = (currentUser as any)?.communityName || (currentUser as any)?.connectedCommunity;
+        const userComm = (u as any).communityName || (u as any).connectedCommunity;
+        if (currentComm && userComm && currentComm === userComm) {
+          reason = `Same community · ${userComm}`;
+        } else if (u.verificationTier && u.verificationTier !== "none") {
+          reason = "Verified creator";
+        } else if ((u.followersCount ?? 0) > 10) {
+          reason = "Popular in your area";
+        }
+
+        results.push({
+          id: u._id,
+          name: u.name ?? "User",
+          username: u.username ?? "user",
+          avatar: userAvatar,
+          bio: u.bio ?? "",
+          location: (u.locationName ?? (u as any).location ?? "").replace(/\s*\(Detected\)\s*/i, "").replace(/^GPS Detected$/i, "").trim(),
+          followersCount: u.followersCount ?? 0,
+          followingCount: u.followingCount ?? 0,
+          mutualCount: 0,
+          reason,
+          isFollowing: false,
+          ...resolveUserVerification(u),
+        });
+        addedIds.add(u._id);
+      }
+    }
+
+    return results;
   },
 });
 
