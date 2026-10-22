@@ -2979,10 +2979,14 @@ export const listNotifications = query({
       .query("notifications")
       .withIndex("by_recipient", (q: any) => q.eq("recipientId", currentUser._id))
       .order("desc")
-      .take(50);
+      .take(100);
+
+    // Filter out chat messages: conversations and messages are the sole source of truth for chat history,
+    // while the Notifications feed is reserved for follows, likes, comments, mentions, and system updates.
+    const socialNotifs = notifs.filter((n: any) => n.type !== "message").slice(0, 50);
 
     return await Promise.all(
-      notifs.map(async (notif: any) => {
+      socialNotifs.map(async (notif: any) => {
         const actor = notif.actorId ? (await ctx.db.get(notif.actorId)) as any : null;
         let actorAvatar = "";
         if (actor) {
@@ -3037,11 +3041,11 @@ export const getUnreadNotificationCount = query({
       .withIndex("by_recipient_read", (q: any) =>
         q.eq("recipientId", currentUser._id).eq("isRead", false)
       )
-      .take(100);
+      .take(150);
 
-    // Capped at 100 so the badge query stays cheap for heavy inboxes.
-
-    return unread.length;
+    // Capped at 100 non-message notifications so the badge query stays cheap for heavy inboxes.
+    const socialUnread = unread.filter((n: any) => n.type !== "message");
+    return Math.min(socialUnread.length, 100);
   },
 });
 
@@ -3610,18 +3614,9 @@ export const sendMessage = mutation({
         : `New message from ${senderName ?? "Someone"}`;
 
       for (const recId of recipientsToNotify) {
-        await ctx.db.insert("notifications", {
-          recipientId: recId,
-          actorId: currentUser._id,
-          type: "message",
-          conversationId: args.conversationId,
-          messageId,
-          targetExcerpt: args.text.slice(0, 80),
-          isRead: false,
-          createdAt: Date.now(),
-        });
-
         // Dispatch native web push / OneSignal with sender avatar
+        // External push notifications are alerts for background devices,
+        // while conversations/messages remain the exclusive source of truth for chat history.
         await ctx.scheduler.runAfter(0, internal.pushActions.dispatchPush, {
           recipientId: recId,
           title: pushTitle,

@@ -787,11 +787,70 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const backendConversations = useQuery(api.social.listConversations);
   const [conversations, setConversations] = useState<Conversation[]>(EMPTY_CONVERSATIONS);
 
+  const prevUnreadMessagesCount = React.useRef<number | null>(null);
+  const seenConversationMessageIds = React.useRef<Set<string>>(new Set());
+
   useEffect(() => {
     if (backendConversations) {
       setConversations(backendConversations as any);
+
+      // Total unread messages across all conversations
+      const totalUnread = (backendConversations as any[]).reduce(
+        (sum, conv) => sum + (conv.unreadCount || 0),
+        0
+      );
+
+      // Track newly arrived messages to play sound and trigger desktop alert when in background
+      if (prevUnreadMessagesCount.current !== null && totalUnread > prevUnreadMessagesCount.current) {
+        // 1. Audio alert for incoming chat message (if not actively viewing this conversation)
+        playNotificationSound();
+
+        // 2. External native notification if page is hidden / background tab
+        const prefs = (currentUser as any)?.notificationPrefs;
+        const desktopAllowed = prefs?.desktop !== false && prefs?.messages !== false;
+
+        if (
+          desktopAllowed &&
+          typeof window !== 'undefined' &&
+          'Notification' in window &&
+          Notification.permission === 'granted' &&
+          document.visibilityState === 'hidden'
+        ) {
+          // Find conversation with newest unread message
+          for (const conv of backendConversations as any[]) {
+            if (conv.unreadCount > 0 && conv.id !== activeChatId) {
+              const lastMsg = conv.messages?.[conv.messages.length - 1];
+              if (lastMsg && !lastMsg.isMine && !seenConversationMessageIds.current.has(lastMsg.id)) {
+                seenConversationMessageIds.current.add(lastMsg.id);
+                try {
+                  const partner = conv.participants?.find((p: any) => p.id !== currentUser?.id);
+                  const senderName = partner?.name || 'Someone';
+                  const externalNotif = new Notification(`New message from ${senderName}`, {
+                    body: lastMsg.text || 'Sent a message',
+                    icon: partner?.avatar || '/icon-192.png',
+                    badge: '/icon-192.png',
+                    tag: `chat-${conv.id}`,
+                  });
+
+                  externalNotif.onclick = () => {
+                    window.focus();
+                    setActiveChatId(conv.id);
+                    setActiveTab('messages');
+                    externalNotif.close();
+                  };
+                } catch (err) {
+                  console.warn('[LalaoContext] Could not trigger native message notification:', err);
+                }
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      prevUnreadMessagesCount.current = totalUnread;
     }
-  }, [backendConversations]);
+  }, [backendConversations, currentUser?.id, activeChatId]);
 
   const [messageContacts, setMessageContacts] = useState<User[]>([]);
 
@@ -835,27 +894,24 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     if (backendNotifications) {
-      setNotifications(backendNotifications);
+      // Social notifications feed strictly excludes chat messages
+      const socialNotifications = backendNotifications.filter((n) => n.type !== 'message');
+      setNotifications(socialNotifications);
 
       let newUnreadCount = 0;
       const newItems: NotificationItem[] = [];
-      backendNotifications.forEach((n) => {
+      socialNotifications.forEach((n) => {
         if (!seenNotificationIds.current.has(n.id)) {
           seenNotificationIds.current.add(n.id);
           if (!n.isRead && n.actor?.id !== currentUser?.id) {
-            if (n.type !== 'message') {
-              newUnreadCount++;
-              newItems.push(n);
-            } else if (n.type === 'message' && n.conversationId !== activeChatId) {
-              newUnreadCount++;
-              newItems.push(n);
-            }
+            newUnreadCount++;
+            newItems.push(n);
           }
         }
       });
 
       if (initialLoadDone.current && newUnreadCount > 0) {
-        // 1. Audio sound alert (separate from external notifications)
+        // 1. Audio sound alert for social events
         playNotificationSound();
 
         // 2. External native browser/OS notification when page is in background or another tab
@@ -870,27 +926,25 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           document.visibilityState === 'hidden'
         ) {
           newItems.slice(0, 3).forEach((item) => {
-            const cat = item.type === 'message'
-              ? 'messages'
-              : item.type === 'follow'
-                ? 'follows'
-                : item.type === 'like'
-                  ? 'likes'
-                  : item.type === 'reply'
-                    ? 'comments'
-                    : undefined;
+            const cat = item.type === 'follow'
+              ? 'follows'
+              : item.type === 'like'
+                ? 'likes'
+                : item.type === 'reply'
+                  ? 'comments'
+                  : undefined;
             if (cat && prefs && prefs[cat] === false) {
               return; // Category disabled by user
             }
 
             try {
-              const notifTitle = item.type === 'message'
-                ? `Message from ${item.actor?.name || 'Someone'}`
-                : item.type === 'follow'
+              const notifTitle = item.type === 'follow'
                 ? 'New follower on Lalao'
+                : item.type === 'like'
+                ? 'New like on your post'
                 : 'Lalao Notification';
               const notifBody = item.text || item.targetExcerpt || 'You have a new alert on Lalao';
-              const notifTag = item.conversationId ? `chat-${item.conversationId}` : `notif-${item.id}`;
+              const notifTag = `notif-${item.id}`;
 
               const externalNotif = new Notification(notifTitle, {
                 body: notifBody,
@@ -901,12 +955,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
               externalNotif.onclick = () => {
                 window.focus();
-                if (item.conversationId) {
-                  setActiveChatId(item.conversationId);
-                  setActiveTab('messages');
-                } else {
-                  setActiveTab('notifications');
-                }
+                setActiveTab('notifications');
                 externalNotif.close();
               };
             } catch (notifErr) {
@@ -918,7 +967,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       initialLoadDone.current = true;
     }
-  }, [backendNotifications, currentUser?.id, activeChatId]);
+  }, [backendNotifications, currentUser?.id]);
 
   useEffect(() => {
     if (feedPostsQuery) {

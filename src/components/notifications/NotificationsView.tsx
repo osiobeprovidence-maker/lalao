@@ -35,7 +35,9 @@ export const NotificationsView: React.FC = () => {
   const now = Date.now();
   const oneDayMs = 24 * 60 * 60 * 1000;
 
-  const safeNotifications = (notifications && notifications.length > 0) ? notifications : SEED_NOTIFICATIONS;
+  const rawNotifications = (notifications && notifications.length > 0) ? notifications : SEED_NOTIFICATIONS;
+  // Social feed is strictly for social and system events (likes, comments, follows, mentions, alerts).
+  const safeNotifications = rawNotifications.filter((n) => n.type !== 'message');
   const todayNotifs = safeNotifications.filter((n) => {
     if (n.createdAt) return now - n.createdAt < oneDayMs;
     return n.timestamp.includes('m ago') || n.timestamp.includes('h ago');

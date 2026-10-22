@@ -126,7 +126,9 @@ export const NotificationsModal: React.FC = () => {
     }
   };
 
-  const safeNotifications = (notifications && notifications.length > 0) ? notifications : SEED_NOTIFICATIONS;
+  const rawNotifications = (notifications && notifications.length > 0) ? notifications : SEED_NOTIFICATIONS;
+  // Social notification modal is strictly for social and system events (likes, comments, follows, mentions, alerts).
+  const safeNotifications = rawNotifications.filter((n) => n.type !== 'message');
 
   // Group notifications into Today vs Earlier
   const todayNotifs = safeNotifications.filter(
