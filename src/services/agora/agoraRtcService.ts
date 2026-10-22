@@ -32,8 +32,16 @@ class AgoraRtcService {
   private isJoined = false;
 
   constructor() {
-    // Register official Agora Web SDK audio autoplay failure handler
+    // Suppress verbose Agora debug noise (visibility change, device checks) in console
+    // 0: DEBUG, 1: INFO, 2: WARNING, 3: ERROR, 4: NONE
     if (typeof window !== 'undefined') {
+      try {
+        AgoraRTC.setLogLevel(2);
+      } catch (err) {
+        // ignore
+      }
+
+      // Register official Agora Web SDK audio autoplay failure handler
       AgoraRTC.onAudioAutoplayFailed = () => {
         console.warn('[AgoraRTC] Audio autoplay policy prevented immediate playback. Registering user gesture handler.');
         const resumeAudio = () => {

@@ -24,13 +24,18 @@ export default defineConfig(() => {
           manualChunks(id) {
             if (id.includes('node_modules')) {
               if (id.includes('@mux')) return 'vendor-mux';
+              if (id.includes('agora-rtc-sdk-ng') || id.includes('agora-token')) return 'vendor-agora';
               if (id.includes('firebase')) return 'vendor-firebase';
               if (id.includes('@google/genai')) return 'vendor-genai';
               if (id.includes('lucide-react')) return 'vendor-lucide';
               if (id.includes('motion')) return 'vendor-motion';
+              if (id.includes('convex')) return 'vendor-convex';
               if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
                 return 'vendor-react';
               }
+            }
+            if (id.includes('/src/pages/admin/')) {
+              return 'admin-panel';
             }
           },
         },

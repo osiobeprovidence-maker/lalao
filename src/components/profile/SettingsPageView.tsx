@@ -505,7 +505,18 @@ export const SettingsPageView: React.FC = () => {
                   </h3>
                 </div>
 
-                {!isInstalled && (
+                {isInstalled ? (
+                  <SettingsRow
+                    id="row-settings-desktop-startup"
+                    icon={Download}
+                    title="Desktop App & Startup"
+                    description="View auto-start and desktop launcher settings"
+                    onClick={() => {
+                      handleClose();
+                      setIsInstallModalOpen(true);
+                    }}
+                  />
+                ) : (
                   <SettingsRow
                     id="row-settings-download-app"
                     icon={Download}

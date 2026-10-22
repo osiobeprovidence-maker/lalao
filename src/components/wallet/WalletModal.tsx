@@ -454,6 +454,11 @@ export const WalletModal: React.FC = () => {
               {currentView === 'market_bills' && 'Pay Bills'}
               {currentView === 'market_electricity' && 'Electricity'}
               {currentView === 'market_cable' && 'Cable TV'}
+              {currentView === 'market_betting' && 'Fund Betting Wallet'}
+              {currentView === 'market_smile' && 'Smile Internet'}
+              {currentView === 'market_spectranet' && 'Spectranet 4G LTE'}
+              {currentView === 'market_waec' && 'WAEC Result Checker'}
+              {currentView === 'market_jamb' && 'JAMB UTME e-PIN'}
               {currentView === 'market_review' && 'Review Purchase'}
               {currentView === 'market_pin' && 'Confirm Purchase'}
               {currentView === 'market_success' && 'Transaction Successful'}
@@ -2297,64 +2302,137 @@ export const WalletModal: React.FC = () => {
 
           {/* MARKET AIRTIME */}
           {currentView === 'market_airtime' && (
-             <div className="p-4 flex flex-col h-full">
-                <div className="flex-1 space-y-6 pt-4">
-                  <div className="flex justify-between items-center bg-theme-surface p-4 rounded-xl border border-theme-divider-light">
-                    <div className="text-xs font-bold text-theme-secondary uppercase tracking-widest">Available balance</div>
-                    <div className="font-black text-theme-primary">{internalBalance.toLocaleString()} LC</div>
+             <div className="p-4 flex flex-col h-full overflow-y-auto">
+                <div className="flex-1 space-y-5 pt-3">
+                  {/* Balance Indicator */}
+                  <div className="flex justify-between items-center bg-theme-surface p-3.5 rounded-2xl border border-theme-divider-light">
+                    <div className="text-[11px] font-bold text-theme-secondary uppercase tracking-widest">Available Balance</div>
+                    <div className="font-mono font-black text-sm text-theme-primary">{internalBalance.toLocaleString()} LC</div>
                   </div>
 
                   <div className="space-y-4">
+                    {/* 1. Network Selector Grid */}
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-2">Network</label>
-                      <select 
-                        value={marketProvider} 
-                        onChange={(e) => setMarketProvider(e.target.value)}
-                        className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-4 px-4 font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                      >
-                        <option value="">Select Network</option>
-                        <option value="MTN">MTN</option>
-                        <option value="Airtel">Airtel</option>
-                        <option value="Glo">Glo</option>
-                        <option value="9mobile">9mobile</option>
-                      </select>
+                      <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">
+                        Select Network
+                      </label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[
+                          { id: 'MTN', label: 'MTN', badge: 'bg-[#FFCC00]/15 text-[#E5B800] border-[#FFCC00]/40' },
+                          { id: 'Airtel', label: 'Airtel', badge: 'bg-[#E60000]/15 text-[#E60000] border-[#E60000]/40' },
+                          { id: 'Glo', label: 'Glo', badge: 'bg-[#00A859]/15 text-[#00A859] border-[#00A859]/40' },
+                          { id: '9mobile', label: '9mobile', badge: 'bg-[#006837]/15 text-[#008542] border-[#006837]/40' },
+                        ].map((net) => {
+                          const isSelected = marketProvider.toUpperCase() === net.id.toUpperCase();
+                          return (
+                            <button
+                              key={net.id}
+                              type="button"
+                              id={`airtime-select-${net.id.toLowerCase()}`}
+                              onClick={() => {
+                                setMarketProvider(net.id);
+                              }}
+                              className={`py-3 px-2 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                                isSelected
+                                  ? `${net.badge} font-black ring-2 ring-[#5E43F3]/30 shadow-xs scale-[1.02]`
+                                  : 'bg-theme-surface border-theme-divider-light text-theme-secondary hover:text-theme-primary hover:border-theme-divider'
+                              }`}
+                            >
+                              <span className="text-xs font-black tracking-tight">{net.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
 
+                    {/* 2. Recipient Phone Number */}
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-2">Phone Number</label>
-                      <input 
-                        type="tel" 
-                        value={marketCustomerIdentifier}
-                        onChange={(e) => setMarketCustomerIdentifier(e.target.value)}
-                        placeholder="e.g. 08012345678" 
-                        className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-4 px-4 font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]" 
-                      />
+                      <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">
+                        Recipient Phone Number
+                      </label>
+                      <div className="relative">
+                        <input 
+                          type="tel" 
+                          id="input-market-airtime-phone"
+                          value={marketCustomerIdentifier}
+                          onChange={(e) => setMarketCustomerIdentifier(e.target.value)}
+                          placeholder="e.g. 08012345678" 
+                          maxLength={14}
+                          className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 px-4 font-bold text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all" 
+                        />
+                        {marketCustomerIdentifier && (
+                          <button
+                            type="button"
+                            onClick={() => setMarketCustomerIdentifier('')}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-theme-tertiary hover:text-theme-primary rounded-full cursor-pointer"
+                            title="Clear phone number"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     
+                    {/* 3. Amount */}
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-2">Amount (₦)</label>
-                      <input 
-                        type="text" 
-                        inputMode="decimal"
-                        value={marketAmount}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) setMarketAmount(val);
-                        }}
-                        placeholder="0" 
-                        className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-4 px-4 font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]" 
-                      />
+                      <div className="flex items-center justify-between px-1">
+                        <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">
+                          Amount (₦)
+                        </label>
+                        <span className="text-[11px] text-theme-tertiary font-medium">
+                          Min: ₦50 · Max: ₦50,000
+                        </span>
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-theme-tertiary font-bold text-sm">₦</span>
+                        <input 
+                          type="text" 
+                          inputMode="decimal"
+                          id="input-market-airtime-amount"
+                          value={marketAmount}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, '');
+                            setMarketAmount(val);
+                          }}
+                          placeholder="e.g. 1000" 
+                          className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 pl-8 pr-4 font-bold text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all font-mono" 
+                        />
+                      </div>
+
+                      {/* Quick Amount Pills */}
+                      <div className="grid grid-cols-4 gap-2 pt-1">
+                        {['200', '500', '1000', '2000'].map((amt) => (
+                          <button
+                            key={amt}
+                            type="button"
+                            onClick={() => setMarketAmount(amt)}
+                            className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                              marketAmount === amt
+                                ? 'bg-[#5E43F3]/15 text-[#5E43F3] border-[#5E43F3]'
+                                : 'bg-theme-surface border-theme-divider-light text-theme-secondary hover:text-theme-primary'
+                            }`}
+                          >
+                            ₦{parseInt(amt).toLocaleString()}
+                          </button>
+                        ))}
+                      </div>
+
+                      {parseFloat(marketAmount || '0') > internalBalance && (
+                        <p className="text-[11px] font-semibold text-amber-500 pt-1">
+                          ⚠️ Insufficient wallet balance. Please fund your wallet to continue.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                <div className="shrink-0 pt-6">
+                <div className="shrink-0 pt-4">
                    <button 
-                     disabled={!marketProvider || !marketCustomerIdentifier || !marketAmount || parseFloat(marketAmount) <= 0 || parseFloat(marketAmount) > internalBalance}
+                     disabled={!marketProvider || !marketCustomerIdentifier || !marketAmount || parseFloat(marketAmount) < 50 || parseFloat(marketAmount) > internalBalance}
                      onClick={() => { setMarketServiceType('airtime'); navigateTo('market_review'); }}
-                     className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-lg hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50"
+                     className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-base hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 cursor-pointer"
                    >
-                     Continue
+                     {parseFloat(marketAmount || '0') > internalBalance ? 'Insufficient Balance' : 'Continue'}
                    </button>
                 </div>
              </div>
@@ -2750,38 +2828,49 @@ export const WalletModal: React.FC = () => {
 
           {/* MARKET ELECTRICITY */}
           {currentView === 'market_electricity' && (
-            <div className="p-4 flex flex-col h-full">
-              <div className="flex-1 space-y-4 pt-2">
+            <div className="p-4 flex flex-col h-full overflow-y-auto">
+              <div className="flex-1 space-y-5 pt-3">
+                {/* Balance Indicator */}
                 <div className="flex justify-between items-center bg-theme-surface p-3.5 rounded-2xl border border-theme-divider-light">
                   <div className="text-[11px] font-bold text-theme-secondary uppercase tracking-widest">Available Balance</div>
                   <div className="font-mono font-black text-sm text-theme-primary">{internalBalance.toLocaleString()} LC</div>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Select Disco</label>
-                    <select
-                      value={marketProvider}
-                      onChange={(e) => {
-                        setMarketProvider(e.target.value);
-                        setVerifiedCustomerName('');
-                      }}
-                      className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                    >
-                      <option value="01">Eko Electric (EKEDC)</option>
-                      <option value="02">Ikeja Electric (IKEDC)</option>
-                      <option value="03">Abuja Electric (AEDC)</option>
-                      <option value="04">Kano Electric (KEDCO)</option>
-                      <option value="05">Port Harcourt Electric (PHED)</option>
-                      <option value="06">Jos Electric (JED)</option>
-                      <option value="07">Kaduna Electric (KAEDCO)</option>
-                      <option value="08">Enugu Electric (EEDC)</option>
-                      <option value="09">Benin Electric (BEDC)</option>
-                    </select>
+                <div className="space-y-4">
+                  {/* 1. Disco Selector Dropdown */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">
+                      Electricity Distribution Company (Disco)
+                    </label>
+                    <div className="relative">
+                      <select
+                        id="select-electricity-disco"
+                        value={marketProvider}
+                        onChange={(e) => {
+                          setMarketProvider(e.target.value);
+                          setVerifiedCustomerName('');
+                        }}
+                        className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 px-4 font-bold text-sm text-theme-primary appearance-none cursor-pointer focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all pr-10"
+                      >
+                        <option value="01">Eko Electric (EKEDC)</option>
+                        <option value="02">Ikeja Electric (IKEDC)</option>
+                        <option value="03">Abuja Electric (AEDC)</option>
+                        <option value="04">Kano Electric (KEDCO)</option>
+                        <option value="05">Port Harcourt Electric (PHED)</option>
+                        <option value="06">Jos Electric (JED)</option>
+                        <option value="07">Kaduna Electric (KAEDCO)</option>
+                        <option value="08">Enugu Electric (EEDC)</option>
+                        <option value="09">Benin Electric (BEDC)</option>
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-theme-tertiary absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Meter Type</label>
+                  {/* 2. Meter Type Selector */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">
+                      Meter Type
+                    </label>
                     <div className="grid grid-cols-2 gap-2">
                       {['Prepaid', 'Postpaid'].map((t) => (
                         <button
@@ -2791,33 +2880,53 @@ export const WalletModal: React.FC = () => {
                             setMeterType(t as any);
                             setVerifiedCustomerName('');
                           }}
-                          className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                          className={`py-3 rounded-xl text-xs font-black border transition-all cursor-pointer ${
                             meterType === t
-                              ? 'bg-[#5E43F3] text-white border-[#5E43F3]'
-                              : 'bg-theme-surface border-theme-divider-light text-theme-secondary hover:text-theme-primary'
+                              ? 'bg-[#5E43F3] text-white border-[#5E43F3] shadow-xs'
+                              : 'bg-theme-surface border-theme-divider-light text-theme-secondary hover:text-theme-primary hover:border-theme-divider'
                           }`}
                         >
-                          {t}
+                          {t} Meter
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Meter Number</label>
+                  {/* 3. Meter Number & Verification */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">
+                      Meter Number
+                    </label>
                     <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={marketCustomerIdentifier}
-                        onChange={(e) => {
-                          setMarketCustomerIdentifier(e.target.value);
-                          setVerifiedCustomerName('');
-                        }}
-                        placeholder="Enter meter number"
-                        className="flex-1 bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3.5 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                      />
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          id="input-electricity-meter-number"
+                          value={marketCustomerIdentifier}
+                          onChange={(e) => {
+                            setMarketCustomerIdentifier(e.target.value.trim());
+                            setVerifiedCustomerName('');
+                          }}
+                          placeholder="Enter 11-13 digit meter number"
+                          className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 px-4 font-bold text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all"
+                        />
+                        {marketCustomerIdentifier && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMarketCustomerIdentifier('');
+                              setVerifiedCustomerName('');
+                            }}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-theme-tertiary hover:text-theme-primary rounded-full cursor-pointer"
+                            title="Clear meter number"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                       <button
                         type="button"
+                        id="btn-verify-electricity-meter"
                         disabled={!marketCustomerIdentifier || isVerifyingCustomer}
                         onClick={async () => {
                           setIsVerifyingCustomer(true);
@@ -2834,45 +2943,97 @@ export const WalletModal: React.FC = () => {
                             setIsVerifyingCustomer(false);
                           }
                         }}
-                        className="px-3.5 py-2 rounded-xl bg-theme-surface-hover hover:bg-theme-surface-active text-xs font-bold text-theme-primary transition-colors cursor-pointer disabled:opacity-50"
+                        className="px-4 py-3.5 rounded-xl bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider font-bold text-xs text-theme-primary hover:border-[#5E43F3]/50 transition-all cursor-pointer disabled:opacity-50 shrink-0 flex items-center justify-center gap-1.5"
                       >
-                        {isVerifyingCustomer ? 'Verifying...' : 'Verify'}
+                        {isVerifyingCustomer ? (
+                          <>
+                            <span className="w-3.5 h-3.5 border-2 border-[#5E43F3] border-t-transparent rounded-full animate-spin" />
+                            <span>Checking...</span>
+                          </>
+                        ) : (
+                          'Verify'
+                        )}
                       </button>
                     </div>
+
+                    {verifiedCustomerName && (
+                      <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-2 animate-in fade-in duration-200">
+                        <Check className="w-4 h-4 shrink-0 text-emerald-500" />
+                        <span className="truncate">Customer: {verifiedCustomerName}</span>
+                      </div>
+                    )}
                   </div>
 
-                  {verifiedCustomerName && (
-                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-2">
-                      <Check className="w-4 h-4 shrink-0" />
-                      <span>Verified: {verifiedCustomerName}</span>
+                  {/* 4. Amount Field */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between px-1">
+                      <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">
+                        Amount (₦)
+                      </label>
+                      <span className="text-[11px] text-theme-tertiary font-medium">
+                        Min: ₦500 · Max: ₦100,000
+                      </span>
                     </div>
-                  )}
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-theme-tertiary font-bold text-sm">₦</span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        id="input-electricity-amount"
+                        value={marketAmount}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9]/g, '');
+                          setMarketAmount(val);
+                        }}
+                        placeholder="e.g. 2000"
+                        className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 pl-8 pr-4 font-bold text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all font-mono"
+                      />
+                    </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Amount (₦)</label>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={marketAmount}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === '' || /^\d*$/.test(val)) setMarketAmount(val);
-                      }}
-                      placeholder="e.g. 2000"
-                      className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3.5 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                    />
-                    <p className="text-[10px] text-theme-tertiary">Platform fee: ₦{marketFee}</p>
+                    {/* Quick Amount Pills */}
+                    <div className="grid grid-cols-4 gap-2 pt-1">
+                      {['1000', '2000', '5000', '10000'].map((amt) => (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => setMarketAmount(amt)}
+                          className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                            marketAmount === amt
+                              ? 'bg-[#5E43F3]/15 text-[#5E43F3] border-[#5E43F3]'
+                              : 'bg-theme-surface border-theme-divider-light text-theme-secondary hover:text-theme-primary'
+                          }`}
+                        >
+                          ₦{parseInt(amt).toLocaleString()}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-theme-tertiary px-1 pt-0.5">
+                      <span>Platform fee: ₦{marketFee}</span>
+                      {marketAmount && parseFloat(marketAmount) > 0 && (
+                        <span className="font-semibold text-theme-secondary">
+                          Total: ₦{(parseFloat(marketAmount) + marketFee).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+
+                    {parseFloat(marketAmount || '0') + marketFee > internalBalance && (
+                      <p className="text-[11px] font-semibold text-amber-500 pt-1">
+                        ⚠️ Insufficient wallet balance. Please fund your wallet to continue.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
 
+              {/* Continue Action Button */}
               <div className="shrink-0 pt-4">
                 <button
                   disabled={!marketCustomerIdentifier || !marketAmount || parseFloat(marketAmount) <= 0 || (parseFloat(marketAmount) + marketFee) > internalBalance}
                   onClick={() => navigateTo('market_review')}
                   className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-base hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 cursor-pointer"
                 >
-                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue to Confirmation'}
+                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue'}
                 </button>
               </div>
             </div>
@@ -2880,87 +3041,135 @@ export const WalletModal: React.FC = () => {
 
           {/* MARKET CABLE TV */}
           {currentView === 'market_cable' && (
-            <div className="p-4 flex flex-col h-full">
-              <div className="flex-1 space-y-4 pt-2">
+            <div className="p-4 flex flex-col h-full overflow-y-auto">
+              <div className="flex-1 space-y-5 pt-3">
+                {/* Balance Indicator */}
                 <div className="flex justify-between items-center bg-theme-surface p-3.5 rounded-2xl border border-theme-divider-light">
                   <div className="text-[11px] font-bold text-theme-secondary uppercase tracking-widest">Available Balance</div>
                   <div className="font-mono font-black text-sm text-theme-primary">{internalBalance.toLocaleString()} LC</div>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Select Provider</label>
+                <div className="space-y-4">
+                  {/* 1. Select Cable Provider */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">
+                      Select Provider
+                    </label>
                     <div className="grid grid-cols-3 gap-2">
-                      {['dstv', 'gotv', 'startimes'].map((p) => (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={async () => {
-                            setMarketProvider(p);
-                            setMarketProduct(null);
-                            setMarketAmount('');
-                            setVerifiedCustomerName('');
-                            setIsFetchingCablePackages(true);
-                            try {
-                              const pkgs = await fetchCablePackages({ provider: p });
-                              setCablePackagesList(pkgs || []);
-                            } finally {
-                              setIsFetchingCablePackages(false);
-                            }
-                          }}
-                          className={`py-2.5 rounded-xl text-xs font-bold border uppercase transition-all cursor-pointer ${
-                            marketProvider.toLowerCase() === p
-                              ? 'bg-[#5E43F3] text-white border-[#5E43F3]'
-                              : 'bg-theme-surface border-theme-divider-light text-theme-secondary hover:text-theme-primary'
-                          }`}
-                        >
-                          {p}
-                        </button>
-                      ))}
+                      {[
+                        { id: 'dstv', label: 'DStv' },
+                        { id: 'gotv', label: 'GOtv' },
+                        { id: 'startimes', label: 'StarTimes' },
+                      ].map((p) => {
+                        const isSelected = marketProvider.toLowerCase() === p.id;
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={async () => {
+                              setMarketProvider(p.id);
+                              setMarketProduct(null);
+                              setMarketAmount('');
+                              setVerifiedCustomerName('');
+                              setIsFetchingCablePackages(true);
+                              try {
+                                const pkgs = await fetchCablePackages({ provider: p.id });
+                                setCablePackagesList(pkgs || []);
+                              } finally {
+                                setIsFetchingCablePackages(false);
+                              }
+                            }}
+                            className={`py-3 px-2 rounded-xl text-xs font-black border transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-[#5E43F3] text-white border-[#5E43F3] shadow-xs'
+                                : 'bg-theme-surface border-theme-divider-light text-theme-secondary hover:text-theme-primary hover:border-theme-divider'
+                            }`}
+                          >
+                            {p.label}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Choose Package</label>
+                  {/* 2. Choose Cable Package */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between px-1">
+                      <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">
+                        Choose Package
+                      </label>
+                      {cablePackagesList.length > 0 && (
+                        <span className="text-[11px] font-semibold text-[#5E43F3]">
+                          {cablePackagesList.length} packages
+                        </span>
+                      )}
+                    </div>
                     {isFetchingCablePackages ? (
-                      <p className="text-xs text-theme-tertiary">Loading live packages...</p>
+                      <div className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 px-4 flex items-center gap-2 text-xs text-theme-tertiary">
+                        <span className="w-3.5 h-3.5 border-2 border-[#5E43F3] border-t-transparent rounded-full animate-spin" />
+                        <span>Loading live packages...</span>
+                      </div>
                     ) : (
-                      <select
-                        value={marketProduct?.packageId || ''}
-                        onChange={(e) => {
-                          const chosen = cablePackagesList.find(pkg => pkg.packageId === e.target.value);
-                          if (chosen) {
-                            setMarketProduct({ planName: chosen.packageName, variationId: chosen.packageId });
-                            setMarketAmount(chosen.price.toString());
-                          }
-                        }}
-                        className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                      >
-                        <option value="">Select a package</option>
-                        {cablePackagesList.map((pkg) => (
-                          <option key={pkg.packageId} value={pkg.packageId}>
-                            {pkg.packageName} — ₦{pkg.price.toLocaleString()}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="relative">
+                        <select
+                          id="select-cable-package"
+                          value={marketProduct?.packageId || ''}
+                          onChange={(e) => {
+                            const chosen = cablePackagesList.find(pkg => pkg.packageId === e.target.value);
+                            if (chosen) {
+                              setMarketProduct({ planName: chosen.packageName, variationId: chosen.packageId, packageId: chosen.packageId });
+                              setMarketAmount(chosen.price.toString());
+                            }
+                          }}
+                          className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 px-4 font-bold text-sm text-theme-primary appearance-none cursor-pointer focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all pr-10"
+                        >
+                          <option value="">Select a package</option>
+                          {cablePackagesList.map((pkg) => (
+                            <option key={pkg.packageId} value={pkg.packageId}>
+                              {pkg.packageName} — ₦{pkg.price.toLocaleString()}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-theme-tertiary absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
                     )}
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Smartcard / IUC Number</label>
+                  {/* 3. Smartcard / IUC Number & Verification */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">
+                      Smartcard / IUC Number
+                    </label>
                     <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={marketCustomerIdentifier}
-                        onChange={(e) => {
-                          setMarketCustomerIdentifier(e.target.value);
-                          setVerifiedCustomerName('');
-                        }}
-                        placeholder="Enter IUC / Smartcard number"
-                        className="flex-1 bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3.5 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                      />
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          id="input-cable-smartcard"
+                          value={marketCustomerIdentifier}
+                          onChange={(e) => {
+                            setMarketCustomerIdentifier(e.target.value.trim());
+                            setVerifiedCustomerName('');
+                          }}
+                          placeholder="Enter 10-11 digit IUC / Smartcard number"
+                          className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 px-4 font-bold text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all"
+                        />
+                        {marketCustomerIdentifier && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMarketCustomerIdentifier('');
+                              setVerifiedCustomerName('');
+                            }}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-theme-tertiary hover:text-theme-primary rounded-full cursor-pointer"
+                            title="Clear IUC number"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                       <button
                         type="button"
+                        id="btn-verify-cable-smartcard"
                         disabled={!marketCustomerIdentifier || isVerifyingCustomer}
                         onClick={async () => {
                           setIsVerifyingCustomer(true);
@@ -2976,29 +3185,58 @@ export const WalletModal: React.FC = () => {
                             setIsVerifyingCustomer(false);
                           }
                         }}
-                        className="px-3.5 py-2 rounded-xl bg-theme-surface-hover hover:bg-theme-surface-active text-xs font-bold text-theme-primary transition-colors cursor-pointer disabled:opacity-50"
+                        className="px-4 py-3.5 rounded-xl bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider font-bold text-xs text-theme-primary hover:border-[#5E43F3]/50 transition-all cursor-pointer disabled:opacity-50 shrink-0 flex items-center justify-center gap-1.5"
                       >
-                        {isVerifyingCustomer ? 'Verifying...' : 'Verify'}
+                        {isVerifyingCustomer ? (
+                          <>
+                            <span className="w-3.5 h-3.5 border-2 border-[#5E43F3] border-t-transparent rounded-full animate-spin" />
+                            <span>Checking...</span>
+                          </>
+                        ) : (
+                          'Verify'
+                        )}
                       </button>
                     </div>
+
+                    {verifiedCustomerName && (
+                      <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-2 animate-in fade-in duration-200">
+                        <Check className="w-4 h-4 shrink-0 text-emerald-500" />
+                        <span className="truncate">Subscriber: {verifiedCustomerName}</span>
+                      </div>
+                    )}
                   </div>
 
-                  {verifiedCustomerName && (
-                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-2">
-                      <Check className="w-4 h-4 shrink-0" />
-                      <span>Subscriber: {verifiedCustomerName}</span>
+                  {/* 4. Selected Package Summary Card */}
+                  {marketProduct && marketAmount && (
+                    <div className="p-3.5 rounded-2xl bg-theme-surface border border-theme-divider-light space-y-2 animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-theme-tertiary font-medium">Package</span>
+                        <span className="font-bold text-theme-primary">{marketProduct.planName}</span>
+                      </div>
+                      <div className="border-t border-theme-divider-light/60 pt-2 flex items-center justify-between text-xs">
+                        <span className="font-bold text-theme-primary">Price</span>
+                        <span className="font-mono font-black text-sm text-[#5E43F3]">
+                          ₦{parseFloat(marketAmount).toLocaleString()}
+                        </span>
+                      </div>
+                      {parseFloat(marketAmount) + marketFee > internalBalance && (
+                        <p className="text-[11px] font-semibold text-amber-500 pt-1">
+                          ⚠️ Insufficient wallet balance. Please fund your wallet to continue.
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
 
+              {/* Continue Action Button */}
               <div className="shrink-0 pt-4">
                 <button
                   disabled={!marketCustomerIdentifier || !marketAmount || parseFloat(marketAmount) <= 0 || (parseFloat(marketAmount) + marketFee) > internalBalance}
                   onClick={() => navigateTo('market_review')}
                   className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-base hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 cursor-pointer"
                 >
-                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue to Confirmation'}
+                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue'}
                 </button>
               </div>
             </div>
@@ -3007,50 +3245,78 @@ export const WalletModal: React.FC = () => {
           {/* MARKET BETTING */}
           {currentView === 'market_betting' && (
             <div className="p-4 flex flex-col h-full overflow-y-auto">
-              <div className="flex-1 space-y-4 pt-2">
+              <div className="flex-1 space-y-5 pt-3">
+                {/* Balance Indicator */}
                 <div className="flex justify-between items-center bg-theme-surface p-3.5 rounded-2xl border border-theme-divider-light">
                   <div className="text-[11px] font-bold text-theme-secondary uppercase tracking-widest">Available Balance</div>
                   <div className="font-mono font-black text-sm text-theme-primary">{internalBalance.toLocaleString()} LC</div>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Betting Platform</label>
-                    <select
-                      value={marketProvider}
-                      onChange={(e) => {
-                        setMarketProvider(e.target.value);
-                        setVerifiedCustomerName('');
-                      }}
-                      className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                    >
-                      <option value="prd-sporty-bet">SportyBet</option>
-                      <option value="product-bet-king">BetKing</option>
-                      <option value="product-1x-bet">1xBet</option>
-                      <option value="product-nairabet">NairaBet</option>
-                      <option value="product-bang-bet">BangBet</option>
-                      <option value="product-bet-way">BetWay</option>
-                      <option value="product-merry-bet">MerryBet</option>
-                      <option value="product-naija-bet">NaijaBet</option>
-                      <option value="product-bet-land">BetLand</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">User ID / Customer Account Number</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={marketCustomerIdentifier}
+                <div className="space-y-4">
+                  {/* 1. Betting Platform Dropdown */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">
+                      Betting Platform
+                    </label>
+                    <div className="relative">
+                      <select
+                        id="select-betting-platform"
+                        value={marketProvider}
                         onChange={(e) => {
-                          setMarketCustomerIdentifier(e.target.value);
+                          setMarketProvider(e.target.value);
                           setVerifiedCustomerName('');
                         }}
-                        placeholder="Enter betting user ID"
-                        className="flex-1 bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3.5 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                      />
+                        className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 px-4 font-bold text-sm text-theme-primary appearance-none cursor-pointer focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all pr-10"
+                      >
+                        <option value="prd-sporty-bet">SportyBet</option>
+                        <option value="product-bet-king">BetKing</option>
+                        <option value="product-1x-bet">1xBet</option>
+                        <option value="product-nairabet">NairaBet</option>
+                        <option value="product-bang-bet">BangBet</option>
+                        <option value="product-bet-way">BetWay</option>
+                        <option value="product-merry-bet">MerryBet</option>
+                        <option value="product-naija-bet">NaijaBet</option>
+                        <option value="product-bet-land">BetLand</option>
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-theme-tertiary absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {/* 2. Customer ID / Account Verification */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">
+                      User ID / Customer Account
+                    </label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          id="input-betting-customer-id"
+                          value={marketCustomerIdentifier}
+                          onChange={(e) => {
+                            setMarketCustomerIdentifier(e.target.value.trim());
+                            setVerifiedCustomerName('');
+                          }}
+                          placeholder="Enter betting user ID"
+                          className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 px-4 font-bold text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all"
+                        />
+                        {marketCustomerIdentifier && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMarketCustomerIdentifier('');
+                              setVerifiedCustomerName('');
+                            }}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-theme-tertiary hover:text-theme-primary rounded-full cursor-pointer"
+                            title="Clear ID"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                       <button
                         type="button"
+                        id="btn-verify-betting-account"
                         disabled={!marketCustomerIdentifier || isVerifyingCustomer}
                         onClick={async () => {
                           setIsVerifyingCustomer(true);
@@ -3066,48 +3332,98 @@ export const WalletModal: React.FC = () => {
                             setIsVerifyingCustomer(false);
                           }
                         }}
-                        className="px-3.5 py-2 rounded-xl bg-theme-surface-hover hover:bg-theme-surface-active text-xs font-bold text-theme-primary transition-colors cursor-pointer disabled:opacity-50"
+                        className="px-4 py-3.5 rounded-xl bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider font-bold text-xs text-theme-primary hover:border-[#5E43F3]/50 transition-all cursor-pointer disabled:opacity-50 shrink-0 flex items-center justify-center gap-1.5"
                       >
-                        {isVerifyingCustomer ? 'Verifying...' : 'Verify'}
+                        {isVerifyingCustomer ? (
+                          <>
+                            <span className="w-3.5 h-3.5 border-2 border-[#5E43F3] border-t-transparent rounded-full animate-spin" />
+                            <span>Checking...</span>
+                          </>
+                        ) : (
+                          'Verify'
+                        )}
                       </button>
                     </div>
+
+                    {verifiedCustomerName && (
+                      <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-2 animate-in fade-in duration-200">
+                        <Check className="w-4 h-4 shrink-0 text-emerald-500" />
+                        <span className="truncate">Verified Bettor: {verifiedCustomerName}</span>
+                      </div>
+                    )}
                   </div>
 
-                  {verifiedCustomerName && (
-                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-2">
-                      <Check className="w-4 h-4 shrink-0" />
-                      <span>Account Name: {verifiedCustomerName}</span>
+                  {/* 3. Amount Field */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between px-1">
+                      <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">
+                        Amount to Fund (₦)
+                      </label>
+                      <span className="text-[11px] text-theme-tertiary font-medium">
+                        Min: ₦100 · Max: ₦100,000
+                      </span>
                     </div>
-                  )}
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-theme-tertiary font-bold text-sm">₦</span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        id="input-betting-amount"
+                        value={marketAmount}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9]/g, '');
+                          setMarketAmount(val);
+                        }}
+                        placeholder="e.g. 1000"
+                        className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 pl-8 pr-4 font-bold text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all font-mono"
+                      />
+                    </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Amount to Fund (₦)</label>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={marketAmount}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === '' || /^\d*$/.test(val)) setMarketAmount(val);
-                      }}
-                      placeholder="e.g. 1000"
-                      className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3.5 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                    />
-                    <div className="flex justify-between items-center text-[10px] text-theme-tertiary px-1">
-                      <span>Convenience fee: ₦{marketFee}</span>
-                      <span>Min: ₦100 · Max: ₦100,000</span>
+                    {/* Quick Amount Pills */}
+                    <div className="grid grid-cols-4 gap-2 pt-1">
+                      {['500', '1000', '2000', '5000'].map((amt) => (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => setMarketAmount(amt)}
+                          className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                            marketAmount === amt
+                              ? 'bg-[#5E43F3]/15 text-[#5E43F3] border-[#5E43F3]'
+                              : 'bg-theme-surface border-theme-divider-light text-theme-secondary hover:text-theme-primary'
+                          }`}
+                        >
+                          ₦{parseInt(amt).toLocaleString()}
+                        </button>
+                      ))}
                     </div>
+
+                    {/* Fee and Balance Notice */}
+                    <div className="flex items-center justify-between text-[11px] text-theme-tertiary px-1 pt-0.5">
+                      <span>Convenience fee: ₦{marketFee}</span>
+                      {marketAmount && parseFloat(marketAmount) >= 100 && (
+                        <span className="font-semibold text-theme-secondary">
+                          Total: ₦{(parseFloat(marketAmount) + marketFee).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+
+                    {parseFloat(marketAmount || '0') + marketFee > internalBalance && (
+                      <p className="text-[11px] font-semibold text-amber-500 pt-1">
+                        ⚠️ Insufficient wallet balance. Please fund your wallet to continue.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
 
+              {/* Continue Action Button */}
               <div className="shrink-0 pt-4">
                 <button
                   disabled={!marketCustomerIdentifier || !marketAmount || parseFloat(marketAmount) < 100 || (parseFloat(marketAmount) + marketFee) > internalBalance}
                   onClick={() => navigateTo('market_review')}
                   className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-base hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 cursor-pointer"
                 >
-                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue to Confirmation'}
+                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue'}
                 </button>
               </div>
             </div>
@@ -3122,53 +3438,71 @@ export const WalletModal: React.FC = () => {
                   <div className="font-mono font-black text-sm text-theme-primary">{internalBalance.toLocaleString()} LC</div>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="space-y-1">
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
                     <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Smile Account / Phone Number</label>
-                    <input
-                      type="text"
-                      value={marketCustomerIdentifier}
-                      onChange={(e) => setMarketCustomerIdentifier(e.target.value)}
-                      placeholder="Enter 10-digit Smile number"
-                      className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3.5 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={marketCustomerIdentifier}
+                        onChange={(e) => setMarketCustomerIdentifier(e.target.value)}
+                        placeholder="Enter 10-digit Smile number"
+                        className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 px-4 font-bold text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all"
+                      />
+                      {marketCustomerIdentifier && (
+                        <button
+                          type="button"
+                          onClick={() => setMarketCustomerIdentifier('')}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-theme-tertiary hover:text-theme-primary p-1 cursor-pointer"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Select Bundle Plan</label>
                     {isFetchingSmilePackages ? (
-                      <p className="text-xs text-theme-tertiary">Loading live Smile data packages...</p>
+                      <div className="flex items-center gap-2 p-3 text-xs text-theme-tertiary bg-theme-surface rounded-xl border border-theme-divider-light">
+                        <Loader2 className="w-4 h-4 animate-spin text-[#5E43F3]" />
+                        <span>Loading live Smile data packages...</span>
+                      </div>
                     ) : (
-                      <select
-                        value={marketProduct?.packageId || ''}
-                        onChange={(e) => {
-                          const chosen = smilePackagesList.find(pkg => pkg.packageId === e.target.value);
-                          if (chosen) {
-                            setMarketProduct({ planName: chosen.packageName, variationId: chosen.packageId });
-                            setMarketAmount(chosen.price.toString());
-                          }
-                        }}
-                        className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                      >
-                        <option value="">Select a Smile bundle</option>
-                        {smilePackagesList.map((pkg) => (
-                          <option key={pkg.packageId} value={pkg.packageId}>
-                            {pkg.packageName} — ₦{pkg.price.toLocaleString()}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="relative">
+                        <select
+                          value={marketProduct?.packageId || ''}
+                          onChange={(e) => {
+                            const chosen = smilePackagesList.find(pkg => pkg.packageId === e.target.value);
+                            if (chosen) {
+                              setMarketProduct({ planName: chosen.packageName, variationId: chosen.packageId });
+                              setMarketAmount(chosen.price.toString());
+                            }
+                          }}
+                          className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 px-4 pr-10 font-bold text-sm text-theme-primary appearance-none focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all cursor-pointer"
+                        >
+                          <option value="">Select a Smile bundle</option>
+                          {smilePackagesList.map((pkg) => (
+                            <option key={pkg.packageId} value={pkg.packageId}>
+                              {pkg.packageName} — ₦{pkg.price.toLocaleString()}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-theme-tertiary absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
                     )}
                   </div>
 
                   {marketProduct && (
-                    <div className="p-3.5 rounded-2xl bg-theme-surface border border-theme-divider-light space-y-1.5">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-theme-tertiary">Selected Plan</span>
+                    <div className="p-3.5 rounded-2xl bg-theme-surface border border-theme-divider-light space-y-2">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-theme-tertiary font-bold">Selected Plan</span>
                         <span className="font-bold text-theme-primary">{marketProduct.planName}</span>
                       </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-theme-tertiary">Price</span>
-                        <span className="font-bold text-[#5E43F3]">₦{parseFloat(marketAmount).toLocaleString()}</span>
+                      <div className="border-t border-theme-divider-light"></div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-theme-tertiary font-bold">Price</span>
+                        <span className="font-mono font-black text-sm text-[#5E43F3]">₦{parseFloat(marketAmount).toLocaleString()}</span>
                       </div>
                     </div>
                   )}
@@ -3181,7 +3515,7 @@ export const WalletModal: React.FC = () => {
                   onClick={() => navigateTo('market_review')}
                   className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-base hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 cursor-pointer"
                 >
-                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue to Confirmation'}
+                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue'}
                 </button>
               </div>
             </div>
@@ -3196,53 +3530,71 @@ export const WalletModal: React.FC = () => {
                   <div className="font-mono font-black text-sm text-theme-primary">{internalBalance.toLocaleString()} LC</div>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="space-y-1">
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
                     <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Spectranet Account / Phone Number</label>
-                    <input
-                      type="text"
-                      value={marketCustomerIdentifier}
-                      onChange={(e) => setMarketCustomerIdentifier(e.target.value)}
-                      placeholder="Enter Spectranet account ID or phone"
-                      className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3.5 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={marketCustomerIdentifier}
+                        onChange={(e) => setMarketCustomerIdentifier(e.target.value)}
+                        placeholder="Enter Spectranet account ID or phone"
+                        className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 px-4 font-bold text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all"
+                      />
+                      {marketCustomerIdentifier && (
+                        <button
+                          type="button"
+                          onClick={() => setMarketCustomerIdentifier('')}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-theme-tertiary hover:text-theme-primary p-1 cursor-pointer"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Select Spectranet Package</label>
                     {isFetchingSpectranetPackages ? (
-                      <p className="text-xs text-theme-tertiary">Loading live Spectranet plans...</p>
+                      <div className="flex items-center gap-2 p-3 text-xs text-theme-tertiary bg-theme-surface rounded-xl border border-theme-divider-light">
+                        <Loader2 className="w-4 h-4 animate-spin text-[#5E43F3]" />
+                        <span>Loading live Spectranet plans...</span>
+                      </div>
                     ) : (
-                      <select
-                        value={marketProduct?.packageId || ''}
-                        onChange={(e) => {
-                          const chosen = spectranetPackagesList.find(pkg => pkg.packageId === e.target.value);
-                          if (chosen) {
-                            setMarketProduct({ planName: chosen.packageName, variationId: chosen.packageId });
-                            setMarketAmount(chosen.price.toString());
-                          }
-                        }}
-                        className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                      >
-                        <option value="">Select a package</option>
-                        {spectranetPackagesList.map((pkg) => (
-                          <option key={pkg.packageId} value={pkg.packageId}>
-                            {pkg.packageName} — ₦{pkg.price.toLocaleString()}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="relative">
+                        <select
+                          value={marketProduct?.packageId || ''}
+                          onChange={(e) => {
+                            const chosen = spectranetPackagesList.find(pkg => pkg.packageId === e.target.value);
+                            if (chosen) {
+                              setMarketProduct({ planName: chosen.packageName, variationId: chosen.packageId });
+                              setMarketAmount(chosen.price.toString());
+                            }
+                          }}
+                          className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 px-4 pr-10 font-bold text-sm text-theme-primary appearance-none focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all cursor-pointer"
+                        >
+                          <option value="">Select a package</option>
+                          {spectranetPackagesList.map((pkg) => (
+                            <option key={pkg.packageId} value={pkg.packageId}>
+                              {pkg.packageName} — ₦{pkg.price.toLocaleString()}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-theme-tertiary absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
                     )}
                   </div>
 
                   {marketProduct && (
-                    <div className="p-3.5 rounded-2xl bg-theme-surface border border-theme-divider-light space-y-1.5">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-theme-tertiary">Package</span>
+                    <div className="p-3.5 rounded-2xl bg-theme-surface border border-theme-divider-light space-y-2">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-theme-tertiary font-bold">Package</span>
                         <span className="font-bold text-theme-primary">{marketProduct.planName}</span>
                       </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-theme-tertiary">Amount</span>
-                        <span className="font-bold text-[#5E43F3]">₦{parseFloat(marketAmount).toLocaleString()}</span>
+                      <div className="border-t border-theme-divider-light"></div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-theme-tertiary font-bold">Amount</span>
+                        <span className="font-mono font-black text-sm text-[#5E43F3]">₦{parseFloat(marketAmount).toLocaleString()}</span>
                       </div>
                     </div>
                   )}
@@ -3255,7 +3607,7 @@ export const WalletModal: React.FC = () => {
                   onClick={() => navigateTo('market_review')}
                   className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-base hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 cursor-pointer"
                 >
-                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue to Confirmation'}
+                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue'}
                 </button>
               </div>
             </div>
@@ -3270,10 +3622,10 @@ export const WalletModal: React.FC = () => {
                   <div className="font-mono font-black text-sm text-theme-primary">{internalBalance.toLocaleString()} LC</div>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="space-y-1">
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
                     <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">WAEC Product</label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       {waecPackagesList.map((pkg) => {
                         const isSelected = marketProduct?.variationId === pkg.packageId;
                         return (
@@ -3284,30 +3636,41 @@ export const WalletModal: React.FC = () => {
                               setMarketProduct({ planName: pkg.packageName, variationId: pkg.packageId });
                               setMarketAmount(pkg.price.toString());
                             }}
-                            className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                            className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
                               isSelected
-                                ? 'bg-[#5E43F3]/10 border-[#5E43F3] text-theme-primary'
+                                ? 'bg-[#5E43F3]/10 border-[#5E43F3] text-theme-primary shadow-sm'
                                 : 'bg-theme-surface border-theme-divider-light text-theme-secondary hover:border-theme-primary/30'
                             }`}
                           >
-                            <span className="font-bold text-xs block text-theme-primary">{pkg.packageName}</span>
-                            <span className="font-mono font-black text-sm text-[#5E43F3] mt-1 block">₦{pkg.price.toLocaleString()}</span>
+                            <span className="font-bold text-sm block text-theme-primary">{pkg.packageName}</span>
+                            <span className="font-mono font-black text-base text-[#5E43F3] mt-1.5 block">₦{pkg.price.toLocaleString()}</span>
                           </button>
                         );
                       })}
                     </div>
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Recipient Mobile Number (For PIN Delivery)</label>
-                    <input
-                      type="tel"
-                      value={marketCustomerIdentifier}
-                      onChange={(e) => setMarketCustomerIdentifier(e.target.value)}
-                      placeholder="e.g. 08012345678"
-                      className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3.5 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                    />
-                    <p className="text-[10px] text-theme-tertiary">The e-PIN & Serial Number will also be shown immediately on screen upon confirmation.</p>
+                    <div className="relative">
+                      <input
+                        type="tel"
+                        value={marketCustomerIdentifier}
+                        onChange={(e) => setMarketCustomerIdentifier(e.target.value)}
+                        placeholder="e.g. 08012345678"
+                        className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 px-4 font-bold text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all"
+                      />
+                      {marketCustomerIdentifier && (
+                        <button
+                          type="button"
+                          onClick={() => setMarketCustomerIdentifier('')}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-theme-tertiary hover:text-theme-primary p-1 cursor-pointer"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-theme-tertiary px-1">The e-PIN & Serial Number will also be shown immediately on screen upon confirmation.</p>
                   </div>
                 </div>
               </div>
@@ -3318,7 +3681,7 @@ export const WalletModal: React.FC = () => {
                   onClick={() => navigateTo('market_review')}
                   className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-base hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 cursor-pointer"
                 >
-                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue to Confirmation'}
+                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue'}
                 </button>
               </div>
             </div>
@@ -3333,10 +3696,10 @@ export const WalletModal: React.FC = () => {
                   <div className="font-mono font-black text-sm text-theme-primary">{internalBalance.toLocaleString()} LC</div>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="space-y-1">
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
                     <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">JAMB Registration Option</label>
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       {jambPackagesList.map((pkg) => {
                         const isSelected = marketProduct?.variationId === pkg.packageId;
                         return (
@@ -3347,30 +3710,41 @@ export const WalletModal: React.FC = () => {
                               setMarketProduct({ planName: pkg.packageName, variationId: pkg.packageId });
                               setMarketAmount(pkg.price.toString());
                             }}
-                            className={`w-full p-3.5 rounded-xl border flex items-center justify-between text-left transition-all cursor-pointer ${
+                            className={`w-full p-4 rounded-2xl border flex items-center justify-between text-left transition-all cursor-pointer ${
                               isSelected
-                                ? 'bg-[#5E43F3]/10 border-[#5E43F3] text-theme-primary'
+                                ? 'bg-[#5E43F3]/10 border-[#5E43F3] text-theme-primary shadow-sm'
                                 : 'bg-theme-surface border-theme-divider-light text-theme-secondary hover:border-theme-primary/30'
                             }`}
                           >
-                            <span className="font-bold text-xs text-theme-primary">{pkg.packageName}</span>
-                            <span className="font-mono font-black text-sm text-[#5E43F3]">₦{pkg.price.toLocaleString()}</span>
+                            <span className="font-bold text-sm text-theme-primary">{pkg.packageName}</span>
+                            <span className="font-mono font-black text-base text-[#5E43F3]">₦{pkg.price.toLocaleString()}</span>
                           </button>
                         );
                       })}
                     </div>
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-1">Candidate Profile Code / Phone</label>
-                    <input
-                      type="text"
-                      value={marketCustomerIdentifier}
-                      onChange={(e) => setMarketCustomerIdentifier(e.target.value)}
-                      placeholder="Enter 10-digit JAMB profile code or phone"
-                      className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3 px-3.5 text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                    />
-                    <p className="text-[10px] text-theme-tertiary">e-PIN will be displayed on screen and can be used directly at any accredited CBT centre.</p>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={marketCustomerIdentifier}
+                        onChange={(e) => setMarketCustomerIdentifier(e.target.value)}
+                        placeholder="Enter 10-digit JAMB profile code or phone"
+                        className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 px-4 font-bold text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all"
+                      />
+                      {marketCustomerIdentifier && (
+                        <button
+                          type="button"
+                          onClick={() => setMarketCustomerIdentifier('')}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-theme-tertiary hover:text-theme-primary p-1 cursor-pointer"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-theme-tertiary px-1">e-PIN will be displayed on screen and can be used directly at any accredited CBT centre.</p>
                   </div>
                 </div>
               </div>
@@ -3381,7 +3755,7 @@ export const WalletModal: React.FC = () => {
                   onClick={() => navigateTo('market_review')}
                   className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-base hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 cursor-pointer"
                 >
-                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue to Confirmation'}
+                  {(parseFloat(marketAmount || '0') + marketFee) > internalBalance ? 'Insufficient Balance' : 'Continue'}
                 </button>
               </div>
             </div>

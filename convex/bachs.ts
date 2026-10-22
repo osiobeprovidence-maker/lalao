@@ -144,66 +144,126 @@ export const verifyBachsFunding = action({
     const baseUrl = getBachsBaseUrl();
 
     try {
-      // 1. If sessionId is provided, query the checkout session directly
-      let sessionData: any = null;
-      if (args.sessionId) {
-        const res = await fetch(`${baseUrl}/v1/checkout-sessions/${args.sessionId}`, {
+      let paymentRecord: any = null;
+
+      // 1. Check /v1/payments endpoint by reference
+      try {
+        const payRes = await fetch(`${baseUrl}/v1/payments?reference=${encodeURIComponent(args.reference)}`, {
           headers: {
             Authorization: `Bearer ${secretKey}`,
             Accept: "application/json",
           },
         });
-        if (res.ok) {
-          sessionData = await res.json();
+        if (payRes.ok) {
+          const payData = await payRes.json() as any;
+          const items = Array.isArray(payData) ? payData : (payData?.items || payData?.data || []);
+          if (items.length > 0) {
+            paymentRecord = items[0];
+          }
+        }
+      } catch (e) {
+        console.warn("[BACHS] /v1/payments by ref query error:", e);
+      }
+
+      // 2. If not found by query param, search recent payments for meta.reference match
+      if (!paymentRecord) {
+        try {
+          const listRes = await fetch(`${baseUrl}/v1/payments?limit=25`, {
+            headers: {
+              Authorization: `Bearer ${secretKey}`,
+              Accept: "application/json",
+            },
+          });
+          if (listRes.ok) {
+            const listData = await listRes.json() as any;
+            const items = Array.isArray(listData) ? listData : (listData?.items || listData?.data || []);
+            paymentRecord = items.find((p: any) => 
+              p.reference === args.reference || 
+              p.meta?.reference === args.reference ||
+              p.source?.reference === args.reference ||
+              (args.sessionId && (p.source?.checkout_id === args.sessionId || p.id === args.sessionId))
+            );
+          }
+        } catch (e) {
+          console.warn("[BACHS] /v1/payments list scan error:", e);
         }
       }
 
-      // 2. Alternatively check by reference if session wasn't retrieved
-      if (!sessionData) {
-        const res = await fetch(`${baseUrl}/v1/checkout-sessions?reference=${encodeURIComponent(args.reference)}`, {
-          headers: {
-            Authorization: `Bearer ${secretKey}`,
-            Accept: "application/json",
-          },
-        });
-        if (res.ok) {
-          const list = await res.json() as any;
-          sessionData = Array.isArray(list) ? list[0] : list?.data?.[0] || list;
+      // 3. Fallback to /v1/checkout-sessions if not matched via payments
+      if (!paymentRecord && args.sessionId) {
+        try {
+          const sessionRes = await fetch(`${baseUrl}/v1/checkout-sessions/${args.sessionId}`, {
+            headers: {
+              Authorization: `Bearer ${secretKey}`,
+              Accept: "application/json",
+            },
+          });
+          if (sessionRes.ok) {
+            paymentRecord = await sessionRes.json();
+          }
+        } catch (e) {
+          console.warn("[BACHS] /v1/checkout-sessions by id error:", e);
         }
       }
 
-      if (!sessionData) {
+      if (!paymentRecord) {
+        try {
+          const sessionListRes = await fetch(`${baseUrl}/v1/checkout-sessions?reference=${encodeURIComponent(args.reference)}`, {
+            headers: {
+              Authorization: `Bearer ${secretKey}`,
+              Accept: "application/json",
+            },
+          });
+          if (sessionListRes.ok) {
+            const sessionListData = await sessionListRes.json() as any;
+            const items = Array.isArray(sessionListData) ? sessionListData : (sessionListData?.items || sessionListData?.data || []);
+            if (items.length > 0) {
+              paymentRecord = items[0];
+            }
+          }
+        } catch (e) {
+          console.warn("[BACHS] /v1/checkout-sessions list error:", e);
+        }
+      }
+
+      if (!paymentRecord) {
         return {
           success: false,
           message: "Transaction could not be found with BACHS provider.",
         };
       }
 
-      const status = (sessionData.status || sessionData.payment_status || "").toLowerCase();
+      const status = (paymentRecord.status || paymentRecord.payment_status || "").toLowerCase();
       if (status !== "completed" && status !== "succeeded" && status !== "paid" && status !== "success") {
         return {
           success: false,
           status,
-          message: `Payment status is ${status}. Wallet can only be credited once payment is confirmed.`,
+          message: `Payment status is ${status || "pending"}. Wallet can only be credited once payment is confirmed.`,
         };
       }
 
-      // 3. Verify currency & amount
-      const currency = (sessionData.pricing?.currency || sessionData.currency || "NGN").toUpperCase();
+      // 4. Verify currency & amount
+      const currency = (
+        paymentRecord.currency || 
+        paymentRecord.settlement_currency || 
+        paymentRecord.pricing?.currency || 
+        "NGN"
+      ).toUpperCase();
       if (currency !== "NGN") {
         return { success: false, message: `Invalid payment currency: ${currency}. Expected NGN.` };
       }
 
-      const verifiedAmount = parseFloat(sessionData.pricing?.amount || sessionData.amount || "0");
+      const rawAmount = paymentRecord.amount_paid || paymentRecord.amount || paymentRecord.pricing?.amount || "0";
+      const verifiedAmount = parseFloat(rawAmount);
       if (isNaN(verifiedAmount) || verifiedAmount <= 0) {
         return { success: false, message: "Invalid amount reported by BACHS provider." };
       }
 
-      // 4. Atomically settle wallet credits
+      // 5. Atomically settle wallet credits
       const settleResult = await ctx.runMutation(internal.wallet.settleWalletFunding, {
         reference: args.reference,
         verifiedAmount,
-        providerTransactionId: sessionData.id || args.sessionId,
+        providerTransactionId: paymentRecord.id || args.sessionId,
         provider: "bachs",
       });
 

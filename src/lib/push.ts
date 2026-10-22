@@ -40,7 +40,7 @@ export async function getOrRequestWebPushSubscription(): Promise<PushSubscriptio
   }
 
   if (!VAPID_KEY) {
-    console.error("[push] VITE_VAPID_PUBLIC_KEY is not configured.");
+    // If VAPID is not set, native Web Push is bypassed (OneSignal handles push delivery)
     return null;
   }
 

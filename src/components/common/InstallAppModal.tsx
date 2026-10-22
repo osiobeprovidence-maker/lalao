@@ -126,6 +126,28 @@ export const InstallAppModal: React.FC = () => {
                 <CheckCircle2 className="w-5 h-5 shrink-0" />
                 <span>LALAO is active in standalone app mode on your device.</span>
               </div>
+
+              {isDesktop && (
+                <div className="p-3.5 rounded-2xl bg-theme-surface border border-theme-divider space-y-2 text-left">
+                  <div className="flex items-center gap-2 text-xs font-bold text-theme-primary">
+                    <Zap className="w-4 h-4 text-[#5E43F3]" />
+                    <span>Auto-start LALAO when your PC turns on:</span>
+                  </div>
+                  <p className="text-[11px] text-theme-secondary leading-relaxed">
+                    In Chrome or Edge, navigate to{' '}
+                    <code className="text-[#5E43F3] bg-[#5E43F3]/10 px-1 py-0.5 rounded font-mono text-[10px]">
+                      chrome://apps
+                    </code>{' '}
+                    or{' '}
+                    <code className="text-[#5E43F3] bg-[#5E43F3]/10 px-1 py-0.5 rounded font-mono text-[10px]">
+                      edge://apps
+                    </code>
+                    , right-click <strong className="text-theme-primary">Lalao</strong>, and check{' '}
+                    <strong className="text-theme-primary">"Start app when you sign in"</strong>.
+                  </p>
+                </div>
+              )}
+
               <button
                 type="button"
                 onClick={closeInstallModal}
