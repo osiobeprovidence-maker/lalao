@@ -359,6 +359,19 @@ export const cancelCall = mutation({
       createdAt: now,
     });
 
+    try {
+      await ctx.scheduler.runAfter(0, (internal as any).pushActions.dispatchPush, {
+        recipientId: call.recipientId,
+        title: `Missed ${call.type === "video" ? "Video" : "Voice"} Call`,
+        body: `You missed a ${call.type} call from ${currentUser.name || "a friend"}.`,
+        url: call.conversationId ? `/app?chat=${call.conversationId}` : `/app?tab=messages`,
+        conversationId: call.conversationId ? call.conversationId.toString() : undefined,
+        icon: currentUser.avatarUrl || "/icon-192.png",
+        tag: `missed-call-${call._id.toString()}`,
+        category: "calls",
+      });
+    } catch (_) {}
+
     return { success: true };
   },
 });
