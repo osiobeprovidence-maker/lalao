@@ -87,6 +87,8 @@ export const dispatchPush = internalAction({
           },
         };
 
+        const effectiveTag = tag ?? (messageId ? `msg-${messageId}` : conversationId ? `chat-${conversationId}-${Date.now()}` : undefined);
+
         if (tag) {
           payload.web_push_topic = tag;
         }
@@ -142,13 +144,17 @@ export const dispatchPush = internalAction({
           privateKey
         );
 
+        // Unique tag ensures every incoming message gets its own OS notification popup/slot,
+        // preventing subsequent messages from replacing prior visible popups.
+        const uniqueNotificationTag = tag ?? (messageId ? `msg-${messageId}` : conversationId ? `chat-${conversationId}-${Date.now()}` : undefined);
+
         const payload = JSON.stringify({
           title,
           body,
           url: url ?? "/",
           icon: icon ?? "/icon-192.png",
           badge: badge ?? "/icon-192.png",
-          tag: tag ?? (conversationId ? `chat-${conversationId}` : undefined),
+          tag: uniqueNotificationTag,
           data: {
             url: url ?? "/",
             conversationId,

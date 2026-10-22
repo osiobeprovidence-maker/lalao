@@ -816,20 +816,24 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           Notification.permission === 'granted' &&
           document.visibilityState === 'hidden'
         ) {
-          // Find conversation with newest unread message
+          // Process all newly arrived messages across active conversations
           for (const conv of backendConversations as any[]) {
             if (conv.unreadCount > 0 && conv.id !== activeChatId) {
-              const lastMsg = conv.messages?.[conv.messages.length - 1];
-              if (lastMsg && !lastMsg.isMine && !seenConversationMessageIds.current.has(lastMsg.id)) {
-                seenConversationMessageIds.current.add(lastMsg.id);
+              const unreadMsgs = (conv.messages || []).filter(
+                (m: any) => !m.isMine && !seenConversationMessageIds.current.has(m.id)
+              );
+
+              for (const msg of unreadMsgs) {
+                seenConversationMessageIds.current.add(msg.id);
                 try {
                   const partner = conv.participants?.find((p: any) => p.id !== currentUser?.id);
                   const senderName = partner?.name || 'Someone';
+                  // Unique tag per message ensures consecutive messages don't overwrite previous popups
                   const externalNotif = new Notification(`New message from ${senderName}`, {
-                    body: lastMsg.text || 'Sent a message',
+                    body: msg.text || 'Sent a message',
                     icon: partner?.avatar || '/icon-192.png',
                     badge: '/icon-192.png',
-                    tag: `chat-${conv.id}`,
+                    tag: `msg-${msg.id}`,
                   });
 
                   externalNotif.onclick = () => {
@@ -841,7 +845,6 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 } catch (err) {
                   console.warn('[LalaoContext] Could not trigger native message notification:', err);
                 }
-                break;
               }
             }
           }
@@ -925,7 +928,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           Notification.permission === 'granted' &&
           document.visibilityState === 'hidden'
         ) {
-          newItems.slice(0, 3).forEach((item) => {
+          newItems.slice(0, 10).forEach((item) => {
             const cat = item.type === 'follow'
               ? 'follows'
               : item.type === 'like'
