@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import { useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { getOrRequestWebPushSubscription } from '../lib/push';
-import { setOneSignalUser } from '../lib/onesignal';
+import { setOneSignalUser, requestOneSignalPushPermission } from '../lib/onesignal';
 import { useAuth } from './AuthContext';
 import {
   User,

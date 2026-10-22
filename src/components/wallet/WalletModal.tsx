@@ -3,10 +3,10 @@ import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { 
   ArrowLeft, ArrowUpRight, Copy, Plus, Check, Settings, 
-  MoreHorizontal, Wallet, ChevronRight, X, Search, History, 
+  MoreHorizontal, Wallet, ChevronRight, ChevronDown, X, Search, History, 
   Shield, Lock, CreditCard, Banknote, Building, AlertCircle, Receipt,
   Bitcoin, Smartphone, Wifi, Tv, ExternalLink, Unplug, Link2, Mail, KeyRound, Zap,
-  Dices, GraduationCap, Globe, BookOpen
+  Dices, GraduationCap, Globe, BookOpen, Loader2
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
