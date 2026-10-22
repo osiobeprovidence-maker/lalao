@@ -262,10 +262,26 @@ export const AdminAds: React.FC = () => {
               Confirm Moderation Decision: <span className="uppercase text-[#5E43F3]">{reviewDecision}</span>
             </h3>
 
-            <div className="p-3 rounded-xl bg-theme-base border border-theme-divider text-xs space-y-1">
+            <div className="p-3 rounded-xl bg-theme-base border border-theme-divider text-xs space-y-2">
               <p className="font-bold text-theme-primary">{selectedCampaign.name}</p>
               <p className="text-theme-tertiary">Headline: {selectedCampaign.creative.headline}</p>
               <p className="text-theme-tertiary">Destination: {selectedCampaign.creative.destinationUrl}</p>
+              {selectedCampaign.creative.mediaUrl && (
+                selectedCampaign.creative.mediaType === 'video' || selectedCampaign.format === 'video_ad' ? (
+                  <video
+                    src={selectedCampaign.creative.mediaUrl}
+                    controls
+                    playsInline
+                    className="w-full max-h-48 object-contain rounded-lg border border-theme-divider bg-black mt-2"
+                  />
+                ) : (
+                  <img
+                    src={selectedCampaign.creative.mediaUrl}
+                    alt="Creative preview"
+                    className="w-full max-h-48 object-cover rounded-lg border border-theme-divider mt-2"
+                  />
+                )
+              )}
             </div>
 
             {(reviewDecision === 'reject' || reviewDecision === 'suspend') && (

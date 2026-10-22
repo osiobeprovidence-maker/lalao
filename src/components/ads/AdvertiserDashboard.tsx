@@ -35,6 +35,7 @@ import { Id } from '../../../convex/_generated/dataModel';
 import { useLalao } from '../../context/LalaoContext';
 import { AppIcon } from '../common/AppIcon';
 import { CampaignImageUploader } from './CampaignImageUploader';
+import { CampaignVideoUploader } from './CampaignVideoUploader';
 
 export const AdvertiserDashboard: React.FC = () => {
   const { currentUser, location } = useLalao();
@@ -322,6 +323,7 @@ const CampaignCreationWizard: React.FC<{ onSuccess: (id: any) => void; onCancel:
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isImageUploading, setIsImageUploading] = useState(false);
+  const [isVideoUploading, setIsVideoUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Form State
@@ -366,8 +368,16 @@ const CampaignCreationWizard: React.FC<{ onSuccess: (id: any) => void; onCancel:
         setError('Please wait for your image creative to finish uploading before continuing.');
         return;
       }
+      if (isVideoUploading) {
+        setError('Please wait for your video creative to finish uploading before continuing.');
+        return;
+      }
       if (format === 'image_ad' && !mediaUrl.trim()) {
         setError('Please select and upload an ad creative image before continuing.');
+        return;
+      }
+      if (format === 'video_ad' && !mediaUrl.trim()) {
+        setError('Please select and upload an ad creative video before continuing.');
         return;
       }
       if (!destinationUrl.startsWith('http://') && !destinationUrl.startsWith('https://') && !destinationUrl.startsWith('/')) {
@@ -623,26 +633,20 @@ const CampaignCreationWizard: React.FC<{ onSuccess: (id: any) => void; onCancel:
           </div>
 
           {format === 'video_ad' ? (
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-theme-primary">
-                Video Stream URL (MP4 / HLS) *
-              </label>
-              <input
-                type="url"
-                value={mediaUrl}
-                onChange={(e) => setMediaUrl(e.target.value)}
-                placeholder="https://example.com/creative.mp4"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-theme-base border border-theme-divider text-xs text-theme-primary focus:border-[#5E43F3] outline-hidden"
-              />
-            </div>
-          ) : (
+            <CampaignVideoUploader
+              mediaUrl={mediaUrl}
+              onMediaUrlChange={(url) => setMediaUrl(url)}
+              onUploadStateChange={(uploading) => setIsVideoUploading(uploading)}
+              disabled={isSubmitting}
+            />
+          ) : format === 'image_ad' || format === 'sponsored_post' ? (
             <CampaignImageUploader
               mediaUrl={mediaUrl}
               onMediaUrlChange={(url) => setMediaUrl(url)}
               onUploadStateChange={(uploading) => setIsImageUploading(uploading)}
               disabled={isSubmitting}
             />
-          )}
+          ) : null}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <div className="space-y-1.5">
@@ -943,11 +947,21 @@ const CampaignDetailsView: React.FC<{ campaignId: Id<"adCampaigns">; onBack: () 
               <p className="text-xs text-theme-secondary">{campaign.creative.description}</p>
             )}
             {campaign.creative.mediaUrl && (
-              <img
-                src={campaign.creative.mediaUrl}
-                alt="Creative"
-                className="w-full max-h-64 object-cover rounded-lg border border-theme-divider"
-              />
+              campaign.creative.mediaType === 'video' || campaign.format === 'video_ad' ? (
+                <video
+                  src={campaign.creative.mediaUrl}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="w-full max-h-72 object-contain rounded-lg border border-theme-divider bg-black"
+                />
+              ) : (
+                <img
+                  src={campaign.creative.mediaUrl}
+                  alt="Creative"
+                  className="w-full max-h-64 object-cover rounded-lg border border-theme-divider"
+                />
+              )
             )}
             <div className="pt-2 flex items-center justify-between text-xs">
               <span className="text-theme-tertiary">Destination: {campaign.creative.destinationUrl}</span>

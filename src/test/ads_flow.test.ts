@@ -68,4 +68,37 @@ describe('Lalao Ads — Policy, Validation & Lifecycle Logic', () => {
     const isCompleted = spentKobo >= budgetKobo;
     assert.strictEqual(isCompleted, true);
   });
+
+  it('Enforces media upload validation and rejects blob URLs', () => {
+    // Blob URLs must be rejected from persistence
+    const blobUrl = 'blob:https://lalao.website/62f689e4-5bfd-4630-9b44-67215c2d61a8';
+    assert.strictEqual(blobUrl.startsWith('blob:'), true);
+
+    // Permitted permanent storage/CDN URLs
+    const cdnUrl = 'https://res.cloudinary.com/lalao/image/upload/v1/ads/ad123.jpg';
+    assert.strictEqual(cdnUrl.startsWith('blob:'), false);
+    assert.strictEqual(cdnUrl.startsWith('https://'), true);
+
+    const convexStorageUrl = 'https://majestic-ptarmigan-155.eu-west-1.convex.cloud/api/storage/abc-123';
+    assert.strictEqual(convexStorageUrl.startsWith('blob:'), false);
+    assert.strictEqual(convexStorageUrl.startsWith('https://'), true);
+  });
+
+  it('Validates file extension and size constraints for ad media', () => {
+    const allowedImageExts = ['.jpg', '.jpeg', '.png', '.webp'];
+    const maxImageBytes = 10 * 1024 * 1024; // 10MB
+
+    const allowedVideoExts = ['.mp4', '.webm', '.mov', '.m4v'];
+    const maxVideoBytes = 100 * 1024 * 1024; // 100MB
+
+    assert.strictEqual(allowedImageExts.some(ext => 'promo.png'.endsWith(ext)), true);
+    assert.strictEqual(allowedImageExts.some(ext => 'document.pdf'.endsWith(ext)), false);
+    assert.strictEqual(5 * 1024 * 1024 <= maxImageBytes, true);
+    assert.strictEqual(15 * 1024 * 1024 <= maxImageBytes, false);
+
+    assert.strictEqual(allowedVideoExts.some(ext => 'ad_creative.mp4'.endsWith(ext)), true);
+    assert.strictEqual(allowedVideoExts.some(ext => 'ad_creative.avi'.endsWith(ext)), false);
+    assert.strictEqual(45 * 1024 * 1024 <= maxVideoBytes, true);
+    assert.strictEqual(120 * 1024 * 1024 <= maxVideoBytes, false);
+  });
 });

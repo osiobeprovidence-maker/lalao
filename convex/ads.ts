@@ -226,9 +226,12 @@ export const createCampaign = mutation({
       }
     }
 
-    // 5. Image Ad Media Verification & Blob Protection
+    // 5. Image & Video Ad Media Verification & Blob Protection
     if (args.format === "image_ad" && !args.creative.mediaUrl && !args.creative.mediaStorageId) {
       throw new Error("An image creative is required for image advertisements.");
+    }
+    if (args.format === "video_ad" && !args.creative.mediaUrl && !args.creative.mediaStorageId) {
+      throw new Error("A video creative is required for video advertisements.");
     }
     if (args.creative.mediaUrl && args.creative.mediaUrl.startsWith("blob:")) {
       throw new Error("Invalid media reference: temporary local blob URLs cannot be persisted.");
