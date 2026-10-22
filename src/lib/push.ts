@@ -1,6 +1,10 @@
-// src/lib/push.ts
+// Canonical Lalao VAPID public key (paired with VAPID_PRIVATE_KEY in Convex backend)
+const DEFAULT_VAPID_PUBLIC_KEY =
+  "BAjkYX23KqM0DcnuFYUnH5SFGywAi7LAJSQ6sdf9VwFXy1jKmH2nf91iSA1V-Y2icFnfgkWUIyxK3A9nuDutDSQ";
 
-const VAPID_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
+const VAPID_KEY =
+  (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) ||
+  DEFAULT_VAPID_PUBLIC_KEY;
 
 /**
  * Converts a base64 string to a Uint8Array.

@@ -54,9 +54,18 @@ export const dispatchPush = internalAction({
 
     if (oneSignalApiKey) {
       try {
-        const defaultAppIcon = "/icon-192.png";
-        const effectiveIcon = (icon && icon.trim().length > 0) ? icon.trim() : defaultAppIcon;
-        const effectiveBadge = (badge && badge.trim().length > 0) ? badge.trim() : "/icon-192.png";
+        const baseUrl = process.env.APP_URL || process.env.VITE_APP_URL || "https://www.lalao.website";
+        const defaultAppIcon = `${baseUrl}/icon-192.png`;
+        const makeAbsoluteUrl = (pathOrUrl?: string) => {
+          if (!pathOrUrl) return undefined;
+          const trimmed = pathOrUrl.trim();
+          if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+          return `${baseUrl}${trimmed.startsWith("/") ? "" : "/"}${trimmed}`;
+        };
+
+        const effectiveIcon = icon ? makeAbsoluteUrl(icon) : defaultAppIcon;
+        const effectiveBadge = badge ? makeAbsoluteUrl(badge) : `${baseUrl}/icon-192.png`;
+        const targetFullUrl = makeAbsoluteUrl(url ?? "/app");
 
         const payload: Record<string, any> = {
           app_id: oneSignalAppId,
@@ -66,8 +75,8 @@ export const dispatchPush = internalAction({
           },
           headings: { en: title },
           contents: { en: body },
-          url: url ?? "/app",
-          web_url: url ?? "/app",
+          url: targetFullUrl,
+          web_url: targetFullUrl,
           chrome_web_icon: effectiveIcon,
           firefox_icon: effectiveIcon,
           chrome_web_badge: effectiveBadge,
