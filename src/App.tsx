@@ -119,7 +119,7 @@ import { CompletePage } from './pages/onboarding/CompletePage';
 import { OnboardingGuard } from './pages/onboarding/OnboardingGuard';
 
 // Admin page
-import { AdminApp } from './pages/admin/AdminApp';
+const AdminApp = React.lazy(() => import('./pages/admin/AdminApp').then(m => ({ default: m.AdminApp })));
 
 const LalaoAppContent: React.FC = () => {
   const {
@@ -645,7 +645,13 @@ export default function App() {
         <AdminRoute>
           <EventDistributionProvider>
             <LalaoProvider>
-              <AdminApp />
+              <React.Suspense fallback={
+                <div className="min-h-screen flex items-center justify-center bg-[#0B0F19]">
+                  <div className="w-8 h-8 rounded-full border-4 border-white/30 border-t-indigo-500 animate-spin" />
+                </div>
+              }>
+                <AdminApp />
+              </React.Suspense>
             </LalaoProvider>
           </EventDistributionProvider>
         </AdminRoute>

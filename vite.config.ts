@@ -34,9 +34,6 @@ export default defineConfig(() => {
                 return 'vendor-react';
               }
             }
-            if (id.includes('/src/pages/admin/')) {
-              return 'admin-panel';
-            }
           },
         },
       },
