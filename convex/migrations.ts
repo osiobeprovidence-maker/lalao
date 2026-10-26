@@ -111,3 +111,70 @@ export const insertTableBatch = mutation({
   },
 });
 
+export const mergeAndSetMainAccount = mutation({
+  args: {
+    mainUsername: v.string(),
+    secondaryUsername: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const mainUser = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", args.mainUsername))
+      .unique();
+    const secondaryUser = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", args.secondaryUsername))
+      .unique();
+
+    if (!mainUser) throw new Error(`Main user @${args.mainUsername} not found`);
+
+    // Ensure main user has super_admin role and normalized email
+    await ctx.db.patch(mainUser._id, {
+      role: "super_admin",
+      email: "riderezzy@gmail.com",
+      emailNormalized: "riderezzy@gmail.com",
+      updatedAt: Date.now(),
+    });
+
+    let updatedIdentities = 0;
+    // Map any authIdentities pointing to secondaryUser to mainUser
+    if (secondaryUser) {
+      const identities = await ctx.db
+        .query("authIdentities")
+        .withIndex("by_user", (q) => q.eq("userId", secondaryUser._id))
+        .collect();
+
+      for (const identity of identities) {
+        await ctx.db.patch(identity._id, { userId: mainUser._id });
+        updatedIdentities++;
+      }
+
+      // Also ensure any posts, followers, follows pointing to secondary point to main
+      const posts = await ctx.db
+        .query("posts")
+        .withIndex("by_author", (q) => q.eq("authorId", secondaryUser._id))
+        .collect();
+      for (const post of posts) {
+        await ctx.db.patch(post._id, { authorId: mainUser._id });
+      }
+
+      // Mark secondary user as merged/archived so username won't conflict
+      await ctx.db.patch(secondaryUser._id, {
+        username: `${args.secondaryUsername}_merged_${Date.now()}`,
+        role: "user",
+        email: undefined,
+        emailNormalized: undefined,
+        updatedAt: Date.now(),
+      });
+    }
+
+    return {
+      success: true,
+      mainUserId: mainUser._id,
+      mainUsername: args.mainUsername,
+      updatedIdentities,
+    };
+  },
+});
+
+
