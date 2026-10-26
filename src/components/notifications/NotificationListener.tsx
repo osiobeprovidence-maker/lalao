@@ -85,18 +85,27 @@ export const NotificationListener: React.FC = () => {
             setActiveChatIdRef.current(match[1]);
           }
         }
-      }
     };
 
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
     }
 
+    // 3. Listen for in-app toast dispatches from anywhere in the app
+    const handleCustomToast = (event: Event) => {
+      const customEvent = event as CustomEvent<PushNotificationPayload>;
+      if (customEvent.detail) {
+        showToast(customEvent.detail);
+      }
+    };
+    window.addEventListener('LALAO_SHOW_TOAST', handleCustomToast);
+
     return () => {
       if (unsubscribeFcm) unsubscribeFcm();
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
       }
+      window.removeEventListener('LALAO_SHOW_TOAST', handleCustomToast);
       if (dismissTimerRef.current) {
         clearTimeout(dismissTimerRef.current);
         dismissTimerRef.current = null;

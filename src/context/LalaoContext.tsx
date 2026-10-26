@@ -839,13 +839,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const prefs = (currentUser as any)?.notificationPrefs;
         const desktopAllowed = prefs?.desktop !== false && prefs?.messages !== false;
 
-        if (
-          desktopAllowed &&
-          typeof window !== 'undefined' &&
-          'Notification' in window &&
-          Notification.permission === 'granted' &&
-          document.visibilityState === 'hidden'
-        ) {
+        if (desktopAllowed) {
           // Process all newly arrived messages across active conversations
           for (const conv of backendConversations as any[]) {
             if (conv.unreadCount > 0 && conv.id !== activeChatId) {
@@ -855,25 +849,49 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
               for (const msg of unreadMsgs) {
                 seenConversationMessageIds.current.add(msg.id);
-                try {
-                  const partner = conv.participants?.find((p: any) => p.id !== currentUser?.id);
-                  const senderName = partner?.name || 'Someone';
-                  // Unique tag per message ensures consecutive messages don't overwrite previous popups
-                  const externalNotif = new Notification(`New message from ${senderName}`, {
-                    body: msg.text || 'Sent a message',
-                    icon: partner?.avatar || '/icon-192.png',
-                    badge: '/icon-192.png',
-                    tag: `msg-${msg.id}`,
-                  });
+                const partner = conv.participants?.find((p: any) => p.id !== currentUser?.id);
+                const senderName = partner?.name || 'Someone';
+                const avatar = partner?.avatar || '/icon-192.png';
+                const notifTitle = `New message from ${senderName}`;
+                const notifBody = msg.text || 'Sent a message';
+                const chatUrl = `/app?chat=${conv.id}`;
 
-                  externalNotif.onclick = () => {
-                    window.focus();
-                    setActiveChatId(conv.id);
-                    setActiveTab('messages');
-                    externalNotif.close();
-                  };
-                } catch (err) {
-                  console.warn('[LalaoContext] Could not trigger native message notification:', err);
+                // A. Outside the app (minimized / background tab) -> Native System Notification popup
+                if (
+                  typeof window !== 'undefined' &&
+                  'Notification' in window &&
+                  Notification.permission === 'granted' &&
+                  document.visibilityState === 'hidden'
+                ) {
+                  try {
+                    const externalNotif = new Notification(notifTitle, {
+                      body: notifBody,
+                      icon: avatar,
+                      badge: '/icon-192.png',
+                      tag: `msg-${msg.id}`,
+                    });
+
+                    externalNotif.onclick = () => {
+                      window.focus();
+                      setActiveChatId(conv.id);
+                      setActiveTab('messages');
+                      externalNotif.close();
+                    };
+                  } catch (err) {
+                    console.warn('[LalaoContext] Could not trigger native message notification:', err);
+                  }
+                } else if (typeof window !== 'undefined' && document.visibilityState === 'visible') {
+                  // B. Inside the app (browsing Lalao but not inside this specific chat) -> In-app Popup Toast
+                  window.dispatchEvent(
+                    new CustomEvent('LALAO_SHOW_TOAST', {
+                      detail: {
+                        title: notifTitle,
+                        body: notifBody,
+                        icon: avatar,
+                        url: chatUrl,
+                      },
+                    })
+                  );
                 }
               }
             }
