@@ -1,3 +1,5 @@
+import { getUserByAuthIdentity } from "./lib/authIdentity";
+import { requireAdmin } from "./admin";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { resolveUserVerification } from "./social";
@@ -38,7 +40,7 @@ export const CREATOR_TIER_CONFIG = {
     price: 3500, // ₦3,500
     currency: "NGN",
     badgeLabel: "Creator Premium",
-    description: "Full Creator Hub, monetization tools, rankings eligibility & Creator teal emblem.",
+    description: "Full Creator Hub, monetization, and rankings for every creator category, including approved Manga & Webtoon publishers.",
     hasCreatorTools: true,
     hasMonetization: true,
     priorityWeight: 1.25,
@@ -70,10 +72,7 @@ export function getActiveVerificationTier(user: any): "none" | "verified" | "pri
 async function getAuthedUser(ctx: any) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) return null;
-  return await ctx.db
-    .query("users")
-    .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-    .first();
+  return await getUserByAuthIdentity(ctx, identity);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -181,6 +180,14 @@ export const getCreatorHubData = query({
 
     const tier = getActiveVerificationTier(user);
     const isCreator = tier === "creator";
+    const approvedApplications = user.creatorType
+      ? await ctx.db.query("creatorApplications")
+          .withIndex("by_user_status", (q) => q.eq("userId", user._id).eq("status", "approved"))
+          .collect()
+      : [];
+    const application = approvedApplications.find((item) => item.creatorType === user.creatorType) ?? null;
+    const creatorApproved = Boolean(application && user.creatorAccountStatus !== "suspended" && user.creatorAccountStatus !== "closed" && !user.suspended);
+    const monetizationEligible = isCreator && creatorApproved;
 
     // 1. Gather all posts by this creator
     const userPosts = await ctx.db
@@ -331,6 +338,9 @@ export const getCreatorHubData = query({
 
     return {
       isCreator,
+      creatorApproved,
+      monetizationEligible,
+      creatorType: user.creatorType ?? null,
       activeTier: tier,
       creatorCategory: user.creatorCategory || "General Creator",
       creatorLevel: currentLevelObj.level,
@@ -350,25 +360,26 @@ export const getCreatorHubData = query({
         engagementRate,
         currentRank: null,
         rankMovement: null,
-        totalEarnings: user.creatorEarnings ?? 0,
-        pendingEarnings: user.creatorPendingEarnings ?? 0,
+        totalEarnings: monetizationEligible ? user.creatorEarnings ?? 0 : 0,
+        pendingEarnings: monetizationEligible ? user.creatorPendingEarnings ?? 0 : 0,
       },
 
       monetization: {
-        status: isCreator ? "active" : "inactive",
-        totalEarnings: user.creatorEarnings ?? 0,
-        pendingEarnings: user.creatorPendingEarnings ?? 0,
-        availableWalletBalance: wallet?.balance ?? 0,
+        status: monetizationEligible ? "active" : "inactive",
+        totalEarnings: monetizationEligible ? user.creatorEarnings ?? 0 : 0,
+        pendingEarnings: monetizationEligible ? user.creatorPendingEarnings ?? 0 : 0,
+        availableWalletBalance: monetizationEligible ? wallet?.balance ?? 0 : 0,
         accountNumber: wallet?.accountNumber ?? "Not set",
         bankName: wallet?.bankName ?? "LaLao Payout",
         features: [
-          { id: "tips", title: "Viewer Tips & Direct Gifts", active: isCreator, desc: "Fans can tip your posts directly with wallet funds." },
-          { id: "rankings", title: "Creator Leaderboard Rewards", active: isCreator, desc: "Compete in Explore Rankings for weekly rewards." },
-          { id: "exclusive", title: "Supporter Subscriptions", active: isCreator, desc: "Offer exclusive content tiers to your top fans." },
-          { id: "events", title: "Paid Creative Workshops", active: isCreator, desc: "Host paid rallies and ticketed community meetups." },
+          { id: "tips", title: "Viewer Tips & Direct Gifts", active: monetizationEligible, desc: "Fans can tip your posts directly with wallet funds." },
+          { id: "rankings", title: "Creator Leaderboard Rewards", active: monetizationEligible, desc: "Compete in Explore Rankings for weekly rewards." },
+          { id: "exclusive", title: "Supporter Subscriptions", active: monetizationEligible, desc: "Offer exclusive content tiers to your top fans." },
+          { id: "events", title: "Paid Creative Workshops", active: monetizationEligible, desc: "Host paid rallies and ticketed community meetups." },
         ],
         eligibilityChecklist: [
           { label: "Creator Premium active", passed: isCreator },
+          { label: "Professional creator application approved", passed: creatorApproved },
           { label: "Community guidelines compliance", passed: !user.suspended },
           { label: "Profile identity complete", passed: Boolean(user.name && user.username) },
           { label: "At least 1 published creation", passed: userPosts.length >= 1 },
@@ -861,12 +872,182 @@ export const updateCreatorCategory = mutation({
     const user = await getAuthedUser(ctx);
     if (!user) throw new Error("Unauthenticated");
 
+    const category = args.category.trim();
+    if (!category) throw new Error("Choose a creator category.");
+    if (/manga|webtoon/i.test(category) && user.creatorType !== "manga") {
+      throw new Error("Apply and receive approval for the Manga Creator profile before selecting this category.");
+    }
+    if (/short.movie|short drama|film/i.test(category) && user.creatorType !== "short_movie") {
+      throw new Error("Apply and receive approval for the Short-Movie Creator profile before selecting this category.");
+    }
+
     await ctx.db.patch(user._id, {
-      creatorCategory: args.category.trim(),
+      creatorCategory: category,
       updatedAt: Date.now(),
     });
 
     return { success: true };
+  },
+});
+
+/** Return the signed-in user's most relevant professional creator application. */
+export const getMyProfessionalCreatorApplication = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getAuthedUser(ctx);
+    if (!user) return null;
+    const applications = await ctx.db
+      .query("creatorApplications")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+    applications.sort((a, b) => b.submittedAt - a.submittedAt);
+    return applications.find((application) => application.creatorType === user.creatorType)
+      ?? applications.find((application) => application.status === "pending")
+      ?? applications[0]
+      ?? null;
+  },
+});
+
+/** Backwards-compatible query alias for existing clients. */
+export const getMyMangaCreatorApplication = getMyProfessionalCreatorApplication;
+
+/** Return the signed-in user's most recent professional creator application. */
+/** Apply for a professional manga or short-movie creator profile. */
+export const applyForProfessionalCreator = mutation({
+  args: {
+    creatorType: v.union(v.literal("manga"), v.literal("short_movie")),
+    publisherName: v.string(),
+    portfolioUrl: v.string(),
+    sampleChapterUrl: v.optional(v.string()),
+    about: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await getAuthedUser(ctx);
+    if (!user) throw new Error("Sign in before applying to become a Manga Creator.");
+    if (user.creatorType === args.creatorType) throw new Error("This professional creator profile is already approved.");
+
+    const publisherName = args.publisherName.trim();
+    const portfolioUrl = args.portfolioUrl.trim();
+    const sampleChapterUrl = args.sampleChapterUrl?.trim() || undefined;
+    const about = args.about.trim();
+    if (publisherName.length < 2 || publisherName.length > 60) {
+      throw new Error("Publisher name must be between 2 and 60 characters.");
+    }
+    if (!/^https:\/\//i.test(portfolioUrl)) {
+      throw new Error("Add a portfolio link that starts with https://.");
+    }
+    if (sampleChapterUrl && !/^https:\/\//i.test(sampleChapterUrl)) {
+      throw new Error("Sample chapter links must start with https://.");
+    }
+    if (about.length < 30 || about.length > 1200) {
+      throw new Error("Tell us about your creator work in 30 to 1,200 characters.");
+    }
+
+    const applications = await ctx.db
+      .query("creatorApplications")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+    if (applications.some((application) => application.status === "pending" && application.creatorType === args.creatorType)) {
+      throw new Error("Your application for this creator category is already under review.");
+    }
+    if (applications.some((application) => application.status === "approved" && application.creatorType === args.creatorType)) {
+      throw new Error("This professional creator profile is already approved.");
+    }
+
+    const now = Date.now();
+    return await ctx.db.insert("creatorApplications", {
+      userId: user._id,
+      creatorType: args.creatorType,
+      publisherName,
+      portfolioUrl,
+      sampleChapterUrl,
+      about,
+      status: "pending",
+      submittedAt: now,
+      updatedAt: now,
+    });
+  },
+});
+
+/** Admin queue for Manga Creator applications. */
+export const listProfessionalCreatorApplications = query({
+  args: { status: v.optional(v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected"))) },
+  handler: async (ctx, { status = "pending" }) => {
+    await requireAdmin(ctx);
+    const applications = await ctx.db
+      .query("creatorApplications")
+      .withIndex("by_status", (q) => q.eq("status", status))
+      .collect();
+    applications.sort((a, b) => b.submittedAt - a.submittedAt);
+    return await Promise.all(applications.map(async (application) => {
+      const user = await ctx.db.get(application.userId);
+      return {
+        ...application,
+        applicant: user ? {
+          id: user._id,
+          name: user.name,
+          username: user.username,
+          avatarUrl: user.avatarUrl,
+          email: user.email,
+        } : null,
+      };
+    }));
+  },
+});
+
+/** Approve or reject a pending Manga Creator application. */
+export const reviewProfessionalCreatorApplication = mutation({
+  args: {
+    applicationId: v.id("creatorApplications"),
+    decision: v.union(v.literal("approved"), v.literal("rejected")),
+    reviewNote: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const admin = await requireAdmin(ctx);
+    if (!admin) throw new Error("Unauthorized: administrator account required.");
+    const application = await ctx.db.get(args.applicationId);
+    if (!application) throw new Error("Application not found.");
+    if (application.status !== "pending") throw new Error("This application has already been reviewed.");
+    const user = await ctx.db.get(application.userId);
+    if (!user) throw new Error("Applicant account no longer exists.");
+
+    const now = Date.now();
+    const reviewNote = args.reviewNote?.trim().slice(0, 1200) || undefined;
+    await ctx.db.patch(application._id, {
+      status: args.decision,
+      reviewNote,
+      reviewedBy: admin._id,
+      reviewedAt: now,
+      updatedAt: now,
+    });
+
+    if (args.decision === "approved") {
+      await ctx.db.patch(user._id, {
+        creatorType: application.creatorType,
+        creatorCategory: application.creatorType === "manga" ? "Manga & Webtoon" : "Short Movies & Dramas",
+        ...(application.creatorType === "manga" ? {
+          mangaPublisherName: application.publisherName,
+          mangaCreatorAbout: application.about,
+        } : {
+          shortMovieStudioName: application.publisherName,
+          shortMovieCreatorAbout: application.about,
+        }),
+        creatorAccountStatus: "active",
+        creatorLevel: user.creatorLevel || 1,
+        updatedAt: now,
+      });
+    }
+
+    await ctx.db.insert("auditLog", {
+      actorId: admin._id,
+      action: `professional_creator_${application.creatorType}_application_${args.decision}`,
+      target: application.userId,
+      before: "pending",
+      after: args.decision,
+      createdAt: now,
+    });
+
+    return { success: true, status: args.decision, userId: user._id };
   },
 });
 
@@ -888,6 +1069,18 @@ export const sendCreatorTip = mutation({
 
     const creator = await ctx.db.get(args.creatorId);
     if (!creator) throw new Error("Creator not found");
+    if (creator.suspended || creator.creatorAccountStatus === "suspended" || creator.creatorAccountStatus === "closed") {
+      throw new Error("This creator cannot receive tips right now.");
+    }
+    if (creator.creatorType) {
+      const approvedApplications = await ctx.db.query("creatorApplications")
+        .withIndex("by_user_status", (q) => q.eq("userId", creator._id).eq("status", "approved"))
+        .collect();
+      const approvedApplication = approvedApplications.find((application) => application.creatorType === creator.creatorType);
+      if (!approvedApplication || getActiveVerificationTier(creator) !== "creator") {
+        throw new Error("This professional creator is not eligible to receive monetized tips.");
+      }
+    }
 
     const now = Date.now();
 

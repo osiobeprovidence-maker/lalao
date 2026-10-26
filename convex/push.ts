@@ -1,3 +1,4 @@
+import { getUserByAuthIdentity, getUserByTokenIdentifier } from "./lib/authIdentity";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
@@ -20,10 +21,7 @@ export const upsertWebPushSubscription = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .first();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) return null;
 
     const now = Date.now();
@@ -95,10 +93,7 @@ export const upsertFcmToken = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .first();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) throw new Error("User not found");
 
     const now = Date.now();
@@ -138,10 +133,7 @@ export const hasActivePushToken = query({
       const identity = await ctx.auth.getUserIdentity();
       if (!identity) return false;
 
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-        .first();
+      const user = await getUserByAuthIdentity(ctx, identity);
       if (!user) return false;
 
       const webPushSub = await ctx.db
@@ -218,10 +210,7 @@ export const deleteStaleToken = internalMutation({
 export const getUserIdFromIdentity = internalQuery({
   args: { tokenIdentifier: v.string() },
   handler: async (ctx, { tokenIdentifier }) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", tokenIdentifier))
-      .first();
+    const user = await getUserByTokenIdentifier(ctx, tokenIdentifier);
     return user?._id ?? null;
   },
 });

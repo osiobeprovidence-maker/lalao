@@ -1,3 +1,4 @@
+import { getUserByAuthIdentity } from "./lib/authIdentity";
 import { mutation, query, action, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Doc } from "./_generated/dataModel";
@@ -7,10 +8,7 @@ import { v, ConvexError } from "convex/values";
 async function getAuthedUser(ctx: any) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) return null;
-  return await ctx.db
-    .query("users")
-    .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-    .unique();
+  return await getUserByAuthIdentity(ctx, identity);
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -1,3 +1,4 @@
+import { getUserByAuthIdentity } from "./lib/authIdentity";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthedUser } from "./social";
@@ -130,10 +131,7 @@ export const listActiveRallies = query({
         let isJoined = false;
         const identity = await ctx.auth.getUserIdentity();
         if (identity) {
-          const user = await ctx.db
-            .query("users")
-            .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-            .unique();
+          const user = await getUserByAuthIdentity(ctx, identity);
           if (user) {
             isJoined = participants.some((p) => p.userId === user._id);
           }

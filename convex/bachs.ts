@@ -1,16 +1,52 @@
-import { action, internalAction } from "./_generated/server";
+import { action, internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 
 const DEFAULT_SANDBOX_URL = "https://sandbox-api.bachs.io";
 const DEFAULT_LIVE_URL = "https://api.bachs.io";
 
+export const getProcessedWebhookEvent = internalQuery({
+  args: { eventId: v.string() },
+  handler: async (ctx, args) => ctx.db.query("bachsWebhookEvents").withIndex("by_event_id", (q) => q.eq("eventId", args.eventId)).first(),
+});
+
+export const recordProcessedWebhookEvent = internalMutation({
+  args: { eventId: v.string(), eventType: v.string() },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.query("bachsWebhookEvents").withIndex("by_event_id", (q) => q.eq("eventId", args.eventId)).first();
+    if (existing) return existing._id;
+    return await ctx.db.insert("bachsWebhookEvents", { ...args, processedAt: Date.now() });
+  },
+});
+
+export const getExpectedPaymentOwner = internalQuery({
+  args: { reference: v.string() },
+  handler: async (ctx, args) => {
+    if (args.reference.startsWith("LALAO_AD_")) {
+      const payment = await ctx.db.query("adPayments").withIndex("by_reference", (q) => q.eq("reference", args.reference)).first();
+      if (!payment) return null;
+      const user = await ctx.db.get(payment.userId);
+      return user ? { userId: String(user._id), email: user.email || `${user.username || "user"}@lalao.app` } : null;
+    }
+    const tx = await ctx.db.query("walletTransactions").withIndex("by_reference", (q) => q.eq("reference", args.reference)).first();
+    if (!tx || tx.paymentProvider !== "bachs") return null;
+    const user = await ctx.db.get(tx.userId);
+    return user ? { userId: String(user._id), email: user.email || `${user.username || "user"}@lalao.app` } : null;
+  },
+});
+
 function getBachsBaseUrl(): string {
-  if (process.env.BACHS_API_BASE_URL) {
-    return process.env.BACHS_API_BASE_URL.replace(/\/+$/, "");
-  }
   const env = (process.env.BACHS_ENVIRONMENT || "sandbox").toLowerCase();
-  return env === "live" || env === "production" ? DEFAULT_LIVE_URL : DEFAULT_SANDBOX_URL;
+  const expected = env === "live" || env === "production" ? DEFAULT_LIVE_URL : DEFAULT_SANDBOX_URL;
+  const configured = process.env.BACHS_API_BASE_URL?.replace(/\/+$/, "");
+  if (configured && configured !== expected) {
+    throw new Error("BACHS_API_BASE_URL does not match BACHS_ENVIRONMENT.");
+  }
+  const key = process.env.BACHS_SECRET_KEY;
+  if (key && ((expected === DEFAULT_LIVE_URL && !key.startsWith("sk_live_")) || (expected === DEFAULT_SANDBOX_URL && !key.startsWith("sk_sandbox_")))) {
+    throw new Error("BACHS_SECRET_KEY does not match BACHS_ENVIRONMENT.");
+  }
+  return expected;
 }
 
 /**
@@ -45,6 +81,12 @@ export const initializeBachsFunding = action({
     });
     if (!wallet) throw new Error("Wallet could not be initialized.");
 
+    const secretKey = process.env.BACHS_SECRET_KEY;
+    if (!secretKey) {
+      throw new Error("Bachs checkout is not configured. Please try again later.");
+    }
+    const baseUrl = getBachsBaseUrl();
+
     // 2. Create pending ledger transaction record with provider = "bachs"
     await ctx.runMutation(internal.wallet.createPendingFunding, {
       amount: args.amount,
@@ -54,22 +96,9 @@ export const initializeBachsFunding = action({
       provider: "bachs",
     });
 
-    const secretKey = process.env.BACHS_SECRET_KEY;
-    if (!secretKey) {
-      // Return helpful development fallback if credentials are not yet entered in Convex environment
-      return {
-        success: true,
-        reference: args.reference,
-        isDevelopmentMode: true,
-        message: "BACHS_SECRET_KEY is not configured in backend environment variables. Configure this secret in Convex to initiate live checkout sessions.",
-      };
-    }
-
     const appUrl = (process.env.APP_URL || process.env.VITE_APP_URL || "https://www.lalao.website").replace(/\/+$/, "");
-    const successUrl = `${appUrl}/app?tab=wallet&funding_success=true&ref=${encodeURIComponent(args.reference)}`;
+    const successUrl = `${appUrl}/app?tab=wallet&funding_pending=true&ref=${encodeURIComponent(args.reference)}`;
     const cancelUrl = `${appUrl}/app?tab=wallet&funding_cancelled=true&ref=${encodeURIComponent(args.reference)}`;
-
-    const baseUrl = getBachsBaseUrl();
 
     try {
       const res = await fetch(`${baseUrl}/v1/checkout-sessions`, {
@@ -88,6 +117,7 @@ export const initializeBachsFunding = action({
             currency: "NGN",
             amount: args.amount.toString(),
           },
+          reference: args.reference,
           metadata: {
             userId: user._id,
             walletId: wallet._id,
@@ -107,7 +137,10 @@ export const initializeBachsFunding = action({
       }
 
       const checkoutUrl = data.checkout_url || data.url;
-      const sessionId = data.id || data.session_id;
+      const sessionId = data.checkout_id;
+      if (typeof checkoutUrl !== "string" || typeof sessionId !== "string") {
+        throw new Error("Bachs returned an incomplete checkout session.");
+      }
 
       return {
         success: true,
@@ -144,97 +177,19 @@ export const verifyBachsFunding = action({
     const baseUrl = getBachsBaseUrl();
 
     try {
-      let paymentRecord: any = null;
-
-      // 1. Check /v1/payments endpoint by reference
-      try {
-        const payRes = await fetch(`${baseUrl}/v1/payments?reference=${encodeURIComponent(args.reference)}`, {
-          headers: {
-            Authorization: `Bearer ${secretKey}`,
-            Accept: "application/json",
-          },
-        });
-        if (payRes.ok) {
-          const payData = await payRes.json() as any;
-          const items = Array.isArray(payData) ? payData : (payData?.items || payData?.data || []);
-          if (items.length > 0) {
-            paymentRecord = items[0];
-          }
-        }
-      } catch (e) {
-        console.warn("[BACHS] /v1/payments by ref query error:", e);
+      if (!args.sessionId) return { success: false, message: "BACHS checkout ID is required to verify this payment." };
+      const sessionRes = await fetch(`${baseUrl}/v1/checkout-sessions/${encodeURIComponent(args.sessionId)}`, {
+        headers: { Authorization: `Bearer ${secretKey}`, Accept: "application/json" },
+      });
+      if (!sessionRes.ok) return { success: false, message: "Could not retrieve the BACHS checkout session." };
+      const paymentRecord = await sessionRes.json() as any;
+      if (paymentRecord.checkout_id !== args.sessionId || paymentRecord.reference !== args.reference) {
+        return { success: false, message: "BACHS checkout does not match this wallet funding request." };
       }
 
-      // 2. If not found by query param, search recent payments for meta.reference match
-      if (!paymentRecord) {
-        try {
-          const listRes = await fetch(`${baseUrl}/v1/payments?limit=25`, {
-            headers: {
-              Authorization: `Bearer ${secretKey}`,
-              Accept: "application/json",
-            },
-          });
-          if (listRes.ok) {
-            const listData = await listRes.json() as any;
-            const items = Array.isArray(listData) ? listData : (listData?.items || listData?.data || []);
-            paymentRecord = items.find((p: any) => 
-              p.reference === args.reference || 
-              p.meta?.reference === args.reference ||
-              p.source?.reference === args.reference ||
-              (args.sessionId && (p.source?.checkout_id === args.sessionId || p.id === args.sessionId))
-            );
-          }
-        } catch (e) {
-          console.warn("[BACHS] /v1/payments list scan error:", e);
-        }
-      }
-
-      // 3. Fallback to /v1/checkout-sessions if not matched via payments
-      if (!paymentRecord && args.sessionId) {
-        try {
-          const sessionRes = await fetch(`${baseUrl}/v1/checkout-sessions/${args.sessionId}`, {
-            headers: {
-              Authorization: `Bearer ${secretKey}`,
-              Accept: "application/json",
-            },
-          });
-          if (sessionRes.ok) {
-            paymentRecord = await sessionRes.json();
-          }
-        } catch (e) {
-          console.warn("[BACHS] /v1/checkout-sessions by id error:", e);
-        }
-      }
-
-      if (!paymentRecord) {
-        try {
-          const sessionListRes = await fetch(`${baseUrl}/v1/checkout-sessions?reference=${encodeURIComponent(args.reference)}`, {
-            headers: {
-              Authorization: `Bearer ${secretKey}`,
-              Accept: "application/json",
-            },
-          });
-          if (sessionListRes.ok) {
-            const sessionListData = await sessionListRes.json() as any;
-            const items = Array.isArray(sessionListData) ? sessionListData : (sessionListData?.items || sessionListData?.data || []);
-            if (items.length > 0) {
-              paymentRecord = items[0];
-            }
-          }
-        } catch (e) {
-          console.warn("[BACHS] /v1/checkout-sessions list error:", e);
-        }
-      }
-
-      if (!paymentRecord) {
-        return {
-          success: false,
-          message: "Transaction could not be found with BACHS provider.",
-        };
-      }
-
-      const status = (paymentRecord.status || paymentRecord.payment_status || "").toLowerCase();
-      if (status !== "completed" && status !== "succeeded" && status !== "paid" && status !== "success") {
+      const status = String(paymentRecord.status || "").toLowerCase();
+      const paymentStatus = String(paymentRecord.payment_status || paymentRecord.charge?.status || "").toLowerCase();
+      if (status !== "completed" || paymentStatus !== "succeeded") {
         return {
           success: false,
           status,
@@ -243,17 +198,12 @@ export const verifyBachsFunding = action({
       }
 
       // 4. Verify currency & amount
-      const currency = (
-        paymentRecord.currency || 
-        paymentRecord.settlement_currency || 
-        paymentRecord.pricing?.currency || 
-        "NGN"
-      ).toUpperCase();
+      const currency = String(paymentRecord.currency || "").toUpperCase();
       if (currency !== "NGN") {
         return { success: false, message: `Invalid payment currency: ${currency}. Expected NGN.` };
       }
 
-      const rawAmount = paymentRecord.amount_paid || paymentRecord.amount || paymentRecord.pricing?.amount || "0";
+      const rawAmount = paymentRecord.amount || "0";
       const verifiedAmount = parseFloat(rawAmount);
       if (isNaN(verifiedAmount) || verifiedAmount <= 0) {
         return { success: false, message: "Invalid amount reported by BACHS provider." };
@@ -263,7 +213,7 @@ export const verifyBachsFunding = action({
       const settleResult = await ctx.runMutation(internal.wallet.settleWalletFunding, {
         reference: args.reference,
         verifiedAmount,
-        providerTransactionId: paymentRecord.id || args.sessionId,
+        providerTransactionId: paymentRecord.charge?.payment_id || args.sessionId,
         provider: "bachs",
       });
 

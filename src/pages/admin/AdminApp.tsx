@@ -23,7 +23,8 @@ import {
   BarChart3,
   MapPin,
   Megaphone,
-  Zap
+  Zap,
+  BookOpen,
 } from 'lucide-react';
 
 import { AdminDashboard } from './AdminDashboard';
@@ -44,6 +45,7 @@ import { AdminRecommendations } from './AdminRecommendations';
 import { AdminApiPartners } from './AdminApiPartners';
 import { AdminEventsDistribution } from './AdminEventsDistribution';
 import { AdminLocationRules } from './AdminLocationRules';
+import { AdminMangaCreatorApplications } from './AdminMangaCreatorApplications';
 import { AdminBetaTesters } from './AdminBetaTesters';
 import { useAuth } from '../../context/AuthContext';
 import { useLalao } from '../../context/LalaoContext';
@@ -97,6 +99,7 @@ export const AdminApp: React.FC = () => {
       title: 'Operations',
       items: [
         { path: '/admin/recommendations', label: 'Recommendations', icon: Star },
+        { path: '/admin/creator-applications', label: 'Creator Applications', icon: BookOpen },
         { path: '/admin/reports', label: 'Reports', icon: FileText },
         { path: '/admin/communities', label: 'Communities', icon: Users },
         { path: '/admin/community-suggestions', label: 'Community Suggestions', icon: Users },
@@ -248,6 +251,7 @@ export const AdminApp: React.FC = () => {
                 <Route path="/communities" element={<AdminCommunities />} />
                 <Route path="/community-suggestions" element={<AdminCommunitySuggestions />} />
                 <Route path="/recommendations" element={<AdminRecommendations />} />
+                <Route path="/creator-applications" element={<AdminMangaCreatorApplications />} />
                 <Route path="/moderation" element={<AdminComingSoon title="Moderation Queue" />} />
                 <Route path="/notifications" element={<AdminComingSoon title="System Notifications" />} />
                 <Route path="/settings" element={<AdminPlatformSettings />} />

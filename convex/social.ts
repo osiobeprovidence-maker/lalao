@@ -1,3 +1,4 @@
+import { getUserByAuthIdentity } from "./lib/authIdentity";
 import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
@@ -12,10 +13,7 @@ import { isPostMatchingTopic, getKeywordsForTopic } from "./topicKeywords";
 export async function getAuthedUser(ctx: any) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) return null;
-  const user = await ctx.db
-    .query("users")
-    .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-    .unique();
+  const user = await getUserByAuthIdentity(ctx, identity);
 
   if (user && (user.accessStatus === "country_restricted" || user.accessStatus === "waitlisted")) {
     throw new Error("Access denied: Country restricted");

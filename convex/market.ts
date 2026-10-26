@@ -2,6 +2,7 @@ import { internalMutation, internalQuery, action, query } from "./_generated/ser
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { DEFAULT_SERVICE_SETTINGS } from "./clubkonnect";
+import { getUserByTokenIdentifier } from "./lib/authIdentity";
 
 const CLUBKONNECT_USER_ID = process.env.CLUBKONNECT_USER_ID;
 const CLUBKONNECT_API_KEY = process.env.CLUBKONNECT_API_KEY;
@@ -535,10 +536,7 @@ export const requeryTransactionStatus = action({
 export const getUserByToken = internalQuery({
   args: { tokenIdentifier: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
-      .query("users")
-      .withIndex("by_token", q => q.eq("tokenIdentifier", args.tokenIdentifier))
-      .first();
+    return await getUserByTokenIdentifier(ctx, args.tokenIdentifier);
   }
 });
 

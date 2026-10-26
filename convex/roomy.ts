@@ -1,3 +1,4 @@
+import { getUserByAuthIdentity } from "./lib/authIdentity";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { ConvexError } from "convex/values";
@@ -14,10 +15,7 @@ export const bootstrapRoomyPage = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new ConvexError("Unauthenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
 
     if (!user) throw new ConvexError("User not found");
 
@@ -101,10 +99,7 @@ export const getMyProfile = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) return null;
 
     return await ctx.db
@@ -133,10 +128,7 @@ export const updateProfile = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new ConvexError("Unauthenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) throw new ConvexError("User not found");
 
     const existing = await ctx.db
@@ -186,10 +178,7 @@ export const createListing = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new ConvexError("Unauthenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) throw new ConvexError("User not found");
 
     const listingId = await ctx.db.insert("roomyListings", {
@@ -213,10 +202,7 @@ export const updateListingStatus = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new ConvexError("Unauthenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) throw new ConvexError("User not found");
 
     const listing = await ctx.db.get(listingId);
@@ -312,10 +298,7 @@ export const toggleSaveListing = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new ConvexError("Unauthenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) throw new ConvexError("User not found");
 
     const existing = await ctx.db
@@ -343,10 +326,7 @@ export const getSavedListings = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) return [];
 
     const saves = await ctx.db
@@ -384,10 +364,7 @@ export const isListingSaved = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return false;
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) return false;
 
     const existing = await ctx.db
@@ -413,10 +390,7 @@ export const requestInspection = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new ConvexError("Unauthenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) throw new ConvexError("User not found");
 
     const listing = await ctx.db.get(listingId);
@@ -447,10 +421,7 @@ export const getMyInspections = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return { requested: [], received: [] };
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) return { requested: [], received: [] };
 
     const requested = await ctx.db
@@ -499,10 +470,7 @@ export const updateInspectionStatus = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new ConvexError("Unauthenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) throw new ConvexError("User not found");
 
     const inspection = await ctx.db.get(inspectionId);

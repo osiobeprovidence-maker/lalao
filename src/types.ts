@@ -38,6 +38,12 @@ export interface User {
   verificationExpiresAt?: number;
   subscription?: UserSubscription;
   creatorCategory?: string;
+  creatorType?: 'manga' | 'short_movie';
+  mangaPublisherName?: string;
+  mangaCreatorAbout?: string;
+  shortMovieStudioName?: string;
+  shortMovieCreatorAbout?: string;
+  creatorAccountStatus?: 'active' | 'suspended' | 'closed';
   creatorLevel?: number;
   creatorEarnings?: number;
   creatorPendingEarnings?: number;

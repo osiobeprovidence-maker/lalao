@@ -79,7 +79,7 @@ describe('Lalao Ads — Policy, Validation & Lifecycle Logic', () => {
     assert.strictEqual(cdnUrl.startsWith('blob:'), false);
     assert.strictEqual(cdnUrl.startsWith('https://'), true);
 
-    const convexStorageUrl = 'https://majestic-ptarmigan-155.eu-west-1.convex.cloud/api/storage/abc-123';
+    const convexStorageUrl = 'https://giddy-toad-666.eu-west-1.convex.cloud/api/storage/abc-123';
     assert.strictEqual(convexStorageUrl.startsWith('blob:'), false);
     assert.strictEqual(convexStorageUrl.startsWith('https://'), true);
   });

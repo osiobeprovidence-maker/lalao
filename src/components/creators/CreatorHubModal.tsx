@@ -40,6 +40,8 @@ export const CreatorHubView: React.FC = () => {
     'Music & Audio',
     'Lifestyle & Vlogs',
     'Art & Visual Design',
+    ...(currentUser?.creatorType === 'manga' ? ['Manga & Webtoon'] : []),
+    ...(currentUser?.creatorType === 'short_movie' ? ['Short Movies & Dramas'] : []),
     'Education & Knowledge',
     'Sports & Gaming',
     'Food & Culinary',
@@ -61,6 +63,7 @@ export const CreatorHubView: React.FC = () => {
   const monetization = hubData?.monetization;
   const perf = hubData?.contentPerformance;
   const progress = hubData?.progress;
+  const monetizationEligible = hubData?.monetizationEligible === true;
 
   return (
     <div className="w-full max-w-3xl mx-auto flex flex-col pb-20 animate-in fade-in duration-200">
@@ -244,10 +247,10 @@ export const CreatorHubView: React.FC = () => {
                     <DollarSign className="w-3.5 h-3.5" />
                   </div>
                   <p className="text-lg sm:text-xl font-black text-emerald-600">
-                    ₦{overview?.totalEarnings.toLocaleString()}
+                    ₦{(monetizationEligible ? overview?.totalEarnings ?? 0 : 0).toLocaleString()}
                   </p>
                   <p className="text-[10px] text-theme-tertiary font-medium">
-                    Pending: ₦{overview?.pendingEarnings.toLocaleString()}
+                    Pending: ₦{(monetizationEligible ? overview?.pendingEarnings ?? 0 : 0).toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -298,7 +301,7 @@ export const CreatorHubView: React.FC = () => {
                     Total Lifetime Earnings
                   </span>
                   <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300">
-                    ₦{(monetization?.totalEarnings ?? 0).toLocaleString()}
+                    ₦{(monetizationEligible ? monetization?.totalEarnings ?? 0 : 0).toLocaleString()}
                   </p>
                   <p className="text-[10px] text-emerald-600/80">From tips & paid subscriptions</p>
                 </div>
@@ -308,7 +311,7 @@ export const CreatorHubView: React.FC = () => {
                     Pending Earnings
                   </span>
                   <p className="text-2xl font-black text-theme-primary">
-                    ₦{(monetization?.pendingEarnings ?? 0).toLocaleString()}
+                    ₦{(monetizationEligible ? monetization?.pendingEarnings ?? 0 : 0).toLocaleString()}
                   </p>
                   <p className="text-[10px] text-theme-tertiary">Settles every Monday</p>
                 </div>
@@ -319,7 +322,7 @@ export const CreatorHubView: React.FC = () => {
                       Available in Wallet
                     </span>
                     <p className="text-2xl font-black text-[#5E43F3]">
-                      ₦{(monetization?.availableWalletBalance ?? 0).toLocaleString()}
+                      ₦{(monetizationEligible ? monetization?.availableWalletBalance ?? 0 : 0).toLocaleString()}
                     </p>
                   </div>
                   <button

@@ -14,6 +14,7 @@
  */
 
 import crypto from "crypto";
+import { verifyBachsWebhookSignature as verifyBachsV2Signature } from "../../convex/lib/bachsWebhookSignature";
 
 interface WalletTransaction {
   id: string;
@@ -290,13 +291,42 @@ export function runBachsTests() {
 }
 
 if (typeof process !== "undefined" && process.argv[1]?.includes("bachs_integration.test.ts")) {
-  console.log("Running BACHS Wallet Funding Integration & Security Tests...\n");
-  const testResults = runBachsTests();
-  let allPassed = true;
-  for (const res of testResults) {
-    console.log(`${res.passed ? "✓ PASS" : "✗ FAIL"}: ${res.name}`);
-    if (!res.passed) allPassed = false;
-  }
-  console.log(`\nResult: ${allPassed ? "ALL 10 TESTS PASSED" : "SOME TESTS FAILED"}`);
-  process.exit(allPassed ? 0 : 1);
+  void (async () => {
+    console.log("Running BACHS Wallet Funding Integration & Security Tests...\n");
+    const testResults = runBachsTests();
+    const secret = "test_bachs_webhook_secret_key_12345";
+    const rawBody = JSON.stringify({ id: "evt_rotation", type: "collection.succeeded", data: { checkout_id: "chk_test" } });
+    const nowMs = Date.now();
+    const timestamp = Math.floor(nowMs / 1000).toString();
+    const correctSignature = crypto.createHmac("sha256", secret).update(`${timestamp}.${rawBody}`).digest("hex");
+    const rotatedHeaderValid = await verifyBachsV2Signature({
+      rawBody,
+      secret,
+      signatureV2: `t=${timestamp},v1=${"0".repeat(64)},v1=${correctSignature}`,
+      nowMs,
+    });
+    testResults.push({ name: "Accepts a matching Bachs V2 signature during secret rotation", passed: rotatedHeaderValid });
+    const tamperedBodyValid = await verifyBachsV2Signature({
+      rawBody: `${rawBody} `,
+      secret,
+      signatureV2: `t=${timestamp},v1=${correctSignature}`,
+      nowMs,
+    });
+    testResults.push({ name: "Rejects a V2 signature when raw webhook bytes change", passed: !tamperedBodyValid });
+    const staleValid = await verifyBachsV2Signature({
+      rawBody,
+      secret,
+      signatureV2: `t=${timestamp},v1=${correctSignature}`,
+      nowMs: nowMs + 301_000,
+    });
+    testResults.push({ name: "Rejects expired Bachs V2 timestamps", passed: !staleValid });
+
+    let allPassed = true;
+    for (const res of testResults) {
+      console.log(`${res.passed ? "✓ PASS" : "✗ FAIL"}: ${res.name}`);
+      if (!res.passed) allPassed = false;
+    }
+    console.log(`\nResult: ${allPassed ? `ALL ${testResults.length} TESTS PASSED` : "SOME TESTS FAILED"}`);
+    process.exit(allPassed ? 0 : 1);
+  })();
 }

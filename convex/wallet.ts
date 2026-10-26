@@ -1,3 +1,4 @@
+import { getUserByAuthIdentity, getUserByTokenIdentifier } from "./lib/authIdentity";
 import { mutation, query, action, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { internal, api } from "./_generated/api";
@@ -16,10 +17,7 @@ export const getUserByIdentity = internalQuery({
       }
     }
     if (args.tokenIdentifier) {
-      const byToken = await ctx.db
-        .query("users")
-        .withIndex("by_token", (q) => q.eq("tokenIdentifier", args.tokenIdentifier!))
-        .unique();
+      const byToken = await getUserByTokenIdentifier(ctx, args.tokenIdentifier!);
       if (byToken) return byToken;
     }
     return null;
@@ -70,10 +68,7 @@ export const getWallet = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) return null;
 
     const wallet = await ctx.db
@@ -104,10 +99,7 @@ export const setWalletPin = mutation({
       throw new Error("PIN must be exactly 4 numeric digits.");
     }
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
 
     if (!user) throw new Error("User not found");
 
@@ -234,10 +226,7 @@ export const resetWalletPinWithOtp = mutation({
       throw new Error("PIN must be exactly 4 numeric digits.");
     }
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
 
     if (!user) throw new Error("User not found");
 
@@ -273,10 +262,7 @@ export const initializeWallet = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
 
     if (!user) throw new Error("User not found");
 
@@ -311,10 +297,7 @@ export const topUp = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
 
     if (!user) throw new Error("User not found");
 

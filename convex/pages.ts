@@ -1,3 +1,4 @@
+import { getUserByAuthIdentity } from "./lib/authIdentity";
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getFeatureFlagsInternal } from "./platformSettings";
@@ -9,10 +10,7 @@ export const getMyPages = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
 
     if (!user) return [];
 
@@ -103,10 +101,7 @@ export const listDiscoverablePages = query({
     let currentUserId: any = null;
     let userMemberships: any[] = [];
     if (identity) {
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-        .unique();
+      const user = await getUserByAuthIdentity(ctx, identity);
       if (user) {
         currentUserId = user._id;
         userMemberships = await ctx.db
@@ -190,10 +185,7 @@ export const getMyFollowedCommunities = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
 
     if (!user) return [];
 
@@ -258,10 +250,7 @@ export const createPage = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
 
     if (!user) throw new Error("User not found");
 
@@ -367,10 +356,7 @@ export const updatePage = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) throw new Error("User not found");
 
     const page = await ctx.db.get(args.pageId);
@@ -416,10 +402,7 @@ export const deletePage = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) throw new Error("User not found");
 
     const page = await ctx.db.get(args.pageId);
@@ -447,10 +430,7 @@ export const updatePageBusinessSettings = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) throw new Error("User not found");
 
     const page = await ctx.db.get(args.pageId);
@@ -477,10 +457,7 @@ export const getPageRelationship = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return { isFollowing: false };
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     
     if (!user) return { isFollowing: false };
 
@@ -499,10 +476,7 @@ export const toggleFollowPage = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
       
     if (!user) throw new Error("User not found");
 
@@ -581,10 +555,7 @@ export const addPageLocation = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) throw new Error("User not found");
 
     const page = await ctx.db.get(args.pageId);
@@ -630,10 +601,7 @@ export const updatePageLocation = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) throw new Error("User not found");
 
     const locationDoc = await ctx.db.get(args.locationId);
@@ -671,10 +639,7 @@ export const removePageLocation = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) throw new Error("User not found");
 
     const locationDoc = await ctx.db.get(args.locationId);
@@ -732,10 +697,7 @@ export const invitePageMember = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) throw new Error("User not found");
 
     // Check caller is owner or admin
@@ -783,10 +745,7 @@ export const removePageMember = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) throw new Error("User not found");
 
     const callerMembership = await ctx.db
@@ -818,10 +777,7 @@ export const leavePageManagement = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) throw new Error("User not found");
 
     const membership = await ctx.db

@@ -10,6 +10,7 @@ export default defineSchema({
   users: defineTable({
     tokenIdentifier: v.string(),
     email: v.optional(v.string()),
+    emailNormalized: v.optional(v.string()),
     phone: v.optional(v.string()),
     name: v.optional(v.string()),
     username: v.optional(v.string()),
@@ -127,6 +128,12 @@ export default defineSchema({
     ),
     verificationExpiresAt: v.optional(v.number()),
     creatorCategory: v.optional(v.string()),
+    creatorType: v.optional(v.union(v.literal("manga"), v.literal("short_movie"))),
+    mangaPublisherName: v.optional(v.string()),
+    mangaCreatorAbout: v.optional(v.string()),
+    shortMovieStudioName: v.optional(v.string()),
+    shortMovieCreatorAbout: v.optional(v.string()),
+    creatorAccountStatus: v.optional(v.union(v.literal("active"), v.literal("suspended"), v.literal("closed"))),
     creatorLevel: v.optional(v.number()),
     creatorEarnings: v.optional(v.number()),
     creatorPendingEarnings: v.optional(v.number()),
@@ -138,6 +145,7 @@ export default defineSchema({
   })
     .index("by_token", ["tokenIdentifier"])
     .index("by_email", ["email"])
+    .index("by_email_normalized", ["emailNormalized"])
     .index("by_username", ["username"])
     .index("by_role", ["role"])
     .index("by_test_account", ["is_test_account"])
@@ -145,6 +153,48 @@ export default defineSchema({
     .searchIndex("search_name", { searchField: "name" })
     .searchIndex("search_email", { searchField: "email" })
     .searchIndex("search_phone", { searchField: "phone" }),
+
+  authIdentities: defineTable({
+    userId: v.id("users"),
+    provider: v.union(v.literal("firebase"), v.literal("playsole")),
+    issuer: v.string(),
+    subject: v.string(),
+    tokenIdentifier: v.string(),
+    method: v.optional(v.string()),
+    emailNormalized: v.optional(v.string()),
+    emailVerified: v.boolean(),
+    linkedAt: v.number(),
+  })
+    // Convex indexes are not unique constraints. Keep provider/subject and
+    // token identifiers deterministic so mutations can enforce uniqueness.
+    .index("by_token_identifier", ["tokenIdentifier"])
+    .index("by_issuer_subject", ["issuer", "subject"])
+    .index("by_user", ["userId"])
+    .index("by_email_normalized", ["emailNormalized"]),
+
+  authLinkChallenges: defineTable({
+    token: v.string(),
+    userId: v.id("users"),
+    initiatingTokenIdentifier: v.optional(v.string()),
+    initiatingIssuer: v.optional(v.string()),
+    initiatingSubject: v.optional(v.string()),
+    targetProvider: v.union(v.literal("firebase"), v.literal("playsole")),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+    consumedAt: v.optional(v.number()),
+  }).index("by_token", ["token"]),
+
+  authMigrationState: defineTable({
+    key: v.string(),
+    emailNormalizedAt: v.optional(v.number()),
+    authIdentitiesBackfilledAt: v.optional(v.number()),
+  }).index("by_key", ["key"]),
+
+  authIdentityBackfillConflicts: defineTable({
+    userId: v.id("users"),
+    tokenIdentifier: v.string(),
+    notedAt: v.number(),
+  }).index("by_user", ["userId"]),
 
   waitlist: defineTable({
     userId: v.id("users"),
@@ -968,21 +1018,48 @@ export default defineSchema({
   creatorSubscriptions: defineTable({
     userId: v.id("users"),
     tier: v.union(v.literal("verified"), v.literal("priority"), v.literal("creator")),
-    status: v.union(v.literal("active"), v.literal("cancelled"), v.literal("expired")),
+    status: v.union(v.literal("pending"), v.literal("active"), v.literal("cancelled"), v.literal("expired")),
     price: v.number(),
     currency: v.string(),
     paymentMethod: v.string(),
     paystackReference: v.optional(v.string()),
+    bachsReference: v.optional(v.string()),
+    bachsCheckoutId: v.optional(v.string()),
+    bachsCheckoutUrl: v.optional(v.string()),
+    bachsProductId: v.optional(v.string()),
+    bachsSubscriptionId: v.optional(v.string()),
+    billingStatus: v.optional(v.string()),
+    cancelAtPeriodEnd: v.boolean(),
     startedAt: v.number(),
     expiresAt: v.number(),
     cancelledAt: v.optional(v.number()),
-    cancelAtPeriodEnd: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_user", ["userId"])
+    .index("by_bachs_reference", ["bachsReference"])
+    .index("by_bachs_product", ["bachsProductId"])
+    .index("by_bachs_subscription", ["bachsSubscriptionId"])
     .index("by_status", ["status"])
     .index("by_tier", ["tier"])
+    .index("by_user_status", ["userId", "status"]),
+
+  creatorApplications: defineTable({
+    userId: v.id("users"),
+    creatorType: v.union(v.literal("manga"), v.literal("short_movie")),
+    publisherName: v.string(),
+    portfolioUrl: v.string(),
+    sampleChapterUrl: v.optional(v.string()),
+    about: v.string(),
+    status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
+    reviewNote: v.optional(v.string()),
+    reviewedBy: v.optional(v.id("users")),
+    submittedAt: v.number(),
+    reviewedAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_status", ["status"])
     .index("by_user_status", ["userId", "status"]),
 
   // ---- PLATFORM ADMINISTRATION ----
@@ -1847,6 +1924,8 @@ export default defineSchema({
     ),
     paystackAccessCode: v.optional(v.string()),
     paystackTransactionId: v.optional(v.string()),
+    bachsCheckoutId: v.optional(v.string()),
+    paymentProvider: v.optional(v.string()),
     paidAt: v.optional(v.number()),
     gatewayResponse: v.optional(v.string()),
     createdAt: v.number(),
@@ -1855,6 +1934,12 @@ export default defineSchema({
     .index("by_reference", ["reference"])
     .index("by_campaign", ["campaignId"])
     .index("by_user", ["userId"]),
+
+  bachsWebhookEvents: defineTable({
+    eventId: v.string(),
+    eventType: v.string(),
+    processedAt: v.number(),
+  }).index("by_event_id", ["eventId"]),
 
   // Deduplicated Ad Events (Impressions & Clicks for fraud prevention & analytics)
   adEvents: defineTable({

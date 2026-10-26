@@ -1,3 +1,4 @@
+import { getUserByAuthIdentity } from "./lib/authIdentity";
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
@@ -7,10 +8,7 @@ import { resolveUserVerification } from "./social";
 async function getAuthedUser(ctx: any) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) return null;
-  return await ctx.db
-    .query("users")
-    .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-    .unique();
+  return await getUserByAuthIdentity(ctx, identity);
 }
 
 function formatRelativeTime(ms: number | undefined | null): string {

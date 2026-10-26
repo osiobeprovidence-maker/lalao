@@ -450,6 +450,9 @@ const normalizeConvexUser = (user: Record<string, any> | null | undefined): User
     verificationStartedAt: user.verificationStartedAt,
     verificationExpiresAt: user.verificationExpiresAt,
     creatorCategory: user.creatorCategory,
+    creatorType: user.creatorType,
+    mangaPublisherName: user.mangaPublisherName,
+    mangaCreatorAbout: user.mangaCreatorAbout,
     creatorLevel: user.creatorLevel,
     creatorEarnings: user.creatorEarnings,
     creatorPendingEarnings: user.creatorPendingEarnings,
@@ -789,6 +792,33 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const prevUnreadMessagesCount = React.useRef<number | null>(null);
   const seenConversationMessageIds = React.useRef<Set<string>>(new Set());
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+
+  const playNotificationSound = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+
+      gainNode.gain.setValueAtTime(0, ctx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.3);
+    } catch (e) {
+      console.warn("Could not play notification sound", e);
+    }
+  };
 
   useEffect(() => {
     if (backendConversations) {
@@ -864,36 +894,9 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [messageContactsQuery]);
 
   const [notifications, setNotifications] = useState<NotificationItem[]>(EMPTY_NOTIFICATIONS);
-  const [activeChatId, setActiveChatId] = useState<string | null>(null);
 
   const seenNotificationIds = React.useRef<Set<string>>(new Set());
   const initialLoadDone = React.useRef(false);
-
-  const playNotificationSound = () => {
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) return;
-      const ctx = new AudioContextClass();
-      const osc = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(600, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
-
-      gainNode.gain.setValueAtTime(0, ctx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-
-      osc.connect(gainNode);
-      gainNode.connect(ctx.destination);
-
-      osc.start();
-      osc.stop(ctx.currentTime + 0.3);
-    } catch (e) {
-      console.warn("Could not play notification sound", e);
-    }
-  };
 
   useEffect(() => {
     if (backendNotifications) {

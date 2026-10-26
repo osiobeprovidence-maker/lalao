@@ -1,3 +1,4 @@
+import { ensureAuthIdentity, getUserByAuthIdentity, getUserByNormalizedEmail, normalizeAuthEmail } from "./lib/authIdentity";
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
@@ -7,10 +8,7 @@ async function getAuthUserId(ctx: any): Promise<Id<"users"> | null> {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) return null;
   
-  const user = await ctx.db
-    .query("users")
-    .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-    .unique();
+  const user = await getUserByAuthIdentity(ctx, identity);
     
   return user?._id ?? null;
 }
@@ -30,10 +28,7 @@ export const getCurrentUser = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
 
     if (!user) return null;
 
@@ -180,11 +175,10 @@ export const createUserRecord = mutation({
   handler: async (ctx, { email, phone, name, avatarUrl }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+    const accountEmail = identity.email || email;
+    const accountEmailIsVerified = identity.emailVerified === true;
     
-    const existing = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const existing = await getUserByAuthIdentity(ctx, identity);
 
     const effectiveAvatar = avatarUrl || identity.pictureUrl || undefined;
     const effectiveName = name || identity.name || (email ? email.split("@")[0] : "New user");
@@ -194,10 +188,13 @@ export const createUserRecord = mutation({
       if (!existing.avatarUrl && effectiveAvatar) {
         updates.avatarUrl = effectiveAvatar;
       }
+      if (accountEmailIsVerified && !existing.emailNormalized && accountEmail) {
+        updates.emailNormalized = normalizeAuthEmail(accountEmail);
+      }
       if ((!existing.name || existing.name === "New user") && effectiveName) {
         updates.name = effectiveName;
       }
-      const isSuperAdmin = existing.email && ["riderezzy@gmail.com", "osiobeprovidence@gmail.com"].includes(existing.email);
+      const isSuperAdmin = accountEmailIsVerified && existing.email && ["riderezzy@gmail.com", "osiobeprovidence@gmail.com"].includes(existing.email);
       if (isSuperAdmin && existing.role !== "super_admin") {
         updates.role = "super_admin";
       }
@@ -205,19 +202,28 @@ export const createUserRecord = mutation({
         updates.updatedAt = Date.now();
         await ctx.db.patch(existing._id, updates);
       }
+      await ensureAuthIdentity(ctx, existing._id, identity, "firebase");
       return existing._id;
     }
+
+    if (accountEmailIsVerified && accountEmail) {
+      const emailOwner = await getUserByNormalizedEmail(ctx, accountEmail);
+      if (emailOwner) {
+        throw new Error("A Lalao account may already use this email. Sign in to that account first, then link this sign-in method from Security & Authentication.");
+      }
+    }
     
-    const baseUsername = (email ?? phone ?? `user${Date.now()}`)
+    const baseUsername = (accountEmail ?? phone ?? `user${Date.now()}`)
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "")
       .slice(0, 20);
       
-    const isSuperAdmin = email === "riderezzy@gmail.com" || email === "osiobeprovidence@gmail.com";
+    const isSuperAdmin = accountEmailIsVerified && (accountEmail === "riderezzy@gmail.com" || accountEmail === "osiobeprovidence@gmail.com");
 
-    return await ctx.db.insert("users", {
+    const newUserId = await ctx.db.insert("users", {
       tokenIdentifier: identity.tokenIdentifier,
-      email,
+      email: accountEmail,
+      emailNormalized: accountEmailIsVerified ? normalizeAuthEmail(accountEmail) : undefined,
       phone,
       name: effectiveName,
       username: baseUsername || `user${Date.now()}`,
@@ -231,6 +237,8 @@ export const createUserRecord = mutation({
       createdAt: Date.now(),
       updatedAt: Date.now(),
     } as any);
+    await ensureAuthIdentity(ctx, newUserId, identity, "firebase");
+    return newUserId;
   },
 });
 
@@ -247,10 +255,7 @@ export const syncAuthProfile = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
 
     if (!user) return null;
 
@@ -607,10 +612,7 @@ export const updateNotificationPrefs = mutation({
   handler: async (ctx, { prefs }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .first();
+    const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) throw new Error("User not found");
     const currentPrefs = (user as any).notificationPrefs || {};
     await ctx.db.patch(user._id, { notificationPrefs: { ...currentPrefs, ...prefs } } as any);

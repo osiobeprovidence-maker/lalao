@@ -78,7 +78,7 @@ export const postCycleStory = mutation({
         recipientId: follow.followerId,
         title: `${authorName} posted a new Cycle`,
         body: args.caption ?? args.text ?? "Tap to view their story",
-        icon: currentUser.avatar ?? "/mascot.png",
+        icon: currentUser.avatarUrl ?? "/mascot.png",
         url: "/",
       });
     }

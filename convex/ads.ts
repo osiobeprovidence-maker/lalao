@@ -1,3 +1,4 @@
+import { getUserByAuthIdentity } from "./lib/authIdentity";
 import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
@@ -10,10 +11,7 @@ async function getAuthUser(ctx: any) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) throw new Error("Unauthenticated");
 
-  const user = await ctx.db
-    .query("users")
-    .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-    .unique();
+  const user = await getUserByAuthIdentity(ctx, identity);
 
   if (!user) throw new Error("User not found");
   return user;
@@ -73,10 +71,7 @@ export const getMyCampaigns = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
 
     if (!user) return [];
 
@@ -99,10 +94,7 @@ export const getCampaignById = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
 
     if (!user) return null;
 
@@ -650,10 +642,7 @@ export const recordAdImpression = mutation({
     let viewerUserId: any = undefined;
     const identity = await ctx.auth.getUserIdentity();
     if (identity) {
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-        .unique();
+      const user = await getUserByAuthIdentity(ctx, identity);
       if (user) viewerUserId = user._id;
     }
 
@@ -707,10 +696,7 @@ export const recordAdClick = mutation({
     let viewerUserId: any = undefined;
     const identity = await ctx.auth.getUserIdentity();
     if (identity) {
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-        .unique();
+      const user = await getUserByAuthIdentity(ctx, identity);
       if (user) viewerUserId = user._id;
     }
 

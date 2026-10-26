@@ -122,7 +122,7 @@ export const CreatorSubscriptionModal: React.FC<CreatorSubscriptionModalProps> =
             {[
               { id: 'verified', name: 'Standard Verified', price: 800, desc: 'Official blue verification seal for account authenticity.' },
               { id: 'priority', name: 'Priority Verified', price: 1700, desc: 'Dual-ring crest seal with priority algorithmic discovery boost.' },
-              { id: 'creator', name: 'Creator Premium', price: 3500, desc: 'Complete creator ecosystem, Creator Hub, monetization tools & analytics.' },
+              { id: 'creator', name: 'Creator Premium', price: 3500, desc: 'Creator Hub, monetization & analytics for every creator category, including approved Manga & Webtoon publishers.' },
             ].map((t) => {
               const isSelected = selectedTier === t.id;
               return (

@@ -33,6 +33,7 @@ import { ManageGroupModal } from './components/groups/ManageGroupModal';
 import { EventDistributionProvider } from './services/events/EventDistributionContext';
 import { KlyroWalletProvider } from './services/wallet/KlyroWalletContext';
 import { UserProfileModal } from './components/profile/UserProfileModal';
+import { MangaPublisherProfilePage } from './components/manga/MangaPublisherProfilePage';
 import { SettingsPageView } from './components/profile/SettingsPageView';
 import { NotificationListener } from './components/notifications/NotificationListener';
 import { CommentsModal } from './components/common/CommentsModal';
@@ -158,6 +159,7 @@ const LalaoAppContent: React.FC = () => {
   
   const location = useLocation();
   const navigate = useNavigate();
+  const isMangaProfile = location.pathname.startsWith('/manga/');
 
   // Initialize OneSignal exactly once on app load
   useEffect(() => {
@@ -370,7 +372,7 @@ const LalaoAppContent: React.FC = () => {
         <DesktopSidebar />
 
         <div className="relative min-w-0 flex min-h-screen flex-col bg-theme-base lg:min-h-screen">
-          {activeTab === 'home' && (
+          {activeTab === 'home' && !isMangaProfile && (
             <div className="lg:hidden">
               <Header />
             </div>
@@ -381,7 +383,11 @@ const LalaoAppContent: React.FC = () => {
             className="relative flex-1 overflow-y-auto bg-theme-base pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0 lg:min-h-0"
           >
             <div className="mx-auto w-full max-w-[600px] min-h-full">
-              {activeGroupId ? (
+              {isMangaProfile ? (
+                <div key="manga-publisher-profile" className="animate-in fade-in duration-200 min-h-full w-full bg-[#111111]">
+                  <MangaPublisherProfilePage />
+                </div>
+              ) : activeGroupId ? (
                 <div key="tab-group-detail" className="animate-in fade-in duration-200 min-h-full w-full bg-transparent">
                   <GroupProfileView />
                 </div>
@@ -638,6 +644,7 @@ export default function App() {
       <Route path="/beta-tester" element={<LalaoApp />} />
       <Route path="/sounds" element={<LalaoApp />} />
       <Route path="/sounds/:soundId" element={<LalaoApp />} />
+      <Route path="/manga/:username" element={<LalaoApp />} />
       <Route path="/app" element={<LalaoApp />} />
       <Route path="/app/*" element={<LalaoApp />} />
 

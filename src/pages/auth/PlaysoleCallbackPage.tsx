@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAction } from 'convex/react';
+import { ConvexHttpClient } from 'convex/browser';
 import { api } from '../../../convex/_generated/api';
-import { handlePlaysoleCallback, initiatePlaysoleLogin } from '../../lib/playsoleAuth';
+import { handlePlaysoleCallback, initiatePlaysoleLogin, PLAYSOLE_CONFIG, savePlaysoleSession } from '../../lib/playsoleAuth';
 import { AppIcon } from '../../components/common/AppIcon';
-import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Loader2, AlertCircle, ArrowLeft, CheckCircle } from 'lucide-react';
 
 export const PlaysoleCallbackPage: React.FC = () => {
   const navigate = useNavigate();
@@ -13,6 +14,8 @@ export const PlaysoleCallbackPage: React.FC = () => {
 
   const [statusMessage, setStatusMessage] = useState('Verifying credentials with Playsole One...');
   const [error, setError] = useState<string | null>(null);
+  const [isComplete, setIsComplete] = useState(false);
+  const [isLinkFlow, setIsLinkFlow] = useState(false);
   const executionStartedRef = useRef(false);
 
   useEffect(() => {
@@ -25,8 +28,11 @@ export const PlaysoleCallbackPage: React.FC = () => {
       const state = searchParams.get('state');
       const errorParam = searchParams.get('error');
       const errorDesc = searchParams.get('error_description');
+      const linkChallenge = sessionStorage.getItem(PLAYSOLE_CONFIG.linkChallengeKey);
+      setIsLinkFlow(Boolean(linkChallenge));
 
       if (errorParam) {
+        if (linkChallenge) sessionStorage.removeItem(PLAYSOLE_CONFIG.linkChallengeKey);
         if (errorParam === 'access_denied') {
           setError('Authorization was cancelled.');
         } else {
@@ -46,41 +52,52 @@ export const PlaysoleCallbackPage: React.FC = () => {
           ? (args: any) => exchangeAuthCode(args)
           : undefined;
 
-        const session = await handlePlaysoleCallback(code, state || '', exchangeFn);
+        sessionStorage.removeItem(PLAYSOLE_CONFIG.linkChallengeKey);
+        const session = await handlePlaysoleCallback(code, state || '', exchangeFn, {
+          persist: false,
+          intent: linkChallenge ? 'link' : 'login',
+        });
+        if (!linkChallenge && session.loginStatus === 'link_required') {
+          setError('A Lalao account may already use this sign-in email. Sign in to that account first, then link Playsole from Security & Authentication.');
+          return;
+        }
+        if (!linkChallenge && session.loginStatus === 'email_verification_required') {
+          setError('Verify your email with Playsole One before using it to sign in to Lalao.');
+          return;
+        }
+        const convexUrl = import.meta.env.VITE_CONVEX_URL;
+        if (!convexUrl) throw new Error('Lalao authentication is temporarily unavailable. Please try again later.');
 
-        setStatusMessage('Syncing your account with Lalao...');
+        const client = new ConvexHttpClient(convexUrl);
+        client.setAuth(session.idToken);
 
-        // Populate local state immediately for instant app responsiveness
-        if (session.user) {
-          try {
-            const currentUser = {
-              id: (session as any).userRecord?._id || session.user.sub,
-              name: session.user.name || 'Playsole User',
-              email: session.user.email || '',
-              avatarUrl: session.user.picture || '',
-              username: session.user.email ? session.user.email.split('@')[0] : 'user',
-              role: 'user',
-            };
-            localStorage.setItem('lalao_current_user', JSON.stringify(currentUser));
-          } catch {
-            // ignore storage errors
-          }
+        // The single-use challenge was created under the existing account's
+        // authenticated session. This mutation separately validates Playsole.
+        if (linkChallenge) {
+          setStatusMessage('Verifying the additional sign-in method...');
+          await client.mutation(api.playsole.completeAuthLink, { challenge: linkChallenge });
+          setStatusMessage('Sign-in method linked. Returning to Lalao...');
+          setIsComplete(true);
+          return;
         }
 
-        // Clean up any stale Firebase session so tokens do not conflict
-        try {
-          const { signOut } = await import('firebase/auth');
-          const { auth } = await import('../../lib/firebase');
-          await signOut(auth);
-        } catch {
-          // ignore
+        setStatusMessage('Checking your Lalao account...');
+        const result = await client.mutation(api.playsole.resolvePlaysoleLogin, {});
+        if (result.status === 'link_required') {
+          setError('A Lalao account may already use this sign-in email. Sign in to that account first, then link Playsole from Security & Authentication.');
+          return;
+        }
+        if (result.status === 'email_verification_required') {
+          setError('Verify your email with Playsole One before using it to sign in to Lalao.');
+          return;
         }
 
+        savePlaysoleSession(session);
         setStatusMessage('Welcome! Redirecting to Lalao...');
         navigate('/app', { replace: true });
       } catch (err: any) {
-        console.error('Playsole auth error:', err);
-        setError(err.message || 'An unexpected error occurred during Playsole One authentication.');
+        // Keep provider tokens and authentication internals out of browser logs.
+        setError(err?.message || 'An unexpected error occurred during Playsole One authentication.');
       }
     };
 
@@ -111,6 +128,11 @@ export const PlaysoleCallbackPage: React.FC = () => {
               <p className="text-sm text-theme-secondary mt-1 max-w-xs mx-auto">{error}</p>
             </div>
             <div className="pt-2 space-y-2.5">
+              {isLinkFlow && (
+                <button type="button" onClick={() => navigate('/app', { replace: true })} className="w-full py-2.5 rounded-xl bg-[#5E43F3] text-white text-sm font-semibold">
+                  Return to account settings
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => initiatePlaysoleLogin()}
@@ -128,6 +150,19 @@ export const PlaysoleCallbackPage: React.FC = () => {
                 <span>Back to Sign In</span>
               </Link>
             </div>
+          </div>
+        ) : isComplete ? (
+          <div className="space-y-4 animate-in fade-in duration-300">
+            <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 mx-auto flex items-center justify-center">
+              <CheckCircle className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-theme-primary">Sign-in method linked</h2>
+              <p className="text-sm text-theme-secondary mt-1">Playsole One can now access this Lalao account.</p>
+            </div>
+            <button type="button" onClick={() => navigate('/app', { replace: true })} className="w-full py-3 rounded-xl bg-[#5E43F3] text-white text-sm font-semibold">
+              Return to Lalao
+            </button>
           </div>
         ) : (
           <div className="space-y-4 animate-in fade-in duration-300">

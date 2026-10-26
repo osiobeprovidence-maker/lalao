@@ -151,10 +151,9 @@ export const getOnboardingRecommendations = query({
       } else if (rec.targetType === "page" || rec.targetType === "community") {
         const targetPageId = ctx.db.normalizeId("pages", rec.targetId);
         if (!targetPageId) continue;
-        if (targetPageId === user._id) continue; // Safe check
-
         const targetPage = await ctx.db.get(targetPageId);
         if (!targetPage) continue;
+        if (targetPage.ownerId === user._id) continue; // Do not recommend the user's own Page.
 
         results.push({
           id: targetPage._id,

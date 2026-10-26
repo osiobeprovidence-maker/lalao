@@ -2,6 +2,7 @@ import { mutation, query, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { getAuthedUser } from "./social";
+import { getUserByAuthIdentity } from "./lib/authIdentity";
 
 // ─────────────────────────────────────────────────────────────
 // INTERNAL HELPERS
@@ -20,7 +21,7 @@ async function ensureSuperAdmin(ctx: any, user: any) {
     // or patched during login mutations.
     return { ...user, role: "super_admin" };
   }
-  return user;
+  return user as NonNullable<typeof user>;
 }
 
 /**
@@ -31,16 +32,10 @@ export async function requireAdmin(ctx: any, allowedRoles = ["super_admin", "adm
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) throw new Error("Unauthenticated");
 
-  let user = await ctx.db
-    .query("users")
-    .withIndex("by_token", (q: any) =>
-      q.eq("tokenIdentifier", identity.tokenIdentifier)
-    )
-    .unique();
+  const foundUser = await getUserByAuthIdentity(ctx, identity);
+  if (!foundUser) throw new Error("User not found");
 
-  if (!user) throw new Error("User not found");
-  
-  user = await ensureSuperAdmin(ctx, user);
+  const user: any = await ensureSuperAdmin(ctx, foundUser);
 
   if (!user.role || !allowedRoles.includes(user.role)) {
     throw new Error(`Unauthorized: Requires one of: ${allowedRoles.join(", ")}`);
@@ -94,12 +89,7 @@ export const bootstrapSuperAdmin = mutation({
       throw new Error("Only designated Super Admin emails can bootstrap.");
     }
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q: any) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
-      )
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
 
     if (!user) throw new Error("User record not found. Complete onboarding first.");
 
@@ -271,12 +261,7 @@ export const getMyRole = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return undefined;
 
-    let user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q: any) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
-      )
-      .unique();
+    let user = await getUserByAuthIdentity(ctx, identity);
 
     if (user) {
       user = await ensureSuperAdmin(ctx, user);
@@ -319,12 +304,7 @@ export const verifyAdminSession = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return false;
 
-    let user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q: any) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
-      )
-      .unique();
+    let user = await getUserByAuthIdentity(ctx, identity);
 
     if (!user) return false;
     user = await ensureSuperAdmin(ctx, user);
@@ -352,12 +332,7 @@ export const destroyAdminSession = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return;
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q: any) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
-      )
-      .unique();
+    const user = await getUserByAuthIdentity(ctx, identity);
 
     if (!user) return;
 

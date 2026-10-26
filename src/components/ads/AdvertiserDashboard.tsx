@@ -159,7 +159,7 @@ export const AdvertiserDashboard: React.FC = () => {
                 </div>
                 <h3 className="font-bold text-base text-theme-primary">No campaigns yet</h3>
                 <p className="text-xs text-theme-tertiary max-w-sm mx-auto">
-                  Launch your first ad campaign in under 2 minutes. Reach local customers in Warri or across Nigeria with Paystack.
+                  Launch your first ad campaign in under 2 minutes. Reach local customers in Warri or across Nigeria with Bachs checkout.
                 </p>
                 <button
                   onClick={() => setActiveView('create')}
@@ -793,7 +793,7 @@ const CampaignCreationWizard: React.FC<{ onSuccess: (id: any) => void; onCancel:
               <strong className="text-theme-primary">~{Math.round((budgetNgn / 10)).toLocaleString()}</strong>
             </div>
             <div className="flex items-center justify-between pt-2 border-t border-theme-divider font-bold text-sm text-theme-primary">
-              <span>Total Payable to Paystack:</span>
+              <span>Total Payable via Bachs:</span>
               <span className="text-[#5E43F3]">₦{budgetNgn.toLocaleString()}</span>
             </div>
           </div>
@@ -801,7 +801,7 @@ const CampaignCreationWizard: React.FC<{ onSuccess: (id: any) => void; onCancel:
           <div className="p-3 rounded-xl bg-[#5E43F3]/10 border border-[#5E43F3]/20 text-[#5E43F3] text-xs flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 shrink-0" />
             <span>
-              Secure Paystack integration. Your campaign will undergo automated screening and admin review before going live.
+              Secure Bachs checkout. Your campaign will undergo automated screening and admin review before going live.
             </span>
           </div>
         </div>
@@ -851,7 +851,7 @@ const CampaignCreationWizard: React.FC<{ onSuccess: (id: any) => void; onCancel:
 };
 
 /**
- * Campaign Details & Paystack Checkout Action View
+ * Campaign Details & Bachs Checkout Action View
  */
 const CampaignDetailsView: React.FC<{ campaignId: Id<"adCampaigns">; onBack: () => void }> = ({
   campaignId,
@@ -859,7 +859,6 @@ const CampaignDetailsView: React.FC<{ campaignId: Id<"adCampaigns">; onBack: () 
 }) => {
   const campaign = useQuery(api.ads.getCampaignById, { campaignId });
   const initializePayment = useAction(api.adActions.initializeCampaignPayment);
-  const verifyPayment = useAction(api.adActions.verifyCampaignPayment);
 
   const [isPaying, setIsPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
@@ -872,17 +871,13 @@ const CampaignDetailsView: React.FC<{ campaignId: Id<"adCampaigns">; onBack: () 
     );
   }
 
-  const handlePaystackCheckout = async () => {
+  const handleBachsCheckout = async () => {
     setIsPaying(true);
     setPayError(null);
     try {
       const res = await initializePayment({ campaignId });
       if (res.authorizationUrl) {
         window.location.href = res.authorizationUrl;
-      } else if (res.isDevFallback && res.reference) {
-        // Dev fallback verification
-        await verifyPayment({ reference: res.reference });
-        alert('Dev payment verified successfully! Campaign moved to pending review / active.');
       }
     } catch (err: any) {
       setPayError(err.message || 'Payment initialization failed');
@@ -923,15 +918,15 @@ const CampaignDetailsView: React.FC<{ campaignId: Id<"adCampaigns">; onBack: () 
                 Payment Required (₦{(campaign.budget.totalBudgetKobo / 100).toLocaleString()})
               </h4>
               <p className="text-[11px] text-amber-600 dark:text-amber-300">
-                Fund your campaign budget securely with Paystack to submit it for administrative review and delivery.
+                Fund your campaign securely with Bachs. Campaign delivery remains subject to Lalao review.
               </p>
             </div>
             <button
-              onClick={handlePaystackCheckout}
+              onClick={handleBachsCheckout}
               disabled={isPaying}
               className="px-5 py-2.5 rounded-xl bg-[#5E43F3] hover:bg-[#4E34E0] text-white font-bold text-xs shadow-md shadow-[#5E43F3]/25 transition-all cursor-pointer shrink-0 disabled:opacity-50"
             >
-              {isPaying ? 'Connecting to Paystack...' : 'Pay with Paystack'}
+              {isPaying ? 'Connecting to Bachs...' : 'Pay with Bachs'}
             </button>
           </div>
         )}

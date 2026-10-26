@@ -209,6 +209,7 @@ export const getGroupMembers = query({
   args: { groupId: v.string() },
   handler: async (ctx, args) => {
     const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new ConvexError("Unauthenticated");
     const resolved = await resolveGroupContext(ctx, args.groupId, currentUser);
     if (!resolved) throw new ConvexError("Group not found");
 
@@ -263,6 +264,7 @@ export const getGroupJoinRequests = query({
   args: { groupId: v.string() },
   handler: async (ctx, args) => {
     const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new ConvexError("Unauthenticated");
     const resolved = await resolveGroupContext(ctx, args.groupId, currentUser);
     if (!resolved || !resolved.isAdmin) {
       throw new ConvexError("Unauthorized: Admin access required");
@@ -306,6 +308,7 @@ export const getGroupAnalytics = query({
   args: { groupId: v.string() },
   handler: async (ctx, args) => {
     const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new ConvexError("Unauthenticated");
     const resolved = await resolveGroupContext(ctx, args.groupId, currentUser);
     if (!resolved || !resolved.isAdmin) {
       throw new ConvexError("Unauthorized: Admin access required");
@@ -943,6 +946,7 @@ export const inviteMember = mutation({
   },
   handler: async (ctx, args) => {
     const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new ConvexError("Unauthenticated");
     const resolved = await resolveGroupContext(ctx, args.groupId, currentUser);
     if (!resolved || !resolved.isAdmin) {
       throw new ConvexError("Unauthorized: Only admins can invite new members");
@@ -992,6 +996,7 @@ export const updateMemberRole = mutation({
   },
   handler: async (ctx, args) => {
     const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new ConvexError("Unauthenticated");
     const resolved = await resolveGroupContext(ctx, args.groupId, currentUser);
     if (!resolved || !resolved.isOwner) {
       throw new ConvexError("Unauthorized: Only the group owner can assign roles");
@@ -1035,6 +1040,7 @@ export const transferOwnership = mutation({
   },
   handler: async (ctx, args) => {
     const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new ConvexError("Unauthenticated");
     const resolved = await resolveGroupContext(ctx, args.groupId, currentUser);
     if (!resolved || !resolved.isOwner) {
       throw new ConvexError("Unauthorized: Only the current owner can transfer ownership");

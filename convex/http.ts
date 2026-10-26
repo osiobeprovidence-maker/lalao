@@ -1,6 +1,7 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { api, internal } from "./_generated/api";
+import { verifyBachsWebhookSignature } from "./lib/bachsWebhookSignature";
 
 const http = httpRouter();
 
@@ -133,57 +134,23 @@ http.route({
   method: "POST",
   handler: httpAction(async (ctx, request) => {
     const payloadString = await request.text();
-    const signature = request.headers.get("x-bachs-signature") || request.headers.get("X-Bachs-Signature");
-    const timestampStr = request.headers.get("x-bachs-timestamp") || request.headers.get("X-Bachs-Timestamp");
-
     const webhookSecret = process.env.BACHS_WEBHOOK_SECRET;
+    if (!webhookSecret) return new Response("Webhook is not configured", { status: 503 });
 
-    // Validate signature and timestamp if webhook secret is configured
-    if (webhookSecret) {
-      if (!signature) {
-        return new Response("Missing X-Bachs-Signature header", { status: 401 });
-      }
-
-      // Replay prevention: verify timestamp drift within 300 seconds (5 minutes)
-      if (timestampStr) {
-        const timestamp = parseInt(timestampStr, 10);
-        const currentTime = Math.floor(Date.now() / 1000);
-        if (isNaN(timestamp) || Math.abs(currentTime - timestamp) > 300) {
-          return new Response("Webhook timestamp expired or invalid", { status: 401 });
-        }
-      }
-
-      try {
-        // SubtleCrypto is standard Web Cryptography available in modern runtimes / Edge / Convex
-        const encoder = new TextEncoder();
-        const keyData = encoder.encode(webhookSecret);
-        const signedPayload = timestampStr ? `${timestampStr}.${payloadString}` : payloadString;
-        
-        const cryptoKey = await crypto.subtle.importKey(
-          "raw",
-          keyData,
-          { name: "HMAC", hash: "SHA-256" },
-          false,
-          ["sign"]
-        );
-        const signatureBytes = await crypto.subtle.sign(
-          "HMAC",
-          cryptoKey,
-          encoder.encode(signedPayload)
-        );
-        const expectedSignature = Array.from(new Uint8Array(signatureBytes))
-          .map(b => b.toString(16).padStart(2, "0"))
-          .join("");
-
-        // Constant time comparison
-        if (signature.toLowerCase() !== expectedSignature.toLowerCase()) {
-          console.warn("[BACHS Webhook] Signature mismatch");
-          return new Response("Invalid signature", { status: 401 });
-        }
-      } catch (cryptoErr) {
-        console.error("[BACHS Webhook] Signature verification error:", cryptoErr);
-        return new Response("Signature verification error", { status: 500 });
-      }
+    // Bachs V2 signs `${timestamp}.${rawBody}` and may include multiple v1 values
+    // during secret rotation. Fall back to the legacy headers only for compatibility.
+    try {
+      const valid = await verifyBachsWebhookSignature({
+        rawBody: payloadString,
+        secret: webhookSecret,
+        signatureV2: request.headers.get("x-bachs-signature-v2"),
+        legacySignature: request.headers.get("x-bachs-signature"),
+        legacyTimestamp: request.headers.get("x-bachs-timestamp"),
+      });
+      if (!valid) return new Response("Invalid or expired signature", { status: 401 });
+    } catch (error) {
+      console.error("[BACHS Webhook] Signature verification failed");
+      return new Response("Signature verification error", { status: 500 });
     }
 
     let data: any;
@@ -193,51 +160,72 @@ http.route({
       return new Response("Invalid JSON payload", { status: 400 });
     }
 
-    const event = data.event || data.type;
-    const sessionData = data.data || data;
-
-    // We process successful collection / checkout session completions
-    const isSuccessEvent = 
-      event === "collection.succeeded" || 
-      event === "checkout.session.completed" || 
-      event === "payment.succeeded" ||
-      sessionData.status === "completed" ||
-      sessionData.status === "paid" ||
-      sessionData.status === "succeeded";
-
-    if (isSuccessEvent) {
-      const reference = sessionData.reference || sessionData.metadata?.reference;
-      const currency = (sessionData.pricing?.currency || sessionData.currency || "NGN").toUpperCase();
-      const amountVal = parseFloat(sessionData.pricing?.amount || sessionData.amount || "0");
-      const transactionId = sessionData.id?.toString() || sessionData.transaction_id?.toString();
-
-      if (!reference) {
-        return new Response("Missing payment reference in payload", { status: 400 });
-      }
-
-      if (currency !== "NGN") {
-        return new Response("Ignored non-NGN currency", { status: 200 });
-      }
-
-      if (isNaN(amountVal) || amountVal <= 0) {
-        return new Response("Invalid amount", { status: 400 });
-      }
-
-      try {
-        await ctx.runMutation(internal.wallet.settleWalletFunding, {
-          reference,
-          verifiedAmount: amountVal,
-          providerTransactionId: transactionId,
-          provider: "bachs",
-        });
-        return new Response("Success", { status: 200 });
-      } catch (error: any) {
-        console.error("[BACHS Webhook] Settlement error:", error);
-        return new Response("Processed with message: " + error.message, { status: 200 });
-      }
+    const event = data.type;
+    const eventData = data.data || {};
+    if (typeof data.id !== "string" || !data.id || typeof event !== "string") return new Response("Invalid event envelope", { status: 400 });
+    const alreadyProcessed = await ctx.runQuery(internal.bachs.getProcessedWebhookEvent, { eventId: data.id });
+    if (alreadyProcessed) return new Response("Duplicate event", { status: 200 });
+    if (event !== "checkout.completed" && event !== "collection.succeeded") {
+      await ctx.runMutation(internal.bachs.recordProcessedWebhookEvent, { eventId: data.id, eventType: event });
+      return new Response("Event ignored", { status: 200 });
     }
+    const checkoutId = eventData.checkout_id;
+    if (typeof checkoutId !== "string" || !checkoutId) return new Response("Missing checkout_id", { status: 400 });
 
-    return new Response("Unhandled event", { status: 200 });
+    // The signed event identifies the checkout. Fetch its authoritative state before
+    // crediting anything; never infer amount, status, or currency from the redirect/event.
+    const apiKey = process.env.BACHS_SECRET_KEY;
+    if (!apiKey) return new Response("Payments are not configured", { status: 503 });
+    const environment = (process.env.BACHS_ENVIRONMENT || "sandbox").toLowerCase();
+    const expectedPrefix = environment === "live" || environment === "production" ? "sk_live_" : "sk_sandbox_";
+    if (!apiKey.startsWith(expectedPrefix)) return new Response("Payment environment is misconfigured", { status: 503 });
+    const baseUrl = expectedPrefix === "sk_live_" ? "https://api.bachs.io" : "https://sandbox-api.bachs.io";
+    try {
+      const verifyResponse = await fetch(`${baseUrl}/v1/checkout-sessions/${encodeURIComponent(checkoutId)}`, {
+        headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
+      });
+      if (!verifyResponse.ok) return new Response("Checkout verification failed", { status: 502 });
+      const session = await verifyResponse.json() as any;
+      if (session.checkout_id !== checkoutId || session.status !== "completed" || session.payment_status !== "succeeded") {
+        return new Response("Checkout is not paid", { status: 200 });
+      }
+      if (String(session.currency || "").toUpperCase() !== "NGN") return new Response("Currency mismatch", { status: 200 });
+      const reference = session.reference;
+      const amount = Number(session.amount);
+      if (typeof reference !== "string" || !reference || !Number.isFinite(amount) || amount <= 0) {
+        return new Response("Invalid verified checkout", { status: 400 });
+      }
+      const expectedOwner = await ctx.runQuery(internal.bachs.getExpectedPaymentOwner, { reference });
+      if (!expectedOwner) return new Response("Payment record is not ready", { status: 500 });
+      const checkoutEmail = String(session.customer?.email || session.customer_details?.email || "").trim().toLowerCase();
+      if (String(session.metadata?.userId || "") !== expectedOwner.userId || checkoutEmail !== expectedOwner.email.toLowerCase()) {
+        return new Response("Checkout customer does not match the payment owner", { status: 400 });
+      }
+      if (reference.startsWith("LALAO_AD_")) {
+        const amountKobo = Math.round(amount * 100);
+        if (!Number.isSafeInteger(amountKobo)) return new Response("Invalid verified amount", { status: 400 });
+        await ctx.runMutation(internal.adActions.settleAdPayment, {
+          reference,
+          paystackAmountKobo: amountKobo,
+          paystackTransactionId: session.charge?.payment_id || checkoutId,
+          paymentProvider: "bachs",
+          gatewayResponse: "Verified with Bachs",
+        });
+        await ctx.runMutation(internal.bachs.recordProcessedWebhookEvent, { eventId: data.id, eventType: event });
+        return new Response("Success", { status: 200 });
+      }
+      await ctx.runMutation(internal.wallet.settleWalletFunding, {
+        reference,
+        verifiedAmount: amount,
+        providerTransactionId: session.charge?.payment_id || checkoutId,
+        provider: "bachs",
+      });
+      await ctx.runMutation(internal.bachs.recordProcessedWebhookEvent, { eventId: data.id, eventType: event });
+      return new Response("Success", { status: 200 });
+    } catch (error: any) {
+      console.error("[BACHS Webhook] Settlement failed; provider may retry.", error?.message || "unknown error");
+      return new Response("Temporary processing failure", { status: 500 });
+    }
   }),
 });
 

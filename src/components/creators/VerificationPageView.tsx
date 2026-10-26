@@ -490,7 +490,7 @@ export const VerificationPageView: React.FC = () => {
                 </div>
 
                 <p className="text-xs text-theme-secondary leading-relaxed">
-                  The complete ecosystem for creators: dedicated Creator emblem, full Creator Hub, monetization tools, analytics, and Explore rankings.
+                  Creator Hub, monetization, analytics, and Explore rankings for all creator categories, including approved Manga & Webtoon publishers. Manga Creator profiles require a separate portfolio review.
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-theme-divider-light text-xs text-theme-secondary">
@@ -513,6 +513,10 @@ export const VerificationPageView: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-[2.5]" />
                     <span>Level progression & milestones</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-[2.5]" />
+                    <span>Creator tools for approved Manga & Webtoon publishers</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-[2.5]" />

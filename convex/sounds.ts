@@ -164,7 +164,7 @@ export const updateSound = mutation({
 
     const sound = await ctx.db.get(args.soundId);
     if (!sound) throw new Error("Sound not found");
-    if (sound.creatorId !== user._id && user.userType !== "admin") {
+    if (sound.creatorId !== user._id && user.role !== "admin" && user.role !== "super_admin") {
       throw new Error("You do not have permission to edit this sound");
     }
 
@@ -198,7 +198,7 @@ export const deleteSound = mutation({
 
     const sound = await ctx.db.get(args.soundId);
     if (!sound) throw new Error("Sound not found");
-    if (sound.creatorId !== user._id && user.userType !== "admin") {
+    if (sound.creatorId !== user._id && user.role !== "admin" && user.role !== "super_admin") {
       throw new Error("You do not have permission to delete this sound");
     }
 

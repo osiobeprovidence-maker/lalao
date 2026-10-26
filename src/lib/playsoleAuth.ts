@@ -13,8 +13,10 @@ export const PLAYSOLE_CONFIG = {
   clientId: (import.meta.env.VITE_PLAYSOLE_CLIENT_ID as string) || 'lalao',
   scopes: 'openid profile email',
   storageKey: 'lalao_playsole_session',
+  linkChallengeKey: 'lalao_playsole_link_challenge',
   pkceVerifierKey: 'playsole_pkce_verifier',
   authStateKey: 'playsole_auth_state',
+  oidcNonceKey: 'playsole_oidc_nonce',
 };
 
 export interface PlaysoleTokenResponse {
@@ -43,6 +45,7 @@ export interface PlaysoleSession {
   refreshToken?: string;
   expiresAt: number; // epoch ms
   user: PlaysoleUserProfile;
+  loginStatus?: 'ready' | 'link_required' | 'email_verification_required';
 }
 
 /**
@@ -120,15 +123,22 @@ export function getPlaysoleRedirectUri(): string {
  * Initiate Playsole One Login
  * Redirects the user to Playsole's authorization screen with PKCE.
  */
-export async function initiatePlaysoleLogin(options?: { prompt?: 'select_account' | 'consent' | 'login'; loginHint?: string }): Promise<void> {
+export async function initiatePlaysoleLogin(options?: { prompt?: 'select_account' | 'consent' | 'login'; loginHint?: string; linkChallenge?: string }): Promise<void> {
   const verifier = generateCodeVerifier();
   const challenge = await generateCodeChallenge(verifier);
   const state = generateState();
+  const nonce = generateState();
   const redirectUri = getPlaysoleRedirectUri();
 
   // Persist PKCE verifier and state in sessionStorage
   sessionStorage.setItem(PLAYSOLE_CONFIG.pkceVerifierKey, verifier);
   sessionStorage.setItem(PLAYSOLE_CONFIG.authStateKey, state);
+  sessionStorage.setItem(PLAYSOLE_CONFIG.oidcNonceKey, nonce);
+  if (options?.linkChallenge) {
+    sessionStorage.setItem(PLAYSOLE_CONFIG.linkChallengeKey, options.linkChallenge);
+  } else {
+    sessionStorage.removeItem(PLAYSOLE_CONFIG.linkChallengeKey);
+  }
 
   const params = new URLSearchParams({
     response_type: 'code',
@@ -138,6 +148,7 @@ export async function initiatePlaysoleLogin(options?: { prompt?: 'select_account
     code_challenge: challenge,
     code_challenge_method: 'S256',
     state,
+    nonce,
   });
 
   if (options?.prompt) {
@@ -186,34 +197,39 @@ async function directTokenExchange(code: string, verifier: string, redirectUri: 
 export async function handlePlaysoleCallback(
   code: string,
   state: string,
-  exchangeFn?: (args: { code: string; codeVerifier: string; redirectUri: string }) => Promise<{ tokens: PlaysoleTokenResponse; userProfile?: PlaysoleUserProfile }>
+  exchangeFn?: (args: { code: string; codeVerifier: string; redirectUri: string; nonce: string; intent: 'login' | 'link' }) => Promise<{ tokens: PlaysoleTokenResponse; userProfile?: PlaysoleUserProfile; loginStatus?: 'ready' | 'link_required' | 'email_verification_required' }>,
+  options?: { persist?: boolean; intent?: 'login' | 'link' },
 ): Promise<PlaysoleSession> {
   const expectedState = sessionStorage.getItem(PLAYSOLE_CONFIG.authStateKey);
+  const expectedNonce = sessionStorage.getItem(PLAYSOLE_CONFIG.oidcNonceKey);
   const verifier = sessionStorage.getItem(PLAYSOLE_CONFIG.pkceVerifierKey);
 
   // Clean up single-use PKCE credentials
   sessionStorage.removeItem(PLAYSOLE_CONFIG.authStateKey);
+  sessionStorage.removeItem(PLAYSOLE_CONFIG.oidcNonceKey);
   sessionStorage.removeItem(PLAYSOLE_CONFIG.pkceVerifierKey);
 
   if (!verifier) {
     throw new Error('PKCE verification error: Code verifier missing from session.');
   }
 
-  if (expectedState && state && expectedState !== state) {
+  if (!expectedState || !state || expectedState !== state) {
     throw new Error('Security verification failed: OAuth state mismatch.');
   }
+  if (!expectedNonce) throw new Error('Security verification failed: OIDC nonce is missing.');
 
   const redirectUri = getPlaysoleRedirectUri();
 
   let tokenData: PlaysoleTokenResponse;
   let userProfile: PlaysoleUserProfile = { sub: '' };
+  let loginStatus: PlaysoleSession['loginStatus'];
 
   if (exchangeFn) {
     let lastError: any = null;
     let serverResult: any = null;
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        serverResult = await exchangeFn({ code, codeVerifier: verifier, redirectUri });
+        serverResult = await exchangeFn({ code, codeVerifier: verifier, redirectUri, nonce: expectedNonce, intent: options?.intent || 'login' });
         break;
       } catch (serverErr: any) {
         lastError = serverErr;
@@ -232,6 +248,7 @@ export async function handlePlaysoleCallback(
     }
 
     tokenData = serverResult.tokens;
+    loginStatus = serverResult.loginStatus;
     if (serverResult.userProfile) {
       userProfile = serverResult.userProfile;
     }
@@ -239,43 +256,51 @@ export async function handlePlaysoleCallback(
     tokenData = await directTokenExchange(code, verifier, redirectUri);
   }
 
+  const idClaims = decodeJwtPayload<any>(tokenData.id_token);
+  const audiences = Array.isArray(idClaims?.aud) ? idClaims.aud : [idClaims?.aud];
+  if (
+    !idClaims ||
+    idClaims.iss !== PLAYSOLE_CONFIG.issuer ||
+    !audiences.includes(PLAYSOLE_CONFIG.clientId) ||
+    idClaims.nonce !== expectedNonce ||
+    !idClaims.sub ||
+    typeof idClaims.exp !== 'number' ||
+    idClaims.exp <= Math.floor(Date.now() / 1000) ||
+    (userProfile.sub && userProfile.sub !== idClaims.sub)
+  ) {
+    throw new Error('Security verification failed: Playsole identity token did not match this sign-in request.');
+  }
+
   // Fetch or decode user profile if not already provided by backend
   if (!userProfile.sub) {
-  try {
-    const userinfoRes = await fetch(PLAYSOLE_CONFIG.userinfoEndpoint, {
-      headers: {
-        Authorization: `Bearer ${tokenData.access_token}`,
-      },
-    });
-    if (userinfoRes.ok) {
-      userProfile = await userinfoRes.json();
-    } else {
-      const decoded = decodeJwtPayload<any>(tokenData.id_token);
-      if (decoded) {
+    try {
+      const userinfoRes = await fetch(PLAYSOLE_CONFIG.userinfoEndpoint, {
+        headers: {
+          Authorization: `Bearer ${tokenData.access_token}`,
+        },
+      });
+      if (userinfoRes.ok) {
+        userProfile = await userinfoRes.json();
+      } else {
         userProfile = {
-          sub: decoded.sub,
-          email: decoded.email,
-          email_verified: decoded.email_verified,
-          name: decoded.name,
-          picture: decoded.picture,
-          tenant_id: decoded.tenant_id,
+          sub: idClaims.sub,
+          email: idClaims.email,
+          email_verified: idClaims.email_verified,
+          name: idClaims.name,
+          picture: idClaims.picture,
+          tenant_id: idClaims.tenant_id,
         };
       }
-    }
-  } catch (err) {
-    console.warn('Could not fetch userinfo, falling back to id_token claims', err);
-    const decoded = decodeJwtPayload<any>(tokenData.id_token);
-    if (decoded) {
+    } catch {
       userProfile = {
-        sub: decoded.sub,
-        email: decoded.email,
-        email_verified: decoded.email_verified,
-        name: decoded.name,
-        picture: decoded.picture,
-        tenant_id: decoded.tenant_id,
+        sub: idClaims.sub,
+        email: idClaims.email,
+        email_verified: idClaims.email_verified,
+        name: idClaims.name,
+        picture: idClaims.picture,
+        tenant_id: idClaims.tenant_id,
       };
     }
-  }
   }
 
   const session: PlaysoleSession = {
@@ -284,9 +309,10 @@ export async function handlePlaysoleCallback(
     refreshToken: tokenData.refresh_token,
     expiresAt: Date.now() + (tokenData.expires_in || 3600) * 1000,
     user: userProfile,
+    loginStatus,
   };
 
-  savePlaysoleSession(session);
+  if (options?.persist !== false) savePlaysoleSession(session);
   return session;
 }
 
@@ -294,7 +320,11 @@ export async function handlePlaysoleCallback(
  * Persist Playsole session to localStorage and emit change event
  */
 export function savePlaysoleSession(session: PlaysoleSession): void {
-  localStorage.setItem(PLAYSOLE_CONFIG.storageKey, JSON.stringify(session));
+  const { loginStatus: _loginStatus, ...persistedSession } = session;
+  sessionStorage.setItem(PLAYSOLE_CONFIG.storageKey, JSON.stringify(persistedSession));
+  // Remove sessions persisted by older versions after migrating them to the
+  // tab-scoped store. This avoids retaining refresh tokens across browser restarts.
+  localStorage.removeItem(PLAYSOLE_CONFIG.storageKey);
   window.dispatchEvent(new Event('playsole_auth_changed'));
 }
 
@@ -303,9 +333,15 @@ export function savePlaysoleSession(session: PlaysoleSession): void {
  */
 export function getPlaysoleSession(): PlaysoleSession | null {
   try {
-    const stored = localStorage.getItem(PLAYSOLE_CONFIG.storageKey);
+    const stored = sessionStorage.getItem(PLAYSOLE_CONFIG.storageKey)
+      || localStorage.getItem(PLAYSOLE_CONFIG.storageKey);
     if (!stored) return null;
-    return JSON.parse(stored) as PlaysoleSession;
+    const session = JSON.parse(stored) as PlaysoleSession;
+    if (!sessionStorage.getItem(PLAYSOLE_CONFIG.storageKey)) {
+      sessionStorage.setItem(PLAYSOLE_CONFIG.storageKey, stored);
+      localStorage.removeItem(PLAYSOLE_CONFIG.storageKey);
+    }
+    return session;
   } catch {
     return null;
   }
@@ -384,6 +420,7 @@ export async function logoutPlaysole(): Promise<void> {
     }
   }
 
+  sessionStorage.removeItem(PLAYSOLE_CONFIG.storageKey);
   localStorage.removeItem(PLAYSOLE_CONFIG.storageKey);
   window.dispatchEvent(new Event('playsole_auth_changed'));
 }

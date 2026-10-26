@@ -149,8 +149,8 @@ export async function setOneSignalUser(userId: string): Promise<void> {
         }
       }
 
-      // 2. Associate external_id
-      if (OneSignal?.login) {
+      // 2. Associate external_id if OneSignal is fully initialized and User model exists
+      if (window.__onesignal_initialized__ && OneSignal?.User && typeof OneSignal.login === "function") {
         await OneSignal.login(userId);
         console.log(`[OneSignal] Logged in with external user ID: ${userId}, pushOptedIn=${Boolean(OneSignal?.User?.PushSubscription?.optedIn)}, subscriptionId=${OneSignal?.User?.PushSubscription?.id || "pending"}`);
       }

@@ -13,6 +13,7 @@ export const createPendingAdPayment = internalMutation({
     currency: v.string(),
     reference: v.string(),
     paystackAccessCode: v.optional(v.string()),
+    bachsCheckoutId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Check if reference already exists to enforce idempotency
@@ -33,6 +34,8 @@ export const createPendingAdPayment = internalMutation({
       reference: args.reference,
       status: "pending",
       paystackAccessCode: args.paystackAccessCode,
+      bachsCheckoutId: args.bachsCheckoutId,
+      paymentProvider: "bachs",
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -49,6 +52,7 @@ export const settleAdPayment = internalMutation({
     reference: v.string(),
     paystackAmountKobo: v.number(),
     paystackTransactionId: v.optional(v.string()),
+    paymentProvider: v.optional(v.string()),
     gatewayResponse: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -84,6 +88,7 @@ export const settleAdPayment = internalMutation({
     await ctx.db.patch(payment._id, {
       status: "successful",
       paystackTransactionId: args.paystackTransactionId,
+      paymentProvider: args.paymentProvider || "paystack",
       gatewayResponse: args.gatewayResponse || "Successful",
       paidAt: now,
       updatedAt: now,
@@ -127,7 +132,7 @@ export const settleAdPayment = internalMutation({
 });
 
 /**
- * Convex Action: Initialize Paystack Checkout for Campaign
+ * Create a Bachs hosted checkout for an ad campaign.
  */
 export const initializeCampaignPayment = action({
   args: {
@@ -152,42 +157,29 @@ export const initializeCampaignPayment = action({
     const amountKobo = campaign.budget.totalBudgetKobo;
     const currency = campaign.budget.currency || "NGN";
     const reference = `LALAO_AD_${campaign._id}_${Date.now()}`;
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
-
-    if (!secretKey) {
-      // In development or test without secret key, record pending and return reference
-      await ctx.runMutation(internal.adActions.createPendingAdPayment, {
-        campaignId: args.campaignId,
-        userId: user._id,
-        amountKobo,
-        currency,
-        reference,
-      });
-
-      return {
-        authorizationUrl: null,
-        accessCode: null,
-        reference,
-        isDevFallback: true,
-        message: "PAYSTACK_SECRET_KEY not set. Using test checkout fallback.",
-      };
+    const secretKey = process.env.BACHS_SECRET_KEY;
+    if (!secretKey) throw new Error("Bachs checkout is not configured. Please try again later.");
+    const environment = (process.env.BACHS_ENVIRONMENT || "sandbox").toLowerCase();
+    const isLive = environment === "live" || environment === "production";
+    if ((isLive && !secretKey.startsWith("sk_live_")) || (!isLive && !secretKey.startsWith("sk_sandbox_"))) {
+      throw new Error("Bachs key does not match the configured payment environment.");
     }
+    const baseUrl = isLive ? "https://api.bachs.io" : "https://sandbox-api.bachs.io";
+    const appUrl = (process.env.APP_URL || process.env.VITE_APP_URL || "https://www.lalao.website").replace(/\/+$/, "");
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VITE_APP_URL || "https://lalao.website";
-    const callbackUrl = `${appUrl}/app?ad_payment_callback=${reference}`;
-
-    const res = await fetch("https://api.paystack.co/transaction/initialize", {
+    const res = await fetch(`${baseUrl}/v1/checkout-sessions`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${secretKey}`,
         "Content-Type": "application/json",
+        Accept: "application/json",
       },
       body: JSON.stringify({
-        email: user.email || `${user.username || "user"}@lalao.website`,
-        amount: amountKobo, // Paystack expects integer in kobo for NGN
-        currency,
+        pricing: { currency, amount: (amountKobo / 100).toFixed(2) },
+        customer: { email: user.email || `${user.username || "user"}@lalao.app`, name: user.name || "Lalao Advertiser" },
         reference,
-        callback_url: callbackUrl,
+        success_url: `${appUrl}/app?tab=ads&payment=pending&reference=${encodeURIComponent(reference)}`,
+        cancel_url: `${appUrl}/app?tab=ads&payment=cancelled&reference=${encodeURIComponent(reference)}`,
         metadata: {
           campaignId: args.campaignId,
           userId: user._id,
@@ -197,9 +189,9 @@ export const initializeCampaignPayment = action({
       }),
     });
 
-    const data = await res.json();
-    if (!data.status) {
-      throw new Error(`Paystack initialization failed: ${data.message}`);
+    const data = await res.json() as any;
+    if (!res.ok || typeof data.checkout_id !== "string" || typeof data.checkout_url !== "string") {
+      throw new Error(data.detail || "Bachs could not start checkout.");
     }
 
     // Persist pending payment record
@@ -209,53 +201,49 @@ export const initializeCampaignPayment = action({
       amountKobo,
       currency,
       reference,
-      paystackAccessCode: data.data.access_code,
+      bachsCheckoutId: data.checkout_id,
     });
 
     return {
       authorizationUrl: data.data.authorization_url,
-      accessCode: data.data.access_code,
+      checkoutId: data.checkout_id,
       reference,
-      isDevFallback: false,
     };
   },
 });
 
 /**
- * Convex Action: Server-side Paystack Verification of Campaign Payment
+ * Server-side Bachs checkout verification for an ad campaign.
  */
 export const verifyCampaignPayment = action({
   args: {
     reference: v.string(),
+    checkoutId: v.string(),
   },
   handler: async (ctx, args): Promise<any> => {
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
-
-    if (!secretKey) {
-      // Dev mode: Test settlement
-      return await ctx.runMutation(internal.adActions.settleAdPaymentDev, {
-        reference: args.reference,
-      });
-    }
-
-    const res = await fetch(`https://api.paystack.co/transaction/verify/${args.reference}`, {
-      headers: { Authorization: `Bearer ${secretKey}` },
+    const secretKey = process.env.BACHS_SECRET_KEY;
+    if (!secretKey) throw new Error("Bachs checkout is not configured.");
+    const environment = (process.env.BACHS_ENVIRONMENT || "sandbox").toLowerCase();
+    const isLive = environment === "live" || environment === "production";
+    if ((isLive && !secretKey.startsWith("sk_live_")) || (!isLive && !secretKey.startsWith("sk_sandbox_"))) throw new Error("Bachs key does not match the configured payment environment.");
+    const baseUrl = isLive ? "https://api.bachs.io" : "https://sandbox-api.bachs.io";
+    const res = await fetch(`${baseUrl}/v1/checkout-sessions/${encodeURIComponent(args.checkoutId)}`, {
+      headers: { Authorization: `Bearer ${secretKey}`, Accept: "application/json" },
     });
-    const data = await res.json();
-
-    if (!data.status || data.data.status !== "success") {
-      throw new Error(data.message || "Payment verification failed or pending on provider.");
-    }
-
-    const paystackAmountKobo = data.data.amount;
-    const paystackTransactionId = data.data.id?.toString();
-    const gatewayResponse = data.data.gateway_response;
+    if (!res.ok) throw new Error("Could not retrieve the Bachs checkout session.");
+    const session = await res.json() as any;
+    if (session.checkout_id !== args.checkoutId || session.reference !== args.reference) throw new Error("Checkout does not match this ad payment.");
+    if (session.status !== "completed" || session.payment_status !== "succeeded") throw new Error("Payment is not confirmed yet.");
+    if (String(session.currency).toUpperCase() !== "NGN") throw new Error("Payment currency does not match the campaign.");
+    const paystackAmountKobo = Math.round(Number(session.amount) * 100);
+    if (!Number.isSafeInteger(paystackAmountKobo) || paystackAmountKobo <= 0) throw new Error("Invalid verified payment amount.");
 
     const result: any = await ctx.runMutation(internal.adActions.settleAdPayment, {
       reference: args.reference,
       paystackAmountKobo,
-      paystackTransactionId,
-      gatewayResponse,
+      paystackTransactionId: session.charge?.payment_id || args.checkoutId,
+      paymentProvider: "bachs",
+      gatewayResponse: "Verified with Bachs",
     });
 
     return result;

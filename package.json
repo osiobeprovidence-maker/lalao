@@ -10,7 +10,7 @@
     "verify:pwa": "node scripts/verify-pwa-assets.cjs",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "tsx src/test/wallet_flow.test.ts && tsx src/test/payment_history.test.ts && tsx src/test/data_plan_selector.test.ts && tsx src/test/agora_calling.test.ts && tsx src/test/verification_badge.test.ts && tsx src/test/chat_push_notifications.test.ts && tsx src/test/ads_flow.test.ts && tsx src/test/clubkonnect_flow.test.ts && tsx src/test/pwa_installation.test.ts && tsx src/test/bachs_integration.test.ts && tsx src/test/social_connections.test.ts"
+    "test": "tsx src/test/auth_identity_policy.test.ts && tsx src/test/wallet_flow.test.ts && tsx src/test/payment_history.test.ts && tsx src/test/data_plan_selector.test.ts && tsx src/test/agora_calling.test.ts && tsx src/test/verification_badge.test.ts && tsx src/test/chat_push_notifications.test.ts && tsx src/test/ads_flow.test.ts && tsx src/test/clubkonnect_flow.test.ts && tsx src/test/pwa_installation.test.ts && tsx src/test/bachs_integration.test.ts && tsx src/test/social_connections.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
