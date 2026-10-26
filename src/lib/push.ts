@@ -101,7 +101,7 @@ export async function getCurrentWebPushSubscription(): Promise<PushSubscription 
     return null;
   }
   try {
-    const registration = await navigator.serviceWorker.getRegistration("/sw.js");
+    const registration = await navigator.serviceWorker.getRegistration('/') || await navigator.serviceWorker.getRegistration();
     if (!registration) return null;
     return await registration.pushManager.getSubscription();
   } catch {
