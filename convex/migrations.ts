@@ -88,16 +88,26 @@ export const insertTableBatch = mutation({
   },
   handler: async (ctx, args) => {
     let inserted = 0;
+    const idMap: Record<string, string> = {};
+    const errors: string[] = [];
+
     for (const doc of args.documents) {
       try {
-        await ctx.db.insert(args.table as any, doc);
+        const originalId = doc._id;
+        const cleanDoc = { ...doc };
+        delete cleanDoc._id;
+        delete cleanDoc._creationTime;
+
+        const newId = await ctx.db.insert(args.table as any, cleanDoc);
+        if (originalId) {
+          idMap[originalId] = newId;
+        }
         inserted++;
       } catch (err: any) {
-        // If already exists or error, continue
-        console.warn(`[Insert Batch] Error inserting into ${args.table}:`, err?.message);
+        errors.push(err?.message || String(err));
       }
     }
-    return { table: args.table, inserted, total: args.documents.length };
+    return { table: args.table, inserted, total: args.documents.length, idMap, errors };
   },
 });
 
