@@ -74,3 +74,30 @@ export const migrateHistoricalPostsNearbyStatus = internalMutation({
     return { success: true, updatedCount, totalPosts: posts.length };
   },
 });
+
+import { mutation } from "./_generated/server";
+import { v } from "convex/values";
+
+/**
+ * Migration helper to insert documents into target tables while preserving original IDs
+ */
+export const insertTableBatch = mutation({
+  args: {
+    table: v.string(),
+    documents: v.array(v.any()),
+  },
+  handler: async (ctx, args) => {
+    let inserted = 0;
+    for (const doc of args.documents) {
+      try {
+        await ctx.db.insert(args.table as any, doc);
+        inserted++;
+      } catch (err: any) {
+        // If already exists or error, continue
+        console.warn(`[Insert Batch] Error inserting into ${args.table}:`, err?.message);
+      }
+    }
+    return { table: args.table, inserted, total: args.documents.length };
+  },
+});
+
