@@ -1992,6 +1992,8 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         soundStartOffset: args.soundStartOffset,
         soundVolume: args.soundVolume,
         originalAudioVolume: args.originalAudioVolume,
+        authorUserId: currentUser?.id,
+        authorUsername: currentUser?.username,
       });
 
       const postIdStr = typeof response === 'object' && response !== null ? response.id : response;
