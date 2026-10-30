@@ -154,7 +154,7 @@ export const MySubscriptionsModal: React.FC<MySubscriptionsModalProps> = ({ inli
                   {isCancelling && (
                     <div className="absolute top-0 right-0 bg-red-100 text-red-600 text-[10px] font-black px-2.5 py-1 rounded-bl-xl flex items-center gap-1 uppercase tracking-wider">
                       <Ban className="w-3 h-3" />
-                      Auto-Renewal Cancelled
+                      Ending at Period End
                     </div>
                   )}
 
@@ -216,7 +216,9 @@ export const MySubscriptionsModal: React.FC<MySubscriptionsModalProps> = ({ inli
                       <p className="text-[10px] font-bold uppercase tracking-wider text-theme-tertiary mb-0.5">Payment Method</p>
                       <span className="font-bold text-theme-secondary flex items-center gap-1 capitalize">
                         {sub.paymentMethod === 'paystack' ? (
-                          <><CreditCard className="w-3.5 h-3.5 text-[#0BA4DB]" /> Paystack</>
+                          <><CreditCard className="w-3.5 h-3.5 text-theme-tertiary" /> Paystack (historical)</>
+                        ) : sub.paymentMethod === 'bachs' ? (
+                          <><CreditCard className="w-3.5 h-3.5 text-[#5E43F3]" /> Batch</>
                         ) : (
                           <><Wallet className="w-3.5 h-3.5 text-[#5E43F3]" /> Wallet</>
                         )}
@@ -235,7 +237,7 @@ export const MySubscriptionsModal: React.FC<MySubscriptionsModalProps> = ({ inli
                     {sub.nextRenewalDate && (
                       <div className="text-right">
                         <span>
-                          {isCancelling ? 'Expires: ' : 'Renews: '}
+                          {isCancelling ? 'Expires: ' : sub.autoRenew ? 'Renews: ' : 'Renew by: '}
                           <strong className={isCancelling ? 'text-red-600' : 'text-[#5E43F3]'}>
                             {new Date(sub.nextRenewalDate).toLocaleDateString()}
                           </strong>

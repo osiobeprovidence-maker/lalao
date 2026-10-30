@@ -11,12 +11,11 @@ import {
   ShieldCheck,
   CheckCircle2,
 } from 'lucide-react';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { VerificationBadge } from '../common/VerificationBadge';
 import { VerificationTier } from '../../types';
-import { usePaystackPayment } from 'react-paystack';
 
 export const VerificationPageView: React.FC = () => {
   const {
@@ -27,7 +26,6 @@ export const VerificationPageView: React.FC = () => {
     isCreatorPremiumActive,
     subscription,
     cancelUserSubscription,
-    subscribeUserToTier,
     creatorSubscriptionInitialTier,
   } = useLalao();
 
@@ -38,6 +36,9 @@ export const VerificationPageView: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const tiersConfig = useQuery(api.creators.getCreatorTiers);
+  const beginTierPurchase = useMutation(api.creators.beginBachsTierPurchase);
+  const initializeBachsPayment = useAction(api.bachs.initializeBachsPayment);
+  const attachCheckout = useMutation(api.creators.attachBachsTierCheckout);
 
   // Selected tier configuration
   const currentSelectedConfig = tiersConfig?.find((t) => t.id === selectedTier) || {
@@ -56,43 +57,18 @@ export const VerificationPageView: React.FC = () => {
         : 800,
   };
 
-  // Paystack configuration (Card only)
-  const paystackRef = `sub_${selectedTier}_${Date.now()}`;
-  const paystackConfig = {
-    reference: paystackRef,
-    email: currentUser?.email || `${currentUser?.username || 'user'}@lalao.app`,
-    amount: currentSelectedConfig.price * 100, // in kobo
-    publicKey:
-      import.meta.env.VITE_PAYSTACK_PUBLIC_KEY ||
-      'pk_test_1e3e4134a6324bd82248c28828b24f8a835e9f0f',
-  };
-
-  const initializePaystack = usePaystackPayment(paystackConfig as any);
-
-  const handleCardSubscribe = () => {
+  const handleBachsSubscribe = async () => {
     setIsSubmitting(true);
     setErrorMsg(null);
-
     try {
-      initializePaystack({
-        onSuccess: async (response: any) => {
-          try {
-            await subscribeUserToTier(selectedTier, response.reference || paystackRef);
-          } catch (err: any) {
-            setErrorMsg(err.message || 'Payment received but failed to activate subscription.');
-          } finally {
-            setIsSubmitting(false);
-          }
-        },
-        onClose: () => {
-          setIsSubmitting(false);
-        },
-      });
+      const tier = selectedTier === 'creator_premium' ? 'creator' : selectedTier;
+      const purchase = await beginTierPurchase({ tier: tier as 'verified' | 'priority' | 'creator' });
+      const checkout = await initializeBachsPayment({ amount: purchase.amount, currency: purchase.currency, reference: purchase.reference, purpose: 'creator_subscription' });
+      await attachCheckout({ reference: purchase.reference, checkoutId: checkout.sessionId, checkoutUrl: checkout.checkoutUrl });
+      window.location.assign(checkout.checkoutUrl);
     } catch (err: any) {
-      // Direct fallback if popup blocker or test env
-      subscribeUserToTier(selectedTier, paystackRef)
-        .catch((e: any) => setErrorMsg(e.message || 'Subscription failed'))
-        .finally(() => setIsSubmitting(false));
+      setErrorMsg(err.message || 'Could not start Batch checkout.');
+      setIsSubmitting(false);
     }
   };
 
@@ -283,7 +259,7 @@ export const VerificationPageView: React.FC = () => {
                 <div>
                   <h4 className="text-xs font-bold text-theme-primary">Manage Subscription</h4>
                   <p className="text-[11px] text-theme-tertiary">
-                    Recurring monthly subscription. Cancel anytime.
+                    30-day access period. Renew manually with Batch before expiry.
                   </p>
                 </div>
 
@@ -532,19 +508,19 @@ export const VerificationPageView: React.FC = () => {
                   Payment Method
                 </h3>
                 <p className="text-[11px] text-theme-tertiary mt-0.5">
-                  Monthly subscriptions are billed securely via card
+                  Monthly plan · renew manually before expiry
                 </p>
               </div>
 
-              {/* Card Payment Option Only */}
+              {/* Batch hosted checkout */}
               <div className="p-3.5 rounded-xl border border-[#5E43F3] bg-[#5E43F3]/[0.04] flex items-center justify-between transition-all">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-lg bg-[#5E43F3]/10 text-[#5E43F3] flex items-center justify-center shrink-0">
                     <CreditCard className="w-4.5 h-4.5" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-theme-primary">DEBIT / CARD</div>
-                    <div className="text-[11px] text-theme-tertiary">Instant via Paystack</div>
+                    <div className="text-xs font-bold text-theme-primary">BATCH CHECKOUT</div>
+                    <div className="text-[11px] text-theme-tertiary">Secure hosted checkout by Batch</div>
                   </div>
                 </div>
                 <div className="w-5 h-5 rounded-full border border-[#5E43F3] bg-[#5E43F3] flex items-center justify-center text-white">
@@ -565,7 +541,7 @@ export const VerificationPageView: React.FC = () => {
               <button
                 type="button"
                 disabled={isSubmitting}
-                onClick={handleCardSubscribe}
+                onClick={handleBachsSubscribe}
                 className="w-full py-3.5 px-4 rounded-xl bg-[#5E43F3] hover:bg-[#4E34E0] active:scale-[0.99] disabled:opacity-50 text-white text-sm font-bold shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
@@ -581,7 +557,7 @@ export const VerificationPageView: React.FC = () => {
               </button>
 
               <p className="text-[11px] text-theme-tertiary text-center mt-3 leading-relaxed">
-                Subscriptions renew automatically each month until cancelled. Badges and benefits reflect immediately across all surfaces upon confirmation.
+                This plan lasts 30 days. Renew before expiry to keep your badge and benefits active.
               </p>
             </div>
           </div>

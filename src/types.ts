@@ -550,7 +550,7 @@ export interface TeamRegistration {
   status: 'confirmed' | 'pending';
   registeredAt: string;
   entryFee?: number;
-  paymentMethod?: 'wallet' | 'paystack' | 'free';
+  paymentMethod?: 'wallet' | 'bachs' | 'paystack' | 'free';
 }
 
 export interface PlayerTeam {
@@ -577,7 +577,7 @@ export interface WalletTransaction {
   reference?: string;
   status: 'successful' | 'pending' | 'failed';
   date: string;
-  paymentMethod?: 'wallet' | 'paystack' | 'bank_transfer' | 'card';
+  paymentMethod?: 'wallet' | 'bachs' | 'paystack' | 'bank_transfer' | 'card';
   eventTitle?: string;
 }
 

@@ -33,7 +33,6 @@ import type * as internal_platformSettingsDefaults from "../internal/platformSet
 import type * as lib_authIdentity from "../lib/authIdentity.js";
 import type * as lib_authLinkPolicy from "../lib/authLinkPolicy.js";
 import type * as lib_bachsWebhookSignature from "../lib/bachsWebhookSignature.js";
-import type * as lib_paystackWebhookSignature from "../lib/paystackWebhookSignature.js";
 import type * as lib_recentSearchShadowRevision from "../lib/recentSearchShadowRevision.js";
 import type * as lib_supabaseAdminRest from "../lib/supabaseAdminRest.js";
 import type * as market from "../market.js";
@@ -99,7 +98,6 @@ declare const fullApi: ApiFromModules<{
   "lib/authIdentity": typeof lib_authIdentity;
   "lib/authLinkPolicy": typeof lib_authLinkPolicy;
   "lib/bachsWebhookSignature": typeof lib_bachsWebhookSignature;
-  "lib/paystackWebhookSignature": typeof lib_paystackWebhookSignature;
   "lib/recentSearchShadowRevision": typeof lib_recentSearchShadowRevision;
   "lib/supabaseAdminRest": typeof lib_supabaseAdminRest;
   market: typeof market;

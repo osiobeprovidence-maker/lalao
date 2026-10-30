@@ -12,7 +12,6 @@ import {
   Upload,
   Image as ImageIcon,
   Wallet,
-  CreditCard,
   Building2,
   Zap,
   Check,
@@ -116,7 +115,7 @@ export const TournamentRegisterModal: React.FC = () => {
   ]);
 
   const [isInvitePickerOpen, setIsInvitePickerOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'paystack'>('wallet');
+  const [paymentMethod] = useState<'wallet'>('wallet');
   const [isProcessing, setIsProcessing] = useState(false);
 
   if (!isTournamentRegisterOpen || !registeringEvent) return null;
@@ -795,7 +794,6 @@ export const TournamentRegisterModal: React.FC = () => {
                     <button
                       type="button"
                       id="btn-pay-wallet-option"
-                      onClick={() => setPaymentMethod('wallet')}
                       className={`w-full p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${
                         paymentMethod === 'wallet'
                           ? 'border-[#5E43F3] bg-violet-50/60 ring-2 ring-[#5E43F3]/20'
@@ -847,32 +845,6 @@ export const TournamentRegisterModal: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Option 2: Paystack Instant */}
-                    <button
-                      type="button"
-                      id="btn-pay-paystack-option"
-                      onClick={() => setPaymentMethod('paystack')}
-                      className={`w-full p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                        paymentMethod === 'paystack'
-                          ? 'border-[#5E43F3] bg-violet-50/60 ring-2 ring-[#5E43F3]/20'
-                          : 'border-theme-divider hover:bg-theme-base'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                          <Zap className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <p className="text-xs sm:text-sm font-black text-theme-primary">
-                            Paystack Payment Gateway
-                          </p>
-                          <p className="text-xs text-theme-tertiary mt-0.5">
-                            Debit Card, Apple Pay, Bank Transfer, USSD
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-xs font-bold text-theme-secondary">Instant</span>
-                    </button>
                   </div>
                 </div>
               ) : (
@@ -1016,7 +988,7 @@ export const TournamentRegisterModal: React.FC = () => {
                     <>
                       <Zap className="w-4 h-4" />
                       <span>
-                        Pay ₦{entryFee.toLocaleString()} ({paymentMethod === 'wallet' ? 'Wallet' : 'Paystack'})
+                        Pay ₦{entryFee.toLocaleString()} (Wallet)
                       </span>
                     </>
                   ) : (

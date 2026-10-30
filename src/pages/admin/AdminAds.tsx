@@ -72,7 +72,7 @@ export const AdminAds: React.FC = () => {
             Ads Moderation & Management
           </h1>
           <p className="text-xs sm:text-sm text-theme-tertiary mt-1">
-            Review self-service ad campaigns, audit Paystack receipts, inspect targeting, and enforce policies.
+            Review self-service ad campaigns, audit Batch payment receipts, inspect targeting, and enforce policies.
           </p>
         </div>
       </div>
@@ -86,7 +86,7 @@ export const AdminAds: React.FC = () => {
           <p className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">
             ₦{(((overview?.totalVerifiedPaymentsKobo || 0)) / 100).toLocaleString()}
           </p>
-          <span className="text-[11px] text-theme-tertiary">Verified Paystack transactions</span>
+          <span className="text-[11px] text-theme-tertiary">Verified Batch transactions</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-theme-surface border border-theme-divider space-y-1">

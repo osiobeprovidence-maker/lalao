@@ -365,7 +365,6 @@ interface LalaoContextType {
   subscription: UserSubscription;
   isCreatorPremiumActive: boolean;
   cancelUserSubscription: () => Promise<void>;
-  subscribeUserToTier: (tier: VerificationTier, paystackRef?: string) => Promise<void>;
   isCreatorHubOpen: boolean;
   setIsCreatorHubOpen: (open: boolean) => void;
   isCreatorSubscriptionOpen: boolean;
@@ -1159,7 +1158,6 @@ const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
   const [creatorSubscriptionInitialTier, setCreatorSubscriptionInitialTier] = useState<VerificationTier | undefined>(undefined);
 
   const backendSubscription = useQuery(api.creators.getMyCreatorSubscription);
-  const subscribeToTierMutation = useMutation(api.creators.subscribeToTier);
   const cancelSubscriptionMutation = useMutation(api.creators.cancelSubscription);
 
   // Local subscription cache
@@ -1197,7 +1195,7 @@ const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
         nextBillingDate,
         price: backendSubscription.subscription?.price || defaultPrice,
         currency: backendSubscription.subscription?.currency || 'NGN',
-        paymentMethod: backendSubscription.subscription?.paymentMethod || 'paystack',
+        paymentMethod: backendSubscription.subscription?.paymentMethod || 'bachs',
         cancelAtPeriodEnd: backendSubscription.cancelAtPeriodEnd ?? false,
       };
     }
@@ -1224,7 +1222,7 @@ const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
         nextBillingDate: currentUser.verificationExpiresAt || (Date.now() + 30 * 86400000),
         price,
         currency: 'NGN',
-        paymentMethod: 'paystack',
+        paymentMethod: 'bachs',
         cancelAtPeriodEnd: false,
       };
     }
@@ -1316,52 +1314,6 @@ const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
     }));
     setIsCreatorHubOpen(false);
     triggerShareToast('Subscription cancelled successfully.');
-  };
-
-  const subscribeUserToTier = async (tier: VerificationTier, paystackRef?: string) => {
-    const backendTier = (tier === 'creator_premium' ? 'creator' : tier) as 'verified' | 'priority' | 'creator';
-    const isCreatorTier = backendTier === 'creator';
-    const price = isCreatorTier ? 3500 : backendTier === 'priority' ? 1700 : 800;
-    const now = Date.now();
-    const expiresAt = now + 30 * 24 * 60 * 60 * 1000;
-
-    try {
-      await subscribeToTierMutation({
-        tier: backendTier,
-        paymentMethod: 'paystack',
-        paystackReference: paystackRef,
-      });
-    } catch (e: any) {
-      console.warn('[LalaoContext] subscribeToTier error:', e);
-    }
-
-    const newSub: UserSubscription = {
-      status: 'active',
-      tier: tier === 'creator' ? 'creator_premium' : tier,
-      startDate: now,
-      nextBillingDate: expiresAt,
-      price,
-      currency: 'NGN',
-      paymentMethod: 'paystack',
-      cancelAtPeriodEnd: false,
-    };
-
-    setLocalSubscriptionState(newSub);
-    setCurrentUser((prev) => ({
-      ...prev,
-      isVerified: true,
-      verificationTier: backendTier,
-      verificationStatus: 'active',
-      verificationStartedAt: now,
-      verificationExpiresAt: expiresAt,
-      subscription: newSub,
-    }));
-
-    triggerShareToast(
-      isCreatorTier
-        ? 'Welcome to Creator Premium! Creator Hub unlocked.'
-        : `Welcome to ${backendTier === 'priority' ? 'Priority' : 'Standard'} Verified! Your badge is active.`
-    );
   };
 
   // Shopping, Cart & Saved Products
@@ -1647,13 +1599,13 @@ const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
     } catch {}
   }, [wallet, currentUser.id]);
 
-  const topUpWallet = (amount: number, method = 'paystack') => {
+  const topUpWallet = (amount: number, method = 'bachs') => {
     if (amount <= 0) return;
     const newTx: WalletTransaction = {
       id: `tx_topup_${Date.now()}`,
       type: 'deposit',
       amount,
-      description: `Wallet Top-Up via ${method === 'paystack' ? 'Paystack (Card)' : 'Direct Bank Transfer'}`,
+      description: `Wallet Top-Up via ${method === 'bachs' ? 'Batch' : 'Direct Bank Transfer'}`,
       reference: `LLW-TOP-${Math.floor(100000 + Math.random() * 900000)}`,
       status: 'successful',
       date: new Date().toISOString(),
@@ -3103,7 +3055,6 @@ const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
         subscription,
         isCreatorPremiumActive,
         cancelUserSubscription,
-        subscribeUserToTier,
         isCreatorHubOpen,
         setIsCreatorHubOpen,
         isCreatorSubscriptionOpen,

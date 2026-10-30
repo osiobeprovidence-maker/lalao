@@ -1,10 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { X, Crown, Check, AlertCircle, Loader2, CreditCard, Wallet, ShieldCheck, Clock, Calendar } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { useAuth } from '../../context/AuthContext';
-import { usePaystackPayment } from 'react-paystack';
 
 interface SubscriptionCheckoutModalProps {
   /**
@@ -27,17 +25,16 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
     triggerShareToast
   } = useLalao();
 
-  const { user } = useAuth();
-
   const reserveSlot = useMutation(api.subscriptions.reserveSlot);
   const joinViaWallet = useMutation(api.subscriptions.joinViaWallet);
-  const verifyAndJoinPaystack = useAction(api.subscriptions.verifyAndJoinPaystack);
+  const attachBachsCheckout = useMutation(api.subscriptions.attachBachsSubscriptionCheckout);
+  const initializeBachsPayment = useAction(api.bachs.initializeBachsPayment);
 
   // Authoritative Lalao wallet balance
   const wallet = useQuery(api.wallet.getWallet);
   const userBalance = wallet?.balance ?? 0;
 
-  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'paystack'>('wallet');
+  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'bachs'>('wallet');
   const [isProcessing, setIsProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,21 +44,7 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
   const price = plan?.defaultSlotPrice || 0;
   const hasEnoughWalletFunds = userBalance >= price;
 
-  // Paystack configuration
-  const paystackReference = useMemo(() => {
-    return `JQ-PSK-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-  }, [isSubscriptionCheckoutOpen, plan?._id]);
-
-  const paystackConfig = {
-    reference: paystackReference,
-    email: user?.email || 'member@lalao.app',
-    amount: price * 100, // Kobo
-    publicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_1e3e4134a6324bd82248c28828b24f8a835e9f0f',
-  };
-
-  const initializePaystack = usePaystackPayment(paystackConfig as any);
-
-  if ((!inline && !isSubscriptionCheckoutOpen) || !plan || !user) return null;
+  if ((!inline && !isSubscriptionCheckoutOpen) || !plan) return null;
 
   const handleWalletCheckout = async () => {
     try {
@@ -91,47 +74,19 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
     }
   };
 
-  const handlePaystackSuccess = async (response: any) => {
-    setIsProcessing(true);
-    try {
-      const verified = await verifyAndJoinPaystack({
-        reference: response.reference || paystackReference,
-      });
-
-      if (verified.success) {
-        setSuccessData(verified);
-        setSuccess(true);
-        triggerShareToast(`Payment verified! Welcome to ${plan.name}.`);
-      } else {
-        setError(verified.message || 'Paystack payment verification failed.');
-      }
-    } catch (e: any) {
-      console.error('Paystack join verification error:', e);
-      setError(e.message || 'Error confirming Paystack transaction.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handlePaystackCheckout = async () => {
+  const handleBachsCheckout = async () => {
     try {
       setError(null);
       setIsProcessing(true);
-
-      // 1. Create temporary slot reservation before opening checkout
-      await reserveSlot({
+      const reference = `LALAO_SUB_${Date.now()}_${Math.random().toString(36).slice(2, 9).toUpperCase()}`;
+      const reservation = await reserveSlot({
         subscriptionId: plan._id as any,
-        paymentMethod: 'paystack',
-        paystackReference: paystackReference,
+        paymentMethod: 'bachs',
+        bachsReference: reference,
       });
-
-      // 2. Open Paystack popup
-      initializePaystack({
-        onSuccess: handlePaystackSuccess,
-        onClose: () => {
-          setIsProcessing(false);
-        },
-      } as any);
+      const checkout = await initializeBachsPayment({ amount: reservation.amount, currency: reservation.currency, reference, purpose: 'subscription_membership' });
+      await attachBachsCheckout({ reference, checkoutId: checkout.sessionId });
+      window.location.assign(checkout.checkoutUrl);
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Failed to initialize payment.');
@@ -306,29 +261,29 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
                     </div>
                   </button>
 
-                  {/* Option 2: Paystack (Card / Bank) */}
+                  {/* Option 2: Bachs hosted checkout */}
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod('paystack')}
+                    onClick={() => setPaymentMethod('bachs')}
                     className={`p-3.5 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-2 cursor-pointer ${
-                      paymentMethod === 'paystack'
-                        ? 'border-[#0BA4DB] bg-[#0BA4DB]/5 ring-2 ring-[#0BA4DB]/20'
+                      paymentMethod === 'bachs'
+                        ? 'border-[#5E43F3] bg-[#5E43F3]/5 ring-2 ring-[#5E43F3]/20'
                         : 'border-theme-divider-light bg-theme-base hover:bg-theme-surface-hover'
                     }`}
                   >
                     <div className="flex items-center justify-between w-full">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-[#0BA4DB]/10 text-[#0BA4DB] flex items-center justify-center">
+                        <div className="w-7 h-7 rounded-full bg-[#5E43F3]/10 text-[#5E43F3] flex items-center justify-center">
                           <CreditCard className="w-3.5 h-3.5" />
                         </div>
-                        <span className="text-xs font-bold text-theme-primary">Paystack</span>
+                        <span className="text-xs font-bold text-theme-primary">Batch</span>
                       </div>
-                      {paymentMethod === 'paystack' && (
-                        <div className="w-4 h-4 rounded-full bg-[#0BA4DB] text-white flex items-center justify-center text-[10px]">âœ“</div>
+                      {paymentMethod === 'bachs' && (
+                        <div className="w-4 h-4 rounded-full bg-[#5E43F3] text-white flex items-center justify-center text-[10px]">âœ“</div>
                       )}
                     </div>
                     <div className="text-[11px] text-theme-secondary">
-                      Debit Card / Bank Transfer
+                      Secure hosted checkout
                     </div>
                   </button>
                 </div>
@@ -398,12 +353,12 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
             <div className="p-4 bg-theme-base border-t border-theme-divider-light shrink-0">
               <button
                 type="button"
-                onClick={paymentMethod === 'wallet' ? handleWalletCheckout : handlePaystackCheckout}
+                onClick={paymentMethod === 'wallet' ? handleWalletCheckout : handleBachsCheckout}
                 disabled={isProcessing || (paymentMethod === 'wallet' && !hasEnoughWalletFunds)}
                 className={`w-full py-4 rounded-xl font-black text-white shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
                   paymentMethod === 'wallet'
                     ? 'bg-[#5E43F3] hover:bg-[#4E34E0] shadow-[#5E43F3]/25'
-                    : 'bg-[#0BA4DB] hover:bg-[#098bbd] shadow-[#0BA4DB]/25'
+                    : 'bg-[#5E43F3] hover:bg-[#4E34E0] shadow-[#5E43F3]/25'
                 } disabled:opacity-60 disabled:cursor-not-allowed`}
               >
                 {isProcessing ? (
@@ -413,7 +368,7 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
                   </>
                 ) : (
                   <span>
-                    Pay â‚¦{price.toLocaleString()} ({durationStr}) via {paymentMethod === 'wallet' ? 'Wallet' : 'Paystack'} & Join
+                    Pay â‚¦{price.toLocaleString()} ({durationStr}) via {paymentMethod === 'wallet' ? 'Wallet' : 'Batch'} & Join
                   </span>
                 )}
               </button>

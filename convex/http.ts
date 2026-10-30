@@ -2,7 +2,6 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { verifyBachsWebhookSignature } from "./lib/bachsWebhookSignature";
-import { verifyPaystackWebhookSignature } from "./lib/paystackWebhookSignature";
 
 const http = httpRouter();
 
@@ -58,79 +57,6 @@ http.route({
   }),
 });
 
-http.route({
-  path: "/api/webhooks/paystack",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    const rawBody = new Uint8Array(await request.arrayBuffer());
-    const payloadString = new TextDecoder().decode(rawBody);
-    const signature = request.headers.get("x-paystack-signature");
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
-    if (!secretKey) return new Response("Webhook is not configured", { status: 503 });
-    try {
-      const valid = await verifyPaystackWebhookSignature({ rawBody, secret: secretKey, signature });
-      if (!valid) return new Response("Invalid signature", { status: 401 });
-    } catch (error) {
-      console.error("[Paystack Webhook] Signature verification failed");
-      return new Response("Signature verification error", { status: 500 });
-    }
-
-    let data;
-    try {
-      data = JSON.parse(payloadString);
-    } catch (e) {
-      return new Response("Invalid JSON", { status: 400 });
-    }
-
-    if (data.event === "charge.success") {
-      const reference = data.data.reference;
-      const amountKobo = data.data.amount;
-      const amountNgn = amountKobo / 100;
-      const transactionId = data.data.id?.toString();
-
-      if (data.data.currency !== "NGN") {
-        return new Response("Ignored non-NGN currency", { status: 200 });
-      }
-
-      // Check if reference belongs to Lalao Ads
-      if (typeof reference === "string" && reference.startsWith("LALAO_AD_")) {
-        try {
-          await ctx.runMutation(internal.adActions.settleAdPayment, {
-            reference,
-            paystackAmountKobo: amountKobo,
-            paystackTransactionId: transactionId,
-            gatewayResponse: data.data.gateway_response || "Webhook verified",
-          });
-          return new Response("Ad Payment Success", { status: 200 });
-        } catch (error: any) {
-          console.error("Paystack Ad webhook error:", error);
-          return new Response("Temporary processing failure", { status: 500 });
-        }
-      }
-
-      try {
-        await ctx.runMutation(internal.wallet.settleWalletFunding, {
-          reference,
-          paystackAmount: amountNgn,
-          paystackTransactionId: transactionId
-        });
-        return new Response("Success", { status: 200 });
-      } catch (error: any) {
-        console.error("Paystack webhook processing error:", error);
-        // Provider retry is safe: wallet settlement returns success for completed references.
-        return new Response("Temporary processing failure", { status: 500 });
-      }
-    }
-
-    return new Response("Unhandled event", { status: 200 });
-  })
-});
-
-/**
- * BACHS Webhook Endpoint
- * Validates HMAC-SHA256 signature and timestamp drift (<300s).
- * Idempotently settles wallet funding on successful payment.
- */
 http.route({
   path: "/api/webhooks/bachs",
   method: "POST",
@@ -189,9 +115,8 @@ http.route({
       if (!verifyResponse.ok) return new Response("Checkout verification failed", { status: 502 });
       const session = await verifyResponse.json() as any;
       if (session.checkout_id !== checkoutId || session.status !== "completed" || session.payment_status !== "succeeded") {
-        return new Response("Checkout is not paid", { status: 200 });
+        return new Response("Checkout is not confirmed yet", { status: 503 });
       }
-      if (String(session.currency || "").toUpperCase() !== "NGN") return new Response("Currency mismatch", { status: 200 });
       const reference = session.reference;
       const amount = Number(session.amount);
       if (typeof reference !== "string" || !reference || !Number.isFinite(amount) || amount <= 0) {
@@ -199,6 +124,7 @@ http.route({
       }
       const expectedOwner = await ctx.runQuery(internal.bachs.getExpectedPaymentOwner, { reference });
       if (!expectedOwner) return new Response("Payment record is not ready", { status: 500 });
+      if (String(session.currency || "").toUpperCase() !== String(expectedOwner.currency || "").toUpperCase()) return new Response("Currency mismatch", { status: 200 });
       const checkoutEmail = String(session.customer?.email || session.customer_details?.email || "").trim().toLowerCase();
       if (String(session.metadata?.userId || "") !== expectedOwner.userId || checkoutEmail !== expectedOwner.email.toLowerCase()) {
         return new Response("Checkout customer does not match the payment owner", { status: 400 });
@@ -208,13 +134,29 @@ http.route({
         if (!Number.isSafeInteger(amountKobo)) return new Response("Invalid verified amount", { status: 400 });
         await ctx.runMutation(internal.adActions.settleAdPayment, {
           reference,
-          paystackAmountKobo: amountKobo,
-          paystackTransactionId: session.charge?.payment_id || checkoutId,
+          verifiedAmountKobo: amountKobo,
+          providerTransactionId: session.charge?.payment_id || checkoutId,
           paymentProvider: "bachs",
           gatewayResponse: "Verified with Bachs",
         });
         await ctx.runMutation(internal.bachs.recordProcessedWebhookEvent, { eventId: data.id, eventType: event });
         return new Response("Success", { status: 200 });
+      }
+      if (reference.startsWith("LALAO_CREATOR_")) {
+        if (!expectedOwner.checkoutId) return new Response("Checkout reference is not yet attached", { status: 500 });
+        if (expectedOwner.checkoutId !== checkoutId) return new Response("Checkout ID mismatch", { status: 400 });
+        if (amount !== expectedOwner.amount) return new Response("Amount mismatch", { status: 400 });
+        await ctx.runMutation(internal.creators.settleBachsTierPayment, { reference, amount, checkoutId });
+        await ctx.runMutation(internal.bachs.recordProcessedWebhookEvent, { eventId: data.id, eventType: event });
+        return new Response("Creator subscription activated", { status: 200 });
+      }
+      if (reference.startsWith("LALAO_SUB_")) {
+        if (!expectedOwner.checkoutId) return new Response("Checkout reference is not yet attached", { status: 500 });
+        if (expectedOwner.checkoutId !== checkoutId) return new Response("Checkout ID mismatch", { status: 400 });
+        if (amount !== expectedOwner.amount) return new Response("Amount mismatch", { status: 400 });
+        await ctx.runMutation(internal.subscriptions.settleBachsSubscription, { reference, amount, currency: String(session.currency), checkoutId });
+        await ctx.runMutation(internal.bachs.recordProcessedWebhookEvent, { eventId: data.id, eventType: event });
+        return new Response("Subscription activated", { status: 200 });
       }
       await ctx.runMutation(internal.wallet.settleWalletFunding, {
         reference,
@@ -277,59 +219,6 @@ http.route({
       });
     }
   }),
-});
-
-http.route({
-  path: "/api/payments/paystack/callback",
-  method: "GET",
-  handler: httpAction(async (ctx, request) => {
-    const url = new URL(request.url);
-    const reference = url.searchParams.get("reference");
-
-    if (!reference) {
-      return new Response("Missing reference", { status: 400 });
-    }
-
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
-    if (!secretKey) return new Response("Server error", { status: 500 });
-
-    try {
-      const res = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
-        headers: { Authorization: `Bearer ${secretKey}` }
-      });
-      const data = await res.json();
-
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VITE_APP_URL || "http://localhost:3000";
-
-      if (data.status === true && data.data.status === "success" && data.data.currency === "NGN") {
-        const amountNgn = data.data.amount / 100;
-        await ctx.runMutation(internal.wallet.settleWalletFunding, {
-          reference,
-          paystackAmount: amountNgn,
-          paystackTransactionId: data.data.id?.toString()
-        });
-        
-        // Redirect back to app wallet with success
-        return new Response(null, {
-          status: 302,
-          headers: { Location: `${appUrl}?funding_success=true` }
-        });
-      } else {
-        // Redirect back to app wallet with failure
-        return new Response(null, {
-          status: 302,
-          headers: { Location: `${appUrl}?funding_failed=true` }
-        });
-      }
-    } catch (e) {
-      console.error("Callback error", e);
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VITE_APP_URL || "http://localhost:3000";
-      return new Response(null, {
-        status: 302,
-        headers: { Location: `${appUrl}?funding_error=true` }
-      });
-    }
-  })
 });
 
 export default http;

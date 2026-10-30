@@ -977,8 +977,10 @@ export default defineSchema({
     currency: v.string(),
     durationMonths: v.optional(v.number()),
     status: v.union(v.literal("pending"), v.literal("completed"), v.literal("expired"), v.literal("cancelled")),
-    paymentMethod: v.union(v.literal("wallet"), v.literal("paystack")),
+    paymentMethod: v.union(v.literal("wallet"), v.literal("paystack"), v.literal("bachs")),
     paystackReference: v.optional(v.string()),
+    bachsReference: v.optional(v.string()),
+    bachsCheckoutId: v.optional(v.string()),
     expiresAt: v.number(),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -986,6 +988,7 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_slot", ["slotId"])
     .index("by_reference", ["paystackReference"])
+    .index("by_bachs_reference", ["bachsReference"])
     .index("by_status", ["status"]),
 
   subscriptionMemberships: defineTable({
@@ -1004,13 +1007,14 @@ export default defineSchema({
     amount: v.optional(v.number()),
     currency: v.optional(v.string()),
     durationMonths: v.optional(v.number()),
-    paymentMethod: v.optional(v.union(v.literal("wallet"), v.literal("paystack"))),
+    paymentMethod: v.optional(v.union(v.literal("wallet"), v.literal("paystack"), v.literal("bachs"))),
     lastPaymentReference: v.optional(v.string()),
     lastPaymentStatus: v.optional(v.string()),
     startedAt: v.optional(v.number()),
     currentPeriodStart: v.optional(v.number()),
     currentPeriodEnd: v.optional(v.number()),
     nextRenewalDate: v.optional(v.number()),
+    renewalReminderForPeriodEnd: v.optional(v.number()),
     cancelAtPeriodEnd: v.boolean(),
     autoRenew: v.optional(v.boolean()),
     createdAt: v.number(),
@@ -1050,6 +1054,7 @@ export default defineSchema({
     bachsProductId: v.optional(v.string()),
     bachsSubscriptionId: v.optional(v.string()),
     billingStatus: v.optional(v.string()),
+    renewalReminderSentFor: v.optional(v.number()),
     cancelAtPeriodEnd: v.boolean(),
     startedAt: v.number(),
     expiresAt: v.number(),
@@ -1945,6 +1950,7 @@ export default defineSchema({
     ),
     paystackAccessCode: v.optional(v.string()),
     paystackTransactionId: v.optional(v.string()),
+    providerTransactionId: v.optional(v.string()),
     bachsCheckoutId: v.optional(v.string()),
     paymentProvider: v.optional(v.string()),
     paidAt: v.optional(v.number()),

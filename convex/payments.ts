@@ -104,8 +104,8 @@ export const getPaymentHistory = query({
         category = "wallet";
         isDebit = false;
         title = "Wallet Top-up";
-        subtitle = w.paymentProvider ? `via ${w.paymentProvider.toUpperCase()}` : "Funded via Paystack";
-        provider = w.paymentProvider ? w.paymentProvider.toUpperCase() : "Paystack";
+        subtitle = w.paymentProvider ? `via ${w.paymentProvider.toUpperCase()}` : "External funding";
+        provider = w.paymentProvider ? w.paymentProvider.toUpperCase() : "External provider";
         iconType = "wallet";
       } else if (w.type === "MARKET_REFUND" || descLower.includes("refund")) {
         category = "other";
@@ -495,7 +495,7 @@ export const seedSamplePaymentHistory = mutation({
     const oneHour = 3600 * 1000;
     const oneDay = 24 * oneHour;
 
-    // 1. Paystack Top-up (Completed)
+    // 1. Batch Top-up (Completed)
     await ctx.db.insert("walletTransactions", {
       walletId: wallet._id,
       userId: user._id,
@@ -503,12 +503,12 @@ export const seedSamplePaymentHistory = mutation({
       fee: 0,
       currency: "LC",
       assetType: "LALAO_CREDITS",
-      paymentProvider: "paystack",
-      providerTransactionId: "pstk_" + Math.random().toString(36).substring(2, 9),
+      paymentProvider: "bachs",
+      providerTransactionId: "bachs_" + Math.random().toString(36).substring(2, 9),
       type: "deposit",
       status: "completed",
-      description: "Wallet funded via Paystack (₦10,000 -> 10,000 LC)",
-      reference: "PAY-PSTK-" + Math.floor(100000 + Math.random() * 900000),
+      description: "Wallet funded via Batch (₦10,000 -> 10,000 LC)",
+      reference: "PAY-BACHS-" + Math.floor(100000 + Math.random() * 900000),
       createdAt: now - 3 * oneDay,
     });
 
@@ -657,11 +657,11 @@ export const seedSamplePaymentHistory = mutation({
       fee: 0,
       currency: "LC",
       assetType: "LALAO_CREDITS",
-      paymentProvider: "paystack",
+      paymentProvider: "bachs",
       type: "deposit",
       status: "pending",
-      description: "Wallet funded via Paystack (₦5,000 -> 5,000 LC) - Awaiting Confirmation",
-      reference: "PAY-PENDING-" + Math.floor(100000 + Math.random() * 900000),
+      description: "Wallet funded via Batch (₦5,000 -> 5,000 LC) - Awaiting Confirmation",
+      reference: "PAY-BACHS-PENDING-" + Math.floor(100000 + Math.random() * 900000),
       createdAt: now - 15 * 60 * 1000,
     });
 

@@ -1,6 +1,7 @@
 import { getUserByAuthIdentity } from "./lib/authIdentity";
 import { requireAdmin } from "./admin";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { resolveUserVerification } from "./social";
 
@@ -728,98 +729,148 @@ export const getCreatorPublicProfile = query({
    MUTATIONS
    ───────────────────────────────────────────────────────────────────────────── */
 
-/**
- * subscribeToTier:
- * Subscribes user to Tier 3 (Verified), Tier 4 (Priority Verified), or Tier 5 (Creator Premium).
- * Deducts funds from their Lalao Wallet if paying via wallet, or accepts Paystack reference.
- */
-export const subscribeToTier = mutation({
+/** Start an unactivated creator-tier purchase. Access is granted only by verified Bachs settlement. */
+export const beginBachsTierPurchase = mutation({
   args: {
     tier: v.union(v.literal("verified"), v.literal("priority"), v.literal("creator")),
-    paymentMethod: v.union(v.literal("wallet"), v.literal("paystack")),
-    paystackReference: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await getAuthedUser(ctx);
     if (!user) throw new Error("Unauthenticated");
-
     const tierInfo = CREATOR_TIER_CONFIG[args.tier];
-    if (!tierInfo) throw new Error("Invalid tier");
-
+    const settings = await ctx.db.query("platformSettings")
+      .withIndex("by_key", (q) => q.eq("key", "creator_tier_settings"))
+      .first();
+    let price = tierInfo.price;
+    if (settings?.value) {
+      try {
+        const parsed = JSON.parse(settings.value);
+        const configured = parsed[`${args.tier}Price`];
+        if (typeof configured === "number" && Number.isFinite(configured) && configured > 0) price = configured;
+      } catch {
+        // Keep the configured default when stored settings are malformed.
+      }
+    }
     const now = Date.now();
-    const durationMs = 30 * 24 * 60 * 60 * 1000; // 30 days
-    const expiresAt = now + durationMs;
-
-    // 1. Enforce card-only payments (no Lalao Wallet for verification subscriptions)
-    if (args.paymentMethod === "wallet") {
-      throw new Error("Lalao Wallet cannot be used for verification subscriptions. Card payment only.");
-    }
-
-    // 2. Mark any previously active subscription as superseded/cancelled
-    const prevSubs = await ctx.db
-      .query("creatorSubscriptions")
-      .withIndex("by_user_status", (q) => q.eq("userId", user._id).eq("status", "active"))
-      .collect();
-
-    for (const sub of prevSubs) {
-      await ctx.db.patch(sub._id, {
-        status: "cancelled",
-        cancelledAt: now,
-        updatedAt: now,
-      });
-    }
-
-    // 3. Create new creatorSubscription record
-    const subId = await ctx.db.insert("creatorSubscriptions", {
+    const reference = `LALAO_CREATOR_${String(user._id)}_${args.tier}_${now}_${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const purchaseId = await ctx.db.insert("creatorSubscriptions", {
       userId: user._id,
       tier: args.tier,
-      status: "active",
-      price: tierInfo.price,
+      status: "pending",
+      price,
       currency: "NGN",
-      paymentMethod: args.paymentMethod,
-      paystackReference: args.paystackReference,
+      paymentMethod: "bachs",
+      bachsReference: reference,
       startedAt: now,
-      expiresAt: expiresAt,
+      expiresAt: now + 15 * 60 * 1000,
       cancelAtPeriodEnd: false,
       createdAt: now,
       updatedAt: now,
     });
+    return { purchaseId, reference, amount: price, currency: "NGN" };
+  },
+});
 
-    // 4. Update user's verification profile
-    const userUpdates: any = {
-      verificationTier: args.tier,
-      verificationStatus: "active",
-      verificationExpiresAt: expiresAt,
-      creatorPriorityWeight: tierInfo.priorityWeight,
-      updatedAt: now,
+export const settleBachsTierPayment = internalMutation({
+  args: { reference: v.string(), amount: v.number(), checkoutId: v.string() },
+  handler: async (ctx, args) => {
+    const purchase = await ctx.db.query("creatorSubscriptions")
+      .withIndex("by_bachs_reference", (q) => q.eq("bachsReference", args.reference)).first();
+    if (!purchase) throw new Error("Creator subscription payment not found.");
+    if (purchase.status === "active") return { success: true, alreadySettled: true, subscriptionId: purchase._id };
+    if (purchase.status !== "pending" || purchase.expiresAt <= Date.now() || !purchase.bachsCheckoutId || purchase.bachsCheckoutId !== args.checkoutId || purchase.price !== args.amount || purchase.currency !== "NGN") {
+      throw new Error("Verified Bachs payment does not match the pending creator subscription.");
+    }
+    const user = await ctx.db.get(purchase.userId);
+    if (!user) throw new Error("Creator account not found.");
+    const now = Date.now();
+    const durationMs = 30 * 24 * 60 * 60 * 1000;
+    for (const sub of await ctx.db.query("creatorSubscriptions")
+      .withIndex("by_user_status", (q) => q.eq("userId", purchase.userId).eq("status", "active")).collect()) {
+      await ctx.db.patch(sub._id, { status: "cancelled", cancelledAt: now, updatedAt: now });
+    }
+    await ctx.db.patch(purchase._id, {
+      status: "active", bachsCheckoutId: args.checkoutId,
+      startedAt: now, expiresAt: now + durationMs, billingStatus: "renewal_due_manually", updatedAt: now,
+    });
+    const tierInfo = CREATOR_TIER_CONFIG[purchase.tier];
+    const updates: any = {
+      verificationTier: purchase.tier, verificationStatus: "active", verificationExpiresAt: now + durationMs,
+      creatorPriorityWeight: tierInfo.priorityWeight, updatedAt: now,
     };
+    if (purchase.tier === "creator") {
+      if (!user.creatorLevel) updates.creatorLevel = 1;
+      if (!user.creatorCategory) updates.creatorCategory = "Content Creator";
+      if (!user.creatorAchievements) updates.creatorAchievements = ["Creator Premium Unlocked"];
+    }
+    await ctx.db.patch(user._id, updates);
+    await ctx.db.insert("notifications", {
+      recipientId: user._id, actorId: user._id, type: "system_alert",
+      targetExcerpt: `Congratulations! Your account is now ${tierInfo.name}.`, isRead: false, createdAt: now,
+    });
+    return { success: true, subscriptionId: purchase._id, tier: purchase.tier, expiresAt: now + durationMs };
+  },
+});
 
-    if (args.tier === "creator") {
-      if (!user.creatorLevel) userUpdates.creatorLevel = 1;
-      if (!user.creatorCategory) userUpdates.creatorCategory = "Content Creator";
-      if (!user.creatorAchievements) {
-        userUpdates.creatorAchievements = ["Creator Premium Unlocked"];
+export const attachBachsTierCheckout = mutation({
+  args: { reference: v.string(), checkoutId: v.string(), checkoutUrl: v.string() },
+  handler: async (ctx, args) => {
+    const user = await getAuthedUser(ctx);
+    if (!user) throw new Error("Unauthenticated");
+    const purchase = await ctx.db.query("creatorSubscriptions")
+      .withIndex("by_bachs_reference", (q) => q.eq("bachsReference", args.reference)).first();
+    if (!purchase || purchase.userId !== user._id || purchase.status !== "pending" || purchase.expiresAt <= Date.now()) throw new Error("Pending checkout not found.");
+    if (purchase.bachsCheckoutId && purchase.bachsCheckoutId !== args.checkoutId) throw new Error("A checkout is already attached to this purchase.");
+    await ctx.db.patch(purchase._id, { bachsCheckoutId: args.checkoutId, bachsCheckoutUrl: args.checkoutUrl, updatedAt: Date.now() });
+    return { success: true };
+  },
+});
+
+export const getBachsCreatorPaymentOwner = internalQuery({
+  args: { reference: v.string() },
+  handler: async (ctx, args) => {
+    const purchase = await ctx.db.query("creatorSubscriptions")
+      .withIndex("by_bachs_reference", (q) => q.eq("bachsReference", args.reference)).first();
+    if (!purchase) return null;
+    const user = await ctx.db.get(purchase.userId);
+    return user ? { userId: String(user._id), email: user.email || `${user.username || "user"}@lalao.app`, amount: purchase.price, currency: purchase.currency, checkoutId: purchase.bachsCheckoutId, status: purchase.status, expiresAt: purchase.expiresAt } : null;
+  },
+});
+
+export const maintainCreatorSubscriptions = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const threeDaysAhead = now + 3 * 24 * 60 * 60 * 1000;
+    const subscriptions = await ctx.db.query("creatorSubscriptions").collect();
+    let reminders = 0;
+    let expired = 0;
+    for (const sub of subscriptions) {
+      if (sub.status !== "active") continue;
+      const user = await ctx.db.get(sub.userId);
+      if (!user) continue;
+      if (sub.expiresAt <= now) {
+        await ctx.db.patch(sub._id, { status: "expired", billingStatus: "expired", updatedAt: now });
+        if (user.verificationExpiresAt === sub.expiresAt && user.verificationTier === sub.tier) {
+          await ctx.db.patch(user._id, { verificationTier: "none", verificationStatus: "expired", verificationExpiresAt: undefined, creatorPriorityWeight: 1, updatedAt: now });
+        }
+        await ctx.db.insert("notifications", {
+          recipientId: user._id, actorId: user._id, type: "system_alert",
+          targetExcerpt: `Your ${CREATOR_TIER_CONFIG[sub.tier].name} plan expired. Renew with Batch checkout to restore access.`,
+          isRead: false, createdAt: now,
+        });
+        expired += 1;
+      } else if (sub.expiresAt < threeDaysAhead && sub.renewalReminderSentFor !== sub.expiresAt) {
+        await ctx.db.patch(sub._id, { renewalReminderSentFor: sub.expiresAt, updatedAt: now });
+        await ctx.db.insert("notifications", {
+          recipientId: user._id, actorId: user._id, type: "system_alert",
+          targetExcerpt: `Your ${CREATOR_TIER_CONFIG[sub.tier].name} plan ends on ${new Date(sub.expiresAt).toLocaleDateString()}. Renew manually with Batch checkout to keep access.`,
+          isRead: false, createdAt: now,
+        });
+        reminders += 1;
       }
     }
-
-    await ctx.db.patch(user._id, userUpdates);
-
-    // 5. Send notification to user
-    await ctx.db.insert("notifications", {
-      recipientId: user._id,
-      actorId: user._id,
-      type: "system_alert",
-      targetExcerpt: `Congratulations! Your account is now ${tierInfo.name}.`,
-      isRead: false,
-      createdAt: now,
-    });
-
-    return {
-      success: true,
-      subscriptionId: subId,
-      tier: args.tier,
-      expiresAt,
-    };
+    return { reminders, expired };
   },
 });
 

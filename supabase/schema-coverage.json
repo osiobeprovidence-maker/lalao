@@ -1,9 +1,9 @@
 {
   "source": "convex/schema.ts",
   "tables": 102,
-  "declaredFields": 1095,
+  "declaredFields": 1100,
   "systemColumns": 204,
-  "regularIndexes": 259,
+  "regularIndexes": 260,
   "searchIndexes": 10,
   "scalarForeignKeys": 171,
   "unresolvedStorageReferences": 7,
@@ -581,28 +581,28 @@
     },
     {
       "table": "subscriptionReservations",
-      "fields": 12,
-      "optionalFields": 2,
-      "indexes": 4,
+      "fields": 14,
+      "optionalFields": 4,
+      "indexes": 5,
       "searchIndexes": 0,
       "validatorKinds": {
         "id": 3,
         "float64": 5,
-        "string": 2,
+        "string": 4,
         "union": 2
       },
       "scalarRelationships": 3
     },
     {
       "table": "subscriptionMemberships",
-      "fields": 20,
-      "optionalFields": 11,
+      "fields": 21,
+      "optionalFields": 12,
       "indexes": 6,
       "searchIndexes": 0,
       "validatorKinds": {
         "id": 4,
         "union": 3,
-        "float64": 8,
+        "float64": 9,
         "string": 3,
         "boolean": 2
       },
@@ -624,14 +624,14 @@
     },
     {
       "table": "creatorSubscriptions",
-      "fields": 19,
-      "optionalFields": 8,
+      "fields": 20,
+      "optionalFields": 9,
       "indexes": 7,
       "searchIndexes": 0,
       "validatorKinds": {
         "id": 1,
         "union": 2,
-        "float64": 6,
+        "float64": 7,
         "string": 9,
         "boolean": 1
       },
@@ -1272,14 +1272,14 @@
     },
     {
       "table": "adPayments",
-      "fields": 14,
-      "optionalFields": 6,
+      "fields": 15,
+      "optionalFields": 7,
       "indexes": 3,
       "searchIndexes": 0,
       "validatorKinds": {
         "id": 2,
         "float64": 4,
-        "string": 7,
+        "string": 8,
         "union": 1
       },
       "scalarRelationships": 2

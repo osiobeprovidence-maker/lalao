@@ -1,5 +1,5 @@
 import { getUserByAuthIdentity } from "./lib/authIdentity";
-import { mutation, query, action, internalMutation } from "./_generated/server";
+import { mutation, query, action, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Doc } from "./_generated/dataModel";
 import { v, ConvexError } from "convex/values";
@@ -113,7 +113,7 @@ async function seedDefaultSubscriptions(ctx: any, pageId: any) {
       memberInstructions: "After joining, an invitation link will be delivered to your JointheQ dashboard and notifications within 10 minutes.",
       eligibilityRules: "Requires a standard Spotify account not currently attached to any active Family or Duo subscription.",
       cancellationPolicy: "Cancel future renewals anytime with 1 click before the next billing cycle.",
-      renewalRules: "Automatic monthly renewal supported via LaLao Wallet or Paystack card.",
+      renewalRules: "Monthly access period. Renew manually before expiry using Lalao Wallet or Batch hosted checkout.",
       gracePeriodDays: 3,
     },
     {
@@ -131,7 +131,7 @@ async function seedDefaultSubscriptions(ctx: any, pageId: any) {
       memberInstructions: "Provide your Apple ID email after payment to receive the iCloud Family invitation.",
       eligibilityRules: "Your Apple ID region must be set to Nigeria.",
       cancellationPolicy: "Cancel anytime before your monthly cycle renewal date.",
-      renewalRules: "Monthly renewal via Wallet or Paystack.",
+      renewalRules: "Monthly access period. Renew manually before expiry using Lalao Wallet or Batch hosted checkout.",
       gracePeriodDays: 3,
     },
     {
@@ -149,7 +149,7 @@ async function seedDefaultSubscriptions(ctx: any, pageId: any) {
       memberInstructions: "Invitation link will be dispatched to your email address.",
       eligibilityRules: "Google account must not have switched family groups within the last 12 months.",
       cancellationPolicy: "Cancel future renewals anytime with 1-click.",
-      renewalRules: "Monthly recurring payment.",
+      renewalRules: "Monthly plan; renew manually before access expires.",
       gracePeriodDays: 3,
     },
     {
@@ -167,7 +167,7 @@ async function seedDefaultSubscriptions(ctx: any, pageId: any) {
       memberInstructions: "Login credentials and profile PIN are assigned directly in your membership details.",
       eligibilityRules: "Open to all users.",
       cancellationPolicy: "Cancel anytime before the next billing cycle.",
-      renewalRules: "Monthly renewal required for uninterrupted access.",
+      renewalRules: "Renew manually before access expires to keep membership active.",
       gracePeriodDays: 2,
     }
   ];
@@ -315,8 +315,8 @@ const RESERVATION_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes to complete payment
 export const reserveSlot = mutation({
   args: {
     subscriptionId: v.id("subscriptionListings"),
-    paymentMethod: v.union(v.literal("wallet"), v.literal("paystack")),
-    paystackReference: v.optional(v.string()),
+    paymentMethod: v.union(v.literal("wallet"), v.literal("bachs")),
+    bachsReference: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await getAuthedUser(ctx);
@@ -384,7 +384,7 @@ export const reserveSlot = mutation({
       currency: subscription.currency,
       status: "pending",
       paymentMethod: args.paymentMethod,
-      paystackReference: args.paystackReference,
+      bachsReference: args.bachsReference,
       expiresAt,
       createdAt: now,
       updatedAt: now,
@@ -465,7 +465,7 @@ export const joinViaWallet = mutation({
       .first();
 
     if (!wallet) {
-      throw new ConvexError("Wallet not initialized. Please fund your wallet first or pay with Card/Paystack.");
+      throw new ConvexError("Wallet not initialized. Please fund your wallet first or use Batch checkout.");
     }
 
     if (wallet.balance < price) {
@@ -524,7 +524,7 @@ export const joinViaWallet = mutation({
       currentPeriodEnd: periodEnd,
       nextRenewalDate: periodEnd,
       cancelAtPeriodEnd: false,
-      autoRenew: true,
+      autoRenew: false,
       createdAt: now,
       updatedAt: now,
     });
@@ -553,15 +553,15 @@ export const joinViaWallet = mutation({
 });
 
 /**
- * settlePaystackSubscription:
- * Internal mutation called strictly upon verified Paystack confirmation to activate membership.
+ * settleBachsSubscription:
+ * Internal mutation called only after authoritative Bachs checkout verification.
  */
-export const settlePaystackSubscription = internalMutation({
+export const settleBachsSubscription = internalMutation({
   args: {
     reference: v.string(),
-    paystackAmount: v.number(),
-    paystackTransactionId: v.optional(v.string()),
-    reservationId: v.optional(v.id("subscriptionReservations")),
+    amount: v.number(),
+    currency: v.string(),
+    checkoutId: v.string(),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -577,15 +577,10 @@ export const settlePaystackSubscription = internalMutation({
     }
 
     // Locate reservation by reference or ID
-    let reservation: Doc<"subscriptionReservations"> | null = null;
-    if (args.reservationId) {
-      reservation = await ctx.db.get(args.reservationId);
-    } else {
-      reservation = await ctx.db
-        .query("subscriptionReservations")
-        .withIndex("by_reference", (q) => q.eq("paystackReference", args.reference))
-        .first();
-    }
+    const reservation: Doc<"subscriptionReservations"> | null = await ctx.db
+      .query("subscriptionReservations")
+      .withIndex("by_bachs_reference", (q) => q.eq("bachsReference", args.reference))
+      .first();
 
     if (!reservation) {
       throw new ConvexError("Subscription reservation not found for reference: " + args.reference);
@@ -597,6 +592,9 @@ export const settlePaystackSubscription = internalMutation({
     const slot: Doc<"subscriptionSlots"> | null = await ctx.db.get(reservation.slotId);
     if (!slot) throw new ConvexError("Subscription slot not found");
 
+    if (reservation.status !== "pending" || reservation.bachsCheckoutId !== args.checkoutId || reservation.amount !== args.amount || reservation.currency.toUpperCase() !== args.currency.toUpperCase() || reservation.expiresAt <= now || slot.status !== "reserved" || slot.reservedForUserId !== reservation.userId) {
+      throw new ConvexError("Verified Bachs payment does not match this subscription reservation.");
+    }
     // Occupy slot
     await ctx.db.patch(slot._id, {
       status: "occupied",
@@ -616,9 +614,9 @@ export const settlePaystackSubscription = internalMutation({
       slotId: slot._id,
       role: "Member",
       status: "active",
-      amount: args.paystackAmount,
+      amount: args.amount,
       currency: subscription.currency,
-      paymentMethod: "paystack",
+      paymentMethod: "bachs",
       lastPaymentReference: args.reference,
       lastPaymentStatus: "completed",
       startedAt: now,
@@ -626,7 +624,7 @@ export const settlePaystackSubscription = internalMutation({
       currentPeriodEnd: periodEnd,
       nextRenewalDate: periodEnd,
       cancelAtPeriodEnd: false,
-      autoRenew: true,
+      autoRenew: false,
       createdAt: now,
       updatedAt: now,
     });
@@ -652,38 +650,65 @@ export const settlePaystackSubscription = internalMutation({
   },
 });
 
+export const attachBachsSubscriptionCheckout = mutation({
+  args: { reference: v.string(), checkoutId: v.string() },
+  handler: async (ctx, args) => {
+    const user = await getAuthedUser(ctx);
+    if (!user) throw new ConvexError("Unauthenticated");
+    const reservation = await ctx.db.query("subscriptionReservations")
+      .withIndex("by_bachs_reference", (q) => q.eq("bachsReference", args.reference)).first();
+    if (!reservation || reservation.userId !== user._id || reservation.status !== "pending" || reservation.expiresAt <= Date.now()) {
+      throw new ConvexError("Pending subscription checkout not found.");
+    }
+    if (reservation.bachsCheckoutId && reservation.bachsCheckoutId !== args.checkoutId) {
+      throw new ConvexError("A checkout is already attached to this reservation.");
+    }
+    await ctx.db.patch(reservation._id, { bachsCheckoutId: args.checkoutId, updatedAt: Date.now() });
+    return { success: true };
+  },
+});
+
 /**
- * verifyAndJoinPaystack:
- * Server-side Paystack verification action.
+ * verifyAndJoinBachs:
+ * Server-side Bachs checkout verification action.
  */
-export const verifyAndJoinPaystack = action({
+export const verifyAndJoinBachs = action({
   args: {
     reference: v.string(),
-    reservationId: v.optional(v.id("subscriptionReservations")),
+    checkoutId: v.string(),
   },
   handler: async (ctx, args): Promise<any> => {
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
-    if (!secretKey) throw new Error("PAYSTACK_SECRET_KEY is not configured on the server.");
-
-    const res = await fetch(`https://api.paystack.co/transaction/verify/${args.reference}`, {
-      headers: { Authorization: `Bearer ${secretKey}` },
-    });
-
-    const data = await res.json();
-    if (!data.status || data.data?.status !== "success") {
-      return { success: false, message: data.message || "Payment verification failed" };
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new ConvexError("Unauthenticated");
+    const user = await ctx.runQuery(internal.wallet.getUserByIdentity, { tokenIdentifier: identity.tokenIdentifier });
+    if (!user) throw new ConvexError("User not found");
+    const reservation = await ctx.runQuery(internal.subscriptions.getBachsReservationForReference, { reference: args.reference });
+    if (!reservation || reservation.userId !== String(user._id)) throw new ConvexError("Payment reservation not found.");
+    const key = process.env.BACHS_SECRET_KEY;
+    const env = (process.env.BACHS_ENVIRONMENT || "sandbox").toLowerCase();
+    const base = env === "live" || env === "production" ? "https://api.bachs.io" : "https://sandbox-api.bachs.io";
+    if (!key) throw new ConvexError("Bachs checkout is not configured.");
+    const expectedPrefix = base === "https://api.bachs.io" ? "sk_live_" : "sk_sandbox_";
+    if (!key.startsWith(expectedPrefix)) throw new ConvexError("Bachs key does not match the configured environment.");
+    const response = await fetch(`${base}/v1/checkout-sessions/${encodeURIComponent(args.checkoutId)}`, { headers: { Authorization: `Bearer ${key}`, Accept: "application/json" } });
+    if (!response.ok) throw new ConvexError("Could not verify the Bachs checkout.");
+    const session = await response.json() as any;
+    const checkoutEmail = String(session.customer?.email || session.customer_details?.email || "").trim().toLowerCase();
+    if (session.checkout_id !== args.checkoutId || session.checkout_id !== reservation.checkoutId || session.reference !== args.reference || session.status !== "completed" || session.payment_status !== "succeeded" || String(session.currency).toUpperCase() !== reservation.currency.toUpperCase() || Number(session.amount) !== reservation.amount || String(session.metadata?.userId || "") !== String(user._id) || checkoutEmail !== reservation.email.toLowerCase()) {
+      return { success: false, message: "Bachs payment is not confirmed or does not match the reservation." };
     }
+    return await ctx.runMutation(internal.subscriptions.settleBachsSubscription, { reference: args.reference, amount: Number(session.amount), currency: String(session.currency), checkoutId: args.checkoutId });
+  },
+});
 
-    const paystackAmount = data.data.amount / 100;
-
-    const result = await ctx.runMutation(internal.subscriptions.settlePaystackSubscription, {
-      reference: args.reference,
-      paystackAmount,
-      paystackTransactionId: data.data.id?.toString(),
-      reservationId: args.reservationId,
-    });
-
-    return result;
+export const getBachsReservationForReference = internalQuery({
+  args: { reference: v.string() },
+  handler: async (ctx, args) => {
+    const reservation = await ctx.db.query("subscriptionReservations").withIndex("by_bachs_reference", (q) => q.eq("bachsReference", args.reference)).first();
+    if (!reservation) return null;
+    const user = await ctx.db.get(reservation.userId);
+    if (!user) return null;
+    return { userId: String(reservation.userId), email: user.email || `${user.username || "user"}@lalao.app`, amount: reservation.amount, currency: reservation.currency, checkoutId: reservation.bachsCheckoutId, status: reservation.status, expiresAt: reservation.expiresAt };
   },
 });
 
@@ -779,7 +804,7 @@ export const cancelSubscriptionRenewal = mutation({
       recipientId: user._id,
       actorId: user._id,
       type: "subscription_cancelled",
-      targetExcerpt: `Auto-renewal cancelled for ${sub?.name || "your subscription"}. You will maintain access until ${new Date(mem.currentPeriodEnd || Date.now()).toLocaleDateString()}.`,
+      targetExcerpt: `${sub?.name || "Your membership"} will end on ${new Date(mem.currentPeriodEnd || Date.now()).toLocaleDateString()}. You will keep access until then.`,
     });
 
     return { success: true };
@@ -1039,35 +1064,49 @@ export const createSubscriptionListing = mutation({
 // 6. RENEWALS & CRON RECONCILIATION
 // ─────────────────────────────────────────────────────────────
 
-export const processDueRenewals = mutation({
+export const processDueRenewals = internalMutation({
   args: {},
   handler: async (ctx) => {
     const now = Date.now();
     const threeDaysAhead = now + 3 * 24 * 60 * 60 * 1000;
 
-    // Send reminders for renewals coming up in 3 days
-    const upcomingRenewals = await ctx.db
+    const activeMemberships = await ctx.db
       .query("subscriptionMemberships")
       .withIndex("by_status", (q) => q.eq("status", "active"))
-      .filter((q) =>
-        q.and(
-          q.gt(q.field("nextRenewalDate"), now),
-          q.lt(q.field("nextRenewalDate"), threeDaysAhead)
-        )
-      )
       .collect();
 
-    for (const mem of upcomingRenewals) {
+    let reminders = 0;
+    let expired = 0;
+    for (const mem of activeMemberships) {
+      const periodEnd = mem.currentPeriodEnd ?? mem.nextRenewalDate;
+      if (!periodEnd) continue;
+      if (periodEnd <= now) {
+        await ctx.db.patch(mem._id, { status: "expired", autoRenew: false, updatedAt: now });
+        const slot = await ctx.db.get(mem.slotId);
+        if (slot?.currentMemberId === mem.userId) {
+          await ctx.db.patch(slot._id, { status: "available", currentMemberId: undefined, reservedForUserId: undefined, reservationExpiresAt: undefined, updatedAt: now });
+        }
+        const subscription = await ctx.db.get(mem.subscriptionId);
+        await createJointheQNotification(ctx, {
+          recipientId: mem.userId, actorId: mem.userId, type: "subscription_payment_failed",
+          targetExcerpt: `Your ${subscription?.name || "JointheQ"} membership expired. Rejoin to restore access.`,
+        });
+        expired += 1;
+        continue;
+      }
+      if (periodEnd >= threeDaysAhead || mem.renewalReminderForPeriodEnd === periodEnd) continue;
       const sub = await ctx.db.get(mem.subscriptionId);
+      await ctx.db.patch(mem._id, { renewalReminderForPeriodEnd: periodEnd, updatedAt: now });
       await createJointheQNotification(ctx, {
         recipientId: mem.userId,
         actorId: mem.userId,
         type: "subscription_renewal",
-        targetExcerpt: `Upcoming renewal: Your ${sub?.name || "JointheQ"} membership renews on ${new Date(mem.nextRenewalDate || now).toLocaleDateString()} for ₦${(mem.amount || 0).toLocaleString()}.`,
+        targetExcerpt: `Your ${sub?.name || "JointheQ"} membership ends on ${new Date(periodEnd).toLocaleDateString()}. Renew manually by then to keep access; the current price is ₦${(mem.amount || 0).toLocaleString()}.`,
       });
+      reminders += 1;
     }
 
-    return { processedReminders: upcomingRenewals.length };
+    return { processedReminders: reminders, expiredMemberships: expired };
   },
 });
 

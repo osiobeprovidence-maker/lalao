@@ -26,12 +26,18 @@ export const getExpectedPaymentOwner = internalQuery({
       const payment = await ctx.db.query("adPayments").withIndex("by_reference", (q) => q.eq("reference", args.reference)).first();
       if (!payment) return null;
       const user = await ctx.db.get(payment.userId);
-      return user ? { userId: String(user._id), email: user.email || `${user.username || "user"}@lalao.app` } : null;
+      return user ? { userId: String(user._id), email: user.email || `${user.username || "user"}@lalao.app`, currency: payment.currency } : null;
+    }
+    if (args.reference.startsWith("LALAO_CREATOR_")) {
+      return await ctx.runQuery(internal.creators.getBachsCreatorPaymentOwner, { reference: args.reference });
+    }
+    if (args.reference.startsWith("LALAO_SUB_")) {
+      return await ctx.runQuery(internal.subscriptions.getBachsReservationForReference, { reference: args.reference });
     }
     const tx = await ctx.db.query("walletTransactions").withIndex("by_reference", (q) => q.eq("reference", args.reference)).first();
     if (!tx || tx.paymentProvider !== "bachs") return null;
     const user = await ctx.db.get(tx.userId);
-    return user ? { userId: String(user._id), email: user.email || `${user.username || "user"}@lalao.app` } : null;
+    return user ? { userId: String(user._id), email: user.email || `${user.username || "user"}@lalao.app`, currency: "NGN" } : null;
   },
 });
 
@@ -152,6 +158,60 @@ export const initializeBachsFunding = action({
       console.error("[BACHS] Checkout session creation error:", err);
       throw new Error(err.message || "Could not connect to BACHS payment gateway.");
     }
+  },
+});
+
+/** Create a hosted one-time checkout for a pending, server-owned Lalao purchase. */
+export const initializeBachsPayment = action({
+  args: {
+    amount: v.number(),
+    currency: v.string(),
+    reference: v.string(),
+    purpose: v.string(),
+  },
+  handler: async (ctx, args): Promise<any> => {
+    const currency = args.currency.trim().toUpperCase();
+    if (!Number.isFinite(args.amount) || args.amount <= 0 || !/^[A-Z]{3}$/.test(currency) || !args.reference || !args.purpose) {
+      throw new Error("Invalid payment request.");
+    }
+    const identity = await ctx.auth.getUserIdentity();
+    const user = await ctx.runQuery(internal.wallet.getUserByIdentity, {
+      tokenIdentifier: identity?.tokenIdentifier,
+    });
+    if (!user) throw new Error("Please sign in before starting checkout.");
+
+    const isCreatorPurchase = args.purpose === "creator_subscription" && args.reference.startsWith("LALAO_CREATOR_");
+    const isMembershipPurchase = args.purpose === "subscription_membership" && args.reference.startsWith("LALAO_SUB_");
+    if (!isCreatorPurchase && !isMembershipPurchase) throw new Error("This checkout purpose and reference are not supported.");
+    const paymentOwner = isCreatorPurchase
+      ? await ctx.runQuery(internal.creators.getBachsCreatorPaymentOwner, { reference: args.reference })
+      : await ctx.runQuery(internal.subscriptions.getBachsReservationForReference, { reference: args.reference });
+    if (!paymentOwner || paymentOwner.userId !== String(user._id) || paymentOwner.amount !== args.amount || paymentOwner.currency.toUpperCase() !== currency || paymentOwner.status !== "pending" || paymentOwner.expiresAt <= Date.now() || paymentOwner.checkoutId) {
+      throw new Error("Checkout details do not match a pending payment for this account.");
+    }
+
+    const secretKey = process.env.BACHS_SECRET_KEY;
+    if (!secretKey) throw new Error("Bachs checkout is not configured.");
+    const baseUrl = getBachsBaseUrl();
+    const appUrl = (process.env.APP_URL || process.env.VITE_APP_URL || "https://www.lalao.website").replace(/\/+$/, "");
+    const payload = {
+      customer: { email: user.email || `${user.username || "user"}@lalao.app`, name: user.name || "Lalao User" },
+      pricing: { currency, amount: args.amount.toFixed(2) },
+      reference: args.reference,
+      metadata: { userId: String(user._id), reference: args.reference, purpose: args.purpose },
+      success_url: `${appUrl}/app?payment=success&purpose=${encodeURIComponent(args.purpose)}&reference=${encodeURIComponent(args.reference)}`,
+      cancel_url: `${appUrl}/app?payment=cancelled&purpose=${encodeURIComponent(args.purpose)}&reference=${encodeURIComponent(args.reference)}`,
+    };
+    const response = await fetch(`${baseUrl}/v1/checkout-sessions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${secretKey}`, "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json() as any;
+    if (!response.ok || typeof data.checkout_id !== "string" || typeof data.checkout_url !== "string") {
+      throw new Error(data?.message || "Bachs could not start checkout.");
+    }
+    return { success: true, sessionId: data.checkout_id, checkoutUrl: data.checkout_url, reference: args.reference };
   },
 });
 

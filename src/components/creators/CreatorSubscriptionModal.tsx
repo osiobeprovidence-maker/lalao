@@ -7,12 +7,10 @@ import {
   Clock,
   BadgeCheck,
 } from 'lucide-react';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { useLalao } from '../../context/LalaoContext';
 import { VerificationBadge } from '../common/VerificationBadge';
 import { VerificationTier } from '../../types';
-import { usePaystackPayment } from 'react-paystack';
 
 interface CreatorSubscriptionModalProps {
   isOpen: boolean;
@@ -25,9 +23,10 @@ export const CreatorSubscriptionModal: React.FC<CreatorSubscriptionModalProps> =
   isOpen,
   onClose,
   initialTier = 'creator',
-  onSuccess,
 }) => {
-  const { currentUser, triggerShareToast, subscribeUserToTier } = useLalao();
+  const beginTierPurchase = useMutation(api.creators.beginBachsTierPurchase);
+  const initializeBachsPayment = useAction(api.bachs.initializeBachsPayment);
+  const attachCheckout = useMutation(api.creators.attachBachsTierCheckout);
 
   const [selectedTier, setSelectedTier] = useState<'verified' | 'priority' | 'creator'>(initialTier);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,47 +47,17 @@ export const CreatorSubscriptionModal: React.FC<CreatorSubscriptionModalProps> =
     price: selectedTier === 'creator' ? 3500 : selectedTier === 'priority' ? 1700 : 800,
   };
 
-  const paystackRef = `sub_${selectedTier}_${Date.now()}`;
-  const paystackConfig = {
-    reference: paystackRef,
-    email: currentUser?.email || `${currentUser?.username || 'user'}@lalao.app`,
-    amount: currentSelectedConfig.price * 100,
-    publicKey:
-      import.meta.env.VITE_PAYSTACK_PUBLIC_KEY ||
-      'pk_test_1e3e4134a6324bd82248c28828b24f8a835e9f0f',
-  };
-
-  const initializePaystack = usePaystackPayment(paystackConfig as any);
-
-  const handleCardSubscribe = () => {
+  const handleBachsSubscribe = async () => {
     setIsSubmitting(true);
     setErrorMsg(null);
-
     try {
-      initializePaystack({
-        onSuccess: async (response: any) => {
-          try {
-            await subscribeUserToTier(selectedTier, response.reference || paystackRef);
-            if (onSuccess) onSuccess();
-            onClose();
-          } catch (err: any) {
-            setErrorMsg(err.message || 'Payment received but failed to update status.');
-          } finally {
-            setIsSubmitting(false);
-          }
-        },
-        onClose: () => {
-          setIsSubmitting(false);
-        },
-      });
-    } catch {
-      subscribeUserToTier(selectedTier, paystackRef)
-        .then(() => {
-          if (onSuccess) onSuccess();
-          onClose();
-        })
-        .catch((e: any) => setErrorMsg(e.message || 'Subscription failed'))
-        .finally(() => setIsSubmitting(false));
+      const purchase = await beginTierPurchase({ tier: selectedTier });
+      const checkout = await initializeBachsPayment({ amount: purchase.amount, currency: purchase.currency, reference: purchase.reference, purpose: 'creator_subscription' });
+      await attachCheckout({ reference: purchase.reference, checkoutId: checkout.sessionId, checkoutUrl: checkout.checkoutUrl });
+      window.location.assign(checkout.checkoutUrl);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Could not start Batch checkout.');
+      setIsSubmitting(false);
     }
   };
 
@@ -103,7 +72,7 @@ export const CreatorSubscriptionModal: React.FC<CreatorSubscriptionModalProps> =
             </div>
             <div>
               <h2 className="text-base font-black text-theme-primary">Verification Subscription</h2>
-              <p className="text-[11px] text-theme-tertiary">Billed monthly · Card only · Cancel anytime</p>
+              <p className="text-[11px] text-theme-tertiary">Monthly plan · Renew manually before expiry</p>
             </div>
           </div>
           <button
@@ -158,7 +127,7 @@ export const CreatorSubscriptionModal: React.FC<CreatorSubscriptionModalProps> =
             })}
           </div>
 
-          {/* Payment Method - Card Only */}
+          {/* Payment Method */}
           <div className="space-y-2 pt-1">
             <span className="text-[10px] font-black uppercase tracking-wider text-theme-tertiary block">
               Payment Method
@@ -167,8 +136,8 @@ export const CreatorSubscriptionModal: React.FC<CreatorSubscriptionModalProps> =
               <div className="flex items-center gap-2.5">
                 <CreditCard className="w-4 h-4 text-[#5E43F3]" />
                 <div>
-                  <div className="text-xs font-bold text-theme-primary">DEBIT / CARD</div>
-                  <div className="text-[10px] text-theme-tertiary">Instant via Paystack</div>
+                  <div className="text-xs font-bold text-theme-primary">BATCH CHECKOUT</div>
+                  <div className="text-[10px] text-theme-tertiary">Secure hosted checkout by Batch</div>
                 </div>
               </div>
               <div className="w-4 h-4 rounded-full bg-[#5E43F3] text-white flex items-center justify-center">
@@ -190,7 +159,7 @@ export const CreatorSubscriptionModal: React.FC<CreatorSubscriptionModalProps> =
           <button
             type="button"
             disabled={isSubmitting}
-            onClick={handleCardSubscribe}
+            onClick={handleBachsSubscribe}
             className="w-full py-3 rounded-xl bg-[#5E43F3] hover:bg-[#4E34E0] active:scale-[0.99] text-white text-xs font-black shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
           >
             {isSubmitting ? (

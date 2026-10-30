@@ -93,8 +93,8 @@ export function simulateVTURefund(
   return { success: true, updatedBalance: wallet.balance };
 }
 
-// 5. Paystack Idempotent Credit Settlement
-export function simulatePaystackSettlement(
+// 5. Idempotent provider credit settlement
+export function simulateProviderSettlement(
   wallet: SimulatedWallet,
   reference: string,
   paidAmountNaira: number,
@@ -198,19 +198,19 @@ export function runAllTests() {
     passed: !t9.success && mockWallet.balance === 500,
   });
 
-  // Test 10: Idempotent Paystack settlement
+  // Test 10: Idempotent provider settlement
   const fundingWallet: SimulatedWallet = { balance: 1000, transactions: [] };
-  const t10a = simulatePaystackSettlement(fundingWallet, "PAY_REF_123", 5000, 5000);
-  const t10b = simulatePaystackSettlement(fundingWallet, "PAY_REF_123", 5000, 5000);
+  const t10a = simulateProviderSettlement(fundingWallet, "PAY_REF_123", 5000, 5000);
+  const t10b = simulateProviderSettlement(fundingWallet, "PAY_REF_123", 5000, 5000);
   results.push({
-    name: "Paystack settlement is strictly idempotent",
+    name: "Provider settlement is strictly idempotent",
     passed: t10a.success && t10b.success && fundingWallet.balance === 6000,
   });
 
   // Test 11: Mismatched payment amount rejection
-  const t11 = simulatePaystackSettlement(fundingWallet, "PAY_REF_999", 2000, 5000);
+  const t11 = simulateProviderSettlement(fundingWallet, "PAY_REF_999", 2000, 5000);
   results.push({
-    name: "Reject Paystack settlement when paid amount does not match expected",
+    name: "Reject provider settlement when paid amount does not match expected",
     passed: !t11.success && fundingWallet.balance === 6000,
   });
 

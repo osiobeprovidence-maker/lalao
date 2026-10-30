@@ -4,7 +4,6 @@ import {
   Ticket,
   CheckCircle2,
   Wallet,
-  CreditCard,
   Building2,
   ChevronRight,
   ShieldCheck,
@@ -30,7 +29,7 @@ export const TicketPurchaseModal: React.FC = () => {
 
   const [ticketTier, setTicketTier] = useState<'General Admission' | 'VIP Pass'>('General Admission');
   const [quantity, setQuantity] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'card'>('wallet');
+  const [paymentMethod] = useState<'wallet'>('wallet');
   const [isProcessing, setIsProcessing] = useState(false);
   const [purchasedTicket, setPurchasedTicket] = useState<EventTicket | null>(null);
 
@@ -57,7 +56,7 @@ export const TicketPurchaseModal: React.FC = () => {
       );
       if (!success) {
         setIsProcessing(false);
-        triggerShareToast('Insufficient wallet balance. Please choose card or top up.');
+        triggerShareToast('Insufficient wallet balance. Please top up your wallet with Batch checkout.');
         return;
       }
     }
@@ -308,10 +307,9 @@ export const TicketPurchaseModal: React.FC = () => {
                 <label className="text-xs font-bold text-theme-primary block mb-2">
                   Payment Method
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2">
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod('wallet')}
                     className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
                       paymentMethod === 'wallet'
                         ? 'border-[#5E43F3] bg-violet-50/60 ring-1 ring-[#5E43F3]'
@@ -323,19 +321,6 @@ export const TicketPurchaseModal: React.FC = () => {
                     <p className="text-[10px] text-theme-tertiary">Balance: ₦{wallet.balance.toLocaleString()}</p>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('card')}
-                    className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
-                      paymentMethod === 'card'
-                        ? 'border-[#5E43F3] bg-violet-50/60 ring-1 ring-[#5E43F3]'
-                        : 'border-theme-divider hover:border-theme-divider-strong bg-theme-surface'
-                    }`}
-                  >
-                    <CreditCard className="w-4 h-4 text-theme-secondary mb-1.5" />
-                    <p className="text-xs font-bold text-theme-primary">Card / USSD</p>
-                    <p className="text-[10px] text-theme-tertiary">Instant Paystack</p>
-                  </button>
                 </div>
               </div>
 

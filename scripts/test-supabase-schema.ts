@@ -7,13 +7,13 @@ const { sql, coverage } = buildSupabaseSchemaSql();
 const details = coverage.tablesDetail as Array<{ table: string; fields: number; indexes: number; searchIndexes: number }>;
 
 assert.equal(coverage.tables, 102, "all current Convex tables are represented");
-assert.equal(coverage.declaredFields, 1095, "all current declared fields are represented");
-assert.equal(coverage.regularIndexes, 259, "all regular Convex indexes are represented");
+assert.equal(coverage.declaredFields, 1100, "all current declared fields are represented");
+assert.equal(coverage.regularIndexes, 260, "all regular Convex indexes are represented");
 assert.equal(coverage.searchIndexes, 10, "all Convex search indexes are represented");
 assert.equal(details.length, 102, "coverage records every table independently");
 assert.equal(new Set(details.map((table) => table.table)).size, 102, "table names are unique");
 assert.equal((sql.match(/^CREATE TABLE public\./gm) || []).length, 102, "migration creates every source table");
-assert.equal((sql.match(/^CREATE INDEX /gm) || []).length, 269, "migration includes regular and search indexes");
+assert.equal((sql.match(/^CREATE INDEX /gm) || []).length, 270, "migration includes regular and search indexes");
 
 assert.match(sql, /CREATE TABLE public\."recentSearches"/);
 assert.match(sql, /"type" text NOT NULL CONSTRAINT "ck_recentSearches_type_enum" CHECK \("type" IN \('keyword', 'person', 'page', 'shop', 'content', 'event'\)\)/);
@@ -28,7 +28,13 @@ assert.match(sql, /Convex relationship target _storage/);
 assert.match(sql, /Polymorphic Convex relationship retained as text without an FK/);
 
 const orderingMigration = readFileSync(resolve("supabase/migrations/20261030000000_recent_search_shadow_ordering.sql"), "utf8");
+const batchPaymentsMigration = readFileSync(resolve("supabase/migrations/20261030000001_batch_subscription_payments.sql"), "utf8");
 const orderingContract = readFileSync(resolve("supabase/tests/database/schema_contract.test.sql"), "utf8");
+assert.match(batchPaymentsMigration, /"subscriptionReservations"[\s\S]*ADD COLUMN IF NOT EXISTS "bachsReference"/);
+assert.match(batchPaymentsMigration, /idx_subscriptionReservations_by_bachs_reference/);
+assert.match(batchPaymentsMigration, /"subscriptionMemberships"[\s\S]*"renewalReminderForPeriodEnd"/);
+assert.match(batchPaymentsMigration, /"creatorSubscriptions"[\s\S]*"renewalReminderSentFor"/);
+assert.match(batchPaymentsMigration, /"adPayments"[\s\S]*"providerTransactionId"/);
 assert.match(orderingMigration, /pg_advisory_xact_lock/, "per-search operations are serialized in PostgreSQL");
 assert.match(orderingMigration, /p_revision < current_revision/, "older operations are rejected after newer events");
 assert.match(orderingMigration, /p_revision = current_revision/, "retries of an already-applied operation are idempotent");

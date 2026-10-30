@@ -4,7 +4,6 @@ import {
   ShieldCheck,
   Truck,
   MapPin,
-  CreditCard,
   Building2,
   Banknote,
   CheckCircle2,
@@ -49,7 +48,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   } = useLalao();
 
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
-  const [paymentMethod, setPaymentMethod] = useState<'transfer' | 'card' | 'cod'>('transfer');
+  const [paymentMethod, setPaymentMethod] = useState<'transfer' | 'cod'>('transfer');
   const [customerName, setCustomerName] = useState(currentUser.name || 'Alex Morgan');
   const [customerPhone, setCustomerPhone] = useState('+234 803 123 4567');
   const [deliveryAddress, setDeliveryAddress] = useState('14 Enerhen Road, Effurun, Delta State');
@@ -501,12 +500,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     name: 'Bank Transfer / USSD',
                     desc: 'Direct transfer to Lazla Escrow account',
                     icon: Building2,
-                  },
-                  {
-                    id: 'card' as const,
-                    name: 'Debit / Credit Card',
-                    desc: 'Instant secure payment via Paystack',
-                    icon: CreditCard,
                   },
                   {
                     id: 'cod' as const,

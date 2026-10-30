@@ -133,7 +133,7 @@ export const JointheQTab: React.FC<JointheQTabProps> = ({ page }) => {
                 Join Premium Subscriptions at a Fraction of the Cost
               </h3>
               <p className="text-xs sm:text-sm text-theme-secondary leading-relaxed mb-4">
-                Spotify, Apple Music, Netflix, and YouTube Family memberships managed directly by the JointheQ team. Pay securely using Paystack or your Lalao Wallet.
+                Spotify, Apple Music, Netflix, and YouTube Family memberships managed directly by the JointheQ team. Pay securely using Batch checkout or your Lalao Wallet.
               </p>
               <div className="flex items-center gap-3">
                 <button
@@ -351,7 +351,7 @@ export const JointheQTab: React.FC<JointheQTabProps> = ({ page }) => {
                             'mo'
                           }</span>
                           <span>•</span>
-                          <span className="text-[#5E43F3] font-bold">Renews {new Date(mem.nextRenewalDate || Date.now()).toLocaleDateString()}</span>
+                          <span className="text-[#5E43F3] font-bold">Renew by {new Date(mem.nextRenewalDate || Date.now()).toLocaleDateString()}</span>
                         </div>
                       </div>
                     </div>
@@ -368,14 +368,14 @@ export const JointheQTab: React.FC<JointheQTabProps> = ({ page }) => {
                       {!mem.cancelAtPeriodEnd && (
                         <button
                           onClick={async () => {
-                            if (confirm(`Cancel auto-renewal for ${sub?.name}?`)) {
+                            if (confirm(`End your ${sub?.name} membership at the end of this period?`)) {
                               await cancelRenewal({ membershipId: mem._id });
-                              triggerShareToast('Auto-renewal cancelled.');
+                              triggerShareToast('Membership will end at the current period boundary.');
                             }
                           }}
                           className="px-3 py-1.5 rounded-xl border border-red-200 text-red-600 text-xs font-bold hover:bg-red-50 transition-colors cursor-pointer"
                         >
-                          Cancel Renewal
+                          End Membership
                         </button>
                       )}
                     </div>
@@ -418,7 +418,7 @@ export const JointheQTab: React.FC<JointheQTabProps> = ({ page }) => {
                   Dual Payment Methods
                 </h5>
                 <p className="text-[11px] text-theme-secondary leading-relaxed">
-                  Pay instantly using your Lalao Wallet points (1 LC = ₦1) or directly with credit/debit cards via Paystack.
+                  Pay using your Lalao Wallet points (1 LC = ₦1) or Batch hosted checkout.
                 </p>
               </div>
             </div>

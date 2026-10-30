@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
-import { usePaystackPayment } from 'react-paystack';
 import { useWeb3Wallet, SUPPORTED_CHAINS, DEFAULT_CHAIN_ID } from '../../hooks/useWeb3Wallet';
 import { NativeDataPlanSelector } from './NativeDataPlanSelector';
 import { RewardsPage } from '../rewards/RewardsPage';
@@ -117,7 +116,7 @@ export const WalletModal: React.FC = () => {
   const [forgotPinEmailMasked, setForgotPinEmailMasked] = useState('');
   const [isRequestingOtp, setIsRequestingOtp] = useState(false);
   const performInitializeFunding = useAction((api as any).bachs?.initializeBachsFunding || api.wallet.initializeFunding);
-  const performVerifyFunding = useAction((api as any).bachs?.verifyBachsFunding || api.wallet.verifyPaystackFunding);
+  const performVerifyFunding = useAction(api.bachs.verifyBachsFunding);
   const performPurchaseService = useAction(api.market.purchaseService);
   const fetchVariations = useAction(api.market.getVariations);
   const fetchCablePackages = useAction(api.market.getCablePackages);
@@ -3298,7 +3297,7 @@ export const WalletModal: React.FC = () => {
                 <div className="bg-theme-surface/50 rounded-2xl p-3.5 border border-theme-divider-light text-[11px] text-theme-tertiary space-y-1">
                   <p>
                     <strong>Renewal Policy: </strong>
-                    {selectedWalletSubscription.renewalRules || 'Auto-renews every cycle using your wallet balance or saved card. Cancel anytime.'}
+                    {selectedWalletSubscription.renewalRules || 'Renew manually before your access expires using Lalao Wallet or Batch checkout.'}
                   </p>
                   <p>
                     <strong>Cancellation: </strong>

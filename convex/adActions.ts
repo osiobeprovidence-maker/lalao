@@ -12,7 +12,6 @@ export const createPendingAdPayment = internalMutation({
     amountKobo: v.number(),
     currency: v.string(),
     reference: v.string(),
-    paystackAccessCode: v.optional(v.string()),
     bachsCheckoutId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -33,7 +32,6 @@ export const createPendingAdPayment = internalMutation({
       currency: args.currency,
       reference: args.reference,
       status: "pending",
-      paystackAccessCode: args.paystackAccessCode,
       bachsCheckoutId: args.bachsCheckoutId,
       paymentProvider: "bachs",
       createdAt: Date.now(),
@@ -50,8 +48,8 @@ export const createPendingAdPayment = internalMutation({
 export const settleAdPayment = internalMutation({
   args: {
     reference: v.string(),
-    paystackAmountKobo: v.number(),
-    paystackTransactionId: v.optional(v.string()),
+    verifiedAmountKobo: v.number(),
+    providerTransactionId: v.optional(v.string()),
     paymentProvider: v.optional(v.string()),
     gatewayResponse: v.optional(v.string()),
   },
@@ -71,14 +69,14 @@ export const settleAdPayment = internalMutation({
     }
 
     // Financial verification: Amount must match expected kobo
-    if (payment.amountKobo !== args.paystackAmountKobo) {
+    if (payment.amountKobo !== args.verifiedAmountKobo) {
       await ctx.db.patch(payment._id, {
         status: "failed",
-        gatewayResponse: `Amount mismatch: expected ${payment.amountKobo} kobo, got ${args.paystackAmountKobo} kobo`,
+        gatewayResponse: `Amount mismatch: expected ${payment.amountKobo} kobo, got ${args.verifiedAmountKobo} kobo`,
         updatedAt: Date.now(),
       });
       throw new Error(
-        `Amount mismatch: expected ${payment.amountKobo} kobo, but Paystack sent ${args.paystackAmountKobo} kobo.`
+        `Amount mismatch: expected ${payment.amountKobo} kobo, but provider verified ${args.verifiedAmountKobo} kobo.`
       );
     }
 
@@ -87,8 +85,8 @@ export const settleAdPayment = internalMutation({
     // Mark payment successful
     await ctx.db.patch(payment._id, {
       status: "successful",
-      paystackTransactionId: args.paystackTransactionId,
-      paymentProvider: args.paymentProvider || "paystack",
+      providerTransactionId: args.providerTransactionId,
+      paymentProvider: args.paymentProvider || "bachs",
       gatewayResponse: args.gatewayResponse || "Successful",
       paidAt: now,
       updatedAt: now,
@@ -235,13 +233,13 @@ export const verifyCampaignPayment = action({
     if (session.checkout_id !== args.checkoutId || session.reference !== args.reference) throw new Error("Checkout does not match this ad payment.");
     if (session.status !== "completed" || session.payment_status !== "succeeded") throw new Error("Payment is not confirmed yet.");
     if (String(session.currency).toUpperCase() !== "NGN") throw new Error("Payment currency does not match the campaign.");
-    const paystackAmountKobo = Math.round(Number(session.amount) * 100);
-    if (!Number.isSafeInteger(paystackAmountKobo) || paystackAmountKobo <= 0) throw new Error("Invalid verified payment amount.");
+    const verifiedAmountKobo = Math.round(Number(session.amount) * 100);
+    if (!Number.isSafeInteger(verifiedAmountKobo) || verifiedAmountKobo <= 0) throw new Error("Invalid verified payment amount.");
 
     const result: any = await ctx.runMutation(internal.adActions.settleAdPayment, {
       reference: args.reference,
-      paystackAmountKobo,
-      paystackTransactionId: session.charge?.payment_id || args.checkoutId,
+      verifiedAmountKobo,
+      providerTransactionId: session.charge?.payment_id || args.checkoutId,
       paymentProvider: "bachs",
       gatewayResponse: "Verified with Bachs",
     });

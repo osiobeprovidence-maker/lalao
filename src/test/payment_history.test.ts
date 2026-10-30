@@ -64,7 +64,7 @@ export function normalizeTransactionRecord(raw: any, currentUserId: string): Moc
   if (raw.type === "deposit") {
     category = "wallet";
     title = "Wallet Top-up";
-    subtitle = raw.paymentProvider ? `via ${raw.paymentProvider.toUpperCase()}` : "Funded via Paystack";
+    subtitle = raw.paymentProvider ? `via ${raw.paymentProvider.toUpperCase()}` : "Funded via Batch";
   } else if (raw.type === "MARKET_REFUND" || descLower.includes("refund")) {
     category = "other";
     title = "Provider Refund";
@@ -286,7 +286,7 @@ export function runPaymentHistoryTests() {
     id: "tx_pend_1",
     userId: USER_A,
     type: "deposit",
-    description: "Wallet funded via Paystack (Pending)",
+    description: "Wallet funded via Batch (Pending)",
     amount: 2500,
     status: "pending",
     reference: "PAY-PENDING-99",

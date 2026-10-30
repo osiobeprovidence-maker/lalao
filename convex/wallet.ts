@@ -346,7 +346,7 @@ export const createPendingFunding = internalMutation({
     }
 
     const providerName = args.provider || "bachs";
-    const providerLabel = providerName === "bachs" ? "BACHS" : "Paystack";
+    const providerLabel = providerName === "bachs" ? "Batch" : "external payment provider";
 
     const txId = await ctx.db.insert("walletTransactions", {
       walletId: args.walletId,
@@ -384,10 +384,8 @@ export const initializeFunding = action({
 export const settleWalletFunding = internalMutation({
   args: {
     reference: v.string(),
-    verifiedAmount: v.optional(v.number()), // Generalized verified amount in NGN
-    paystackAmount: v.optional(v.number()), // Legacy fallback support for Paystack
+    verifiedAmount: v.number(), // Server-verified amount in NGN
     providerTransactionId: v.optional(v.string()),
-    paystackTransactionId: v.optional(v.string()),
     provider: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -408,8 +406,8 @@ export const settleWalletFunding = internalMutation({
       throw new Error(`Transaction is already in status: ${pendingTx.status}`);
     }
 
-    const settledAmount = args.verifiedAmount ?? args.paystackAmount;
-    if (settledAmount === undefined || isNaN(settledAmount)) {
+    const settledAmount = args.verifiedAmount;
+    if (!Number.isFinite(settledAmount)) {
       throw new Error("Payment verification amount is missing or invalid.");
     }
 
@@ -420,7 +418,7 @@ export const settleWalletFunding = internalMutation({
     const wallet = await ctx.db.get(pendingTx.walletId);
     if (!wallet) throw new Error("Wallet not found.");
 
-    const finalTxId = args.providerTransactionId || args.paystackTransactionId;
+    const finalTxId = args.providerTransactionId;
     const finalProvider = args.provider || pendingTx.paymentProvider || "bachs";
 
     // 2. Mark transaction as completed with provider transaction ID
@@ -450,62 +448,6 @@ export const settleWalletFunding = internalMutation({
     return { success: true, newBalance: updatedBalance };
   }
 });
-
-export const verifyPaystackFunding = action({
-  args: {
-    reference: v.string(),
-  },
-  handler: async (ctx, args): Promise<any> => {
-    // Verify with Paystack API
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
-    if (!secretKey) {
-      // In development mode without secret key, check if pending transaction exists
-      // and allow safe test verification
-      return { 
-        success: false, 
-        isDevelopmentMode: true,
-        message: "PAYSTACK_SECRET_KEY is not configured in backend environment variables. Set this secret in your Convex dashboard to enable live backend verification." 
-      };
-    }
-
-    try {
-      const res = await fetch(`https://api.paystack.co/transaction/verify/${args.reference}`, {
-        headers: {
-          Authorization: `Bearer ${secretKey}`,
-        },
-      });
-
-      const data = await res.json();
-      
-      if (data.status !== true || data.data?.status !== "success") {
-        return { 
-          success: false, 
-          status: data.data?.status || "failed",
-          message: data.message || "Payment verification failed with provider." 
-        };
-      }
-
-      // Verify currency
-      if (data.data.currency !== "NGN") {
-        return { success: false, message: "Invalid payment currency. Expected NGN." };
-      }
-
-      const paystackAmountNGN = data.data.amount / 100;
-
-      // Call idempotent settlement mutation
-      const result = await ctx.runMutation(internal.wallet.settleWalletFunding, {
-        reference: args.reference,
-        paystackAmount: paystackAmountNGN,
-        paystackTransactionId: data.data.id?.toString()
-      });
-
-      return result;
-    } catch (e: any) {
-      return { success: false, message: e.message || "Network error verifying payment." };
-    }
-  }
-});
-
 
 export const getTransactions = query({
   args: {},
