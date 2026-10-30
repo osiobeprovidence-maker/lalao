@@ -52,6 +52,8 @@ export default defineSchema({
     followingCount: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
+    lastSignInProvider: v.optional(v.union(v.literal("firebase"), v.literal("playsole"))),
+    lastSignInMethod: v.optional(v.string()),
     // Platform role — super_admin has full platform access
     role: v.optional(
       v.union(
@@ -188,6 +190,11 @@ export default defineSchema({
     key: v.string(),
     emailNormalizedAt: v.optional(v.number()),
     authIdentitiesBackfilledAt: v.optional(v.number()),
+  }).index("by_key", ["key"]),
+
+  emailSendLimits: defineTable({
+    key: v.string(),
+    sentAt: v.number(),
   }).index("by_key", ["key"]),
 
   authIdentityBackfillConflicts: defineTable({
@@ -475,12 +482,16 @@ export default defineSchema({
         canCreateRallies: v.string(),
       })
     ),
+    isChatroom: v.optional(v.boolean()),
+    allowPublicPreview: v.optional(v.boolean()),
+    roomIcon: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_creator", ["creatorId"])
     .index("by_username", ["username"])
-    .index("by_visibility", ["visibility"]),
+    .index("by_visibility", ["visibility"])
+    .index("by_is_chatroom", ["isChatroom"]),
 
   groupMembers: defineTable({
     groupId: v.id("groupChats"),
@@ -915,7 +926,15 @@ export default defineSchema({
     category: v.string(),
     totalAccountCost: v.number(),
     currency: v.string(),
-    billingCycle: v.union(v.literal("monthly"), v.literal("quarterly"), v.literal("yearly")),
+    billingCycle: v.union(
+      v.literal("monthly"),
+      v.literal("quarterly"),
+      v.literal("yearly"),
+      v.literal("3_months"),
+      v.literal("6_months"),
+      v.literal("12_months")
+    ),
+    durationMonths: v.optional(v.number()), // Explicit duration in calendar months (3, 6, 12)
     totalCapacity: v.number(),
     defaultSlotPrice: v.number(),
     allowDifferentSlotPrices: v.boolean(),
@@ -956,6 +975,7 @@ export default defineSchema({
     userId: v.id("users"),
     amount: v.number(),
     currency: v.string(),
+    durationMonths: v.optional(v.number()),
     status: v.union(v.literal("pending"), v.literal("completed"), v.literal("expired"), v.literal("cancelled")),
     paymentMethod: v.union(v.literal("wallet"), v.literal("paystack")),
     paystackReference: v.optional(v.string()),
@@ -983,6 +1003,7 @@ export default defineSchema({
     ),
     amount: v.optional(v.number()),
     currency: v.optional(v.string()),
+    durationMonths: v.optional(v.number()),
     paymentMethod: v.optional(v.union(v.literal("wallet"), v.literal("paystack"))),
     lastPaymentReference: v.optional(v.string()),
     lastPaymentStatus: v.optional(v.string()),
@@ -1972,6 +1993,160 @@ export default defineSchema({
     timestamp: v.number(),
   })
     .index("by_campaign", ["campaignId"]),
+
+  // ==========================================
+  // LA LAO REWARD POINTS SYSTEM
+  // ==========================================
+
+  userRewardBalances: defineTable({
+    userId: v.id("users"),
+    availablePoints: v.number(),
+    pendingPoints: v.number(),
+    lifetimePoints: v.number(),
+    totalEarned: v.number(),
+    totalRedeemed: v.number(),
+    lastUpdatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  rewardTransactions: defineTable({
+    userId: v.id("users"),
+    type: v.union(
+      v.literal("earn_purchase"),
+      v.literal("earn_referral"),
+      v.literal("earn_bonus"),
+      v.literal("redeem_reward"),
+      v.literal("reverse_purchase"),
+      v.literal("adjustment")
+    ),
+    description: v.string(),
+    amount: v.number(),
+    pointsBefore: v.number(),
+    pointsAfter: v.number(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("completed"),
+      v.literal("reversed")
+    ),
+    relatedTransactionId: v.optional(v.id("walletTransactions")),
+    relatedRedemptionId: v.optional(v.id("rewardRedemptions")),
+    relatedReferralId: v.optional(v.id("referralRelationships")),
+    idempotencyKey: v.optional(v.string()),
+    metadata: v.optional(v.any()),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"])
+   .index("by_user_created", ["userId", "createdAt"])
+   .index("by_type", ["type"])
+   .index("by_idempotency", ["idempotencyKey"]),
+
+  rewardCatalogue: defineTable({
+    name: v.string(),
+    description: v.string(),
+    type: v.union(
+      v.literal("gift_card"),
+      v.literal("airtime"),
+      v.literal("data_bundle"),
+      v.literal("voucher"),
+      v.literal("partner_offer"),
+      v.literal("other")
+    ),
+    imageUrl: v.optional(v.string()),
+    pointsCost: v.number(),
+    status: v.union(
+      v.literal("active"),
+      v.literal("inactive"),
+      v.literal("archived")
+    ),
+    stockLimit: v.optional(v.number()),
+    stockRemaining: v.optional(v.number()),
+    availabilityStart: v.optional(v.number()),
+    availabilityEnd: v.optional(v.number()),
+    eligibilityRequirements: v.optional(v.any()),
+    fulfillmentInstructions: v.optional(v.string()),
+    providerIntegration: v.optional(v.any()),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.id("users")),
+  }).index("by_type", ["type"])
+   .index("by_status", ["status"]),
+
+  rewardRedemptions: defineTable({
+    userId: v.id("users"),
+    rewardId: v.id("rewardCatalogue"),
+    rewardName: v.string(),
+    rewardType: v.string(),
+    pointsCost: v.number(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("fulfilled"),
+      v.literal("rejected"),
+      v.literal("cancelled")
+    ),
+    rejectionReason: v.optional(v.string()),
+    fulfillmentReference: v.optional(v.string()),
+    fulfilledAt: v.optional(v.number()),
+    fulfilledBy: v.optional(v.id("users")),
+    idempotencyKey: v.string(),
+    metadata: v.optional(v.any()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"])
+   .index("by_user_created", ["userId", "createdAt"])
+   .index("by_status", ["status"])
+   .index("by_reward", ["rewardId"])
+   .index("by_idempotency", ["idempotencyKey"]),
+
+  referralCodes: defineTable({
+    userId: v.id("users"),
+    code: v.string(),
+    isActive: v.boolean(),
+    totalReferrals: v.number(),
+    qualifiedReferrals: v.number(),
+    totalPointsEarned: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"])
+   .index("by_code", ["code"]),
+
+  referralRelationships: defineTable({
+    referrerId: v.id("users"),
+    referredUserId: v.id("users"),
+    referralCode: v.string(),
+    status: v.union(
+      v.literal("invited"),
+      v.literal("registered"),
+      v.literal("qualified"),
+      v.literal("rewarded")
+    ),
+    qualificationRequirement: v.string(),
+    qualificationCompletedAt: v.optional(v.number()),
+    rewardAwardedAt: v.optional(v.number()),
+    rewardPoints: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_referrer", ["referrerId"])
+   .index("by_referred", ["referredUserId"])
+   .index("by_code", ["referralCode"])
+   .index("by_status", ["status"]),
+
+  rewardConfiguration: defineTable({
+    key: v.string(),
+    value: v.string(),
+    description: v.string(),
+    updatedBy: v.optional(v.id("users")),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
+  rewardAdminAudit: defineTable({
+    actorId: v.id("users"),
+    action: v.string(),
+    target: v.optional(v.string()),
+    before: v.optional(v.string()),
+    after: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_actor", ["actorId"])
+   .index("by_created", ["createdAt"]),
 });
 
 

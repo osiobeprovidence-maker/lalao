@@ -6,7 +6,6 @@ import {
   Clock,
   MapPin,
   ChevronRight,
-  Sparkles,
   ArrowLeft,
   CheckCircle2,
   History,

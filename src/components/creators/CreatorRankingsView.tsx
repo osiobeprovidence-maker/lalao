@@ -6,7 +6,6 @@ import {
   Award,
   TrendingUp,
   Clock,
-  Sparkles,
   ArrowUp,
   ArrowDown,
   Minus,

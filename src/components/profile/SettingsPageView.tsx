@@ -67,6 +67,10 @@ export const SettingsPageView: React.FC = () => {
   const { theme } = useTheme();
   const { isInstalled, setIsInstallModalOpen } = usePWA();
   const { logout } = useAuth();
+  const authAccount = useQuery(api.users.getCurrentUser, {});
+  const signInLabel = (authAccount as any)?.lastSignInProvider === 'playsole' || (currentUser as any)?.provider === 'playsole'
+    ? 'Playsole One'
+    : 'Google / Firebase';
 
   const [activeView, setActiveView] = useState<SettingsActiveView>('hub');
   const [isTopicsDrawerOpen, setIsTopicsDrawerOpen] = useState(false);
@@ -236,6 +240,7 @@ export const SettingsPageView: React.FC = () => {
                 </button>
                 <div>
                   <h1 className="font-bold text-base text-theme-primary">Settings & Profile</h1>
+                  <p className="text-[11px] text-theme-tertiary">Last sign-in: {signInLabel}</p>
                   <p className="text-[11px] text-theme-tertiary">Select a category to manage</p>
                 </div>
               </div>

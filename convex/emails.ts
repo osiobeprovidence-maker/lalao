@@ -131,6 +131,23 @@ function getSenderEmail() {
   return process.env.RESEND_FROM_EMAIL || "Lalao <onboarding@resend.dev>";
 }
 
+/** Send a Firebase-managed verification link through Resend (Firebase owns the token). */
+export const sendVerificationLink = action({
+  args: { email: v.string(), verificationLink: v.string() },
+  handler: async (_ctx, { email, verificationLink }) => {
+    const resend = getResendClient();
+    if (!resend) throw new Error("Email delivery is temporarily unavailable. Please try again later.");
+    const url = new URL(verificationLink);
+    if (url.protocol !== "https:" && url.hostname !== "localhost") throw new Error("Invalid verification link.");
+    const safeLink = url.toString().replace(/&/g, "&amp;").replace(/\"/g, "&quot;");
+    const html = getBaseEmailLayout("Verify your LaLao email", `<h2>Verify your LaLao email</h2><p>Confirm this email address to secure and activate your LaLao account.</p><p style="text-align:center"><a class="cta-button" href="${safeLink}">Verify Email</a></p><p>If you did not create this account, you can ignore this email.</p>`);
+    const result = await resend.emails.send({ from: getSenderEmail(), to: email, subject: "Verify your LaLao email", html, text: `Verify your LaLao account by opening: ${url.toString()}` });
+    if (result.error) throw new Error("We could not send the verification email. Please try again later.");
+    return { success: true };
+  },
+});
+
+
 /* ─────────────────────────────────────────────────────────────────────────────
    CONVEX ACTIONS FOR EMAIL DELIVERY
    ───────────────────────────────────────────────────────────────────────────── */

@@ -10,7 +10,6 @@ import {
   Zap,
   CheckCheck,
   Bell,
-  Sparkles,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from './Avatar';

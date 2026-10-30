@@ -16,7 +16,6 @@ import {
   ExternalLink,
   ChevronRight,
   TrendingUp,
-  Sparkles,
   ArrowLeft,
   Upload,
   Globe,

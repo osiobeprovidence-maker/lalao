@@ -10,7 +10,6 @@ import {
   Eye,
   EyeOff,
   Radio,
-  Sparkles,
   AlertCircle,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';

@@ -295,8 +295,14 @@ if (typeof process !== "undefined" && process.argv[1]?.includes("bachs_integrati
     console.log("Running BACHS Wallet Funding Integration & Security Tests...\n");
     const testResults = runBachsTests();
     const secret = "test_bachs_webhook_secret_key_12345";
-    const rawBody = JSON.stringify({ id: "evt_rotation", type: "collection.succeeded", data: { checkout_id: "chk_test" } });
     const nowMs = Date.now();
+    const rawBody = JSON.stringify({
+      id: "evt_rotation",
+      type: "collection.succeeded",
+      created_at: new Date(nowMs).toISOString(),
+      organization_id: "acct_test",
+      data: { checkout_id: "chk_test" },
+    });
     const timestamp = Math.floor(nowMs / 1000).toString();
     const correctSignature = crypto.createHmac("sha256", secret).update(`${timestamp}.${rawBody}`).digest("hex");
     const rotatedHeaderValid = await verifyBachsV2Signature({
@@ -306,6 +312,26 @@ if (typeof process !== "undefined" && process.argv[1]?.includes("bachs_integrati
       nowMs,
     });
     testResults.push({ name: "Accepts a matching Bachs V2 signature during secret rotation", passed: rotatedHeaderValid });
+    const missingSignatureValid = await verifyBachsV2Signature({
+      rawBody,
+      secret,
+      nowMs,
+    });
+    testResults.push({ name: "Rejects a missing Bachs signature", passed: !missingSignatureValid });
+    const invalidSignatureValid = await verifyBachsV2Signature({
+      rawBody,
+      secret,
+      signatureV2: `t=${timestamp},v1=${"0".repeat(64)}`,
+      nowMs,
+    });
+    testResults.push({ name: "Rejects an invalid Bachs signature", passed: !invalidSignatureValid });
+    const emptySecretValid = await verifyBachsV2Signature({
+      rawBody,
+      secret: "",
+      signatureV2: `t=${timestamp},v1=${correctSignature}`,
+      nowMs,
+    });
+    testResults.push({ name: "Fails closed when the Bachs signing secret is empty", passed: !emptySecretValid });
     const tamperedBodyValid = await verifyBachsV2Signature({
       rawBody: `${rawBody} `,
       secret,

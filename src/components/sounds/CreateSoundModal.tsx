@@ -9,7 +9,6 @@ import {
   Sliders,
   Check,
   AlertCircle,
-  Sparkles,
   Lock,
   Globe,
   Radio,
@@ -402,7 +401,6 @@ export const CreateSoundModal: React.FC<CreateSoundModalProps> = ({
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5" />
               <span>Presets</span>
             </button>
           </div>

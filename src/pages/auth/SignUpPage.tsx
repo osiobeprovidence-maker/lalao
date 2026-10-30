@@ -55,7 +55,11 @@ export const SignUpPage: React.FC = () => {
 
       navigate('/onboarding/phone');
     } catch (err: any) {
-      setError(err.message || 'Failed to create account. Try again.');
+      if (err?.code === 'auth/email-already-in-use' || String(err?.message || '').includes('already use this email')) {
+        setError('An account with this email already exists. Sign in using Google, Playsole One, or the sign-in method you used before.');
+      } else {
+        setError(err.message || 'Failed to create account. Try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -216,7 +220,10 @@ export const SignUpPage: React.FC = () => {
 
                     navigate('/onboarding/phone');
                   } catch (err: any) {
-                    setError(err.message || 'Google sign-up failed.');
+                    const message = String(err?.message || '');
+                    setError(message.includes('already use this email')
+                      ? 'This email already belongs to a Lalao account. Sign in with the provider you used before, or link Google from Security & Authentication.'
+                      : (err.message || 'Google sign-up failed.'));
                   }
                 }}
                 className="w-full py-3.5 rounded-xl border-2 border-theme-divider bg-theme-surface text-theme-secondary font-bold text-base flex items-center justify-center gap-3 hover:bg-theme-base active:scale-[0.98] transition-all cursor-pointer"

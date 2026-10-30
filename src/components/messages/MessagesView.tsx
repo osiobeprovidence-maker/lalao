@@ -585,8 +585,12 @@ export const MessagesView: React.FC = () => {
                       </div>
                     )}
                     {(conv as any).isGroupChat && (
-                      <div className="text-[10px] font-black tracking-wider text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/40 px-1.5 py-0.5 rounded-sm uppercase mt-1 w-fit mb-0.5">
-                        Group Chat
+                      <div className={`text-[10px] font-black tracking-wider px-1.5 py-0.5 rounded-sm uppercase mt-1 w-fit mb-0.5 ${
+                        (conv as any).groupChat?.isChatroom
+                          ? 'text-[#5E43F3] bg-[#5E43F3]/10 border border-[#5E43F3]/20'
+                          : 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/40'
+                      }`}>
+                        {(conv as any).groupChat?.isChatroom ? 'Chatroom' : 'Group Chat'}
                       </div>
                     )}
                     <div className="flex items-center gap-1 text-xs text-theme-tertiary truncate mt-0.5 max-w-[220px]">

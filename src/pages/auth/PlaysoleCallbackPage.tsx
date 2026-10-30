@@ -10,18 +10,24 @@ import { Loader2, AlertCircle, ArrowLeft, CheckCircle } from 'lucide-react';
 export const PlaysoleCallbackPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const exchangeAuthCode = useAction((api as any).playsole?.exchangeAuthCode || 'skip');
+  const exchangeAuthCode = useAction(api.playsole.exchangeAuthCode);
 
   const [statusMessage, setStatusMessage] = useState('Verifying credentials with Playsole One...');
   const [error, setError] = useState<string | null>(null);
   const [isComplete, setIsComplete] = useState(false);
   const [isLinkFlow, setIsLinkFlow] = useState(false);
-  const executionStartedRef = useRef(false);
+  const processedRequestRef = useRef<string | null>(null);
+  const linkChallengeRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Avoid double execution in React StrictMode
-    if (executionStartedRef.current) return;
-    executionStartedRef.current = true;
+    // Process each callback (code/state/error) exactly once. This also lets a
+    // failed attempt be retried in the same tab with a fresh authorization.
+    const requestSignature = searchParams.toString();
+    if (processedRequestRef.current === requestSignature) return;
+    processedRequestRef.current = requestSignature;
+    setIsComplete(false);
+    setError(null);
+    setStatusMessage('Verifying credentials with Playsole One...');
 
     const processAuth = async () => {
       const code = searchParams.get('code');
@@ -29,10 +35,10 @@ export const PlaysoleCallbackPage: React.FC = () => {
       const errorParam = searchParams.get('error');
       const errorDesc = searchParams.get('error_description');
       const linkChallenge = sessionStorage.getItem(PLAYSOLE_CONFIG.linkChallengeKey);
+      linkChallengeRef.current = linkChallenge;
       setIsLinkFlow(Boolean(linkChallenge));
 
       if (errorParam) {
-        if (linkChallenge) sessionStorage.removeItem(PLAYSOLE_CONFIG.linkChallengeKey);
         if (errorParam === 'access_denied') {
           setError('Authorization was cancelled.');
         } else {
@@ -52,7 +58,6 @@ export const PlaysoleCallbackPage: React.FC = () => {
           ? (args: any) => exchangeAuthCode(args)
           : undefined;
 
-        sessionStorage.removeItem(PLAYSOLE_CONFIG.linkChallengeKey);
         const session = await handlePlaysoleCallback(code, state || '', exchangeFn, {
           persist: false,
           intent: linkChallenge ? 'link' : 'login',
@@ -76,6 +81,8 @@ export const PlaysoleCallbackPage: React.FC = () => {
         if (linkChallenge) {
           setStatusMessage('Verifying the additional sign-in method...');
           await client.mutation(api.playsole.completeAuthLink, { challenge: linkChallenge });
+          sessionStorage.removeItem(PLAYSOLE_CONFIG.linkChallengeKey);
+          linkChallengeRef.current = null;
           setStatusMessage('Sign-in method linked. Returning to Lalao...');
           setIsComplete(true);
           return;
@@ -94,7 +101,17 @@ export const PlaysoleCallbackPage: React.FC = () => {
 
         savePlaysoleSession(session);
         setStatusMessage('Welcome! Redirecting to Lalao...');
-        navigate('/app', { replace: true });
+        let postLoginRedirect = '/app';
+        try {
+          const stored = sessionStorage.getItem('lalao_post_login_redirect');
+          sessionStorage.removeItem('lalao_post_login_redirect');
+          if (stored && stored.startsWith('/') && !stored.startsWith('//')) {
+            postLoginRedirect = stored;
+          }
+        } catch {
+          // Fall back to the app root when sessionStorage is unavailable.
+        }
+        navigate(postLoginRedirect, { replace: true });
       } catch (err: any) {
         // Keep provider tokens and authentication internals out of browser logs.
         setError(err?.message || 'An unexpected error occurred during Playsole One authentication.');
@@ -135,7 +152,9 @@ export const PlaysoleCallbackPage: React.FC = () => {
               )}
               <button
                 type="button"
-                onClick={() => initiatePlaysoleLogin()}
+                onClick={() => initiatePlaysoleLogin(
+                  linkChallengeRef.current ? { linkChallenge: linkChallengeRef.current } : undefined,
+                )}
                 className="w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border border-black/10 dark:border-white/15 bg-black text-white hover:bg-neutral-900 text-sm font-semibold transition-all cursor-pointer active:scale-[0.98] shadow-md"
               >
                 <img src="https://one.playsole.xyz/brand/playsole-logo.png" alt="Playsole" className="w-4 h-4 object-contain" />

@@ -8,7 +8,6 @@ import {
   Users,
   ChevronRight,
   Globe,
-  Sparkles,
   Flame,
   ArrowRight,
   CheckCircle2,
@@ -160,7 +159,6 @@ export const EventCard: React.FC<EventCardProps> = ({
           {/* Bottom Featured Highlight Tile */}
           <div className="relative z-10 text-white mt-auto pt-8">
             <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-1">
-              <Sparkles className="w-3 h-3" />
               Featured Tournament
             </span>
             <p className="text-xs text-theme-tertiary font-medium line-clamp-2 mt-1">
@@ -220,7 +218,6 @@ export const EventCard: React.FC<EventCardProps> = ({
               ) : (
                 <div className="bg-theme-base border border-theme-divider/70 rounded-2xl p-2.5 flex flex-col justify-between">
                   <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-theme-secondary">
-                    <Sparkles className="w-3 h-3 text-amber-500" />
                     <span>Entry</span>
                   </div>
                   <p className="text-xs sm:text-sm font-black text-theme-primary mt-1">

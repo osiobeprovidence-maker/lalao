@@ -69,6 +69,36 @@ class Conversation {
     this.isBusinessChat = false,
     this.isUnread = false,
     this.messages = const [],
+    this.isChatroom = false,
+    this.category,
+    this.roomIcon,
+  });
+  final bool isChatroom;
+  final String? category;
+  final String? roomIcon;
+}
+
+class Chatroom {
+  final String id;
+  final String name;
+  final String category;
+  final String description;
+  final String roomIcon;
+  final String coverImage;
+  final int memberCount;
+  final List<String> rules;
+  bool isJoined;
+
+  Chatroom({
+    required this.id,
+    required this.name,
+    required this.category,
+    required this.description,
+    required this.roomIcon,
+    required this.coverImage,
+    required this.memberCount,
+    required this.rules,
+    this.isJoined = false,
   });
 }
 
@@ -154,6 +184,125 @@ class MockRepository extends ChangeNotifier {
   List<AppNotification> notifications = [];
   List<Post> posts = [];
   List<Post> videoPosts = [];
+
+  List<Chatroom> chatrooms = [
+    Chatroom(
+      id: 'room_general',
+      name: 'General Chat',
+      category: 'General',
+      description: 'Talk about anything, introduce yourself, ask questions and meet new people.',
+      roomIcon: 'users',
+      coverImage: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=1200&auto=format&fit=crop&q=80',
+      memberCount: 1,
+      rules: [
+        'Be kind and welcoming to everyone.',
+        'Keep discussions clean and family-friendly.',
+        'No spam, excessive links, or unsolicited advertising.',
+        'Respect diverse viewpoints and privacy.'
+      ],
+    ),
+    Chatroom(
+      id: 'room_social',
+      name: 'Meet & Connect',
+      category: 'Social',
+      description: 'Make new friends, discover shared interests and build meaningful friendships.',
+      roomIcon: 'user_plus',
+      coverImage: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1200&auto=format&fit=crop&q=80',
+      memberCount: 1,
+      rules: [
+        'Introduce yourself genuinely.',
+        'Respect boundaries and personal space.',
+        'Harassment and unsolicited solicitation are strictly prohibited.',
+        'Support and encourage your peers.'
+      ],
+    ),
+    Chatroom(
+      id: 'room_entertainment',
+      name: 'Entertainment Zone',
+      category: 'Entertainment',
+      description: 'Discuss games, anime, music, movies and entertainment.',
+      roomIcon: 'gamepad',
+      coverImage: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=1200&auto=format&fit=crop&q=80',
+      memberCount: 1,
+      rules: [
+        'Use spoiler alerts for recent plotlines.',
+        'Constructive debate is welcome.',
+        'No piracy or unauthorized links.'
+      ],
+    ),
+    Chatroom(
+      id: 'room_ideas',
+      name: 'Ideas & Trending',
+      category: 'Discussion',
+      description: 'Share opinions, discuss interesting topics, technology and trending conversations.',
+      roomIcon: 'lightbulb',
+      coverImage: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&auto=format&fit=crop&q=80',
+      memberCount: 1,
+      rules: [
+        'Ground arguments with factual insights and respect.',
+        'Encourage innovation and technology.',
+        'Stay on-topic.'
+      ],
+    ),
+    Chatroom(
+      id: 'room_nigeria',
+      name: 'Naija Connect',
+      category: 'Nigeria',
+      description: 'Discuss Nigerian culture, everyday life, opportunities and local happenings.',
+      roomIcon: 'map_pin',
+      coverImage: 'https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=1200&auto=format&fit=crop&q=80',
+      memberCount: 1,
+      rules: [
+        'Celebrate Nigerian culture, innovation, and unity.',
+        'Keep conversations constructive.',
+        'No hate speech or tribalism.'
+      ],
+    ),
+  ];
+
+  void joinChatroom(String roomId) {
+    final room = chatrooms.firstWhere((r) => r.id == roomId);
+    room.isJoined = true;
+
+    // Check if conversation already exists in conversations
+    final existingConvo = conversations.where((c) => c.id == roomId).toList();
+    if (existingConvo.isEmpty) {
+      conversations.insert(
+        0,
+        Conversation(
+          id: room.id,
+          contact: User(
+            id: 'room_user_${room.id}',
+            name: room.name,
+            username: room.category.toLowerCase(),
+            avatarUrl: room.coverImage,
+            isOnline: true,
+          ),
+          lastMessage: 'Welcome to ${room.name}!',
+          timestamp: 'Just now',
+          isChatroom: true,
+          category: room.category,
+          roomIcon: room.roomIcon,
+          messages: [
+            ChatMessage(
+              id: 'init_${room.id}',
+              text: 'Welcome to ${room.name}! ${room.description}',
+              isMe: false,
+              timestamp: 'Just now',
+            ),
+          ],
+        ),
+      );
+    }
+    notifyListeners();
+  }
+
+  void leaveChatroom(String roomId) {
+    final room = chatrooms.firstWhere((r) => r.id == roomId);
+    room.isJoined = false;
+    conversations.removeWhere((c) => c.id == roomId);
+    notifyListeners();
+  }
 
   MockRepository._internal() {
     statuses = [

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { Save, Upload, Image as ImageIcon, CheckCircle2, RotateCcw, Building2, Camera, ExternalLink, Sparkles, ShieldCheck } from 'lucide-react';
+import { Save, Upload, Image as ImageIcon, CheckCircle2, RotateCcw, Building2, Camera, ExternalLink, ShieldCheck } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { uploadImageToCloudinary, uploadImageWithFallback } from '../../lib/cloudinary';
 

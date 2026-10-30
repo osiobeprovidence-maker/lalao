@@ -1,18 +1,22 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { 
-  ArrowLeft, ArrowUpRight, Copy, Plus, Check, Settings, 
-  MoreHorizontal, Wallet, ChevronRight, ChevronDown, X, Search, History, 
+import {
+  ArrowLeft, ArrowUpRight, Copy, Plus, Check, Settings,
+  MoreHorizontal, Wallet, ChevronRight, ChevronDown, X, Search, History,
   Shield, Lock, CreditCard, Banknote, Building, AlertCircle, Receipt,
   Bitcoin, Smartphone, Wifi, Tv, ExternalLink, Unplug, Link2, Mail, KeyRound, Zap,
-  Dices, GraduationCap, Globe, BookOpen, Loader2
+  Dices, GraduationCap, Globe, BookOpen, Loader2, Crown, Filter, MessageSquare,
+  Gift, Share2
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { usePaystackPayment } from 'react-paystack';
 import { useWeb3Wallet, SUPPORTED_CHAINS, DEFAULT_CHAIN_ID } from '../../hooks/useWeb3Wallet';
 import { NativeDataPlanSelector } from './NativeDataPlanSelector';
+import { RewardsPage } from '../rewards/RewardsPage';
+import { SubscriptionCheckoutModal } from '../pages/SubscriptionCheckoutModal';
+import { MySubscriptionsModal } from '../subscriptions/MySubscriptionsModal';
 
 export interface WithdrawalAccount {
   id: string;
@@ -23,8 +27,12 @@ export interface WithdrawalAccount {
   isDefault: boolean;
 }
 
-type WalletView = 
-  | 'home' 
+type WalletView =
+  | 'home'
+  | 'credits'
+  | 'rewards'
+  | 'subscriptions_my'
+  | 'subscription_checkout'
   | 'settings'
   | 'pay_select_wallet'
   | 'pay_select_recipient'
@@ -64,26 +72,36 @@ type WalletView =
   | 'market_spectranet'
   | 'market_waec'
   | 'market_jamb'
+  | 'market_subscriptions'
+  | 'market_subscription_detail'
   | 'market_review'
   | 'market_pin'
   | 'market_success';
 
 export const WalletModal: React.FC = () => {
-  const { isWalletModalOpen, setIsWalletModalOpen } = useLalao();
-  
+  const {
+    isWalletModalOpen,
+    setIsWalletModalOpen,
+    setSelectedSubscriptionPlan,
+    triggerShareToast
+  } = useLalao();
+
   const wallet = useQuery(api.wallet.getWallet);
   const dbTransactions = useQuery(api.wallet.getTransactions);
   const currentUser = useQuery(api.users.getCurrentUser);
   const userRole = useQuery(api.admin.getMyRole);
   const isDevAdmin = userRole === 'super_admin' || userRole === 'admin';
-  
+  // Reward balance powers the wallet's points pill and inline Rewards screen.
+  // The backend returns null for anonymous users, so this is safe globally.
+  const rewardBalance = useQuery(api.rewards.getUserRewardBalance, {});
+
   const performTransferCredits = useMutation(api.wallet.transferCredits);
   const performTransferCrypto = useMutation(api.wallet.transferCrypto);
   const performTopUp = useMutation(api.wallet.topUp);
   const performSetWalletPin = useMutation(api.wallet.setWalletPin);
   const performRequestPinResetOtp = useAction(api.wallet.requestPinResetOtp);
   const performResetWalletPinWithOtp = useMutation(api.wallet.resetWalletPinWithOtp);
-  
+
   // Settings / PIN State
   const [isPinSectionExpanded, setIsPinSectionExpanded] = useState(false);
   const [oldWalletPinInput, setOldWalletPinInput] = useState('');
@@ -112,6 +130,13 @@ export const WalletModal: React.FC = () => {
   const fetchJAMBPackages = useAction(api.market.getJAMBPackages);
   const serviceSettings = useQuery(api.clubkonnect.getCustomerServiceSettings);
 
+  // Subscriptions Marketplace Queries & State
+  const subscriptionCatalogue = useQuery(api.subscriptions.getJointheQCatalogue, {}) || [];
+  const userMemberships = useQuery(api.subscriptions.getMySubscriptions) || [];
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string>('All');
+  const [subscriptionSearchQuery, setSubscriptionSearchQuery] = useState<string>('');
+  const [selectedWalletSubscription, setSelectedWalletSubscription] = useState<any>(null);
+
   // Crypto wallet — real Web3 connection
   const web3 = useWeb3Wallet();
   const dbCryptoWallets = useQuery(api.cryptoWallets.getCryptoWallets);
@@ -121,12 +146,18 @@ export const WalletModal: React.FC = () => {
 
   const [currentView, setCurrentView] = useState<WalletView>('home');
   const [viewStack, setViewStack] = useState<WalletView[]>(['home']);
-  
+  // Kept in sync so the history (popstate) listener can read the latest stack
+  // without re-subscribing on every internal navigation.
+  const viewStackRef = useRef<WalletView[]>(viewStack);
+  useEffect(() => {
+    viewStackRef.current = viewStack;
+  }, [viewStack]);
+
   // Dev override for testing — restricted to explicit test mode flag
   const [devBalance, setDevBalance] = useState<number | null>(null);
   const isTestModeEnabled = isDevAdmin && import.meta.env.DEV && import.meta.env.VITE_ENABLE_WALLET_TEST_MODE === 'true';
   const internalBalance = (isTestModeEnabled && devBalance !== null) ? devBalance : (wallet?.balance ?? 0);
-  
+
   // Real crypto balance derived from hook
   const cryptoBalanceUSDC = web3.balance ? parseFloat(web3.balance) : 0;
 
@@ -169,7 +200,7 @@ export const WalletModal: React.FC = () => {
   const [flowMethod, setFlowMethod] = useState<string>('');
   const [pin, setPin] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const [selectedTx, setSelectedTx] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [withdrawError, setWithdrawError] = useState('');
@@ -229,7 +260,7 @@ export const WalletModal: React.FC = () => {
         reference: referenceToVerify,
         sessionId,
       });
-      
+
       if (result.success) {
         navigateTo('fund_success');
       } else {
@@ -249,7 +280,7 @@ export const WalletModal: React.FC = () => {
     setViewStack(prev => [...prev, view]);
     setCurrentView(view);
   };
-  
+
   const goBack = () => {
     if (viewStack.length > 1) {
       const newStack = [...viewStack];
@@ -260,7 +291,7 @@ export const WalletModal: React.FC = () => {
       handleClose();
     }
   };
-  
+
   const handleClose = () => {
     setIsWalletModalOpen(false);
     setTimeout(() => {
@@ -269,7 +300,7 @@ export const WalletModal: React.FC = () => {
       resetFlows();
     }, 300);
   };
-  
+
   const resetFlows = () => {
     setFlowAssetType('LALAO_CREDITS');
     setFlowRecipient(null);
@@ -309,10 +340,10 @@ export const WalletModal: React.FC = () => {
 
   const handleSaveAccount = () => {
     if (!accountForm.name || !accountForm.bank || !accountForm.number) return;
-    
+
     if (editingAccountId) {
-      setWithdrawalAccounts(prev => prev.map(acc => 
-        acc.id === editingAccountId 
+      setWithdrawalAccounts(prev => prev.map(acc =>
+        acc.id === editingAccountId
           ? { ...acc, accountName: accountForm.name, bankName: accountForm.bank, accountNumber: accountForm.number }
           : acc
       ));
@@ -335,9 +366,29 @@ export const WalletModal: React.FC = () => {
   useEffect(() => {
     if (!isWalletModalOpen) return;
     window.history.pushState({ modal: 'wallet' }, '');
-    const handlePopState = () => setIsWalletModalOpen(false);
+    const handlePopState = () => {
+      // The browser back button should walk back through internal wallet
+      // screens first. Only close once the wallet is showing its root view.
+      if (viewStackRef.current.length > 1) {
+        window.history.pushState({ modal: 'wallet' }, '');
+        const newStack = viewStackRef.current.slice(0, -1);
+        viewStackRef.current = newStack;
+        setViewStack(newStack);
+        setCurrentView(newStack[newStack.length - 1]);
+      } else {
+        setIsWalletModalOpen(false);
+      }
+    };
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsWalletModalOpen(false);
+      if (e.key !== 'Escape') return;
+      if (viewStackRef.current.length > 1) {
+        const newStack = viewStackRef.current.slice(0, -1);
+        viewStackRef.current = newStack;
+        setViewStack(newStack);
+        setCurrentView(newStack[newStack.length - 1]);
+      } else {
+        setIsWalletModalOpen(false);
+      }
     };
     window.addEventListener('popstate', handlePopState);
     window.addEventListener('keydown', handleKeyDown);
@@ -347,11 +398,11 @@ export const WalletModal: React.FC = () => {
     };
   }, [isWalletModalOpen, setIsWalletModalOpen]);
 
-  const searchResults = useQuery(api.search.globalSearch, { 
-    query: searchQuery, 
-    filter: flowAssetType === 'LALAO_CREDITS' ? 'shop' : 'people' 
+  const searchResults = useQuery(api.search.globalSearch, {
+    query: searchQuery,
+    filter: flowAssetType === 'LALAO_CREDITS' ? 'shop' : 'people'
   });
-  
+
   const filteredUsers = useMemo(() => {
     if (!searchQuery || !searchResults) return [];
     return flowAssetType === 'LALAO_CREDITS' ? searchResults.pages : searchResults.people;
@@ -360,7 +411,7 @@ export const WalletModal: React.FC = () => {
   const handlePayConfirm = async () => {
     if (isProcessing) return;
     setIsProcessing(true);
-    
+
     const amt = parseFloat(flowAmount);
     try {
       if (flowAssetType === 'LALAO_CREDITS') {
@@ -413,17 +464,17 @@ export const WalletModal: React.FC = () => {
 
   return (
     <>
-      <div 
+      <div
         className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 sm:p-4 animate-in fade-in duration-200"
         onClick={(e) => {
           if (e.target === e.currentTarget) handleClose();
         }}
       >
-        <div 
+        <div
           className="w-full sm:max-w-md bg-theme-base sm:rounded-[32px] rounded-t-[32px] shadow-2xl overflow-hidden flex flex-col h-[90vh] sm:h-[85vh] max-h-[92vh]"
           onClick={(e) => e.stopPropagation()}
         >
-        
+
         {/* Header */}
         <div className="flex items-center justify-between p-4 bg-theme-surface shrink-0 sticky top-0 z-10 border-b border-theme-divider-light">
           <div className="flex items-center gap-3">
@@ -435,6 +486,10 @@ export const WalletModal: React.FC = () => {
             </button>
             <h2 className="text-xl font-black text-theme-primary tracking-tight">
               {currentView === 'home' && 'Wallet'}
+              {currentView === 'credits' && 'LaLao Credits'}
+              {currentView === 'rewards' && 'Rewards'}
+              {currentView === 'subscriptions_my' && 'My Subscriptions'}
+              {currentView === 'subscription_checkout' && 'Join Subscription'}
               {currentView === 'settings' && 'Wallet Settings'}
               {currentView === 'transactions' && 'Transaction History'}
               {currentView === 'receipt' && 'Transaction Receipt'}
@@ -459,52 +514,67 @@ export const WalletModal: React.FC = () => {
               {currentView === 'market_spectranet' && 'Spectranet 4G LTE'}
               {currentView === 'market_waec' && 'WAEC Result Checker'}
               {currentView === 'market_jamb' && 'JAMB UTME e-PIN'}
+              {currentView === 'market_subscriptions' && 'Subscription Marketplace'}
+              {currentView === 'market_subscription_detail' && (selectedWalletSubscription?.name || 'Subscription Details')}
               {currentView === 'market_review' && 'Review Purchase'}
               {currentView === 'market_pin' && 'Confirm Purchase'}
               {currentView === 'market_success' && 'Transaction Successful'}
             </h2>
           </div>
-          {currentView === 'home' && (
-            <button onClick={() => navigateTo('settings')} className="w-10 h-10 flex items-center justify-center rounded-full bg-theme-surface-hover hover:bg-theme-surface-active transition-colors">
-              <Settings className="w-5 h-5 text-theme-primary" />
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {currentView === 'home' && rewardBalance && (
+              <button
+                onClick={() => navigateTo('rewards')}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-[#5E43F3]/10 border border-[#5E43F3]/20 text-[#5E43F3] hover:bg-[#5E43F3]/20 hover:text-[#4E34E0] transition-colors text-xs font-bold"
+              >
+                {rewardBalance.availablePoints.toLocaleString()} pts
+              </button>
+            )}
+            {currentView === 'home' && (
+              <button onClick={() => navigateTo('settings')} className="w-10 h-10 flex items-center justify-center rounded-full bg-theme-surface-hover hover:bg-theme-surface-active transition-colors">
+                <Settings className="w-5 h-5 text-theme-primary" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto relative bg-theme-base">
-          
+
           {/* HOME */}
           {currentView === 'home' && (
             <div className="p-4 space-y-8 pb-12">
-              
+
               {/* LALAO CREDITS */}
               <div>
                 <h3 className="font-black text-theme-primary px-2 text-xl mb-3">LaLao Credits</h3>
-                <div className="bg-theme-surface rounded-3xl p-6 border border-[#5E43F3]/30 shadow-sm flex flex-col items-center relative overflow-hidden">
+                <div
+                  onClick={() => navigateTo('credits')}
+                  className="bg-theme-surface rounded-3xl p-6 border border-[#5E43F3]/30 shadow-sm flex flex-col items-center relative overflow-hidden cursor-pointer"
+                >
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#5E43F3] to-[#8A74F7]"></div>
-                  
+
                   <div className="text-4xl font-black text-theme-primary tracking-tighter mb-2">
                     {internalBalance.toLocaleString()} LC
                   </div>
                   <p className="text-xs text-theme-secondary text-center mb-6 max-w-[220px]">
                     Used for: Subscriptions & LaLao Partner Businesses
                   </p>
-                  
+
                   <div className="flex items-center justify-center gap-6 w-full">
-                    <button onClick={() => navigateTo('fund_amount')} className="flex flex-col items-center gap-2 group">
+                    <button onClick={(e) => { e.stopPropagation(); navigateTo('fund_amount'); }} className="flex flex-col items-center gap-2 group">
                       <div className="w-12 h-12 rounded-full bg-theme-surface-hover text-theme-primary flex items-center justify-center group-hover:bg-theme-surface-active transition-colors">
                         <Plus className="w-5 h-5" />
                       </div>
                       <span className="text-xs font-bold text-theme-primary">Fund</span>
                     </button>
-                    <button onClick={() => { setFlowAssetType('LALAO_CREDITS'); navigateTo('pay_select_recipient'); }} className="flex flex-col items-center gap-2 group">
+                    <button onClick={(e) => { e.stopPropagation(); setFlowAssetType('LALAO_CREDITS'); navigateTo('pay_select_recipient'); }} className="flex flex-col items-center gap-2 group">
                       <div className="w-12 h-12 rounded-full bg-[#5E43F3] text-white flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
                         <ArrowUpRight className="w-5 h-5" />
                       </div>
                       <span className="text-xs font-bold text-theme-primary">Use</span>
                     </button>
-                    <button onClick={() => navigateTo('withdraw_amount')} className="flex flex-col items-center gap-2 group">
+                    <button onClick={(e) => { e.stopPropagation(); navigateTo('withdraw_amount'); }} className="flex flex-col items-center gap-2 group">
                       <div className="w-12 h-12 rounded-full bg-theme-surface-hover text-theme-primary flex items-center justify-center group-hover:bg-theme-surface-active transition-colors">
                         <Banknote className="w-5 h-5" />
                       </div>
@@ -530,7 +600,7 @@ export const WalletModal: React.FC = () => {
                     </div>
                     <ChevronRight className="w-5 h-5 text-theme-tertiary" />
                   </button>
-                  
+
                   <button onClick={() => navigateTo('market_data')} className="flex items-center justify-between p-4 rounded-2xl bg-theme-base border border-theme-divider-light hover:border-[#5E43F3]/30 transition-colors group">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-theme-surface-hover flex items-center justify-center group-hover:bg-[#5E43F3]/10">
@@ -540,7 +610,7 @@ export const WalletModal: React.FC = () => {
                     </div>
                     <ChevronRight className="w-5 h-5 text-theme-tertiary" />
                   </button>
-                  
+
                   <button onClick={() => navigateTo('market_bills')} className="flex items-center justify-between p-4 rounded-2xl bg-theme-base border border-theme-divider-light hover:border-[#5E43F3]/30 transition-colors group">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-theme-surface-hover flex items-center justify-center group-hover:bg-[#5E43F3]/10">
@@ -549,6 +619,26 @@ export const WalletModal: React.FC = () => {
                       <span className="font-bold text-theme-primary">Pay Bills</span>
                     </div>
                     <ChevronRight className="w-5 h-5 text-theme-tertiary" />
+                  </button>
+
+                  <button onClick={() => navigateTo('market_subscriptions')} className="flex items-center justify-between p-4 rounded-2xl bg-theme-base border border-[#5E43F3]/30 hover:border-[#5E43F3] transition-colors group relative overflow-hidden">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-[#5E43F3]/15 flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <Crown className="w-5 h-5 text-[#5E43F3]" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-theme-primary">Subscriptions</span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#5E43F3]/10 text-[#5E43F3] uppercase tracking-wider">
+                            Popular
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-theme-tertiary font-medium">
+                          Join Spotify, Netflix, YouTube Premium & more
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-theme-tertiary group-hover:text-theme-primary" />
                   </button>
                 </div>
               </div>
@@ -639,6 +729,131 @@ export const WalletModal: React.FC = () => {
               </button>
 
             </div>
+          )}
+
+          {/* LALAO CREDITS */}
+          {currentView === 'credits' && (
+            <div className="p-4 space-y-6 pb-10">
+              <div className="bg-theme-surface rounded-3xl p-6 border border-[#5E43F3]/30 shadow-sm flex flex-col relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#5E43F3] to-[#8A74F7]"></div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-theme-tertiary mb-2">
+                  Available balance
+                </p>
+                <div className="text-4xl font-black text-theme-primary tracking-tighter mb-2">
+                  {internalBalance.toLocaleString()} LC
+                </div>
+                <p className="text-xs text-theme-secondary">
+                  Used for subscriptions, LaLao Market purchases and LaLao partner businesses.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => navigateTo('fund_amount')} className="bg-theme-surface border border-theme-divider-light rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-theme-surface-hover transition-colors group cursor-pointer">
+                  <div className="w-11 h-11 rounded-full bg-theme-surface-hover text-theme-primary flex items-center justify-center group-hover:bg-theme-surface-active transition-colors">
+                    <Plus className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-bold text-theme-primary">Fund Wallet</span>
+                </button>
+                <button onClick={() => { setFlowAssetType('LALAO_CREDITS'); navigateTo('pay_select_recipient'); }} className="bg-theme-surface border border-theme-divider-light rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-theme-surface-hover transition-colors group cursor-pointer">
+                  <div className="w-11 h-11 rounded-full bg-[#5E43F3] text-white flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+                    <ArrowUpRight className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-bold text-theme-primary">Use Credits</span>
+                </button>
+                <button onClick={() => navigateTo('withdraw_amount')} className="bg-theme-surface border border-theme-divider-light rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-theme-surface-hover transition-colors group cursor-pointer">
+                  <div className="w-11 h-11 rounded-full bg-theme-surface-hover text-theme-primary flex items-center justify-center group-hover:bg-theme-surface-active transition-colors">
+                    <Banknote className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-bold text-theme-primary">Withdraw</span>
+                </button>
+                <button onClick={() => navigateTo('transactions')} className="bg-theme-surface border border-theme-divider-light rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-theme-surface-hover transition-colors group cursor-pointer">
+                  <div className="w-11 h-11 rounded-full bg-theme-surface-hover text-theme-primary flex items-center justify-center group-hover:bg-theme-surface-active transition-colors">
+                    <History className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-bold text-theme-primary">Transaction History</span>
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary">Recent activity</h4>
+                  <button onClick={() => navigateTo('transactions')} className="text-[11px] font-bold text-[#5E43F3] hover:text-[#4E34E0]">
+                    View all
+                  </button>
+                </div>
+                {(() => {
+                  const creditTx = (dbTransactions ?? []).filter((tx: any) => tx.assetType !== 'CRYPTO').slice(0, 4);
+                  if (!dbTransactions) {
+                    return (
+                      <div className="bg-theme-surface rounded-2xl border border-theme-divider-light p-6 flex justify-center">
+                        <Loader2 className="w-5 h-5 animate-spin text-theme-tertiary" />
+                      </div>
+                    );
+                  }
+                  if (creditTx.length === 0) {
+                    return (
+                      <div className="bg-theme-surface rounded-2xl border border-theme-divider-light p-6 text-center text-xs text-theme-tertiary">
+                        No LaLao Credits activity yet.
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="bg-theme-surface rounded-2xl border border-theme-divider-light overflow-hidden divide-y divide-theme-divider-light">
+                      {creditTx.map((tx: any) => {
+                        const isCredit = tx.type === 'transfer_in' || tx.type === 'deposit';
+                        return (
+                          <button key={tx._id} onClick={() => openReceipt(tx)} className="w-full p-4 flex items-center justify-between hover:bg-theme-surface-hover transition-colors text-left">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${isCredit ? 'bg-green-100 text-green-600' : 'bg-theme-surface-hover text-theme-primary'}`}>
+                                {isCredit ? <Plus className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-theme-primary truncate">{tx.description}</p>
+                                <p className="text-[10px] font-semibold text-theme-tertiary mt-0.5">
+                                  {new Date(tx.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                            <span className={`text-xs font-black whitespace-nowrap ${isCredit ? 'text-green-600' : 'text-theme-primary'}`}>
+                              {isCredit ? '+' : '-'}{tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {tx.currency || 'LC'}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <button onClick={() => navigateTo('settings')} className="w-full bg-theme-surface p-4 rounded-2xl flex items-center justify-between border border-theme-divider-light hover:bg-theme-surface-hover transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-theme-surface-hover flex items-center justify-center">
+                    <Settings className="w-5 h-5 text-theme-primary" />
+                  </div>
+                  <span className="font-bold text-theme-primary text-sm">Wallet Settings</span>
+                </div>
+                <ChevronRight className="w-5 h-5 text-theme-tertiary" />
+              </button>
+            </div>
+          )}
+
+          {/* REWARDS */}
+          {currentView === 'rewards' && (
+            <RewardsPage embedded onBack={goBack} />
+          )}
+
+          {/* MY SUBSCRIPTIONS */}
+          {currentView === 'subscriptions_my' && (
+            <MySubscriptionsModal inline onClose={goBack} />
+          )}
+
+          {/* SUBSCRIPTION CHECKOUT */}
+          {currentView === 'subscription_checkout' && (
+            <SubscriptionCheckoutModal
+              inline
+              onClose={goBack}
+              onTopUp={() => navigateTo('fund_amount')}
+            />
           )}
 
           {/* SETTINGS */}
@@ -789,7 +1004,7 @@ export const WalletModal: React.FC = () => {
 
                           <div>
                             <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1.5">Current PIN</label>
-                            <input 
+                            <input
                               type="password"
                               maxLength={4}
                               placeholder="••••"
@@ -801,7 +1016,7 @@ export const WalletModal: React.FC = () => {
 
                           <div>
                             <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1.5">New 4-Digit PIN</label>
-                            <input 
+                            <input
                               type="password"
                               maxLength={4}
                               placeholder="••••"
@@ -813,7 +1028,7 @@ export const WalletModal: React.FC = () => {
 
                           <div>
                             <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1.5">Confirm New PIN</label>
-                            <input 
+                            <input
                               type="password"
                               maxLength={4}
                               placeholder="••••"
@@ -925,7 +1140,7 @@ export const WalletModal: React.FC = () => {
 
                           <div>
                             <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1.5">6-Digit Email Code</label>
-                            <input 
+                            <input
                               type="text"
                               maxLength={6}
                               placeholder="123456"
@@ -937,7 +1152,7 @@ export const WalletModal: React.FC = () => {
 
                           <div>
                             <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1.5">New 4-Digit PIN</label>
-                            <input 
+                            <input
                               type="password"
                               maxLength={4}
                               placeholder="••••"
@@ -949,7 +1164,7 @@ export const WalletModal: React.FC = () => {
 
                           <div>
                             <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1.5">Confirm New PIN</label>
-                            <input 
+                            <input
                               type="password"
                               maxLength={4}
                               placeholder="••••"
@@ -1038,7 +1253,7 @@ export const WalletModal: React.FC = () => {
                         <div className="space-y-3 pt-1">
                           <div>
                             <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1.5">Create 4-Digit PIN</label>
-                            <input 
+                            <input
                               type="password"
                               maxLength={4}
                               placeholder="••••"
@@ -1050,7 +1265,7 @@ export const WalletModal: React.FC = () => {
 
                           <div>
                             <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1.5">Confirm PIN</label>
-                            <input 
+                            <input
                               type="password"
                               maxLength={4}
                               placeholder="••••"
@@ -1095,7 +1310,7 @@ export const WalletModal: React.FC = () => {
               </div>
             </div>
           )}
-          
+
           {/* TRANSACTIONS */}
           {currentView === 'transactions' && (
             <div className="p-4">
@@ -1104,8 +1319,8 @@ export const WalletModal: React.FC = () => {
                ) : (
                  <div className="space-y-3">
                    {dbTransactions.map((tx: any) => (
-                     <button 
-                       key={tx._id} 
+                     <button
+                       key={tx._id}
                        onClick={() => openReceipt(tx)}
                        className="w-full bg-theme-surface p-4 rounded-2xl flex items-center justify-between border border-theme-divider-light hover:border-[#5E43F3]/50 transition-colors text-left"
                      >
@@ -1152,17 +1367,17 @@ export const WalletModal: React.FC = () => {
                    {selectedTx.assetType === 'CRYPTO' ? 'Crypto Payment' : 'LaLao'}
                  </h3>
                  <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest mb-2">Payment Receipt</div>
-                 
+
                  {selectedTx.status === 'completed' && (
                     <div className="flex items-center justify-center gap-1 text-green-500 font-bold mb-4 text-sm">
                       <Check className="w-4 h-4" /> Payment successful
                     </div>
                  )}
-                 
+
                  <div className="font-black text-4xl text-theme-primary mb-4">
                    {selectedTx.amount.toLocaleString(undefined, {minimumFractionDigits:2})} {selectedTx.currency || 'LC'}
                  </div>
-                 
+
                  {selectedTx.type === 'transfer_out' && (
                    <div className="text-theme-secondary font-semibold">
                      Sent to <br/>
@@ -1222,7 +1437,7 @@ export const WalletModal: React.FC = () => {
                    <span className="font-bold text-theme-primary capitalize">{selectedTx.status}</span>
                  </div>
                </div>
-               
+
                <div className="mt-8">
                  <button onClick={handleClose} className="w-full py-4 rounded-xl bg-theme-surface-hover text-theme-primary font-bold hover:bg-theme-surface-active transition-colors">
                     Done
@@ -1237,9 +1452,9 @@ export const WalletModal: React.FC = () => {
           {currentView === 'pay_select_wallet' && (
              <div className="p-4 space-y-4">
                <h3 className="font-black text-theme-primary text-xl mb-6">Pay From</h3>
-               
-               <button 
-                  onClick={() => { setFlowAssetType('LALAO_CREDITS'); navigateTo('pay_select_recipient'); }} 
+
+               <button
+                  onClick={() => { setFlowAssetType('LALAO_CREDITS'); navigateTo('pay_select_recipient'); }}
                   className="w-full bg-theme-base rounded-2xl p-4 flex items-center justify-between border-2 border-transparent hover:border-[#5E43F3]/30 shadow-sm text-left transition-colors group"
                 >
                   <div className="flex items-center gap-4">
@@ -1254,8 +1469,8 @@ export const WalletModal: React.FC = () => {
                   <ChevronRight className="w-5 h-5 text-theme-tertiary" />
                 </button>
 
-                <button 
-                  onClick={() => { setFlowAssetType('CRYPTO'); navigateTo('pay_select_recipient'); }} 
+                <button
+                  onClick={() => { setFlowAssetType('CRYPTO'); navigateTo('pay_select_recipient'); }}
                   className="w-full bg-theme-base rounded-2xl p-4 flex items-center justify-between border-2 border-transparent hover:border-blue-500/30 shadow-sm text-left transition-colors group"
                 >
                   <div className="flex items-center gap-4">
@@ -1287,17 +1502,17 @@ export const WalletModal: React.FC = () => {
                    </div>
                    <button onClick={() => navigateTo('pay_select_wallet')} className="text-xs font-bold text-theme-primary px-4 py-2 bg-theme-base border border-theme-divider rounded-full hover:bg-theme-surface-active transition-colors">Change</button>
                 </div>
-                
+
                 <h3 className="font-black text-theme-primary text-2xl mb-2">Who are you paying?</h3>
                 <p className="text-sm font-semibold text-theme-secondary mb-6">
-                  {flowAssetType === 'LALAO_CREDITS' 
-                    ? 'Search LaLao partner businesses' 
+                  {flowAssetType === 'LALAO_CREDITS'
+                    ? 'Search LaLao partner businesses'
                     : 'Search users or enter a wallet address'}
                 </p>
-                
+
                 <div className="relative mb-6">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-theme-tertiary" />
-                  <input 
+                  <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -1305,10 +1520,10 @@ export const WalletModal: React.FC = () => {
                     className="w-full bg-theme-surface border border-theme-divider-light rounded-2xl py-4 pl-12 pr-4 font-semibold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
                   />
                 </div>
-                
+
                 <div className="flex-1 overflow-y-auto space-y-2">
                   {filteredUsers.map((user: any) => (
-                    <button 
+                    <button
                       key={user.id}
                       onClick={() => { setFlowRecipient(user); navigateTo('pay_enter_amount'); }}
                       className="w-full flex items-center gap-3 p-3 bg-theme-surface rounded-2xl hover:bg-theme-surface-hover transition-colors text-left"
@@ -1325,29 +1540,29 @@ export const WalletModal: React.FC = () => {
                   ))}
                   {!searchQuery && (
                     <div className="text-center py-8 text-theme-tertiary font-semibold">
-                      {flowAssetType === 'LALAO_CREDITS' 
-                        ? 'Search for an eligible partner business to pay.' 
+                      {flowAssetType === 'LALAO_CREDITS'
+                        ? 'Search for an eligible partner business to pay.'
                         : 'Search for someone to pay'}
                     </div>
                   )}
                   {searchQuery && filteredUsers.length === 0 && (
                     <div className="text-center py-8 text-theme-tertiary font-semibold">
-                      {flowAssetType === 'LALAO_CREDITS' 
-                        ? 'No LaLao Credit businesses found' 
+                      {flowAssetType === 'LALAO_CREDITS'
+                        ? 'No LaLao Credit businesses found'
                         : 'No users found'}
                     </div>
                   )}
                 </div>
              </div>
           )}
-          
+
           {/* PAY FLOW - AMOUNT */}
           {currentView === 'pay_enter_amount' && (
              <div className="p-4 flex flex-col h-full">
                 <div className="flex-1 flex flex-col items-center justify-center pt-8 pb-12">
                    <h3 className="font-black text-theme-primary text-2xl mb-8">Amount</h3>
                    <div className="flex items-center text-theme-primary mb-4">
-                     <input 
+                     <input
                        type="text"
                        inputMode="decimal"
                        value={flowAmount}
@@ -1371,7 +1586,7 @@ export const WalletModal: React.FC = () => {
                    )}
                 </div>
                 <div className="shrink-0 pt-4 border-t border-theme-divider-light">
-                   <button 
+                   <button
                      onClick={() => navigateTo('pay_review')}
                      disabled={!flowAmount || parseFloat(flowAmount) <= 0 || parseFloat(flowAmount) > (flowAssetType === 'LALAO_CREDITS' ? internalBalance : cryptoBalanceUSDC)}
                      className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-lg hover:bg-indigo-600 transition-colors disabled:opacity-50"
@@ -1386,7 +1601,7 @@ export const WalletModal: React.FC = () => {
           {currentView === 'pay_review' && (
              <div className="p-4 flex flex-col h-full">
                 <h3 className="font-black text-theme-primary text-2xl mb-6">Review Payment</h3>
-                
+
                 <div className="flex-1 space-y-4">
                   <div className="bg-theme-surface rounded-2xl p-5 border border-theme-divider-light space-y-4">
                     <div className="flex justify-between items-center">
@@ -1414,13 +1629,13 @@ export const WalletModal: React.FC = () => {
                 </div>
 
                 <div className="shrink-0 pt-4 flex gap-3">
-                   <button 
+                   <button
                      onClick={handleClose}
                      className="w-1/3 py-4 rounded-xl bg-theme-surface-hover text-theme-primary font-bold hover:bg-theme-surface-active transition-colors"
                    >
                      Cancel
                    </button>
-                   <button 
+                   <button
                      onClick={() => navigateTo('pay_pin')}
                      className="w-2/3 py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-lg hover:bg-indigo-600 transition-colors shadow-lg"
                    >
@@ -1440,7 +1655,7 @@ export const WalletModal: React.FC = () => {
                 <p className="text-theme-secondary font-semibold text-sm mb-8 text-center max-w-[250px]">
                   Confirm your payment of {parseFloat(flowAmount).toLocaleString()} {flowAssetType === 'LALAO_CREDITS' ? 'LC' : 'USDC'} to {flowRecipient?.name}
                 </p>
-                <input 
+                <input
                   type="password"
                   value={pin}
                   onChange={e => {
@@ -1471,7 +1686,7 @@ export const WalletModal: React.FC = () => {
                 <div className="text-theme-secondary font-semibold mb-8">
                   sent to <span className="font-bold text-theme-primary">{selectedTx.relatedUserName}</span> <span className="text-sm">@{selectedTx.relatedUserUsername}</span>
                 </div>
-                
+
                 <div className="w-full bg-theme-surface rounded-2xl p-4 text-left border border-theme-divider-light mb-8">
                   <div className="flex justify-between text-sm mb-2">
                     <span className="text-theme-tertiary font-bold">From</span>
@@ -1523,7 +1738,7 @@ export const WalletModal: React.FC = () => {
                      <span className="text-xs font-bold text-theme-tertiary uppercase tracking-widest mb-1">Enter Amount in Naira</span>
                      <div className="flex items-center text-theme-primary mb-2">
                        <span className="text-4xl font-black mr-1 text-theme-secondary">₦</span>
-                       <input 
+                       <input
                          type="text"
                          inputMode="numeric"
                          value={flowAmount}
@@ -1578,8 +1793,8 @@ export const WalletModal: React.FC = () => {
                      </div>
                      {flowAmount && (parseFloat(flowAmount) < 100 || parseFloat(flowAmount) > 500000) && (
                        <div className="text-xs font-bold text-red-500 bg-red-50 dark:bg-red-950/30 px-3 py-1.5 rounded-xl border border-red-200 dark:border-red-900/40">
-                         {parseFloat(flowAmount) < 100 
-                           ? 'Minimum funding amount is ₦100 (100 LC).' 
+                         {parseFloat(flowAmount) < 100
+                           ? 'Minimum funding amount is ₦100 (100 LC).'
                            : 'Maximum funding amount is ₦500,000 (500,000 LC).'}
                        </div>
                      )}
@@ -1587,7 +1802,7 @@ export const WalletModal: React.FC = () => {
                 </div>
 
                 <div className="shrink-0 pt-4 border-t border-theme-divider-light">
-                   <button 
+                   <button
                      onClick={() => {
                        const num = parseFloat(flowAmount);
                        if (isNaN(num) || num < 100 || num > 500000) return;
@@ -1638,7 +1853,7 @@ export const WalletModal: React.FC = () => {
                    <button onClick={goBack} disabled={isProcessing} className="flex-1 py-4 rounded-xl bg-theme-surface-hover text-theme-primary font-bold hover:bg-theme-surface-active transition-colors">
                      Cancel
                    </button>
-                   <button 
+                   <button
                      onClick={async () => {
                        setIsProcessing(true);
                        setFundingStatusMessage('Initializing secure BACHS checkout...');
@@ -1657,7 +1872,7 @@ export const WalletModal: React.FC = () => {
                            // Navigate to pending while opening BACHS hosted checkout
                            setFundingStatusMessage('Redirecting to BACHS payment page...');
                            navigateTo('fund_pending');
-                           
+
                            // Open checkout session in same or popup window
                            const checkoutWindow = window.open(initRes.checkoutUrl, '_blank');
                            if (!checkoutWindow) {
@@ -1748,7 +1963,7 @@ export const WalletModal: React.FC = () => {
                      <span className="font-semibold text-emerald-600">BACHS</span>
                    </div>
                  </div>
-                 
+
                  <div className="w-full">
                    <button onClick={handleClose} className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold hover:bg-indigo-600 transition-colors shadow-lg shadow-[#5E43F3]/20">
                      Done
@@ -1771,14 +1986,14 @@ export const WalletModal: React.FC = () => {
                  </p>
 
                  <div className="w-full space-y-3">
-                   <button 
-                     onClick={() => navigateTo('fund_review')} 
+                   <button
+                     onClick={() => navigateTo('fund_review')}
                      className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold hover:bg-indigo-600 transition-colors shadow-lg"
                    >
                      Try Again
                    </button>
-                   <button 
-                     onClick={handleClose} 
+                   <button
+                     onClick={handleClose}
                      className="w-full py-4 rounded-xl bg-theme-surface-hover text-theme-primary font-bold hover:bg-theme-surface-active transition-colors"
                    >
                      Close
@@ -1807,17 +2022,17 @@ export const WalletModal: React.FC = () => {
                   <>
                     <div className="flex-1 flex flex-col items-center justify-center pt-8 pb-12">
                        <h3 className="font-black text-theme-primary text-2xl mb-2">Withdraw earnings</h3>
-                       
+
                        <div className="flex items-center gap-2 mb-8 bg-theme-surface px-4 py-2 rounded-full border border-theme-divider-light">
                          <Building className="w-4 h-4 text-theme-tertiary" />
                          <span className="text-sm font-bold text-theme-primary">
                            {withdrawalAccounts.find(a => a.isDefault)?.bankName || withdrawalAccounts[0]?.bankName} •••• {(withdrawalAccounts.find(a => a.isDefault)?.accountNumber || withdrawalAccounts[0]?.accountNumber).slice(-4)}
                          </span>
                        </div>
-                       
+
                        <div className="flex items-center text-theme-primary mb-4">
                          <span className="text-3xl font-black mr-2 text-theme-secondary">₦</span>
-                         <input 
+                         <input
                            type="text"
                            inputMode="decimal"
                            value={flowAmount}
@@ -1830,17 +2045,17 @@ export const WalletModal: React.FC = () => {
                            autoFocus
                          />
                        </div>
-                       
+
                        <div className="text-sm font-semibold text-theme-secondary bg-theme-surface px-4 py-2 rounded-full border border-theme-divider-light">
                          Available balance: ₦{internalBalance.toLocaleString()}
                        </div>
-                       
+
                        {parseFloat(flowAmount) > internalBalance && (
                          <div className="mt-4 flex items-center gap-2 text-red-500 text-sm font-bold bg-red-50 px-4 py-2 rounded-full">
                            <AlertCircle className="w-4 h-4" /> Insufficient balance
                          </div>
                        )}
-                       
+
                        {(parseFloat(flowAmount) > 0 && parseFloat(flowAmount) < 500) && (
                          <div className="mt-4 flex items-center gap-2 text-red-500 text-sm font-bold bg-red-50 px-4 py-2 rounded-full">
                            <AlertCircle className="w-4 h-4" /> Minimum withdrawal is ₦500.
@@ -1848,7 +2063,7 @@ export const WalletModal: React.FC = () => {
                        )}
                     </div>
                     <div className="shrink-0 pt-4 border-t border-theme-divider-light space-y-3">
-                       <button 
+                       <button
                          onClick={() => navigateTo('withdraw_review')}
                          disabled={!flowAmount || parseFloat(flowAmount) < 500 || parseFloat(flowAmount) > internalBalance}
                          className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-lg hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 disabled:shadow-none"
@@ -1890,7 +2105,7 @@ export const WalletModal: React.FC = () => {
                    <button onClick={goBack} className="flex-1 py-4 rounded-xl bg-theme-surface-hover text-theme-primary font-bold hover:bg-theme-surface-active transition-colors">
                      Cancel
                    </button>
-                   <button 
+                   <button
                      onClick={() => navigateTo('withdraw_success')}
                      className="flex-[2] py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-lg hover:bg-indigo-600 transition-colors shadow-lg"
                    >
@@ -1911,7 +2126,7 @@ export const WalletModal: React.FC = () => {
                  <p className="text-theme-secondary font-semibold text-sm max-w-[280px] mb-8 mx-auto">
                    Your withdrawal has been queued and is pending processing. This typically takes 1-2 business days.
                  </p>
-                 
+
                  <div className="w-full">
                    <button onClick={handleClose} className="w-full py-4 rounded-xl bg-theme-surface-hover text-theme-primary font-bold hover:bg-theme-surface-active transition-colors">
                      Done
@@ -1940,7 +2155,7 @@ export const WalletModal: React.FC = () => {
                    <div className="font-bold text-theme-primary">₦0.00</div>
                  </div>
                </div>
-               
+
                <div>
                  <h4 className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-2 mb-3">Earnings History</h4>
                  <div className="bg-theme-surface rounded-2xl p-8 text-center border border-theme-divider-light">
@@ -1957,14 +2172,14 @@ export const WalletModal: React.FC = () => {
                <div className="text-sm font-semibold text-theme-secondary px-2">
                  Your withdrawal details are securely stored. Configure where Laula creator earnings will be withdrawn.
                </div>
-               
+
                <div className="flex items-center justify-between px-2 mb-1">
                  <h4 className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">Withdrawal method</h4>
                  <button onClick={handleRefreshAccounts} disabled={isRefreshingAccounts} className="text-xs font-bold text-theme-primary bg-theme-surface-hover hover:bg-theme-surface-active px-3 py-1 rounded-full transition-colors flex items-center gap-1 disabled:opacity-50">
                    {isRefreshingAccounts ? 'Refreshing...' : 'Refresh'}
                  </button>
                </div>
-               
+
                {withdrawalAccounts.length === 0 ? (
                  <div className="bg-theme-surface rounded-2xl p-8 text-center border border-theme-divider-light">
                    <div className="font-bold text-theme-primary mb-2">No withdrawal account added</div>
@@ -1989,14 +2204,14 @@ export const WalletModal: React.FC = () => {
                            </div>
                          </div>
                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full border ${
-                           acc.status === 'verified' ? 'text-green-500 bg-green-50 border-green-100' : 
-                           acc.status === 'pending' ? 'text-orange-500 bg-orange-50 border-orange-100' : 
+                           acc.status === 'verified' ? 'text-green-500 bg-green-50 border-green-100' :
+                           acc.status === 'pending' ? 'text-orange-500 bg-orange-50 border-orange-100' :
                            'text-red-500 bg-red-50 border-red-100'
                          }`}>
                            {acc.status === 'verified' ? 'Verified (Demo)' : acc.status === 'pending' ? 'Pending verification' : 'Verification failed'}
                          </span>
                        </div>
-                       
+
                        <div className="flex gap-2 pt-4 border-t border-theme-divider-light">
                          <button onClick={() => { setEditingAccountId(acc.id); setAccountForm({name: acc.accountName, bank: acc.bankName, number: acc.accountNumber}); navigateTo('withdrawal_edit_account'); }} className="flex-1 py-2 rounded-xl bg-theme-surface-hover font-bold text-theme-primary text-sm hover:bg-theme-surface-active transition-colors">Edit</button>
                          <button onClick={() => { if(confirm('Are you sure you want to remove this withdrawal account?')) handleRemoveAccount(acc.id); }} className="flex-1 py-2 rounded-xl bg-red-50 font-bold text-red-500 text-sm hover:bg-red-100 transition-colors">Remove</button>
@@ -2006,13 +2221,13 @@ export const WalletModal: React.FC = () => {
                        </div>
                      </div>
                    ))}
-                   
+
                    <button onClick={() => { setEditingAccountId(null); setAccountForm({name:'', bank:'', number:''}); navigateTo('withdrawal_add_account'); }} className="w-full py-4 rounded-xl border border-dashed border-theme-divider-light font-bold text-theme-primary hover:bg-theme-surface transition-colors flex items-center justify-center gap-2">
                      <Plus className="w-5 h-5" /> Add withdrawal account
                    </button>
                  </div>
                )}
-               
+
                <div className="bg-theme-surface p-4 rounded-2xl border border-theme-divider-light space-y-3">
                  <div className="flex justify-between items-center text-sm">
                    <div className="text-theme-tertiary font-bold">Minimum withdrawal</div>
@@ -2032,17 +2247,17 @@ export const WalletModal: React.FC = () => {
                 <div className="flex-1 space-y-6">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-2">Account name</label>
-                    <input 
-                      type="text" 
-                      placeholder="Enter account name" 
+                    <input
+                      type="text"
+                      placeholder="Enter account name"
                       value={accountForm.name}
                       onChange={e => setAccountForm({...accountForm, name: e.target.value})}
-                      className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-4 px-4 font-semibold text-theme-primary focus:outline-none focus:border-[#5E43F3]" 
+                      className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-4 px-4 font-semibold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-2">Bank</label>
-                    <select 
+                    <select
                       value={accountForm.bank}
                       onChange={e => setAccountForm({...accountForm, bank: e.target.value})}
                       className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-4 px-4 font-semibold text-theme-primary focus:outline-none focus:border-[#5E43F3] appearance-none"
@@ -2057,23 +2272,23 @@ export const WalletModal: React.FC = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-2">Account number</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       inputMode="numeric"
-                      placeholder="Enter account number" 
+                      placeholder="Enter account number"
                       value={accountForm.number}
                       onChange={e => setAccountForm({...accountForm, number: e.target.value})}
-                      className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-4 px-4 font-semibold text-theme-primary focus:outline-none focus:border-[#5E43F3] font-mono" 
+                      className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-4 px-4 font-semibold text-theme-primary focus:outline-none focus:border-[#5E43F3] font-mono"
                     />
                   </div>
                 </div>
-                
+
                 <div className="shrink-0 pt-6 flex gap-3">
                    <button onClick={goBack} className="flex-1 py-4 rounded-xl bg-theme-surface-hover text-theme-primary font-bold hover:bg-theme-surface-active transition-colors">
                      Cancel
                    </button>
-                   <button 
-                     onClick={handleSaveAccount} 
+                   <button
+                     onClick={handleSaveAccount}
                      disabled={!accountForm.name || !accountForm.bank || !accountForm.number}
                      className="flex-[2] py-4 rounded-xl bg-[#5E43F3] text-white font-bold hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 disabled:shadow-none"
                    >
@@ -2130,7 +2345,7 @@ export const WalletModal: React.FC = () => {
                        {addressCopied ? <><Check className="w-4 h-4" /> Copied</> : <><Copy className="w-4 h-4" /> Copy</>}
                      </button>
                    </div>
-                   
+
                    <div className="flex gap-3">
                      <button onClick={() => navigateTo('crypto_send')} className="flex-1 py-4 bg-theme-surface-hover hover:bg-theme-surface-active rounded-xl font-bold text-theme-primary transition-colors flex items-center justify-center gap-2">
                        <ArrowUpRight className="w-5 h-5" /> Send
@@ -2204,12 +2419,12 @@ export const WalletModal: React.FC = () => {
                       <ChevronRight className="w-4 h-4 text-theme-tertiary" />
                     </div>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-2">Recipient address</label>
                     <input type="text" placeholder="Enter wallet address" className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-4 px-4 font-semibold text-theme-primary focus:outline-none focus:border-[#5E43F3] font-mono" />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-theme-tertiary uppercase tracking-widest px-2">Amount</label>
                     <div className="relative">
@@ -2217,7 +2432,7 @@ export const WalletModal: React.FC = () => {
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-theme-secondary">ETH</span>
                     </div>
                   </div>
-                  
+
                   <div className="bg-theme-surface p-4 rounded-xl border border-theme-divider-light space-y-2">
                     <div className="flex justify-between items-center text-sm">
                       <div className="text-theme-tertiary font-bold">Network</div>
@@ -2229,7 +2444,7 @@ export const WalletModal: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="shrink-0 pt-6">
                    <button className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-lg hover:bg-indigo-600 transition-colors shadow-lg">
                      Confirm transaction
@@ -2251,15 +2466,15 @@ export const WalletModal: React.FC = () => {
                    <div className="font-mono font-black text-theme-primary text-xl mb-6">
                      {web3.shortAddress}
                    </div>
-                   
+
                    <button onClick={handleCopyAddress} className="py-4 px-8 w-full rounded-xl bg-theme-surface-hover hover:bg-theme-surface-active font-bold text-theme-primary transition-colors flex items-center justify-center gap-2 mb-8">
                      {addressCopied ? <><Check className="w-5 h-5" /> Copied!</> : <><Copy className="w-5 h-5" /> Copy address</>}
                    </button>
-                   
+
                    <div className="bg-theme-surface p-3 rounded-xl text-xs font-bold text-theme-secondary border border-theme-divider-light mb-4">
                      Network: {web3.chainName}
                    </div>
-                   
+
                    <div className="bg-orange-50 text-orange-600 p-4 rounded-xl text-xs font-bold border border-orange-100 max-w-xs mx-auto">
                      Only send assets on the same network ({web3.chainName}) to this address.
                    </div>
@@ -2287,7 +2502,7 @@ export const WalletModal: React.FC = () => {
                  {web3.shortAddress && (
                    <div className="font-mono text-sm text-theme-tertiary mb-8">{web3.shortAddress}</div>
                  )}
-                 
+
                  <div className="w-full space-y-3">
                    <button onClick={handleCryptoDisconnect} className="w-full py-4 rounded-xl bg-red-500 text-white font-bold text-lg hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20">
                      Disconnect
@@ -2351,14 +2566,14 @@ export const WalletModal: React.FC = () => {
                         Recipient Phone Number
                       </label>
                       <div className="relative">
-                        <input 
-                          type="tel" 
+                        <input
+                          type="tel"
                           id="input-market-airtime-phone"
                           value={marketCustomerIdentifier}
                           onChange={(e) => setMarketCustomerIdentifier(e.target.value)}
-                          placeholder="e.g. 08012345678" 
+                          placeholder="e.g. 08012345678"
                           maxLength={14}
-                          className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 px-4 font-bold text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all" 
+                          className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 px-4 font-bold text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all"
                         />
                         {marketCustomerIdentifier && (
                           <button
@@ -2372,7 +2587,7 @@ export const WalletModal: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    
+
                     {/* 3. Amount */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between px-1">
@@ -2385,8 +2600,8 @@ export const WalletModal: React.FC = () => {
                       </div>
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-theme-tertiary font-bold text-sm">₦</span>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           inputMode="decimal"
                           id="input-market-airtime-amount"
                           value={marketAmount}
@@ -2394,8 +2609,8 @@ export const WalletModal: React.FC = () => {
                             const val = e.target.value.replace(/[^0-9]/g, '');
                             setMarketAmount(val);
                           }}
-                          placeholder="e.g. 1000" 
-                          className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 pl-8 pr-4 font-bold text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all font-mono" 
+                          placeholder="e.g. 1000"
+                          className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 pl-8 pr-4 font-bold text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all font-mono"
                         />
                       </div>
 
@@ -2427,7 +2642,7 @@ export const WalletModal: React.FC = () => {
                 </div>
 
                 <div className="shrink-0 pt-4">
-                   <button 
+                   <button
                      disabled={!marketProvider || !marketCustomerIdentifier || !marketAmount || parseFloat(marketAmount) < 50 || parseFloat(marketAmount) > internalBalance}
                      onClick={() => { setMarketServiceType('airtime'); navigateTo('market_review'); }}
                      className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-base hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 cursor-pointer"
@@ -2526,14 +2741,14 @@ export const WalletModal: React.FC = () => {
                         Recipient Phone Number
                       </label>
                       <div className="relative">
-                        <input 
-                          type="tel" 
+                        <input
+                          type="tel"
                           id="input-market-data-phone"
                           value={marketCustomerIdentifier}
                           onChange={(e) => setMarketCustomerIdentifier(e.target.value)}
-                          placeholder="e.g. 08012345678" 
+                          placeholder="e.g. 08012345678"
                           maxLength={14}
-                          className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 px-4 font-bold text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all" 
+                          className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-3.5 px-4 font-bold text-sm text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3] focus:ring-1 focus:ring-[#5E43F3] transition-all"
                         />
                         {marketCustomerIdentifier && (
                           <button
@@ -2581,7 +2796,7 @@ export const WalletModal: React.FC = () => {
 
                 {/* Continue Action */}
                 <div className="shrink-0 pt-4">
-                   <button 
+                   <button
                      disabled={!marketProvider || !marketCustomerIdentifier || !marketProduct || parseFloat(marketAmount) <= 0 || parseFloat(marketAmount) > internalBalance}
                      onClick={() => { setMarketServiceType('data'); navigateTo('market_review'); }}
                      className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-base hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50 cursor-pointer"
@@ -2600,10 +2815,10 @@ export const WalletModal: React.FC = () => {
                     <h3 className="font-black text-theme-primary text-xl">Pay Bills & Utilities</h3>
                     <p className="text-xs text-theme-tertiary">Select a service to pay with your Lalao wallet balance.</p>
                   </div>
-                  
+
                   {/* Electricity */}
                   {serviceSettings?.electricity?.enabled !== false && (
-                    <button 
+                    <button
                       onClick={() => {
                         setMarketServiceType('electricity');
                         setMarketProvider('01'); // EKEDC default
@@ -2612,7 +2827,7 @@ export const WalletModal: React.FC = () => {
                         setVerifiedCustomerName('');
                         setMarketFee(serviceSettings?.electricity?.fee ?? 100);
                         navigateTo('market_electricity');
-                      }} 
+                      }}
                       className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active border border-theme-divider-light transition-colors group cursor-pointer w-full text-left"
                     >
                       <div className="flex items-center gap-3.5">
@@ -2627,10 +2842,10 @@ export const WalletModal: React.FC = () => {
                       <ChevronRight className="w-5 h-5 text-theme-tertiary group-hover:text-theme-primary transition-colors" />
                     </button>
                   )}
-                  
+
                   {/* Cable TV */}
                   {serviceSettings?.cable?.enabled !== false && (
-                    <button 
+                    <button
                       onClick={() => {
                         setMarketServiceType('cable');
                         setMarketProvider('dstv');
@@ -2644,7 +2859,7 @@ export const WalletModal: React.FC = () => {
                           .then(pkgs => setCablePackagesList(pkgs || []))
                           .finally(() => setIsFetchingCablePackages(false));
                         navigateTo('market_cable');
-                      }} 
+                      }}
                       className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active border border-theme-divider-light transition-colors group cursor-pointer w-full text-left"
                     >
                       <div className="flex items-center gap-3.5">
@@ -2662,7 +2877,7 @@ export const WalletModal: React.FC = () => {
 
                   {/* Betting */}
                   {serviceSettings?.betting?.enabled !== false && (
-                    <button 
+                    <button
                       onClick={() => {
                         setMarketServiceType('betting');
                         setMarketProvider('prd-sporty-bet');
@@ -2671,7 +2886,7 @@ export const WalletModal: React.FC = () => {
                         setVerifiedCustomerName('');
                         setMarketFee(serviceSettings?.betting?.fee ?? 50);
                         navigateTo('market_betting');
-                      }} 
+                      }}
                       className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active border border-theme-divider-light transition-colors group cursor-pointer w-full text-left"
                     >
                       <div className="flex items-center gap-3.5">
@@ -2689,7 +2904,7 @@ export const WalletModal: React.FC = () => {
 
                   {/* Smile */}
                   {serviceSettings?.smile?.enabled !== false && (
-                    <button 
+                    <button
                       onClick={() => {
                         setMarketServiceType('smile');
                         setMarketProvider('smile-direct');
@@ -2702,7 +2917,7 @@ export const WalletModal: React.FC = () => {
                           .then(pkgs => setSmilePackagesList(pkgs || []))
                           .finally(() => setIsFetchingSmilePackages(false));
                         navigateTo('market_smile');
-                      }} 
+                      }}
                       className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active border border-theme-divider-light transition-colors group cursor-pointer w-full text-left"
                     >
                       <div className="flex items-center gap-3.5">
@@ -2720,7 +2935,7 @@ export const WalletModal: React.FC = () => {
 
                   {/* Spectranet */}
                   {serviceSettings?.spectranet?.enabled !== false && (
-                    <button 
+                    <button
                       onClick={() => {
                         setMarketServiceType('spectranet');
                         setMarketProvider('spectranet');
@@ -2733,7 +2948,7 @@ export const WalletModal: React.FC = () => {
                           .then(pkgs => setSpectranetPackagesList(pkgs || []))
                           .finally(() => setIsFetchingSpectranetPackages(false));
                         navigateTo('market_spectranet');
-                      }} 
+                      }}
                       className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active border border-theme-divider-light transition-colors group cursor-pointer w-full text-left"
                     >
                       <div className="flex items-center gap-3.5">
@@ -2751,7 +2966,7 @@ export const WalletModal: React.FC = () => {
 
                   {/* WAEC Examination */}
                   {serviceSettings?.waec?.enabled !== false && (
-                    <button 
+                    <button
                       onClick={() => {
                         setMarketServiceType('waec');
                         setMarketProvider('waec');
@@ -2770,7 +2985,7 @@ export const WalletModal: React.FC = () => {
                           })
                           .finally(() => setIsFetchingWAECPackages(false));
                         navigateTo('market_waec');
-                      }} 
+                      }}
                       className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active border border-theme-divider-light transition-colors group cursor-pointer w-full text-left"
                     >
                       <div className="flex items-center gap-3.5">
@@ -2788,7 +3003,7 @@ export const WalletModal: React.FC = () => {
 
                   {/* JAMB Examination */}
                   {serviceSettings?.jamb?.enabled !== false && (
-                    <button 
+                    <button
                       onClick={() => {
                         setMarketServiceType('jamb');
                         setMarketProvider('jamb');
@@ -2807,7 +3022,7 @@ export const WalletModal: React.FC = () => {
                           })
                           .finally(() => setIsFetchingJAMBPackages(false));
                         navigateTo('market_jamb');
-                      }} 
+                      }}
                       className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active border border-theme-divider-light transition-colors group cursor-pointer w-full text-left"
                     >
                       <div className="flex items-center gap-3.5">
@@ -2822,8 +3037,296 @@ export const WalletModal: React.FC = () => {
                       <ChevronRight className="w-5 h-5 text-theme-tertiary group-hover:text-theme-primary transition-colors" />
                     </button>
                   )}
+                  {/* Subscriptions Marketplace Entry */}
+                  <button
+                    onClick={() => navigateTo('market_subscriptions')}
+                    className="flex items-center justify-between p-4 rounded-2xl bg-theme-surface hover:bg-theme-surface-active border border-[#5E43F3]/30 transition-colors group cursor-pointer w-full text-left"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-11 h-11 rounded-2xl bg-[#5E43F3]/10 border border-[#5E43F3]/20 flex items-center justify-center shrink-0">
+                        <Crown className="w-5 h-5 text-[#5E43F3]" />
+                      </div>
+                      <div>
+                        <span className="font-bold text-sm text-theme-primary block">Subscription Marketplace</span>
+                        <span className="text-xs text-theme-tertiary">Spotify, Netflix, YouTube Premium & shared plans</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-theme-tertiary group-hover:text-theme-primary transition-colors" />
+                  </button>
                 </div>
              </div>
+          )}
+
+          {/* MARKET SUBSCRIPTIONS CATALOGUE */}
+          {currentView === 'market_subscriptions' && (
+            <div className="p-4 flex flex-col h-full overflow-y-auto">
+              <div className="flex-1 space-y-4">
+                {/* Header & Quick Stats / My Subscriptions trigger */}
+                <div className="flex items-center justify-between bg-gradient-to-r from-[#5E43F3]/10 via-purple-500/5 to-transparent p-4 rounded-2xl border border-[#5E43F3]/20">
+                  <div>
+                    <h3 className="font-black text-theme-primary text-base flex items-center gap-2">
+                      <Crown className="w-4 h-4 text-[#5E43F3]" />
+                      Subscription Groups
+                    </h3>
+                    <p className="text-xs text-theme-tertiary">
+                      Verified joint memberships at discounted group rates.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => navigateTo('subscriptions_my')}
+                    className="px-3 py-1.5 rounded-full bg-[#5E43F3] text-white text-xs font-bold hover:bg-[#4E34E0] transition-colors shrink-0 shadow-sm cursor-pointer"
+                  >
+                    My Subscriptions{userMemberships.length > 0 ? ` (${userMemberships.length})` : ''}
+                  </button>
+                </div>
+
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="w-4 h-4 text-theme-tertiary absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={subscriptionSearchQuery}
+                    onChange={(e) => setSubscriptionSearchQuery(e.target.value)}
+                    placeholder="Search Spotify, Netflix, YouTube, Apple..."
+                    className="w-full bg-theme-surface border border-theme-divider-light rounded-xl py-2.5 pl-10 pr-4 text-xs font-semibold text-theme-primary placeholder:text-theme-tertiary focus:outline-none focus:border-[#5E43F3]"
+                  />
+                  {subscriptionSearchQuery && (
+                    <button
+                      onClick={() => setSubscriptionSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-tertiary hover:text-theme-primary"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Category Pills */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                  {['All', 'Music & Audio', 'Video & Streaming', 'Movies & TV', 'Productivity & Utilities'].map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedSubCategory(cat)}
+                      className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                        selectedSubCategory === cat
+                          ? 'bg-[#5E43F3] text-white shadow-xs'
+                          : 'bg-theme-surface border border-theme-divider-light text-theme-secondary hover:bg-theme-surface-hover'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Listings Grid */}
+                <div className="space-y-3 pt-1">
+                  {subscriptionCatalogue
+                    .filter((item: any) => {
+                      if (selectedSubCategory !== 'All' && item.category !== selectedSubCategory) return false;
+                      if (!subscriptionSearchQuery.trim()) return true;
+                      const q = subscriptionSearchQuery.toLowerCase();
+                      return (
+                        item.name?.toLowerCase().includes(q) ||
+                        item.description?.toLowerCase().includes(q) ||
+                        item.platformName?.toLowerCase().includes(q) ||
+                        item.category?.toLowerCase().includes(q)
+                      );
+                    })
+                    .map((sub: any) => {
+                      const isFull = sub.availableSlots === 0;
+                      return (
+                        <div
+                          key={sub._id}
+                          onClick={() => {
+                            setSelectedWalletSubscription(sub);
+                            navigateTo('market_subscription_detail');
+                          }}
+                          className="p-4 rounded-2xl bg-theme-surface border border-theme-divider-light hover:border-[#5E43F3]/40 transition-all cursor-pointer group shadow-xs"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-3">
+                              <div className="w-12 h-12 rounded-2xl bg-theme-surface-hover border border-theme-divider-light flex items-center justify-center shrink-0 p-2 overflow-hidden">
+                                {sub.platformLogo ? (
+                                  <img src={sub.platformLogo} alt={sub.platformName} className="w-full h-full object-contain" />
+                                ) : (
+                                  <Crown className="w-6 h-6 text-[#5E43F3]" />
+                                )}
+                              </div>
+                              <div className="space-y-1">
+                                <h4 className="font-black text-theme-primary text-sm group-hover:text-[#5E43F3] transition-colors leading-tight">
+                                  {sub.name}
+                                </h4>
+                                <p className="text-xs text-theme-tertiary line-clamp-1">
+                                  {sub.description}
+                                </p>
+                                <div className="flex items-center gap-2 pt-0.5">
+                                  <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                                    isFull
+                                      ? 'bg-red-500/10 text-red-600'
+                                      : 'bg-emerald-500/10 text-emerald-600'
+                                  }`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${isFull ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                                    {isFull ? 'Group Full' : `${sub.availableSlots ?? sub.totalCapacity} slots remaining`}
+                                  </span>
+                                  <span className="text-[11px] text-theme-tertiary">
+                                    • {sub.billingCycle}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="text-base font-black text-theme-primary block">
+                                ₦{(sub.defaultSlotPrice || 0).toLocaleString()}
+                              </span>
+                              <span className="text-[10px] text-theme-tertiary font-medium">
+                                / {sub.billingCycle === 'monthly' ? 'month' : sub.billingCycle}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                  {subscriptionCatalogue.length === 0 && (
+                    <div className="py-12 text-center text-theme-tertiary space-y-2">
+                      <Crown className="w-10 h-10 text-theme-tertiary mx-auto opacity-50" />
+                      <p className="text-sm font-bold">No subscriptions available right now</p>
+                      <p className="text-xs">Check back soon as administrators publish new shared group offers.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* MARKET SUBSCRIPTION DETAIL */}
+          {currentView === 'market_subscription_detail' && selectedWalletSubscription && (
+            <div className="p-4 flex flex-col h-full overflow-y-auto">
+              <div className="flex-1 space-y-5">
+                {/* Hero Card */}
+                <div className="bg-theme-surface rounded-2xl p-5 border border-theme-divider-light shadow-xs space-y-4">
+                  <div className="flex items-start gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-theme-surface-hover border border-theme-divider-light flex items-center justify-center shrink-0 p-2.5">
+                      {selectedWalletSubscription.platformLogo ? (
+                        <img
+                          src={selectedWalletSubscription.platformLogo}
+                          alt={selectedWalletSubscription.platformName}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <Crown className="w-8 h-8 text-[#5E43F3]" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-[#5E43F3] uppercase tracking-wider">
+                          {selectedWalletSubscription.category}
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-black text-theme-primary leading-snug">
+                        {selectedWalletSubscription.name}
+                      </h3>
+                      <p className="text-xs text-theme-secondary mt-1">
+                        Provided by verified platform partner
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Pricing and Capacity Bar */}
+                  <div className="grid grid-cols-2 gap-3 p-3 bg-theme-base rounded-xl border border-theme-divider-light">
+                    <div>
+                      <span className="text-[10px] font-bold text-theme-tertiary uppercase tracking-wider block">
+                        Slot Price
+                      </span>
+                      <span className="text-base font-black text-theme-primary">
+                        ₦{(selectedWalletSubscription.defaultSlotPrice || 0).toLocaleString()}
+                        <span className="text-xs font-normal text-theme-tertiary"> / {selectedWalletSubscription.billingCycle}</span>
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-theme-tertiary uppercase tracking-wider block">
+                        Capacity
+                      </span>
+                      <span className={`text-sm font-bold ${
+                        (selectedWalletSubscription.availableSlots ?? selectedWalletSubscription.totalCapacity) > 0
+                          ? 'text-emerald-600'
+                          : 'text-red-500'
+                      }`}>
+                        {(selectedWalletSubscription.availableSlots ?? selectedWalletSubscription.totalCapacity) > 0
+                          ? `${selectedWalletSubscription.availableSlots ?? selectedWalletSubscription.totalCapacity} of ${selectedWalletSubscription.totalCapacity} Slots Left`
+                          : 'Fully Booked'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Benefits */}
+                {selectedWalletSubscription.benefits && selectedWalletSubscription.benefits.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary px-1">
+                      Membership Benefits
+                    </h4>
+                    <div className="bg-theme-surface rounded-2xl p-4 border border-theme-divider-light space-y-2.5">
+                      {selectedWalletSubscription.benefits.map((b: string, idx: number) => (
+                        <div key={idx} className="flex items-start gap-2.5 text-xs text-theme-secondary">
+                          <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                          <span>{b}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Instructions & Access Method */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-theme-tertiary px-1">
+                    Access & Fulfillment
+                  </h4>
+                  <div className="bg-theme-surface rounded-2xl p-4 border border-theme-divider-light space-y-2 text-xs text-theme-secondary">
+                    <p>
+                      {selectedWalletSubscription.memberInstructions ||
+                        'Access details and invitation links are delivered immediately to your notifications and My Subscriptions dashboard upon confirmation.'}
+                    </p>
+                    {selectedWalletSubscription.eligibilityRules && (
+                      <div className="pt-2 border-t border-theme-divider-light text-[11px] text-theme-tertiary">
+                        <strong>Eligibility: </strong> {selectedWalletSubscription.eligibilityRules}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Renewal & Cancellation Terms */}
+                <div className="bg-theme-surface/50 rounded-2xl p-3.5 border border-theme-divider-light text-[11px] text-theme-tertiary space-y-1">
+                  <p>
+                    <strong>Renewal Policy: </strong>
+                    {selectedWalletSubscription.renewalRules || 'Auto-renews every cycle using your wallet balance or saved card. Cancel anytime.'}
+                  </p>
+                  <p>
+                    <strong>Cancellation: </strong>
+                    {selectedWalletSubscription.cancellationPolicy || 'Cancel future renewals with 1-click in My Subscriptions before your next period.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Join Action Bar */}
+              <div className="shrink-0 pt-4 border-t border-theme-divider-light">
+                <button
+                  type="button"
+                  disabled={selectedWalletSubscription.availableSlots === 0}
+                  onClick={() => {
+                    setSelectedSubscriptionPlan(selectedWalletSubscription);
+                    navigateTo('subscription_checkout');
+                  }}
+                  className="w-full py-4 rounded-xl bg-[#5E43F3] text-white font-bold text-sm hover:bg-[#4E34E0] transition-colors shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Crown className="w-4 h-4" />
+                  <span>
+                    {selectedWalletSubscription.availableSlots === 0
+                      ? 'Fully Booked'
+                      : `Join Subscription · ₦${(selectedWalletSubscription.defaultSlotPrice || 0).toLocaleString()}`}
+                  </span>
+                </button>
+              </div>
+            </div>
           )}
 
           {/* MARKET ELECTRICITY */}
@@ -3766,9 +4269,9 @@ export const WalletModal: React.FC = () => {
              <div className="p-4 flex flex-col h-full overflow-y-auto">
                 <h3 className="font-black text-theme-primary text-2xl mb-6">
                   Confirm {
-                    marketServiceType === 'airtime' ? 'Airtime' : 
-                    marketServiceType === 'data' ? 'Data Bundle' : 
-                    marketServiceType === 'electricity' ? 'Electricity Bill' : 
+                    marketServiceType === 'airtime' ? 'Airtime' :
+                    marketServiceType === 'data' ? 'Data Bundle' :
+                    marketServiceType === 'electricity' ? 'Electricity Bill' :
                     marketServiceType === 'cable' ? 'Cable TV Subscription' :
                     marketServiceType === 'betting' ? 'Betting Wallet Funding' :
                     marketServiceType === 'smile' ? 'Smile Internet' :
@@ -3777,7 +4280,7 @@ export const WalletModal: React.FC = () => {
                     marketServiceType === 'jamb' ? 'JAMB e-PIN' : 'Bill Payment'
                   }
                 </h3>
-                
+
                 <div className="flex-1 space-y-4">
                   <div className="bg-theme-surface rounded-2xl p-5 border border-theme-divider-light space-y-4">
                     <div className="flex justify-between items-center">
@@ -3787,7 +4290,7 @@ export const WalletModal: React.FC = () => {
                     <div className="border-t border-theme-divider-light"></div>
                     <div className="flex justify-between items-center">
                       <div className="text-xs font-bold text-theme-tertiary uppercase tracking-widest">
-                        {marketServiceType === 'waec' || marketServiceType === 'jamb' ? 'Recipient Mobile / Candidate' : 
+                        {marketServiceType === 'waec' || marketServiceType === 'jamb' ? 'Recipient Mobile / Candidate' :
                          marketServiceType === 'betting' ? 'Customer Account ID' :
                          marketServiceType === 'electricity' ? 'Meter Number' :
                          marketServiceType === 'cable' ? 'Smartcard / IUC' : 'Recipient Phone'}
@@ -3827,7 +4330,7 @@ export const WalletModal: React.FC = () => {
                       <div className="font-black text-base text-[#5E43F3]">₦{(parseFloat(marketAmount || '0') + marketFee).toLocaleString()}</div>
                     </div>
                   </div>
-                  
+
                   <div className="flex justify-between items-center bg-theme-surface-hover p-4 rounded-xl border border-theme-divider-light">
                     <div className="text-xs font-bold text-theme-secondary uppercase tracking-widest">Balance after purchase</div>
                     <div className="font-black text-theme-primary">₦{(internalBalance - (parseFloat(marketAmount || '0') + marketFee)).toLocaleString()}</div>
@@ -3846,7 +4349,7 @@ export const WalletModal: React.FC = () => {
              <div className="p-4 flex flex-col h-full items-center justify-center text-center">
                <h3 className="font-black text-theme-primary text-2xl mb-2">Enter Wallet PIN</h3>
                <p className="text-theme-secondary font-semibold text-sm mb-8">Confirm your purchase.</p>
-               
+
                <div className="flex items-center gap-4 mb-8">
                  {[...Array(4)].map((_, i) => (
                    <div key={i} className={`w-6 h-6 rounded-full border-2 ${pin.length > i ? 'bg-[#5E43F3] border-[#5E43F3]' : 'bg-transparent border-theme-divider-light'}`}></div>
@@ -3873,8 +4376,8 @@ export const WalletModal: React.FC = () => {
                    )
                  ))}
                </div>
-               
-               <button 
+
+               <button
                  disabled={pin.length < 4 || isProcessing}
                  onClick={async () => {
                    setIsProcessing(true);
@@ -3890,7 +4393,7 @@ export const WalletModal: React.FC = () => {
                        pin: pin,
                        meterType: marketServiceType === 'electricity' ? meterType : undefined,
                      });
-                     
+
                      if (res.success) {
                        if (res.token) setReturnedToken(res.token);
                        navigateTo('market_success');
@@ -3945,7 +4448,7 @@ export const WalletModal: React.FC = () => {
                      </p>
                    </div>
                  )}
-                 
+
                  <div className="w-full max-w-sm">
                    <button onClick={handleClose} className="w-full py-3.5 rounded-xl bg-[#5E43F3] text-white font-bold text-sm hover:bg-[#4E34E0] transition-colors cursor-pointer">
                      Done
@@ -3958,12 +4461,12 @@ export const WalletModal: React.FC = () => {
         </div>
         </div>
       </div>
-      
+
       {/* DEVELOPMENT / TESTING CONTROLS — Only visible when explicitly enabled in local dev test mode */}
       {isTestModeEnabled && (
         <div className="fixed bottom-4 left-4 bg-black/90 p-4 rounded-xl border border-theme-divider-light z-[100] max-w-[320px] text-white space-y-3 shadow-2xl">
           <div className="text-[10px] font-bold uppercase tracking-widest text-theme-tertiary">Admin Dev Controls (Test Mode)</div>
-          
+
           <div className="space-y-1">
             <div className="text-xs font-semibold text-theme-secondary mb-1">Withdrawal Accounts</div>
             <div className="flex flex-wrap gap-2">
@@ -3972,7 +4475,7 @@ export const WalletModal: React.FC = () => {
               <button onClick={() => setWithdrawalAccounts([{id: 'dev1', accountName: 'John', bankName: 'First Bank', accountNumber: '11112222', status: 'verified', isDefault: true}])} className="text-[10px] px-2 py-1 bg-theme-surface rounded font-bold border border-theme-divider-light hover:bg-theme-surface-hover">C. 1 Verified</button>
             </div>
           </div>
-          
+
           <div className="space-y-1">
             <div className="text-xs font-semibold text-theme-secondary mb-1">Mock Balance</div>
             <div className="flex gap-2">

@@ -11,8 +11,8 @@ class ExploreScreen extends StatefulWidget {
 
 class _ExploreScreenState extends State<ExploreScreen> {
   final repo = MockRepository();
-  String _activeFilter = 'All';
-  final List<String> _filters = ['All', 'People', 'Pages', 'Video', 'Trending'];
+  String _activeFilter = 'Chatrooms';
+  final List<String> _filters = ['Chatrooms', 'All', 'People', 'Pages', 'Video', 'Trending'];
 
   @override
   void initState() {
@@ -109,47 +109,246 @@ class _ExploreScreenState extends State<ExploreScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Roomy Card
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: const Color(0xFF5E43F3), borderRadius: BorderRadius.circular(16)),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Roomy', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 4),
-                      Text('Find rooms, roommates, and housing around you.', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                    ],
+          if (_activeFilter == 'Chatrooms') ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E1E1E),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF5E43F3).withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text('LaLao Chatrooms', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 4),
+                  Text('Join open community spaces, talk with friends, and discover lively discussions.', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...repo.chatrooms.map((room) => _buildChatroomCard(room)).toList(),
+          ] else ...[
+            // Roomy Card
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: const Color(0xFF5E43F3), borderRadius: BorderRadius.circular(16)),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text('Roomy', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                        SizedBox(height: 4),
+                        Text('Find rooms, roommates, and housing around you.', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                      ],
+                    ),
                   ),
-                ),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                    child: const Icon(LucideIcons.chevron_right, color: Colors.white),
+                  )
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                const Text('People Near You', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-                  child: const Icon(LucideIcons.chevron_right, color: Colors.white),
-                )
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(12)),
+                  child: Text('${repo.nearbyUsers.length}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                ),
               ],
             ),
-          ),
-          
-          const SizedBox(height: 24),
-          Row(
+            const SizedBox(height: 12),
+            ...repo.nearbyUsers.map((user) => _buildPeopleCard(user)).toList(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChatroomCard(Chatroom room) {
+    IconData getIcon(String iconName) {
+      switch (iconName) {
+        case 'users':
+          return LucideIcons.users;
+        case 'user_plus':
+          return LucideIcons.user_plus;
+        case 'gamepad':
+          return LucideIcons.gamepad_2;
+        case 'lightbulb':
+          return LucideIcons.lightbulb;
+        case 'map_pin':
+          return LucideIcons.map_pin;
+        default:
+          return LucideIcons.message_square;
+      }
+    }
+
+    return Card(
+      color: Colors.white,
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _showRoomDetails(room),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('People Near You', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(12)),
-                child: Text('${repo.nearbyUsers.length}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF5E43F3).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(getIcon(room.roomIcon), color: const Color(0xFF5E43F3), size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(room.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            const SizedBox(width: 8),
+                            if (room.isJoined)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(8)),
+                                child: Text('JOINED', style: TextStyle(color: Colors.green.shade700, fontSize: 10, fontWeight: FontWeight.bold)),
+                              ),
+                          ],
+                        ),
+                        Text(room.category, style: const TextStyle(color: Color(0xFF5E43F3), fontSize: 12, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                  OutlinedButton(
+                    onPressed: () => _showRoomDetails(room),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF5E43F3),
+                      side: const BorderSide(color: Color(0xFF5E43F3)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+                    ),
+                    child: const Text('View Room', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(room.description, style: TextStyle(color: Colors.grey.shade700, fontSize: 13, height: 1.3)),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Icon(LucideIcons.users, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text('${room.memberCount} ${room.memberCount == 1 ? "member" : "members"}', style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 12),
+                  const Text('·', style: TextStyle(color: Colors.grey)),
+                  const SizedBox(width: 12),
+                  const Text('Public Chatroom', style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          ...repo.nearbyUsers.map((user) => _buildPeopleCard(user)).toList(),
-        ],
+        ),
       ),
+    );
+  }
+
+  void _showRoomDetails(Chatroom room) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, top: 20, left: 20, right: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(room.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                    ],
+                  ),
+                  Text('Category: ${room.category}', style: const TextStyle(color: Color(0xFF5E43F3), fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 12),
+                  Text(room.description, style: const TextStyle(fontSize: 14, height: 1.4, color: Colors.black87)),
+                  const SizedBox(height: 16),
+                  const Text('Room Rules', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  ...room.rules.map((rule) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
+                        Expanded(child: Text(rule, style: TextStyle(color: Colors.grey.shade800, fontSize: 13))),
+                      ],
+                    ),
+                  )),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (room.isJoined) {
+                          repo.leaveChatroom(room.id);
+                          setSheetState(() {});
+                          setState(() {});
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('You left the chatroom')));
+                        } else {
+                          repo.joinChatroom(room.id);
+                          setSheetState(() {});
+                          setState(() {});
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Joined chatroom! Available in your Messages inbox.')));
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: room.isJoined ? Colors.red.shade600 : const Color(0xFF5E43F3),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                      ),
+                      child: Text(
+                        room.isJoined ? 'Leave Chatroom' : 'Join Chatroom',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

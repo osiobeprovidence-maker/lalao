@@ -1,5 +1,5 @@
 import React from 'react';
-import { Phone, PhoneOff, Video, Sparkles } from 'lucide-react';
+import { Phone, PhoneOff, Video } from 'lucide-react';
 import { useCall } from '../../context/CallContext';
 import { Avatar } from '../common/Avatar';
 import { VerificationBadge } from '../common/VerificationBadge';

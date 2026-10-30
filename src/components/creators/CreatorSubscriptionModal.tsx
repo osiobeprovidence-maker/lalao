@@ -5,7 +5,6 @@ import {
   CreditCard,
   AlertCircle,
   Clock,
-  Sparkles,
   BadgeCheck,
 } from 'lucide-react';
 import { useQuery } from 'convex/react';

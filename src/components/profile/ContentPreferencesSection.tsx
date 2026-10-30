@@ -8,7 +8,6 @@ import {
   RotateCcw,
   Save,
   Shield,
-  Sparkles,
   Info,
   Lock,
 } from 'lucide-react';

@@ -503,8 +503,8 @@ export const joinViaWallet = mutation({
       updatedAt: now,
     });
 
-    // 7. Calculate billing period
-    const periodEnd = calculateBillingPeriodEnd(now, subscription.billingCycle);
+    // 7. Calculate billing period (calendar month exact)
+    const periodEnd = calculateBillingPeriodEnd(now, subscription.billingCycle, subscription.durationMonths);
 
     // 8. Create membership
     const membershipId = await ctx.db.insert("subscriptionMemberships", {
@@ -606,7 +606,7 @@ export const settlePaystackSubscription = internalMutation({
       updatedAt: now,
     });
 
-    const periodEnd = calculateBillingPeriodEnd(now, subscription.billingCycle);
+    const periodEnd = calculateBillingPeriodEnd(now, subscription.billingCycle, subscription.durationMonths);
 
     // Create active membership record
     const membershipId = await ctx.db.insert("subscriptionMemberships", {
@@ -914,6 +914,15 @@ export const updateSubscriptionListing = mutation({
     eligibilityRules: v.optional(v.string()),
     cancellationPolicy: v.optional(v.string()),
     benefits: v.optional(v.array(v.string())),
+    billingCycle: v.optional(v.union(
+      v.literal("monthly"),
+      v.literal("quarterly"),
+      v.literal("yearly"),
+      v.literal("3_months"),
+      v.literal("6_months"),
+      v.literal("12_months")
+    )),
+    durationMonths: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const listing = await ctx.db.get(args.listingId);
@@ -953,7 +962,15 @@ export const createSubscriptionListing = mutation({
     totalAccountCost: v.number(),
     defaultSlotPrice: v.number(),
     currency: v.string(),
-    billingCycle: v.union(v.literal("monthly"), v.literal("quarterly"), v.literal("yearly")),
+    billingCycle: v.union(
+      v.literal("monthly"),
+      v.literal("quarterly"),
+      v.literal("yearly"),
+      v.literal("3_months"),
+      v.literal("6_months"),
+      v.literal("12_months")
+    ),
+    durationMonths: v.optional(v.number()),
     totalCapacity: v.number(),
     benefits: v.array(v.string()),
     memberInstructions: v.optional(v.string()),
@@ -962,6 +979,12 @@ export const createSubscriptionListing = mutation({
   },
   handler: async (ctx, args) => {
     const { user } = await verifyPageAdmin(ctx, args.pageId);
+
+    // Derive canonical durationMonths from billingCycle if not supplied
+    const durationMonths = args.durationMonths ??
+      (args.billingCycle === "3_months" || args.billingCycle === "quarterly" ? 3 :
+       args.billingCycle === "6_months" ? 6 :
+       args.billingCycle === "12_months" || args.billingCycle === "yearly" ? 12 : 1);
 
     const listingId = await ctx.db.insert("subscriptionListings", {
       pageId: args.pageId,
@@ -974,6 +997,7 @@ export const createSubscriptionListing = mutation({
       defaultSlotPrice: args.defaultSlotPrice,
       currency: args.currency,
       billingCycle: args.billingCycle,
+      durationMonths,
       totalCapacity: args.totalCapacity,
       allowDifferentSlotPrices: false,
       benefits: args.benefits,
@@ -1048,10 +1072,29 @@ export const processDueRenewals = mutation({
 });
 
 // Helper utilities
-function calculateBillingPeriodEnd(start: number, cycle: "monthly" | "quarterly" | "yearly") {
-  if (cycle === "quarterly") return start + 90 * 24 * 60 * 60 * 1000;
-  if (cycle === "yearly") return start + 365 * 24 * 60 * 60 * 1000;
-  return start + 30 * 24 * 60 * 60 * 1000; // default 30 days
+function calculateBillingPeriodEnd(start: number, cycle: string, durationMonths?: number): number {
+  const startDate = new Date(start);
+  let monthsToAdd = 1;
+  if (durationMonths && [3, 6, 12].includes(durationMonths)) {
+    monthsToAdd = durationMonths;
+  } else if (cycle === "3_months" || cycle === "quarterly") {
+    monthsToAdd = 3;
+  } else if (cycle === "6_months") {
+    monthsToAdd = 6;
+  } else if (cycle === "12_months" || cycle === "yearly") {
+    monthsToAdd = 12;
+  }
+  const targetMonth = startDate.getMonth() + monthsToAdd;
+  const targetYear = startDate.getFullYear() + Math.floor(targetMonth / 12);
+  const normalizedMonth = ((targetMonth % 12) + 12) % 12;
+  const originalDay = startDate.getDate();
+  const maxDaysInTargetMonth = new Date(targetYear, normalizedMonth + 1, 0).getDate();
+  const targetDay = Math.min(originalDay, maxDaysInTargetMonth);
+  const endDate = new Date(startDate);
+  endDate.setFullYear(targetYear);
+  endDate.setMonth(normalizedMonth);
+  endDate.setDate(targetDay);
+  return endDate.getTime();
 }
 
 async function createJointheQNotification(ctx: any, args: {

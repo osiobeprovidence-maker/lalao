@@ -9,7 +9,6 @@ import {
   X,
   ShieldCheck,
   Crosshair,
-  Sparkles,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 

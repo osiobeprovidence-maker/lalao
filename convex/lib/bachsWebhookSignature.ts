@@ -18,6 +18,7 @@ export async function verifyBachsWebhookSignature(args: {
   toleranceSeconds?: number;
 }): Promise<boolean> {
   const { rawBody, secret } = args;
+  if (!secret) return false;
   let timestampText = args.legacyTimestamp || "";
   let signatures = args.legacySignature ? [args.legacySignature] : [];
   if (args.signatureV2) {

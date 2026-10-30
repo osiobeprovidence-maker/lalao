@@ -9,7 +9,6 @@ import {
   Plus,
   Disc,
   Heart,
-  Sparkles,
   Flame,
   Radio,
   Mic,
@@ -41,7 +40,7 @@ interface SoundPickerModalProps {
 }
 
 const CATEGORIES = [
-  { id: 'for_you', label: 'For You', icon: Sparkles },
+  { id: 'for_you', label: 'For You', icon: null },
   { id: 'trending', label: 'Trending', icon: Flame },
   { id: 'music', label: 'Music', icon: Music },
   { id: 'original', label: 'Original Audio', icon: Mic },
@@ -271,7 +270,7 @@ export const SoundPickerModal: React.FC<SoundPickerModalProps> = ({
                       : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
                   }`}
                 >
-                  <Icon className="w-3.5 h-3.5" />
+                  {Icon ? <Icon className="w-3.5 h-3.5" /> : null}
                   <span>{cat.label}</span>
                 </button>
               );

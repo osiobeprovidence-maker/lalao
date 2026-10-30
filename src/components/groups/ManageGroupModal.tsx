@@ -7,7 +7,6 @@ import {
   Globe,
   Users,
   Settings,
-  Sparkles,
   BarChart3,
   UserCheck,
   UserPlus,
@@ -256,7 +255,7 @@ export const ManageGroupModal: React.FC<ManageGroupModalProps> = ({
           {[
             { id: 'profile', label: 'Profile', icon: FileText },
             { id: 'privacy', label: 'Privacy', icon: Lock },
-            { id: 'community', label: 'Community', icon: Sparkles },
+            { id: 'community', label: 'Community', icon: null },
             { id: 'permissions', label: 'Permissions', icon: Shield },
             { id: 'members', label: `Members (${members.length})`, icon: Users },
             { id: 'requests', label: `Requests (${joinRequests.length})`, icon: UserCheck },
@@ -274,7 +273,7 @@ export const ManageGroupModal: React.FC<ManageGroupModalProps> = ({
                     : 'border-transparent text-theme-tertiary hover:text-theme-secondary'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
+                {Icon ? <Icon className="w-3.5 h-3.5" /> : null}
                 <span>{tab.label}</span>
               </button>
             );

@@ -11,7 +11,6 @@ import {
   Share2,
   CheckCircle2,
   Globe,
-  Sparkles,
   Award,
   Swords,
   ChevronRight,
@@ -184,7 +183,6 @@ export const EventDetailModal: React.FC = () => {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
               <div>
                 <p className="text-[10px] text-theme-tertiary font-medium uppercase">Admission</p>
                 <p className="font-bold text-emerald-700">Free Entry</p>
@@ -318,7 +316,6 @@ export const EventDetailModal: React.FC = () => {
               {/* Lao Line Platform Advantage Banner */}
               <div className="bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-100 rounded-2xl p-4 flex items-start gap-3">
                 <div className="p-2 rounded-xl bg-[#5E43F3] text-white">
-                  <Sparkles className="w-4 h-4" />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-[#5E43F3]">

@@ -25,6 +25,7 @@ import {
   Megaphone,
   Zap,
   BookOpen,
+  Award,
 } from 'lucide-react';
 
 import { AdminDashboard } from './AdminDashboard';
@@ -47,6 +48,7 @@ import { AdminEventsDistribution } from './AdminEventsDistribution';
 import { AdminLocationRules } from './AdminLocationRules';
 import { AdminMangaCreatorApplications } from './AdminMangaCreatorApplications';
 import { AdminBetaTesters } from './AdminBetaTesters';
+import { AdminRewards } from './AdminRewards';
 import { useAuth } from '../../context/AuthContext';
 import { useLalao } from '../../context/LalaoContext';
 import { useQuery, useMutation } from 'convex/react';
@@ -92,6 +94,7 @@ export const AdminApp: React.FC = () => {
         { path: '/admin/subscriptions', label: 'Subscriptions', icon: CreditCard },
         { path: '/admin/transactions', label: 'Transactions', icon: Activity },
         { path: '/admin/wallet', label: 'Wallet Activity', icon: Wallet },
+        { path: '/admin/rewards', label: 'Rewards Management', icon: Award },
         { path: '/admin/monetization', label: 'Creator Monetization', icon: BadgeDollarSign },
       ]
     },
@@ -246,6 +249,7 @@ export const AdminApp: React.FC = () => {
                 <Route path="/subscriptions" element={<AdminSubscriptions />} />
                 <Route path="/transactions" element={<AdminTransactions />} />
                 <Route path="/wallet" element={<AdminComingSoon title="Wallet Activity" />} />
+                <Route path="/rewards" element={<AdminRewards />} />
                 <Route path="/monetization" element={<AdminComingSoon title="Creator Monetization" />} />
                 <Route path="/reports" element={<AdminReports />} />
                 <Route path="/communities" element={<AdminCommunities />} />

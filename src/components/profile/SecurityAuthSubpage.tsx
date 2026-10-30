@@ -29,7 +29,9 @@ export const SecurityAuthSubpage: React.FC<SecurityAuthSubpageProps> = ({ onBack
   const [linkError, setLinkError] = useState('');
   const [isLinking, setIsLinking] = useState(false);
   const [linkConfirmation, setLinkConfirmation] = useState('');
-  const linkedMethods = useQuery(api.playsole.getMyAuthMethods) || [];
+  const linkedMethodsQuery = useQuery(api.playsole.getMyAuthMethods);
+  const linkedMethodsLoading = linkedMethodsQuery === undefined;
+  const linkedMethods = linkedMethodsQuery ?? [];
   const beginAuthLink = useMutation(api.playsole.beginAuthLink);
 
   const currentPhone = currentUser.phone || currentUser.phoneNumber;
@@ -157,9 +159,11 @@ export const SecurityAuthSubpage: React.FC<SecurityAuthSubpageProps> = ({ onBack
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-bold text-theme-primary">Playsole One</div>
-                <div className="text-xs text-theme-tertiary">{hasPlaysoleMapping ? 'Linked to this Lalao account' : 'Not linked'}</div>
+                <div className="text-xs text-theme-tertiary">
+                  {hasPlaysoleMapping ? 'Linked to this Lalao account' : linkedMethodsLoading ? 'Checking linked methods…' : 'Not linked'}
+                </div>
               </div>
-              {!hasPlaysoleMapping && (
+              {!linkedMethodsLoading && !hasPlaysoleMapping && (
                 <button type="button" onClick={linkPlaysole} disabled={isLinking} className="px-3 py-2 rounded-xl bg-[#5E43F3]/10 text-[#5E43F3] text-xs font-bold disabled:opacity-50">
                   {isLinking ? 'Opening…' : 'Link Playsole'}
                 </button>

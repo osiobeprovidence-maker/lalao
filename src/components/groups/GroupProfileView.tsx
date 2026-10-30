@@ -11,7 +11,6 @@ import {
   Share2,
   Check,
   UserPlus,
-  Sparkles,
   Calendar,
   Image as ImageIcon,
   Flame,
@@ -121,7 +120,12 @@ export const GroupProfileView: React.FC = () => {
     try {
       const res = await requestToJoinMutation({ groupId: activeGroupId });
       if (res.status === 'joined') {
-        triggerShareToast('You joined the group!');
+        triggerShareToast(group?.isChatroom ? 'You joined the chatroom!' : 'You joined the group!');
+        if (res.conversationId) {
+          setActiveChatId(res.conversationId);
+        } else if (group?.conversationId) {
+          setActiveChatId(group.conversationId);
+        }
       } else {
         triggerShareToast('Join request sent to group admins');
       }
@@ -133,10 +137,13 @@ export const GroupProfileView: React.FC = () => {
   };
 
   const handleLeave = async () => {
-    if (window.confirm('Are you sure you want to leave this group?')) {
+    const isChatroom = group?.isChatroom;
+    if (window.confirm(isChatroom ? 'Are you sure you want to leave this chatroom? It will be removed from your Messages inbox.' : 'Are you sure you want to leave this group?')) {
       try {
         await leaveGroupMutation({ groupId: activeGroupId });
-        triggerShareToast('You left the group');
+        triggerShareToast(isChatroom ? 'You left the chatroom' : 'You left the group');
+        // Clear active chat if it was open
+        setActiveChatId(null);
       } catch (err: any) {
         triggerShareToast(err?.message || 'Could not leave group');
       }
@@ -299,6 +306,11 @@ export const GroupProfileView: React.FC = () => {
               <h2 className="text-xl sm:text-2xl font-black text-theme-primary font-sans">
                 {group.name}
               </h2>
+              {group.isChatroom && (
+                <span className="px-2 py-0.5 rounded-full bg-[#5E43F3] text-white text-[10px] font-black uppercase tracking-wider">
+                  CHATROOM
+                </span>
+              )}
               <span className="px-2 py-0.5 rounded-full bg-[#5E43F3]/10 text-[#5E43F3] text-[10px] font-black uppercase tracking-wider">
                 {group.category}
               </span>
@@ -320,6 +332,17 @@ export const GroupProfileView: React.FC = () => {
             <p className="text-xs text-theme-tertiary font-mono mt-0.5">
               @{group.username}
             </p>
+
+            {group.creator && (
+              <div className="flex items-center gap-2 mt-2 pt-1">
+                <span className="text-[11px] text-theme-tertiary">Created by</span>
+                <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-theme-surface border border-theme-divider text-xs font-semibold text-theme-primary">
+                  <Avatar src={group.creator.avatar} alt={group.creator.name} size="xs" />
+                  <span>{group.creator.name}</span>
+                  <span className="text-theme-tertiary font-mono text-[10px]">@{group.creator.username}</span>
+                </div>
+              </div>
+            )}
 
             {group.description && (
               <p className="text-xs sm:text-sm text-theme-secondary mt-2.5 leading-relaxed whitespace-pre-wrap">
@@ -543,7 +566,6 @@ export const GroupProfileView: React.FC = () => {
               <div className="p-4 space-y-4">
                 <div className="p-4 rounded-2xl bg-theme-surface border border-theme-divider space-y-2 text-xs text-theme-secondary">
                   <div className="flex items-center gap-2 text-theme-primary font-bold">
-                    <Sparkles className="w-4 h-4 text-[#5E43F3]" />
                     <span>About {group.name}</span>
                   </div>
                   <p className="leading-relaxed">

@@ -85,6 +85,7 @@ export const NotificationListener: React.FC = () => {
             setActiveChatIdRef.current(match[1]);
           }
         }
+      }
     };
 
     if ('serviceWorker' in navigator) {

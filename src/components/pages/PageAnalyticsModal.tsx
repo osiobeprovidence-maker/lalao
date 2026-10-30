@@ -9,7 +9,6 @@ import {
   MessageSquare,
   Share2,
   Calendar,
-  Sparkles,
   ArrowUpRight,
   MapPin,
   Clock,
@@ -102,7 +101,6 @@ export const PageAnalyticsModal: React.FC<PageAnalyticsModalProps> = ({
 
           <div className="p-4 bg-theme-base rounded-2xl border border-theme-divider-light">
             <div className="flex items-center justify-between text-theme-tertiary mb-1.5">
-              <Sparkles className="w-4 h-4 text-pink-500" />
               <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded-full">High</span>
             </div>
             <p className="text-xl sm:text-2xl font-black text-theme-primary">{analytics.engagementRate}%</p>

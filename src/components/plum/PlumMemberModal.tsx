@@ -10,7 +10,6 @@ import {
   Heart,
   Bookmark,
   ShieldAlert,
-  Sparkles,
   ChevronLeft,
   ChevronRight,
   Flame,

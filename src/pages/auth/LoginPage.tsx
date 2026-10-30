@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 import { AppIcon } from '../../components/common/AppIcon';
 import { useMutation } from 'convex/react';
@@ -7,8 +7,18 @@ import { api } from '../../../convex/_generated/api';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { initiatePlaysoleLogin } from '../../lib/playsoleAuth';
+
+const POST_LOGIN_REDIRECT_KEY = 'lalao_post_login_redirect';
+
+function safeRedirect(value: string | null): string {
+  return value && value.startsWith('/') && !value.startsWith('//') ? value : '/app';
+}
+
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = safeRedirect(searchParams.get('redirect'));
+  const signupPath = redirectTo !== '/app' ? `/signup?redirect=${encodeURIComponent(redirectTo)}` : '/signup';
   const createUserRecord = useMutation(api.users.createUserRecord);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -30,7 +40,6 @@ export const LoginPage: React.FC = () => {
       if (!readyUser) {
         throw new Error('Authentication is still loading. Please try again.');
       }
-      await readyUser.getIdToken(true);
       await readyUser.getIdToken(true);
       
       // Retry loop to ensure Convex receives the auth token
@@ -54,7 +63,7 @@ export const LoginPage: React.FC = () => {
       }
       if (attempts >= 15) throw new Error('Server authentication timeout.');
 
-      navigate('/app');
+      navigate(redirectTo);
     } catch (err: any) {
       setError(err.message || 'Invalid email or password.');
     } finally {
@@ -222,7 +231,18 @@ export const LoginPage: React.FC = () => {
           <div className="space-y-2.5">
             <button 
               type="button"
-              onClick={() => initiatePlaysoleLogin()}
+              onClick={() => {
+                try {
+                  if (redirectTo !== '/app') {
+                    sessionStorage.setItem(POST_LOGIN_REDIRECT_KEY, redirectTo);
+                  } else {
+                    sessionStorage.removeItem(POST_LOGIN_REDIRECT_KEY);
+                  }
+                } catch {
+                  // sessionStorage may be unavailable in privacy-restricted browsers.
+                }
+                initiatePlaysoleLogin();
+              }}
               className="w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border border-black/10 dark:border-white/15 bg-black text-white hover:bg-neutral-900 text-sm font-semibold transition-all cursor-pointer active:scale-[0.98] shadow-sm"
             >
               <img 
@@ -264,7 +284,7 @@ export const LoginPage: React.FC = () => {
                   }
                   if (attempts >= 15) throw new Error('Server authentication timeout.');
 
-                  navigate('/app');
+                  navigate(redirectTo);
                 } catch (err: any) {
                   setError(err.message || 'Google sign-in failed.');
                 }
@@ -279,7 +299,7 @@ export const LoginPage: React.FC = () => {
           {/* Sign up link */}
           <p className="text-center text-sm text-theme-tertiary">
             Don't have an account?{' '}
-            <Link to="/signup" className="font-bold text-[#5E43F3] hover:text-[#4E34E0] transition-colors">
+            <Link to={signupPath} className="font-bold text-[#5E43F3] hover:text-[#4E34E0] transition-colors">
               Create account
             </Link>
           </p>

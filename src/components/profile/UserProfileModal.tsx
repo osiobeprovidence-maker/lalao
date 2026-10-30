@@ -18,7 +18,6 @@ import {
   X,
   Flame,
   Clock,
-  Sparkles,
   Users,
   Copy,
   VolumeX,
@@ -890,7 +889,6 @@ export const UserProfileModal: React.FC = () => {
                                 item.backgroundColor || 'from-[#5E43F3] to-fuchsia-600'
                               } p-3 flex flex-col justify-between text-white`}
                             >
-                              <Sparkles className="w-4 h-4 opacity-80" />
                               <p className="text-xs font-bold line-clamp-3 leading-snug">
                                 {item.text}
                               </p>

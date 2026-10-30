@@ -14,8 +14,11 @@ export const PostImage: React.FC<PostImageProps> = ({
   src,
   alt = 'Post attachment',
   className = '',
+  maxHeight,
   onClick,
 }) => {
+  // Apply maxHeight if provided; otherwise rely on responsive max‑height classes.
+  const maxHeightStyle = maxHeight ? { maxHeight: `${maxHeight}px` } : {};
   return (
     <div
       className={`w-full overflow-hidden rounded-xl border border-theme-divider-light bg-theme-surface-hover ${onClick ? 'cursor-pointer' : ''} ${className}`}
@@ -27,7 +30,8 @@ export const PostImage: React.FC<PostImageProps> = ({
         referrerPolicy="no-referrer"
         loading="lazy"
         decoding="async"
-        className="block w-full h-auto max-h-[65vh] md:max-h-[70vh] object-cover object-center"
+        style={maxHeightStyle}
+        className="block w-full h-full object-cover object-center"
       />
     </div>
   );

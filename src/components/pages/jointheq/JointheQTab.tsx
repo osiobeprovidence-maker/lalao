@@ -249,12 +249,28 @@ export const JointheQTab: React.FC<JointheQTabProps> = ({ page }) => {
                     {/* Bottom Pricing & CTA */}
                     <div className="pt-3 border-t border-theme-divider-light flex items-center justify-between">
                       <div>
-                        <span className="text-[10px] font-bold text-theme-tertiary uppercase tracking-wider block">Monthly Price</span>
+                        <span className="text-[10px] font-bold text-theme-tertiary uppercase tracking-wider block">
+                          {listing.durationMonths === 3 ? '3-Month Price' :
+                           listing.durationMonths === 6 ? '6-Month Price' :
+                           listing.durationMonths === 12 ? '12-Month Price' :
+                           listing.billingCycle === '3_months' || listing.billingCycle === 'quarterly' ? '3-Month Price' :
+                           listing.billingCycle === '6_months' ? '6-Month Price' :
+                           listing.billingCycle === '12_months' || listing.billingCycle === 'yearly' ? '12-Month Price' :
+                           'Slot Price'}
+                        </span>
                         <div className="flex items-baseline gap-1">
                           <span className="text-lg font-black text-theme-primary">
                             ₦{listing.defaultSlotPrice.toLocaleString()}
                           </span>
-                          <span className="text-[10px] text-theme-tertiary font-bold">/ month</span>
+                          <span className="text-[10px] text-theme-tertiary font-bold">
+                            / {listing.durationMonths === 3 ? '3 mo' :
+                               listing.durationMonths === 6 ? '6 mo' :
+                               listing.durationMonths === 12 ? 'year' :
+                               listing.billingCycle === '3_months' || listing.billingCycle === 'quarterly' ? '3 mo' :
+                               listing.billingCycle === '6_months' ? '6 mo' :
+                               listing.billingCycle === '12_months' || listing.billingCycle === 'yearly' ? 'year' :
+                               'mo'}
+                          </span>
                         </div>
                       </div>
 
@@ -328,7 +344,12 @@ export const JointheQTab: React.FC<JointheQTabProps> = ({ page }) => {
                         <div className="flex items-center gap-2 text-xs text-theme-tertiary font-medium mt-0.5">
                           <span>Slot {mem.slot?.slotNumber || 1}</span>
                           <span>•</span>
-                          <span>₦{(mem.amount || sub?.defaultSlotPrice || 0).toLocaleString()} / mo</span>
+                          <span>₦{(mem.amount || sub?.defaultSlotPrice || 0).toLocaleString()} / {
+                            (sub?.durationMonths === 3 || sub?.billingCycle === '3_months' || sub?.billingCycle === 'quarterly') ? '3 mo' :
+                            (sub?.durationMonths === 6 || sub?.billingCycle === '6_months') ? '6 mo' :
+                            (sub?.durationMonths === 12 || sub?.billingCycle === '12_months' || sub?.billingCycle === 'yearly') ? 'yr' :
+                            'mo'
+                          }</span>
                           <span>•</span>
                           <span className="text-[#5E43F3] font-bold">Renews {new Date(mem.nextRenewalDate || Date.now()).toLocaleDateString()}</span>
                         </div>

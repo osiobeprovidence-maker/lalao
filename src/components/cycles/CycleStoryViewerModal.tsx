@@ -14,7 +14,6 @@ import {
   VolumeX,
   Volume2,
   Flag,
-  Sparkles,
   Plus,
   CheckCircle2,
   Smile,

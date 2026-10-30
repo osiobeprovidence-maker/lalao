@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ExternalLink, Sparkles, AlertCircle } from 'lucide-react';
+import { ExternalLink, AlertCircle } from 'lucide-react';
 import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Avatar } from '../common/Avatar';

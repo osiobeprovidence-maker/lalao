@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { brand } from '../../config/brand';
 import { X } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
@@ -8,10 +8,21 @@ import { api } from '../../../convex/_generated/api';
 
 export const AuthPromptModal: React.FC = () => {
   const navigate = useNavigate();
-  const { isAuthPromptOpen, authPromptMessage, closeAuthPrompt } = useLalao();
+  const location = useLocation();
+  const { isAuthPromptOpen, authPromptMessage, authPromptRedirect, closeAuthPrompt } = useLalao();
   const settings = useQuery((api as any).platformSettings.getBrandingSettings);
 
   if (!isAuthPromptOpen) return null;
+
+  // Preserve the destination the visitor was trying to reach. Only relative,
+  // same-origin paths are allowed to prevent open redirects.
+  const requestedRedirect = authPromptRedirect || `${location.pathname}${location.search}`;
+  const redirect =
+    requestedRedirect.startsWith('/') && !requestedRedirect.startsWith('//')
+      ? requestedRedirect
+      : '/app';
+  const loginPath = `/login?redirect=${encodeURIComponent(redirect)}`;
+  const signupPath = `/signup?redirect=${encodeURIComponent(redirect)}`;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm animate-in fade-in duration-200">
@@ -52,7 +63,7 @@ export const AuthPromptModal: React.FC = () => {
               type="button"
               onClick={() => {
                 closeAuthPrompt();
-                navigate('/signup');
+                navigate(signupPath);
               }}
               className="flex w-full items-center justify-center rounded-full bg-[#5E43F3] px-6 py-3.5 text-[15px] font-bold text-white transition hover:bg-[#4d36d2] cursor-pointer"
             >
@@ -62,7 +73,7 @@ export const AuthPromptModal: React.FC = () => {
               type="button"
               onClick={() => {
                 closeAuthPrompt();
-                navigate('/login');
+                navigate(loginPath);
               }}
               className="flex w-full items-center justify-center rounded-full bg-theme-surface-hover px-6 py-3.5 text-[15px] font-bold text-theme-primary transition hover:bg-theme-surface-active cursor-pointer"
             >

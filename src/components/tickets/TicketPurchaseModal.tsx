@@ -7,7 +7,6 @@ import {
   CreditCard,
   Building2,
   ChevronRight,
-  Sparkles,
   ShieldCheck,
   Plus,
   Minus,

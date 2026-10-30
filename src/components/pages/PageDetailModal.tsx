@@ -18,7 +18,6 @@ import {
   History,
   Ticket,
   Trophy,
-  Sparkles,
   Calendar,
   Gamepad2,
   Users,
@@ -778,7 +777,6 @@ export const PageDetailModal: React.FC = () => {
                           }}
                           className="w-full px-3.5 py-2 text-left text-xs font-semibold text-theme-primary hover:bg-theme-base flex items-center gap-2.5 cursor-pointer"
                         >
-                          <Sparkles className="w-4 h-4 text-[#5E43F3]" />
                           <span>Customize Page</span>
                         </button>
 

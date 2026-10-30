@@ -709,6 +709,17 @@ export const updatePurchaseStatus = internalMutation({
         refundedAt: Date.now()
       });
 
+      // If points were already awarded for this purchase, take them back.
+      try {
+        await ctx.runMutation(internal.rewards.reverseMarketPurchasePoints, {
+          userId: args.userId,
+          marketTxId: args.marketTxId,
+          reason: args.status === "FAILED" ? "purchase_failed" : "purchase_refunded",
+        });
+      } catch (err) {
+        console.error("Failed to reverse reward points for market purchase", args.marketTxId, err);
+      }
+
     } else if (args.status === "COMPLETED") {
       await ctx.db.patch(args.walletTxId, {
         status: "completed"
@@ -724,6 +735,30 @@ export const updatePurchaseStatus = internalMutation({
         updatedAt: Date.now(),
         completedAt: Date.now()
       });
+
+      // Award reward points for the completed purchase. Idempotent by marketTxId,
+      // so a duplicate provider callback cannot double-award.
+      try {
+        await ctx.runMutation(internal.rewards.awardMarketPurchasePoints, {
+          userId: args.userId,
+          amountNgn: marketTx.amount,
+          marketTxId: args.marketTxId,
+          walletTxId: args.walletTxId,
+        });
+      } catch (err) {
+        // Never fail a completed purchase because the loyalty ledger hiccuped.
+        console.error("Failed to award reward points for market purchase", args.marketTxId, err);
+      }
+
+      // A completed purchase may satisfy the configured referral qualification.
+      try {
+        await ctx.runMutation(internal.rewards.qualifyReferralAfterEvent, {
+          referredUserId: args.userId,
+          trigger: "purchase",
+        });
+      } catch (err) {
+        console.error("Failed to qualify referral for purchase", args.marketTxId, err);
+      }
     } else {
       // PROCESSING
       await ctx.db.patch(args.marketTxId, {

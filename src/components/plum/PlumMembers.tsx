@@ -3,7 +3,6 @@ import {
   LayoutGrid,
   List,
   Filter,
-  Sparkles,
   MapPin,
   Heart,
   Bookmark,

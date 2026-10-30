@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { getOrRequestWebPushSubscription } from '../lib/push';
@@ -353,6 +353,14 @@ interface LalaoContextType {
   topUpWallet: (amount: number, method?: string) => void;
   payWithWallet: (amount: number, description: string, reference?: string) => boolean;
 
+  // Subscriptions Marketplace
+  isMySubscriptionsOpen: boolean;
+  setIsMySubscriptionsOpen: (open: boolean) => void;
+  isSubscriptionCheckoutOpen: boolean;
+  setIsSubscriptionCheckoutOpen: (open: boolean) => void;
+  selectedSubscriptionPlan: any;
+  setSelectedSubscriptionPlan: (plan: any) => void;
+
   // Creator Ecosystem & Subscriptions
   subscription: UserSubscription;
   isCreatorPremiumActive: boolean;
@@ -374,9 +382,10 @@ interface LalaoContextType {
   setIsEditProfileOpen: (open: boolean) => void;
   isAuthPromptOpen: boolean;
   authPromptMessage: string;
-  showAuthPrompt: (message?: string) => void;
+  authPromptRedirect: string | null;
+  showAuthPrompt: (message?: string, redirect?: string) => void;
   closeAuthPrompt: () => void;
-  requireAuth: (action: () => void, message?: string) => void;
+  requireAuth: (action: () => void, message?: string, redirect?: string) => void;
   [key: string]: any;
   featureFlags: { communityEnabled: boolean; ralliesEnabled: boolean; cyclesEnabled: boolean; roomyEnabled?: boolean; };
 }
@@ -467,11 +476,14 @@ const normalizeConvexUser = (user: Record<string, any> | null | undefined): User
 };
 
 export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const currentUserQuery = useQuery(api.users.getCurrentUser);
-  const featureFlags = useQuery(api.platformSettings.getFeatureFlags) || { communityEnabled: false, ralliesEnabled: true, cyclesEnabled: true, roomyEnabled: true };
-  const pushEnabledQuery = useQuery(api.push.hasActivePushToken, currentUserQuery ? {} : "skip");
-  const upsertWebPushSubscription = useMutation(api.push.upsertWebPushSubscription);
-  const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
+// Determine authentication status early to safely query user data
+const { isAuthenticated } = useAuth();
+// Guard the current user query to avoid errors when not logged in
+const currentUserQuery = useQuery(api.users.getCurrentUser, {}, isAuthenticated ? {} : "skip");
+const featureFlags = useQuery(api.platformSettings.getFeatureFlags) || { communityEnabled: false, ralliesEnabled: true, cyclesEnabled: true, roomyEnabled: true };
+const pushEnabledQuery = useQuery(api.push.hasActivePushToken, currentUserQuery ? {} : "skip");
+const upsertWebPushSubscription = useMutation(api.push.upsertWebPushSubscription);
+const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
   const toggleFollowUserMutation = useMutation(api.social.toggleFollowUser);
   const toggleFollowPageMutation = useMutation(api.pages.toggleFollowPage);
   const toggleRepostPostMutation = useMutation(api.social.toggleRepost);
@@ -674,36 +686,39 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsCreateSoundOpen(true);
   };
 
-  const { isAuthenticated } = useAuth();
+
 
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
   const [authPromptMessage, setAuthPromptMessage] = useState('');
+  const [authPromptRedirect, setAuthPromptRedirect] = useState<string | null>(null);
 
-  const showAuthPrompt = (message = 'Sign in to continue') => {
+  const showAuthPrompt = useCallback((message = 'Sign in to continue', redirect?: string) => {
     setAuthPromptMessage(message);
+    setAuthPromptRedirect(redirect ?? null);
     setIsAuthPromptOpen(true);
-  };
+  }, []);
 
-  const closeAuthPrompt = () => {
+  const closeAuthPrompt = useCallback(() => {
     setIsAuthPromptOpen(false);
-  };
+    setAuthPromptRedirect(null);
+  }, []);
 
-  const requireAuth = (action: () => void, message?: string) => {
+  const requireAuth = useCallback((action: () => void, message?: string, redirect?: string) => {
     if (isAuthenticated) {
       action();
     } else {
-      showAuthPrompt(message);
+      showAuthPrompt(message, redirect);
     }
-  };
+  }, [isAuthenticated, showAuthPrompt]);
 
-  const setActiveTab = (tab: NavTab) => {
-    const protectedTabs = ['messages', 'profile', 'notifications', 'create-post', 'following', 'saved', 'liked', 'create-page'];
+  const setActiveTab = useCallback((tab: NavTab) => {
+    const protectedTabs = ['messages', 'profile', 'notifications', 'create-post', 'following', 'saved', 'liked', 'create-page', 'recent-searches', 'ads'];
     if (protectedTabs.includes(tab) && !isAuthenticated) {
-      showAuthPrompt(`Sign in to view ${tab.replace('-', ' ')}`);
+      showAuthPrompt(`Sign in to view ${tab.replace('-', ' ')}`, `/app?tab=${encodeURIComponent(tab)}`);
       return;
     }
     setRawActiveTab(tab);
-  };
+  }, [isAuthenticated, showAuthPrompt]);
   const [feedTab, setFeedTab] = useState<FeedTab>('for_you');
   const [nearbySort, setNearbySort] = useState<'closest' | 'recent'>('closest');
   const [isDetectingGps, setIsDetectingGps] = useState(false);
@@ -1446,7 +1461,18 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
-  const [isShoppingHistoryOpen, setIsShoppingHistoryOpen] = useState(false);
+  const [isShoppingHistoryOpen, setShoppingHistoryOpenState] = useState(false);
+  const setIsShoppingHistoryOpen = useCallback((open: boolean) => {
+    if (!open) {
+      setShoppingHistoryOpenState(false);
+      return;
+    }
+    requireAuth(
+      () => setShoppingHistoryOpenState(true),
+      'Sign in to view your order history',
+      '/app?tab=orders',
+    );
+  }, [requireAuth]);
   const [selectedOrderForDetail, setSelectedOrderForDetail] = useState<Order | null>(null);
 
   useEffect(() => {
@@ -1577,7 +1603,21 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // User Wallet Ecosystem
-  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [isWalletModalOpen, setWalletModalOpenState] = useState(false);
+  const setIsWalletModalOpen = useCallback((open: boolean) => {
+    if (!open) {
+      setWalletModalOpenState(false);
+      return;
+    }
+    requireAuth(
+      () => setWalletModalOpenState(true),
+      'Sign in to view your wallet',
+      '/app?tab=wallet',
+    );
+  }, [requireAuth]);
+  const [isMySubscriptionsOpen, setIsMySubscriptionsOpen] = useState(false);
+  const [isSubscriptionCheckoutOpen, setIsSubscriptionCheckoutOpen] = useState(false);
+  const [selectedSubscriptionPlan, setSelectedSubscriptionPlan] = useState<any>(null);
   const [wallet, setWallet] = useState<UserWallet>(() => {
     try {
       const saved = localStorage.getItem(`lalao_wallet_${currentUser.id}`);
@@ -2885,6 +2925,7 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setActiveTab,
         isAuthPromptOpen,
         authPromptMessage,
+        authPromptRedirect,
         showAuthPrompt,
         closeAuthPrompt,
         requireAuth,
@@ -3051,6 +3092,12 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         wallet,
         isWalletModalOpen,
         setIsWalletModalOpen,
+        isMySubscriptionsOpen,
+        setIsMySubscriptionsOpen,
+        isSubscriptionCheckoutOpen,
+        setIsSubscriptionCheckoutOpen,
+        selectedSubscriptionPlan,
+        setSelectedSubscriptionPlan,
         topUpWallet,
         payWithWallet,
         subscription,

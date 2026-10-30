@@ -16,7 +16,6 @@ import {
   ChevronRight,
   Check,
   MessageSquare,
-  Sparkles,
   ExternalLink,
   Package,
   History,

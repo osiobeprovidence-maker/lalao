@@ -10,7 +10,6 @@ import {
   Maximize2,
   ShieldCheck,
   Info,
-  Sparkles,
   ArrowLeft,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
@@ -50,7 +49,6 @@ export const DigitalTicketModal: React.FC = () => {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <span className="text-xs font-black tracking-wider uppercase text-violet-300 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             Lao Line Official Pass
           </span>
         </div>

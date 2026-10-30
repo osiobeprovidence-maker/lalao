@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -21,9 +21,11 @@ import {
   ChevronRight,
   MoreVertical,
   ShieldAlert,
-  Sparkles,
   Crown,
   Clock,
+  MessageSquare,
+  Gamepad2,
+  Lightbulb,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { EventsView } from '../events/EventsView';
@@ -56,7 +58,10 @@ export const DiscoverView: React.FC = () => {
     pages,
     toggleFollowPage,
     setActivePageId,
+    setActiveGroupId,
+    setActiveChatId,
     setActiveUserProfile,
+    showAuthPrompt,
     posts,
     setIsNotificationsOpen,
     unreadNotifsCount,
@@ -73,11 +78,19 @@ export const DiscoverView: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'ranking' | 'pages' | 'shop' | 'events' | 'videos'>('ranking');
+  const [activeFilter, setActiveFilter] = useState<'ranking' | 'pages' | 'shop' | 'events' | 'videos' | 'rooms'>('ranking');
+  const [chatroomCategory, setChatroomCategory] = useState<string>('All');
   const [locationMode, setLocationMode] = useState<'current' | 'selected' | 'global'>('current');
   const [isLocationModeMenuOpen, setIsLocationModeMenuOpen] = useState(false);
   const [isPlumMenuOpen, setIsPlumMenuOpen] = useState(false);
   const navigate = useNavigate();
+
+  // Chatrooms query from backend
+  const chatrooms = useQuery(api.groups.listDiscoverableGroups, {
+    isChatroom: true,
+    search: debouncedQuery || undefined,
+    category: chatroomCategory !== 'All' ? chatroomCategory : undefined,
+  });
 
   // Plum Page Discovery Preference ("I'm not interested" / "Hide this page")
   const plumHiddenPref = useQuery(api.plum.getPageDiscoveryPreference, { pageSlugOrId: 'plum' });
@@ -105,31 +118,40 @@ export const DiscoverView: React.FC = () => {
   // Actual backend search query
   const searchResults = useQuery(api.search.globalSearch, {
     query: debouncedQuery,
-    filter: activeFilter,
+    filter: activeFilter === 'rooms' ? 'pages' : activeFilter,
   });
 
   // Recent searches integration
   const recentSearches = useQuery(api.search.getRecentSearches, { limit: 10 });
   const recordSearch = useMutation(api.search.recordRecentSearch);
   const removeSearch = useMutation(api.search.removeRecentSearch);
+  const requestToJoinRoom = useMutation(api.groups.requestToJoin);
+
+  const recordSearchAndMirror = useCallback(async (args: any) => {
+    await recordSearch(args);
+  }, [recordSearch]);
+
+  const removeSearchAndMirror = useCallback(async (id: any) => {
+    await removeSearch({ id });
+  }, [removeSearch]);
 
   // Automatically save keyword searches when query is typed and settles
   useEffect(() => {
     const clean = debouncedQuery.trim();
     if (clean.length >= 2) {
-      recordSearch({
+      recordSearchAndMirror({
         query: clean,
         type: 'keyword',
       }).catch(() => {});
     }
-  }, [debouncedQuery, recordSearch]);
+  }, [debouncedQuery, recordSearchAndMirror]);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       const clean = searchQuery.trim();
       if (clean.length > 0) {
         setDebouncedQuery(clean);
-        recordSearch({
+        recordSearchAndMirror({
           query: clean,
           type: 'keyword',
         }).catch(() => {});
@@ -139,7 +161,7 @@ export const DiscoverView: React.FC = () => {
 
   const handleSelectPerson = (user: any) => {
     const displayName = getPublicIdentityLabel(user) || user.name || 'User';
-    recordSearch({
+    recordSearchAndMirror({
       query: displayName,
       type: 'person',
       entityId: user.id || user._id,
@@ -153,7 +175,7 @@ export const DiscoverView: React.FC = () => {
   };
 
   const handleSelectPage = (page: any) => {
-    recordSearch({
+    recordSearchAndMirror({
       query: page.name || 'Page',
       type: 'page',
       entityId: page.id || page._id,
@@ -165,7 +187,7 @@ export const DiscoverView: React.FC = () => {
   };
 
   const handleSelectPlum = () => {
-    recordSearch({
+    recordSearchAndMirror({
       query: 'Plum',
       type: 'page',
       entityId: 'plum',
@@ -417,7 +439,7 @@ export const DiscoverView: React.FC = () => {
 
         {/* Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-          {['ranking', 'pages', 'shop', 'events', 'videos'].map((filter) => (
+          {['ranking', 'pages', 'shop', 'events', 'videos', 'rooms'].map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter as any)}
@@ -500,7 +522,7 @@ export const DiscoverView: React.FC = () => {
                   id={`btn-remove-quick-search-${item._id}`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    removeSearch({ id: item._id });
+                    void removeSearchAndMirror(item._id).catch(() => {});
                   }}
                   className="w-4 h-4 rounded-full flex items-center justify-center text-theme-tertiary hover:text-red-500 hover:bg-red-500/10 transition-colors ml-0.5 cursor-pointer"
                   title="Remove"
@@ -894,6 +916,187 @@ export const DiscoverView: React.FC = () => {
                     >
                       Show everywhere
                     </button>
+                  </div>
+                )}
+              </section>
+            )}
+            {/* CHATROOMS SECTION */}
+            {activeFilter === 'rooms' && (
+              <section className="px-4 space-y-4">
+                {/* Header & Short Description */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-[#5E43F3]/10 flex items-center justify-center text-[#5E43F3]">
+                      <MessageSquare className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm sm:text-base font-black text-theme-primary tracking-tight">
+                        LaLao Chatrooms
+                      </h2>
+                      <p className="text-[11px] text-theme-tertiary">
+                        Join open community spaces, talk with friends, and discover lively discussions.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Category Pills for Chatrooms */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+                  {['All', 'General', 'Social', 'Entertainment', 'Discussion', 'Nigeria'].map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setChatroomCategory(cat)}
+                      className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                        chatroomCategory === cat
+                          ? 'bg-[#5E43F3] text-white shadow-xs'
+                          : 'bg-theme-surface text-theme-secondary border border-theme-divider hover:bg-theme-base'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Room List States */}
+                {chatrooms === undefined ? (
+                  <div className="flex justify-center p-10">
+                    <div className="w-6 h-6 border-2 border-[#5E43F3] border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : chatrooms.length === 0 ? (
+                  <div className="p-8 rounded-2xl bg-theme-surface text-center border border-theme-divider space-y-2">
+                    <p className="text-sm font-bold text-theme-primary">No chatrooms found</p>
+                    <p className="text-xs text-theme-tertiary">Try searching with a different room name or category.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {chatrooms.map((room: any) => {
+                      const getRoomIcon = (iconName?: string) => {
+                        switch (iconName) {
+                          case 'Users':
+                            return <Users className="w-5 h-5 text-[#5E43F3]" />;
+                          case 'UserPlus':
+                            return <UserPlus className="w-5 h-5 text-emerald-400" />;
+                          case 'Gamepad2':
+                            return <Gamepad2 className="w-5 h-5 text-purple-400" />;
+                          case 'Lightbulb':
+                            return <Lightbulb className="w-5 h-5 text-amber-400" />;
+                          case 'MapPin':
+                            return <MapPin className="w-5 h-5 text-rose-400" />;
+                          default:
+                            return <MessageSquare className="w-5 h-5 text-[#5E43F3]" />;
+                        }
+                      };
+
+                      return (
+                        <div
+                          key={room.id}
+                          id={`chatroom-card-${room.id}`}
+                          onClick={() => {
+                            setActiveGroupId(room.id);
+                          }}
+                          className="group relative overflow-hidden rounded-2xl border border-theme-divider bg-theme-surface hover:border-[#5E43F3]/50 transition-all cursor-pointer shadow-xs hover:shadow-md"
+                        >
+                          {/* Banner Cover */}
+                          <div className="relative h-24 w-full bg-gradient-to-r from-neutral-900 via-neutral-950 to-neutral-900 overflow-hidden">
+                            {room.coverImage && (
+                              <img
+                                src={room.coverImage}
+                                alt={room.name}
+                                className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-500"
+                              />
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                            <div className="absolute top-2.5 right-2.5">
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-black/60 backdrop-blur-md text-[#5E43F3] border border-[#5E43F3]/30">
+                                {room.category}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Content Body */}
+                          <div className="p-3.5 sm:p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-11 h-11 rounded-2xl bg-black/40 border border-theme-divider flex items-center justify-center shrink-0 shadow-sm">
+                                  {getRoomIcon(room.roomIcon)}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="font-black text-sm text-theme-primary truncate">
+                                      {room.name}
+                                    </h3>
+                                    {room.isMember && (
+                                      <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                        JOINED
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[11px] text-theme-tertiary font-mono">@{room.username}</p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                {room.isMember ? (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveGroupId(room.id);
+                                    }}
+                                    className="px-3.5 py-1.5 rounded-full text-xs font-bold text-white bg-theme-surface border border-theme-divider hover:bg-theme-surface-hover transition-colors shrink-0 cursor-pointer shadow-xs"
+                                  >
+                                    View Room
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      if (!currentUser) {
+                                        showAuthPrompt('Sign in to join this room');
+                                        return;
+                                      }
+                                      try {
+                                        const res = await requestToJoinRoom({ groupId: room.id });
+                                        if (res.conversationId) {
+                                          setActiveChatId(res.conversationId);
+                                        } else {
+                                          setActiveGroupId(room.id);
+                                        }
+                                      } catch (err: any) {
+                                        console.error(err);
+                                      }
+                                    }}
+                                    className="px-3.5 py-1.5 rounded-full text-xs font-bold text-white bg-[#5E43F3] hover:bg-[#4E34E0] transition-colors shrink-0 cursor-pointer shadow-xs"
+                                  >
+                                    Join Room
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {room.description && (
+                              <p className="text-xs text-theme-secondary mt-2.5 line-clamp-2 leading-relaxed">
+                                {room.description}
+                              </p>
+                            )}
+
+                            {/* Genuine Member count */}
+                            <div className="flex items-center gap-3 mt-3 pt-2.5 border-t border-theme-divider text-[11px] text-theme-tertiary">
+                              <div className="flex items-center gap-1.5">
+                                <Users className="w-3.5 h-3.5 text-theme-tertiary" />
+                                <span>
+                                  <strong className="text-theme-primary font-bold">{room.memberCount}</strong> {room.memberCount === 1 ? 'member' : 'members'}
+                                </span>
+                              </div>
+                              <span>·</span>
+                              <span className="text-emerald-500 font-semibold">Active Room</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </section>

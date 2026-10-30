@@ -5,7 +5,6 @@ import {
   X,
   Check,
   Wifi,
-  Sparkles,
   Zap,
 } from 'lucide-react';
 

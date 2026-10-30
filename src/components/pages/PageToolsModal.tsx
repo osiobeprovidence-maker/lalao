@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Briefcase, Gift, Tag, Repeat, Users, BarChart, Settings, Check, Sparkles, Gavel, CalendarDays, ConciergeBell } from 'lucide-react';
+import { ArrowLeft, Briefcase, Gift, Tag, Repeat, Users, BarChart, Settings, Check, Gavel, CalendarDays, ConciergeBell } from 'lucide-react';
 import { Page } from '../../types';
 import { useLalao } from '../../context/LalaoContext';
 import { useMutation } from 'convex/react';

@@ -8,7 +8,6 @@ import {
   Trash2,
   Users,
   Building,
-  Sparkles,
   AlertTriangle,
   Flame,
 } from 'lucide-react';
@@ -259,7 +258,6 @@ export const RecentSearchesPage: React.FC = () => {
               onClick={() => setActiveTab('discover')}
               className="px-6 py-2.5 rounded-full bg-[#5E43F3] hover:bg-[#4E34E0] active:scale-95 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer flex items-center gap-2"
             >
-              <Sparkles className="w-4 h-4" />
               <span>Explore Lalao</span>
             </button>
           </div>

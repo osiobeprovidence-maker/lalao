@@ -10,7 +10,6 @@ import {
   Clock,
   Check,
   Building2,
-  Sparkles,
 } from 'lucide-react';
 import { Page } from '../../types';
 import { useLalao } from '../../context/LalaoContext';

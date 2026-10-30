@@ -2,6 +2,7 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { verifyBachsWebhookSignature } from "./lib/bachsWebhookSignature";
+import { verifyPaystackWebhookSignature } from "./lib/paystackWebhookSignature";
 
 const http = httpRouter();
 
@@ -61,17 +62,18 @@ http.route({
   path: "/api/webhooks/paystack",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
-    const payloadString = await request.text();
+    const rawBody = new Uint8Array(await request.arrayBuffer());
+    const payloadString = new TextDecoder().decode(rawBody);
     const signature = request.headers.get("x-paystack-signature");
-    
-    // 1. Verify signature
-    /*
-    const crypto = require('crypto');
-    const secretKey = process.env.PAYSTACK_SECRET_KEY || '';
-    const expectedSig = crypto.createHmac('sha512', secretKey).update(payloadString).digest('hex');
-    if (signature !== expectedSig) return new Response("Unauthorized", { status: 401 });
-    */
-    // Uncomment the above to enforce Paystack signature validation
+    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    if (!secretKey) return new Response("Webhook is not configured", { status: 503 });
+    try {
+      const valid = await verifyPaystackWebhookSignature({ rawBody, secret: secretKey, signature });
+      if (!valid) return new Response("Invalid signature", { status: 401 });
+    } catch (error) {
+      console.error("[Paystack Webhook] Signature verification failed");
+      return new Response("Signature verification error", { status: 500 });
+    }
 
     let data;
     try {
@@ -102,7 +104,7 @@ http.route({
           return new Response("Ad Payment Success", { status: 200 });
         } catch (error: any) {
           console.error("Paystack Ad webhook error:", error);
-          return new Response("Processed with error: " + error.message, { status: 200 });
+          return new Response("Temporary processing failure", { status: 500 });
         }
       }
 
@@ -115,8 +117,8 @@ http.route({
         return new Response("Success", { status: 200 });
       } catch (error: any) {
         console.error("Paystack webhook processing error:", error);
-        // If it's already settled, we just return 200 to prevent retries
-        return new Response("Processed with error: " + error.message, { status: 200 });
+        // Provider retry is safe: wallet settlement returns success for completed references.
+        return new Response("Temporary processing failure", { status: 500 });
       }
     }
 
@@ -147,7 +149,7 @@ http.route({
         legacySignature: request.headers.get("x-bachs-signature"),
         legacyTimestamp: request.headers.get("x-bachs-timestamp"),
       });
-      if (!valid) return new Response("Invalid or expired signature", { status: 401 });
+      if (!valid) return new Response("Invalid or expired signature", { status: 400 });
     } catch (error) {
       console.error("[BACHS Webhook] Signature verification failed");
       return new Response("Signature verification error", { status: 500 });

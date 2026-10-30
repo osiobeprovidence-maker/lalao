@@ -6,9 +6,15 @@ import { api } from '../../../convex/_generated/api';
 
 type SubFilter = 'all' | 'active' | 'renewals' | 'cancelled';
 
-export const MySubscriptionsModal: React.FC = () => {
-  const { 
-    isMySubscriptionsOpen, 
+interface MySubscriptionsModalProps {
+  /** Render inline inside the wallet modal instead of as a standalone overlay. */
+  inline?: boolean;
+  onClose?: () => void;
+}
+
+export const MySubscriptionsModal: React.FC<MySubscriptionsModalProps> = ({ inline = false, onClose }) => {
+  const {
+    isMySubscriptionsOpen,
     setIsMySubscriptionsOpen,
     setIsWalletModalOpen,
     triggerShareToast
@@ -20,7 +26,7 @@ export const MySubscriptionsModal: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<SubFilter>('all');
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  if (!isMySubscriptionsOpen) return null;
+  if (!inline && !isMySubscriptionsOpen) return null;
 
   const handleCancelRenewal = async (memId: string, subName: string) => {
     if (!confirm(`Are you sure you want to cancel future renewals for ${subName}? You will keep your active slot until the end of your paid billing period.`)) {
@@ -49,53 +55,53 @@ export const MySubscriptionsModal: React.FC = () => {
     return true;
   });
 
-  return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in duration-200"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) setIsMySubscriptionsOpen(false);
-      }}
-    >
-      <div 
-        className="bg-theme-surface rounded-3xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh] shadow-2xl border border-theme-divider-light"
+  const content = (
+      <div
+        className={
+          inline
+            ? "w-full flex flex-col overflow-hidden"
+            : "bg-theme-surface rounded-3xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh] shadow-2xl border border-theme-divider-light"
+        }
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-theme-divider-light shrink-0">
-          <div className="flex items-center gap-3">
+        {/* Header (standalone only — the wallet supplies its own header inline) */}
+        {!inline && (
+          <div className="flex items-center justify-between p-4 sm:p-5 border-b border-theme-divider-light shrink-0">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsMySubscriptionsOpen(false)}
+                className="p-2 -ml-2 rounded-full hover:bg-theme-surface-hover text-theme-secondary transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div>
+                <h2 className="text-lg font-black text-theme-primary flex items-center gap-2">
+                  <Crown className="w-5 h-5 text-[#5E43F3]" />
+                  My Subscriptions
+                </h2>
+                <p className="text-xs text-theme-tertiary font-medium">
+                  Manage your JointheQ & Page subscription groups
+                </p>
+              </div>
+            </div>
+
             <button
               type="button"
-              onClick={() => setIsMySubscriptionsOpen(false)}
-              className="p-2 -ml-2 rounded-full hover:bg-theme-surface-hover text-theme-secondary transition-colors cursor-pointer"
+              onClick={() => {
+                setIsMySubscriptionsOpen(false);
+                setIsWalletModalOpen(true);
+              }}
+              className="px-3 py-1.5 rounded-full bg-theme-surface-hover hover:bg-theme-surface-active text-xs font-bold text-theme-primary transition-colors flex items-center gap-1.5 cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <Wallet className="w-3.5 h-3.5 text-[#5E43F3]" />
+              <span>Wallet History</span>
             </button>
-            <div>
-              <h2 className="text-lg font-black text-theme-primary flex items-center gap-2">
-                <Crown className="w-5 h-5 text-[#5E43F3]" />
-                My Subscriptions
-              </h2>
-              <p className="text-xs text-theme-tertiary font-medium">
-                Manage your JointheQ & Page subscription groups
-              </p>
-            </div>
           </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              setIsMySubscriptionsOpen(false);
-              setIsWalletModalOpen(true);
-            }}
-            className="px-3 py-1.5 rounded-full bg-theme-surface-hover hover:bg-theme-surface-active text-xs font-bold text-theme-primary transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            <Wallet className="w-3.5 h-3.5 text-[#5E43F3]" />
-            <span>Wallet History</span>
-          </button>
-        </div>
+        )}
 
         {/* Filter Pills */}
-        <div className="flex items-center gap-2 px-4 sm:px-5 py-3 border-b border-theme-divider-light bg-theme-base/60 overflow-x-auto shrink-0">
+        <div className={`flex items-center gap-2 px-4 sm:px-5 py-3 border-b border-theme-divider-light bg-theme-base/60 overflow-x-auto shrink-0 ${inline ? 'pt-0' : ''}`}>
           {(
             [
               { id: 'all', label: 'All' },
@@ -119,7 +125,9 @@ export const MySubscriptionsModal: React.FC = () => {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 bg-theme-base space-y-4">
+        <div className={inline
+          ? "p-4 sm:p-5 bg-theme-base space-y-4"
+          : "flex-1 overflow-y-auto p-4 sm:p-5 bg-theme-base space-y-4"}>
           {filtered.length === 0 ? (
             <div className="text-center py-12 px-4 bg-theme-surface rounded-2xl border border-theme-divider-light">
               <div className="w-14 h-14 bg-[#5E43F3]/10 text-[#5E43F3] rounded-full flex items-center justify-center mx-auto mb-3">
@@ -139,8 +147,8 @@ export const MySubscriptionsModal: React.FC = () => {
               const isCancelling = sub.cancelAtPeriodEnd;
 
               return (
-                <div 
-                  key={sub._id} 
+                <div
+                  key={sub._id}
                   className="bg-theme-surface rounded-2xl border border-theme-divider-light p-4 sm:p-5 shadow-xs transition-all relative overflow-hidden"
                 >
                   {isCancelling && (
@@ -266,6 +274,18 @@ export const MySubscriptionsModal: React.FC = () => {
           )}
         </div>
       </div>
+  );
+
+  if (inline) return content;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in duration-200"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) setIsMySubscriptionsOpen(false);
+      }}
+    >
+      {content}
     </div>
   );
 };

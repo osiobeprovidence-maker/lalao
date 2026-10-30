@@ -19,6 +19,7 @@ export const resolvePlaysoleLogin = mutation({
     if (explicitMappings.length === 1) {
       const mappedUser = await ctx.db.get(explicitMappings[0].userId);
       if (!mappedUser) throw new Error("The linked Lalao account could not be found. Contact support for recovery.");
+      await ctx.db.patch(mappedUser._id, { lastSignInProvider: "playsole", lastSignInMethod: "playsole", updatedAt: Date.now() });
       return { status: "ready" as const, userId: mappedUser._id };
     }
 
@@ -38,6 +39,7 @@ export const resolvePlaysoleLogin = mutation({
     if (decision === "email_verification_required") return { status: "email_verification_required" as const };
     if (legacyUser) {
       await ensureAuthIdentity(ctx, legacyUser._id, identity, "playsole");
+      await ctx.db.patch(legacyUser._id, { lastSignInProvider: "playsole", lastSignInMethod: "playsole", updatedAt: Date.now() });
       return { status: "ready" as const, userId: legacyUser._id };
     }
 
@@ -59,8 +61,15 @@ export const resolvePlaysoleLogin = mutation({
       phoneVerified: false,
       createdAt: now,
       updatedAt: now,
+      lastSignInProvider: "playsole",
+      lastSignInMethod: "playsole",
     } as any);
 
+    const raceOwner = normalizedEmail ? await getUserByNormalizedEmail(ctx, normalizedEmail) : null;
+    if (raceOwner && raceOwner._id !== userId) {
+      await ctx.db.delete(userId);
+      return { status: "link_required" as const };
+    }
     await ensureAuthIdentity(ctx, userId, identity, "playsole");
     return { status: "ready" as const, userId };
   },
@@ -241,6 +250,87 @@ export const backfillAuthIdentities = internalMutation({
   },
 });
 
+/**
+ * Playsole One is a confidential OIDC client: the client secret is mandatory
+ * for both code exchange and refresh token grants. It must live in the Convex
+ * deployment environment, never in the browser bundle.
+ */
+function playsoleClientCredentials(): { clientId: string; clientSecret: string } {
+  const clientId = process.env.PLAYSOLE_CLIENT_ID || process.env.VITE_PLAYSOLE_CLIENT_ID || "lalao";
+  const clientSecret = process.env.PLAYSOLE_CLIENT_SECRET;
+  if (!clientSecret) {
+    console.error("[playsole] PLAYSOLE_CLIENT_SECRET is not configured on this Convex deployment.");
+    throw new Error("Playsole sign-in is not configured on this deployment. Please contact Lalao support.");
+  }
+  return { clientId, clientSecret };
+}
+
+async function requestPlaysoleTokens(
+  bodyParams: Record<string, string>,
+): Promise<{ clientId: string; tokenData: any }> {
+  const { clientId, clientSecret } = playsoleClientCredentials();
+  const tokenRes = await fetch("https://one.playsole.xyz/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ ...bodyParams, client_id: clientId, client_secret: clientSecret }).toString(),
+  });
+
+  let tokenData: any = null;
+  try {
+    tokenData = await tokenRes.json();
+  } catch {
+    // Fall through to the generic error below; never log token material.
+  }
+
+  if (!tokenRes.ok) {
+    const providerError = typeof tokenData?.error === "string" ? tokenData.error : "unknown_error";
+    console.error(`[playsole] token request failed (${tokenRes.status} ${providerError})`);
+    if (providerError === "invalid_grant") {
+      throw new Error("This Playsole sign-in has expired or was already used. Please try again.");
+    }
+    if (providerError === "invalid_client") {
+      throw new Error("Playsole sign-in is not configured correctly on this deployment. Please contact Lalao support.");
+    }
+    throw new Error("Playsole sign-in could not be verified. Please try again.");
+  }
+
+  if (!tokenData || typeof tokenData.id_token !== "string" || typeof tokenData.access_token !== "string") {
+    throw new Error("Playsole sign-in could not be verified. Please try again.");
+  }
+  return { clientId, tokenData };
+}
+
+function assertPlaysoleIdToken(
+  claims: ReturnType<typeof decodePlaysoleJwtClaims>,
+  clientId: string,
+  nonce?: string,
+): void {
+  const expired = typeof claims.exp !== "number" || claims.exp <= Math.floor(Date.now() / 1000);
+  const audienceMatches = claims.audiences.includes(clientId);
+  // Playsole currently does not echo the OIDC `nonce` claim in its ID tokens.
+  // Enforce it whenever the provider supplies one, but do not reject tokens
+  // solely because the provider omitted it: PKCE (verified by the confidential
+  // code exchange) and OAuth `state` still protect the callback.
+  const nonceClaimPresent = typeof claims.nonce === "string";
+  const nonceMatches = nonce === undefined || !nonceClaimPresent || claims.nonce === nonce;
+  if (claims.iss !== PLAYSOLE_ISSUER || !audienceMatches || !nonceMatches || !claims.sub || expired) {
+    // Safe diagnostics only: never log the token or its raw claims payload.
+    console.error("[playsole] rejected id_token claims", {
+      issuer: claims.iss,
+      expectedIssuer: PLAYSOLE_ISSUER,
+      audiences: claims.audiences,
+      expectedAudience: clientId,
+      nonceProvided: nonce !== undefined,
+      nonceClaimPresent,
+      nonceMatches,
+      hasSubject: Boolean(claims.sub),
+      expType: typeof claims.exp,
+      expired,
+    });
+    throw new Error("Playsole sign-in could not be verified. Please try again.");
+  }
+}
+
 /** Exchange a Playsole authorization code. The returned OIDC token is verified by Convex auth before it is trusted. */
 export const exchangeAuthCode = action({
   args: {
@@ -250,35 +340,16 @@ export const exchangeAuthCode = action({
     nonce: v.string(),
     intent: v.optional(v.union(v.literal("login"), v.literal("link"))),
   },
-  handler: async (ctx, { code, codeVerifier, redirectUri, nonce, intent = "login" }) => {
-    const clientId = process.env.PLAYSOLE_CLIENT_ID || "lalao";
-    const clientSecret = process.env.PLAYSOLE_CLIENT_SECRET;
-    const bodyParams: Record<string, string> = {
+  handler: async (ctx, { code, codeVerifier, redirectUri, nonce }) => {
+    const { clientId, tokenData } = await requestPlaysoleTokens({
       grant_type: "authorization_code",
       code,
       redirect_uri: redirectUri,
-      client_id: clientId,
       code_verifier: codeVerifier,
-    };
-    if (clientSecret) bodyParams.client_secret = clientSecret;
-    const tokenRes = await fetch("https://one.playsole.xyz/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams(bodyParams).toString(),
     });
-    if (!tokenRes.ok) throw new Error("Playsole sign-in could not be verified. Please try again.");
 
-    const tokenData = await tokenRes.json();
-    if (typeof tokenData.id_token !== "string") throw new Error("Playsole sign-in could not be verified. Please try again.");
     const idClaims = decodePlaysoleJwtClaims(tokenData.id_token);
-    if (
-      idClaims.iss !== PLAYSOLE_ISSUER ||
-      !idClaims.audiences.includes(clientId) ||
-      idClaims.nonce !== nonce ||
-      !idClaims.sub ||
-      typeof idClaims.exp !== "number" ||
-      idClaims.exp <= Math.floor(Date.now() / 1000)
-    ) throw new Error("Playsole sign-in could not be verified. Please try again.");
+    assertPlaysoleIdToken(idClaims, clientId, nonce);
     let userProfile: any = null;
     try {
       const userinfoRes = await fetch("https://one.playsole.xyz/userinfo", {
@@ -315,7 +386,42 @@ export const exchangeAuthCode = action({
     // Do not create or resolve a Lalao account here. This action can decode
     // claims but cannot ask Convex auth to validate the bearer ID token. The
     // callback performs account resolution via Convex after token validation.
-    return { tokens: tokenData, userProfile };
+    return {
+      tokens: {
+        access_token: tokenData.access_token,
+        id_token: tokenData.id_token,
+        refresh_token: typeof tokenData.refresh_token === "string" ? tokenData.refresh_token : undefined,
+        expires_in: typeof tokenData.expires_in === "number" ? tokenData.expires_in : 3600,
+        token_type: typeof tokenData.token_type === "string" ? tokenData.token_type : undefined,
+        scope: typeof tokenData.scope === "string" ? tokenData.scope : undefined,
+      },
+      userProfile,
+    };
+  },
+});
+
+/**
+ * Refresh a Playsole session. The browser cannot perform this grant itself
+ * because Playsole requires client_secret authentication on every token call.
+ */
+export const refreshPlaysoleToken = action({
+  args: { refreshToken: v.string() },
+  handler: async (_ctx, { refreshToken }) => {
+    const { clientId, tokenData } = await requestPlaysoleTokens({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+    });
+
+    const idClaims = decodePlaysoleJwtClaims(tokenData.id_token);
+    assertPlaysoleIdToken(idClaims, clientId);
+    return {
+      access_token: tokenData.access_token,
+      id_token: tokenData.id_token,
+      refresh_token: typeof tokenData.refresh_token === "string" ? tokenData.refresh_token : undefined,
+      expires_in: typeof tokenData.expires_in === "number" ? tokenData.expires_in : 3600,
+      token_type: typeof tokenData.token_type === "string" ? tokenData.token_type : undefined,
+      scope: typeof tokenData.scope === "string" ? tokenData.scope : undefined,
+    };
   },
 });
 

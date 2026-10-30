@@ -3,7 +3,7 @@ import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
-import { X, Users, Sparkles } from 'lucide-react';
+import { X, Users } from 'lucide-react';
 
 const INTERESTS = ['Football', 'Music', 'Art', 'Technology', 'Travel', 'Food', 'Wellness', 'Community'];
 
@@ -60,7 +60,6 @@ export const CreateGroupCycleModal: React.FC = () => {
       <div className="w-full max-w-lg max-h-[88vh] overflow-y-auto rounded-t-3xl bg-theme-base shadow-2xl">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-theme-divider px-4 py-3 bg-theme-base/95">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-[#5E43F3]" />
             <div>
               <h2 className="text-lg font-black text-theme-primary">Create Group Cycle</h2>
               <p className="text-xs text-theme-tertiary">Share with members who share your interests.</p>

@@ -8,7 +8,6 @@ import {
   X,
   Check,
   CheckCheck,
-  Sparkles,
   MoreHorizontal,
   Camera,
   Image as ImageIcon,
@@ -977,7 +976,7 @@ export const ChatModal: React.FC = () => {
                   </div>
                   {(conv as any).isGroupChat && (
                     <span className="block truncate text-[11px] text-theme-tertiary">
-                      {`${conv.participant.followersCount || 1} members • Private Group`}
+                      {`${conv.participant.followersCount || 1} members • ${(conv as any).groupChat?.isChatroom ? 'Public Chatroom' : 'Private Group'}`}
                     </span>
                   )}
                 </div>
@@ -1155,7 +1154,7 @@ export const ChatModal: React.FC = () => {
                       )
                     ) : msg.isSticker && msg.stickerId ? (
                       <div className="p-2 hover:scale-105 transition-transform -ml-2">
-                        {STICKERS.find((s) => s.id === msg.stickerId)?.render() || <Sparkles className="w-12 h-12 text-amber-500" />}
+                        {STICKERS.find((s) => s.id === msg.stickerId)?.render() || null}
                       </div>
                     ) : msg.audioUrl ? (
                       <CustomAudioPlayer

@@ -16,7 +16,6 @@ import {
   ShoppingBag,
   X,
   Download,
-  Sparkles,
   Briefcase,
   History,
   Megaphone,

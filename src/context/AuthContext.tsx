@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import {
@@ -14,6 +14,7 @@ export interface UnifiedAuthUser {
   displayName?: string | null;
   photoURL?: string | null;
   provider: 'firebase' | 'playsole';
+  lastSignInProvider?: 'firebase' | 'playsole';
   getIdToken?: (forceRefresh?: boolean) => Promise<string | null>;
   [key: string]: any;
 }
@@ -75,11 +76,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         displayName: playsoleSession.user.name ?? null,
         photoURL: playsoleSession.user.picture ?? null,
         provider: 'playsole',
+        lastSignInProvider: 'playsole',
         getIdToken: async () => refreshPlaysoleTokenIfNeeded(),
       }
     : firebaseUser;
 
-  const fetchAccessToken = async ({ forceRefreshToken }: { forceRefreshToken: boolean }) => {
+  const fetchAccessToken = useCallback(async ({ forceRefreshToken }: { forceRefreshToken: boolean }) => {
     // 1. If Playsole One session is active, prioritize Playsole OIDC token
     if (playsoleSession) {
       try {
@@ -101,9 +103,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     return null;
-  };
+  }, [playsoleSession, firebaseUser]);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       const { getCurrentWebPushSubscription } = await import('../lib/push');
       const sub = await getCurrentWebPushSubscription();
@@ -144,19 +146,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e) {
       console.warn('[AuthContext] OneSignal logout error:', e);
     }
-  };
+  }, [firebaseUser]);
+
+  const contextValue = useMemo(() => ({
+    user: unifiedUser,
+    isLoading,
+    isAuthenticated: !!unifiedUser,
+    isPlaysoleAuth: isPlaysole,
+    fetchAccessToken,
+    logout,
+  }), [unifiedUser, isLoading, isPlaysole, fetchAccessToken, logout]);
 
   return (
-    <AuthContext.Provider
-      value={{
-        user: unifiedUser,
-        isLoading,
-        isAuthenticated: !!unifiedUser,
-        isPlaysoleAuth: isPlaysole,
-        fetchAccessToken,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

@@ -5,7 +5,6 @@ import {
   CreditCard,
   AlertCircle,
   Clock,
-  Sparkles,
   Briefcase,
   BadgeCheck,
   Calendar,

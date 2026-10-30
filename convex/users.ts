@@ -4,6 +4,20 @@ import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { resolveUserVerification } from "./social";
 
+function firebaseSignInMethod(identity: unknown): string {
+  if (!identity || typeof identity !== "object") return "firebase";
+  const claims = identity as Record<string, unknown>;
+  const flatClaim = claims["firebase.sign_in_provider"];
+  if (typeof flatClaim === "string" && flatClaim.length > 0) return flatClaim;
+
+  const firebaseClaim = claims.firebase;
+  if (firebaseClaim && typeof firebaseClaim === "object" && !Array.isArray(firebaseClaim)) {
+    const method = (firebaseClaim as Record<string, unknown>).sign_in_provider;
+    if (typeof method === "string" && method.length > 0) return method;
+  }
+  return "firebase";
+}
+
 async function getAuthUserId(ctx: any): Promise<Id<"users"> | null> {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) return null;
@@ -184,7 +198,10 @@ export const createUserRecord = mutation({
     const effectiveName = name || identity.name || (email ? email.split("@")[0] : "New user");
 
     if (existing) {
-      const updates: any = {};
+      const updates: any = {
+        lastSignInProvider: "firebase",
+        lastSignInMethod: firebaseSignInMethod(identity),
+      };
       if (!existing.avatarUrl && effectiveAvatar) {
         updates.avatarUrl = effectiveAvatar;
       }
@@ -236,7 +253,16 @@ export const createUserRecord = mutation({
       phoneVerified: false,
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      lastSignInProvider: "firebase",
+      lastSignInMethod: firebaseSignInMethod(identity),
     } as any);
+    if (accountEmailIsVerified && accountEmail) {
+      const emailOwner = await getUserByNormalizedEmail(ctx, accountEmail);
+      if (emailOwner && emailOwner._id !== newUserId) {
+        await ctx.db.delete(newUserId);
+        throw new Error("A Lalao account may already use this email. Sign in with the provider you used before.");
+      }
+    }
     await ensureAuthIdentity(ctx, newUserId, identity, "firebase");
     return newUserId;
   },

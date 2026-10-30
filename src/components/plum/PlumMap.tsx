@@ -8,7 +8,6 @@ import {
   EyeOff,
   Navigation,
   Lock,
-  Sparkles,
   Users,
   ZoomIn,
   ZoomOut,

@@ -437,6 +437,16 @@ export const settleWalletFunding = internalMutation({
       updatedAt: Date.now()
     });
 
+    // A wallet top-up may be the configured referral qualification event.
+    try {
+      await ctx.runMutation(internal.rewards.qualifyReferralAfterEvent, {
+        referredUserId: pendingTx.userId,
+        trigger: "wallet_topup",
+      });
+    } catch (err) {
+      console.error("Failed to qualify referral for wallet top-up", args.reference, err);
+    }
+
     return { success: true, newBalance: updatedBalance };
   }
 });

@@ -196,6 +196,21 @@ export const getGroup = query({
       role,
       conversationId: conversation ? conversation._id : null,
       isRestrictedPreview: false,
+      isChatroom: group.isChatroom ?? false,
+      allowPublicPreview: group.allowPublicPreview ?? true,
+      roomIcon: group.roomIcon,
+      creator: await (async () => {
+        const creatorDoc: any = await ctx.db.get(group.creatorId);
+        if (!creatorDoc) return null;
+        return {
+          id: creatorDoc._id,
+          name: creatorDoc.name ?? "Creator",
+          username: creatorDoc.username ?? "creator",
+          avatar: creatorDoc.avatarUrl ?? "",
+          role: creatorDoc.role ?? "user",
+          ...resolveUserVerification(creatorDoc),
+        };
+      })(),
       createdAt: group.createdAt,
     };
   },
@@ -390,12 +405,24 @@ export const listDiscoverableGroups = query({
   args: {
     search: v.optional(v.string()),
     category: v.optional(v.string()),
+    isChatroom: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const currentUser = await getAuthedUser(ctx);
+    let currentUser: any = null;
+    try {
+      currentUser = await getAuthedUser(ctx);
+    } catch {
+      currentUser = null;
+    }
     const groups = await ctx.db.query("groupChats").collect();
 
     const filtered = groups.filter((g) => {
+      // Filter by isChatroom if specified
+      if (args.isChatroom !== undefined) {
+        const matchesRoom = !!g.isChatroom === !!args.isChatroom;
+        if (!matchesRoom) return false;
+      }
+
       const visibility = g.visibility ?? "private_discoverable";
       // Hidden groups are NEVER exposed in discovery unless caller is already a member
       if (visibility === "private_hidden") {
@@ -415,14 +442,20 @@ export const listDiscoverableGroups = query({
         const matchesName = g.name.toLowerCase().includes(query);
         const matchesDesc = (g.description ?? "").toLowerCase().includes(query);
         const matchesUsername = (g.username ?? "").toLowerCase().includes(query);
-        if (!matchesName && !matchesDesc && !matchesUsername) return false;
+        const matchesCategory = (g.category ?? "").toLowerCase().includes(query);
+        if (!matchesName && !matchesDesc && !matchesUsername && !matchesCategory) return false;
       }
 
       return true;
     });
 
-    return filtered.map((g) => {
+    return Promise.all(filtered.map(async (g) => {
       const isMember = currentUser ? g.memberIds.includes(currentUser._id) : false;
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_group_chat", (q: any) => q.eq("groupChatId", g._id))
+        .first();
+
       return {
         id: g._id,
         name: g.name,
@@ -435,9 +468,13 @@ export const listDiscoverableGroups = query({
         communityEnabled: g.communityEnabled ?? false,
         memberCount: g.memberIds.length,
         isMember,
+        isChatroom: g.isChatroom ?? false,
+        allowPublicPreview: g.allowPublicPreview ?? true,
+        roomIcon: g.roomIcon,
+        conversationId: conversation ? conversation._id : null,
         createdAt: g.createdAt,
       };
-    });
+    }));
   },
 });
 
@@ -592,6 +629,9 @@ export const createGroup = mutation({
     ),
     memberIds: v.optional(v.array(v.string())),
     creatorUserId: v.optional(v.string()),
+    isChatroom: v.optional(v.boolean()),
+    allowPublicPreview: v.optional(v.boolean()),
+    roomIcon: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     let currentUser = await getAuthedUser(ctx);
@@ -600,6 +640,20 @@ export const createGroup = mutation({
       if (normId) currentUser = await ctx.db.get(normId);
     }
     if (!currentUser) throw new ConvexError("Please sign in to create a group");
+
+    // Room creation permission check: Only verified creators or admins/super_admins can create rooms/groups
+    const isPlatformAdmin = currentUser.role === "admin" || currentUser.role === "super_admin";
+    const isVerifiedCreator =
+      currentUser.verificationTier === "creator" ||
+      currentUser.verificationTier === "priority" ||
+      currentUser.verificationTier === "verified" ||
+      currentUser.creatorAccountStatus === "active";
+
+    if (args.isChatroom && !isPlatformAdmin && !isVerifiedCreator) {
+      throw new ConvexError(
+        "Chatroom creation is currently restricted to verified creators and authorized community partners."
+      );
+    }
 
     const now = Date.now();
     const validMemberIds: Id<"users">[] = [currentUser._id];
@@ -626,6 +680,9 @@ export const createGroup = mutation({
       memberIds: validMemberIds,
       avatarUrl: args.avatarUrl,
       coverImage: args.coverImage,
+      roomIcon: args.roomIcon,
+      isChatroom: args.isChatroom,
+      allowPublicPreview: args.allowPublicPreview,
       category: args.category?.trim() || "General",
       rules: args.rules || [
         "Be respectful to all members.",
@@ -829,7 +886,22 @@ export const requestToJoin = mutation({
         updatedAt: now,
       });
 
-      return { status: "joined" };
+      // Ensure linked core conversation exists
+      let conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_group_chat", (q: any) => q.eq("groupChatId", resolved.groupId))
+        .first();
+
+      if (!conversation) {
+        const convoId = await ctx.db.insert("conversations", {
+          userA: currentUser._id,
+          groupChatId: resolved.groupId,
+          updatedAt: now,
+        });
+        conversation = await ctx.db.get(convoId);
+      }
+
+      return { status: "joined", conversationId: conversation?._id ?? null };
     }
 
     // For private groups, create a pending Join Request

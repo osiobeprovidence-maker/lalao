@@ -54,6 +54,9 @@ import { DigitalTicketModal } from './components/tickets/DigitalTicketModal';
 import { MyTicketsModal } from './components/tickets/MyTicketsModal';
 import { WalletModal } from './components/wallet/WalletModal';
 import { MySubscriptionsModal } from './components/subscriptions/MySubscriptionsModal';
+import { SubscriptionCheckoutModal } from './components/pages/SubscriptionCheckoutModal';
+import { RewardsPage } from './components/rewards/RewardsPage';
+import { ReferralCapture, ReferralLanding } from './components/rewards/ReferralCapture';
 import { CreatorHubView } from './components/creators/CreatorHubModal';
 import { VerificationPageView } from './components/creators/VerificationPageView';
 import { BetaTesterView } from './components/beta/BetaTesterView';
@@ -63,7 +66,7 @@ import { InstallAppModal } from './components/common/InstallAppModal';
 import { Check, Plus } from 'lucide-react';
 
 // Router
-import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 
 
@@ -77,21 +80,33 @@ import { api } from '../convex/_generated/api';
 const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const role = useQuery(api.admin.getMyRole);
-  
-  const token = typeof window !== 'undefined' ? sessionStorage.getItem('lalao_admin_token') : null;
-  const isSessionValid = useQuery(api.admin.verifyAdminSession, token ? { token } : "skip");
 
-  if (isAuthLoading || role === undefined || (token && isSessionValid === undefined)) {
+  // Hooks must run unconditionally, so the session query is skipped when there
+  // is no admin token instead of being called inside a conditional branch.
+  const token = typeof window !== 'undefined' ? sessionStorage.getItem('lalao_admin_token') : null;
+  const sessionValid = useQuery(
+    api.admin.verifyAdminSession,
+    token ? { token } : 'skip'
+  );
+
+  const isCheckingSession = !!token && sessionValid === undefined;
+
+  // Show loading spinner while verifying auth status
+  if (isAuthLoading || role === undefined || isCheckingSession) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0B0F19]">
-        <div className="w-8 h-8 rounded-full border-4 border-white/30 border-t-indigo-500 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-theme-inverse">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-4 border-[#5E43F3]/30 border-t-[#5E43F3] animate-spin" />
+          <p className="text-xs text-theme-tertiary">Verifying access…</p>
+        </div>
       </div>
     );
   }
 
   const isAdminAccount = role === 'super_admin' || role === 'admin' || role === 'editor';
 
-  if (!isAuthenticated || !isAdminAccount || !token || !isSessionValid) {
+  // Allow access if: authenticated, has admin role, and session is valid (or no token yet)
+  if (!isAuthenticated || !isAdminAccount || (!!token && sessionValid !== true)) {
     return <Navigate to="/app" replace />;
   }
 
@@ -131,6 +146,7 @@ const LalaoAppContent: React.FC = () => {
     setIsCreateCycleOpen,
     isShoppingHistoryOpen,
     setIsShoppingHistoryOpen,
+    setIsWalletModalOpen,
     selectedOrderForDetail,
     setSelectedOrderForDetail,
     setIsCreateSheetOpen,
@@ -159,7 +175,9 @@ const LalaoAppContent: React.FC = () => {
   
   const location = useLocation();
   const navigate = useNavigate();
+  const { isLoading: isAuthLoading, isAuthenticated } = useAuth();
   const isMangaProfile = location.pathname.startsWith('/manga/');
+  const isRewardsRoute = location.pathname === '/rewards';
 
   // Initialize OneSignal exactly once on app load
   useEffect(() => {
@@ -198,13 +216,28 @@ const LalaoAppContent: React.FC = () => {
 
     let handled = false;
     if (tabParam) {
+      const protectedTabParams = ['ads', 'recent-searches', 'wallet', 'orders'];
+      if (protectedTabParams.includes(tabParam) && !isAuthenticated) {
+        if (!isAuthLoading) {
+          const destination = `/app?tab=${encodeURIComponent(tabParam)}`;
+          navigate(`/login?redirect=${encodeURIComponent(destination)}`, { replace: true });
+        }
+        return;
+      }
+
       const validTabs = [
         'home', 'discover', 'create', 'create-post', 'messages', 'notifications',
         'profile', 'following', 'saved', 'create-page', 'my-pages', 'liked',
         'events', 'location', 'pages', 'verification', 'beta-tester', 'creator-hub',
-        'sounds', 'plum',
+        'sounds', 'plum', 'ads', 'recent-searches',
       ];
-      if (validTabs.includes(tabParam)) {
+      if (tabParam === 'wallet') {
+        setIsWalletModalOpen(true);
+        handled = true;
+      } else if (tabParam === 'orders') {
+        setIsShoppingHistoryOpen(true);
+        handled = true;
+      } else if (validTabs.includes(tabParam)) {
         setActiveTab(tabParam as any);
         handled = true;
       }
@@ -222,7 +255,46 @@ const LalaoAppContent: React.FC = () => {
       const cleanSearch = nextParams.toString() ? `?${nextParams.toString()}` : '';
       navigate(`${location.pathname}${cleanSearch}`, { replace: true });
     }
-  }, [location.search, setActiveTab, setActiveChatId, navigate]);
+  }, [location.search, isAuthenticated, isAuthLoading, setActiveTab, setActiveChatId, setIsWalletModalOpen, setIsShoppingHistoryOpen, navigate]);
+
+  // Protect direct URLs for authenticated features. Public routes are untouched.
+  useEffect(() => {
+    if (isAuthLoading) return;
+
+    const protectedPaths: Record<string, () => void> = {
+      '/ads': () => setActiveTab('ads'),
+      '/app/ads': () => setActiveTab('ads'),
+      '/recent-searches': () => setActiveTab('recent-searches'),
+      '/app/recent-searches': () => setActiveTab('recent-searches'),
+      '/orders': () => setIsShoppingHistoryOpen(true),
+      '/app/orders': () => setIsShoppingHistoryOpen(true),
+      '/wallet': () => setIsWalletModalOpen(true),
+      '/app/wallet': () => setIsWalletModalOpen(true),
+    };
+
+    const normalizedPath = location.pathname.replace(/\/+$/, '') || '/';
+    const openProtectedFeature = protectedPaths[normalizedPath];
+    if (!openProtectedFeature) return;
+
+    if (!isAuthenticated) {
+      const destination = `${normalizedPath}${location.search}`;
+      navigate(`/login?redirect=${encodeURIComponent(destination)}`, { replace: true });
+      return;
+    }
+
+    openProtectedFeature();
+    navigate('/app', { replace: true });
+  }, [location.pathname, location.search, isAuthenticated, isAuthLoading, navigate, setActiveTab, setIsShoppingHistoryOpen, setIsWalletModalOpen]);
+
+  // Close protected surfaces and leave protected tabs when a session ends.
+  useEffect(() => {
+    if (isAuthLoading || isAuthenticated) return;
+    setIsWalletModalOpen(false);
+    setIsShoppingHistoryOpen(false);
+    if (activeTab === 'ads' || activeTab === 'recent-searches') {
+      setActiveTab('home');
+    }
+  }, [isAuthLoading, isAuthenticated, activeTab, setActiveTab, setIsWalletModalOpen, setIsShoppingHistoryOpen]);
 
   // Protect Creator Hub route: if non-creator-premium user visits, redirect away
   useEffect(() => {
@@ -354,7 +426,6 @@ const LalaoAppContent: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [activeTab]);
 
-  const { isLoading: isAuthLoading } = useAuth();
   const currentUserQuery = useQuery(api.users.getCurrentUser);
   
   // Normal loading screen while resolving auth/user
@@ -391,6 +462,10 @@ const LalaoAppContent: React.FC = () => {
                 <div key="tab-group-detail" className="animate-in fade-in duration-200 min-h-full w-full bg-transparent">
                   <GroupProfileView />
                 </div>
+              ) : isRewardsRoute ? (
+                <div key="rewards-page" className="animate-in fade-in duration-200 min-h-full w-full bg-transparent">
+                  <Outlet />
+                </div>
               ) : !activePageId ? (
                 <>
             {activeTab === 'create-post' && (
@@ -408,7 +483,7 @@ const LalaoAppContent: React.FC = () => {
                 <DiscoverView />
               </div>
             )}
-            {activeTab === 'recent-searches' && (
+            {activeTab === 'recent-searches' && isAuthenticated && (
               <div key="tab-recent-searches" className="animate-in fade-in duration-200 w-full bg-transparent">
                 <RecentSearchesPage />
               </div>
@@ -463,7 +538,7 @@ const LalaoAppContent: React.FC = () => {
                 <BetaTesterView />
               </div>
             )}
-            {activeTab === 'ads' && (
+            {activeTab === 'ads' && isAuthenticated && (
               <div key="tab-ads" className="animate-in fade-in duration-200 w-full bg-transparent pb-24">
                 <ErrorBoundary fallback={
                   <div className="p-8 text-center max-w-lg mx-auto bg-theme-surface rounded-2xl border border-theme-divider mt-6 space-y-3">
@@ -556,7 +631,7 @@ const LalaoAppContent: React.FC = () => {
       {!['create-post'].includes(activeTab) && <PermissionPromptModal />}
       {!['create-post'].includes(activeTab) && <DevicePermissionsModal />}
       {!['create-post'].includes(activeTab) && <CartDrawer />}
-      {!['create-post'].includes(activeTab) && (
+      {!['create-post'].includes(activeTab) && isAuthenticated && (
         <ShoppingHistoryScreen
           isOpen={isShoppingHistoryOpen}
           onClose={() => setIsShoppingHistoryOpen(false)}
@@ -575,8 +650,9 @@ const LalaoAppContent: React.FC = () => {
       {!['create-post'].includes(activeTab) && <TicketPurchaseModal />}
       {!['create-post'].includes(activeTab) && <DigitalTicketModal />}
       {!['create-post'].includes(activeTab) && <MyTicketsModal />}
-      {!['create-post'].includes(activeTab) && <WalletModal />}
+      {!['create-post'].includes(activeTab) && isAuthenticated && <WalletModal />}
       {!['create-post'].includes(activeTab) && <MySubscriptionsModal />}
+      {!['create-post'].includes(activeTab) && <SubscriptionCheckoutModal />}
       <AuthPromptModal />
       <NotificationListener />
 
@@ -619,11 +695,13 @@ const LalaoApp: React.FC = () => (
 export default function App() {
   return (
     <>
+    <ReferralCapture />
     <Routes>
       <Route path="/" element={<Navigate to="/app" replace />} />
 
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignUpPage />} />
+      <Route path="/referral/:code" element={<ReferralLanding />} />
       <Route path="/auth/playsole/callback" element={<PlaysoleCallbackPage />} />
       <Route path="/verify" element={<OTPVerifyPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -647,6 +725,9 @@ export default function App() {
       <Route path="/manga/:username" element={<LalaoApp />} />
       <Route path="/app" element={<LalaoApp />} />
       <Route path="/app/*" element={<LalaoApp />} />
+      <Route path="/rewards" element={<LalaoApp />}>
+        <Route index element={<RewardsPage />} />
+      </Route>
 
       <Route path="/admin/*" element={
         <AdminRoute>

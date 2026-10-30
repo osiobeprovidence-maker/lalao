@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React from 'react';
-import { X, PenLine, Hand, Building2, ChevronRight, ArrowLeft, Sparkles, Users, MessageCircle, Music } from 'lucide-react';
+import { X, PenLine, Hand, Building2, ChevronRight, ArrowLeft, Users, MessageCircle, Music } from 'lucide-react';
 import { useLalao, CreateOption } from '../../context/LalaoContext';
 import { PostComposerModal } from './PostComposerModal';
 import { RallyComposerModal } from './RallyComposerModal';
@@ -208,7 +208,6 @@ export const CreateBottomSheet: React.FC = () => {
             >
               <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#5E43F3] to-pink-500 text-white shadow-md shadow-[#5E43F3]/20">
-                  <Sparkles className="h-6 w-6 stroke-[2.2]" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-3">
@@ -375,7 +374,6 @@ export const CreateBottomSheet: React.FC = () => {
               className="w-full p-4 rounded-2xl bg-gradient-to-r from-purple-50/70 to-pink-50/50 hover:from-purple-100/70 hover:to-pink-100/70 active:scale-[0.99] border border-purple-100/80 transition-all text-left flex items-start gap-4 group cursor-pointer"
             >
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#5E43F3] to-pink-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-[#5E43F3]/20">
-                <Sparkles className="w-6 h-6 stroke-[2.2]" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">

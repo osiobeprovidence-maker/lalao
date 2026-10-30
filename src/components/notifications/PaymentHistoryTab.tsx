@@ -17,7 +17,6 @@ import {
   ChevronRight,
   Filter,
   Calendar,
-  Sparkles,
   ArrowUpRight,
   ArrowDownLeft,
 } from 'lucide-react';
@@ -444,7 +443,6 @@ export const PaymentHistoryTab: React.FC = () => {
               }}
               className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-theme-divider hover:bg-theme-surface-hover text-theme-secondary hover:text-theme-primary font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
               <span>{isSeeding ? 'Populating...' : 'Generate Sample History'}</span>
             </button>
           </div>

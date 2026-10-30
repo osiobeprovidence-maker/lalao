@@ -8,7 +8,6 @@ import {
   Trash2,
   Check,
   ArrowRight,
-  Sparkles,
   MapPin,
   Shield,
   Heart,

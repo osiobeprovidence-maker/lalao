@@ -1,7 +1,10 @@
 import { getUserByAuthIdentity } from "./lib/authIdentity";
-import { query, mutation } from "./_generated/server";
+import { internalAction, internalQuery, query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
+import { isSupabaseRecentSearchShadowEnabled, recentSearchShadowRetryDelayMs, SupabaseAdminRestClient, SupabaseRestError } from "./lib/supabaseAdminRest";
+import { deleteRecentSearchShadowRevision, nextRecentSearchShadowRevision } from "./lib/recentSearchShadowRevision";
 import { resolveUserVerification } from "./social";
 
 // Helper to get authed user
@@ -266,6 +269,100 @@ export const globalSearch = query({
    RECENT SEARCHES API
    ───────────────────────────────────────────────────────────────────────────── */
 
+export const getUserForSupabaseMirror = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) return null;
+    return {
+      _id: user._id,
+      _creationTime: user._creationTime,
+      tokenIdentifier: user.tokenIdentifier,
+      onboardingStep: user.onboardingStep,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+  },
+});
+
+function getRecentSearchShadowClient() {
+  if (!isSupabaseRecentSearchShadowEnabled(process.env)) return null;
+  return new SupabaseAdminRestClient({
+    url: process.env.SUPABASE_URL!,
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  });
+}
+
+/**
+ * Internal, durable mirror worker. The Convex mutation passes an immutable row
+ * snapshot plus a strictly increasing per-row revision. PostgreSQL's RPC
+ * serializes these operations and preserves delete revisions as tombstones.
+ */
+/** Atomically enqueue a server-authorized shadow operation from a Convex mutation. */
+async function scheduleRecentSearchShadow(
+  ctx: any,
+  record: any,
+  deleted = false,
+  revision = record.timestamp,
+) {
+  if (!isSupabaseRecentSearchShadowEnabled(process.env)) return;
+  await ctx.scheduler.runAfter(0, internal.search.applyRecentSearchShadow, {
+    id: record._id,
+    userId: record.userId,
+    revision,
+    deleted,
+    ...(!deleted ? { record } : {}),
+    attempt: 0,
+  });
+}
+
+export const applyRecentSearchShadow = internalAction({
+  args: {
+    id: v.id("recentSearches"),
+    userId: v.id("users"),
+    revision: v.number(),
+    deleted: v.boolean(),
+    record: v.optional(v.any()),
+    attempt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const supabase = getRecentSearchShadowClient();
+    if (!supabase) return { status: "disabled" as const };
+
+    try {
+      if (!args.deleted) {
+        if (!args.record || args.record._id !== args.id || args.record.userId !== args.userId || args.record.timestamp !== args.revision) {
+          throw new Error("Invalid internal recent-search shadow event.");
+        }
+        const user = await ctx.runQuery(internal.search.getUserForSupabaseMirror, { userId: args.userId });
+        if (!user) return { status: "user_not_found" as const };
+        await supabase.upsert("users", [user], "_id");
+      }
+
+      await supabase.applyRecentSearchShadow({
+        id: args.id,
+        userId: args.userId,
+        revision: args.revision,
+        deleted: args.deleted,
+        record: args.record,
+      });
+      return { status: args.deleted ? "deleted" as const : "mirrored" as const };
+    } catch (error) {
+      const delay = error instanceof SupabaseRestError && error.retryable
+        ? recentSearchShadowRetryDelayMs(args.attempt)
+        : null;
+      if (delay !== null) {
+        await ctx.scheduler.runAfter(delay, internal.search.applyRecentSearchShadow, {
+          ...args,
+          attempt: args.attempt + 1,
+        });
+        return { status: "retry_scheduled" as const };
+      }
+      throw error;
+    }
+  },
+});
+
 /**
  * Fetch the authenticated user's recent searches, sorted newest to oldest.
  */
@@ -384,20 +481,23 @@ export const recordRecentSearch = mutation({
     }
 
     if (existing) {
-      await ctx.db.patch(existing._id, {
-        timestamp: now,
+      const updates = {
+        timestamp: nextRecentSearchShadowRevision(existing.timestamp, now),
         entityId: args.entityId ?? existing.entityId,
         title: args.title ?? existing.title,
         subtitle: args.subtitle ?? existing.subtitle,
         avatarUrl: args.avatarUrl ?? existing.avatarUrl,
         isVerified: args.isVerified ?? existing.isVerified,
         verificationTier: args.verificationTier ?? existing.verificationTier,
-      });
+      };
+      await ctx.db.patch(existing._id, updates);
+      const updatedSearch = await ctx.db.get(existing._id);
+      if (updatedSearch) await scheduleRecentSearchShadow(ctx, updatedSearch);
       return existing._id;
     }
 
     // Insert new entry
-    const id = await ctx.db.insert("recentSearches", {
+    const newSearch = {
       userId: currentUser._id,
       query: cleanQuery,
       type: args.type,
@@ -408,7 +508,10 @@ export const recordRecentSearch = mutation({
       isVerified: args.isVerified,
       verificationTier: args.verificationTier,
       timestamp: now,
-    });
+    };
+    const id = await ctx.db.insert("recentSearches", newSearch);
+    const insertedSearch = await ctx.db.get(id);
+    if (insertedSearch) await scheduleRecentSearchShadow(ctx, insertedSearch);
 
     // Keep history trimmed to a max of 50 items per user
     const total = await ctx.db
@@ -420,6 +523,7 @@ export const recordRecentSearch = mutation({
     if (total.length > 50) {
       const toDelete = total.slice(0, total.length - 50);
       for (const item of toDelete) {
+        await scheduleRecentSearchShadow(ctx, item, true, deleteRecentSearchShadowRevision(item.timestamp));
         await ctx.db.delete(item._id);
       }
     }
@@ -447,6 +551,7 @@ export const removeRecentSearch = mutation({
       throw new Error("Unauthorized to remove this search item");
     }
 
+    await scheduleRecentSearchShadow(ctx, record, true, deleteRecentSearchShadowRevision(record.timestamp));
     await ctx.db.delete(args.id);
     return { success: true };
   },
@@ -467,6 +572,7 @@ export const clearAllRecentSearches = mutation({
       .collect();
 
     for (const record of records) {
+      await scheduleRecentSearchShadow(ctx, record, true, deleteRecentSearchShadowRevision(record.timestamp));
       await ctx.db.delete(record._id);
     }
 

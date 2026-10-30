@@ -12,7 +12,6 @@ import {
   AlertCircle,
   ChevronRight,
   Crosshair,
-  Sparkles,
   RefreshCw,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';

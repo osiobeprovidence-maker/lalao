@@ -7,7 +7,6 @@ import {
   Plus,
   CheckCircle2,
   UserPlus,
-  Sparkles,
   Trophy,
   Swords,
   Upload,
@@ -668,7 +667,6 @@ export const TournamentRegisterModal: React.FC = () => {
                     <div className="mt-4 p-4 rounded-2xl bg-violet-50/80 border border-violet-200 animate-fadeIn space-y-3">
                       <div className="flex items-center justify-between">
                         <h4 className="text-xs font-black text-violet-950 flex items-center gap-1.5">
-                          <Sparkles className="w-3.5 h-3.5 text-[#5E43F3]" />
                           Select a gamer friend to complete your roster:
                         </h4>
                         {isInvitePickerOpen && (

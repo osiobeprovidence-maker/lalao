@@ -1,0 +1,1439 @@
+{
+  "source": "convex/schema.ts",
+  "tables": 102,
+  "declaredFields": 1095,
+  "systemColumns": 204,
+  "regularIndexes": 259,
+  "searchIndexes": 10,
+  "scalarForeignKeys": 171,
+  "unresolvedStorageReferences": 7,
+  "embeddedReferenceFields": 3,
+  "unresolvedPolymorphicReferences": 1,
+  "uniquenessConstraints": [
+    "authIdentities(issuer,subject)",
+    "authIdentities(tokenIdentifier)",
+    "bachsWebhookEvents(eventId)"
+  ],
+  "rls": {
+    "enabledTables": 102,
+    "directClientPolicies": 0,
+    "roleAccess": "service_role only; server-side authorization still required"
+  },
+  "tablesDetail": [
+    {
+      "table": "users",
+      "fields": 57,
+      "optionalFields": 53,
+      "indexes": 6,
+      "searchIndexes": 4,
+      "validatorKinds": {
+        "string": 24,
+        "union": 12,
+        "float64": 13,
+        "array": 2,
+        "any": 1,
+        "boolean": 4,
+        "object": 1
+      },
+      "scalarRelationships": 0
+    },
+    {
+      "table": "authIdentities",
+      "fields": 9,
+      "optionalFields": 2,
+      "indexes": 4,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "union": 1,
+        "string": 5,
+        "boolean": 1,
+        "float64": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "authLinkChallenges",
+      "fields": 9,
+      "optionalFields": 4,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "string": 4,
+        "id": 1,
+        "union": 1,
+        "float64": 3
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "authMigrationState",
+      "fields": 3,
+      "optionalFields": 2,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "string": 1,
+        "float64": 2
+      },
+      "scalarRelationships": 0
+    },
+    {
+      "table": "emailSendLimits",
+      "fields": 2,
+      "optionalFields": 0,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "string": 1,
+        "float64": 1
+      },
+      "scalarRelationships": 0
+    },
+    {
+      "table": "authIdentityBackfillConflicts",
+      "fields": 3,
+      "optionalFields": 0,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 1,
+        "float64": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "waitlist",
+      "fields": 8,
+      "optionalFields": 2,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 4,
+        "union": 1,
+        "float64": 2
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "posts",
+      "fields": 51,
+      "optionalFields": 44,
+      "indexes": 5,
+      "searchIndexes": 1,
+      "validatorKinds": {
+        "id": 4,
+        "string": 23,
+        "union": 7,
+        "float64": 14,
+        "array": 2,
+        "boolean": 1
+      },
+      "scalarRelationships": 3
+    },
+    {
+      "table": "comments",
+      "fields": 11,
+      "optionalFields": 6,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 4,
+        "string": 2,
+        "float64": 3,
+        "union": 1,
+        "boolean": 1
+      },
+      "scalarRelationships": 3
+    },
+    {
+      "table": "likes",
+      "fields": 4,
+      "optionalFields": 0,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "union": 1,
+        "string": 1,
+        "float64": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "follows",
+      "fields": 3,
+      "optionalFields": 0,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "float64": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "pages",
+      "fields": 24,
+      "optionalFields": 16,
+      "indexes": 2,
+      "searchIndexes": 2,
+      "validatorKinds": {
+        "id": 1,
+        "string": 9,
+        "union": 7,
+        "array": 2,
+        "boolean": 1,
+        "object": 1,
+        "float64": 3
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "pageMembers",
+      "fields": 5,
+      "optionalFields": 0,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "union": 1,
+        "float64": 2
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "pageExtensions",
+      "fields": 5,
+      "optionalFields": 0,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 1,
+        "any": 1,
+        "float64": 2
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "pageLocations",
+      "fields": 11,
+      "optionalFields": 5,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 5,
+        "float64": 4,
+        "boolean": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "pageFollowers",
+      "fields": 3,
+      "optionalFields": 0,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "float64": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "conversations",
+      "fields": 5,
+      "optionalFields": 3,
+      "indexes": 4,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 4,
+        "float64": 1
+      },
+      "scalarRelationships": 4
+    },
+    {
+      "table": "groupChats",
+      "fields": 19,
+      "optionalFields": 13,
+      "indexes": 4,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "string": 7,
+        "id": 1,
+        "array": 3,
+        "union": 1,
+        "boolean": 3,
+        "object": 2,
+        "float64": 2
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "groupMembers",
+      "fields": 4,
+      "optionalFields": 0,
+      "indexes": 4,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "union": 1,
+        "float64": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "groupJoinRequests",
+      "fields": 7,
+      "optionalFields": 3,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 3,
+        "union": 1,
+        "string": 1,
+        "float64": 2
+      },
+      "scalarRelationships": 3
+    },
+    {
+      "table": "groupInvitations",
+      "fields": 6,
+      "optionalFields": 1,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 3,
+        "union": 1,
+        "float64": 2
+      },
+      "scalarRelationships": 3
+    },
+    {
+      "table": "groupFollowers",
+      "fields": 3,
+      "optionalFields": 0,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "float64": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "groupCycles",
+      "fields": 8,
+      "optionalFields": 2,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "string": 3,
+        "id": 1,
+        "array": 2,
+        "float64": 2
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "messages",
+      "fields": 23,
+      "optionalFields": 19,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 7,
+        "string": 4,
+        "boolean": 4,
+        "float64": 6,
+        "union": 2
+      },
+      "scalarRelationships": 5
+    },
+    {
+      "table": "calls",
+      "fields": 13,
+      "optionalFields": 5,
+      "indexes": 6,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 3,
+        "union": 2,
+        "string": 2,
+        "float64": 6
+      },
+      "scalarRelationships": 3
+    },
+    {
+      "table": "notifications",
+      "fields": 10,
+      "optionalFields": 5,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 6,
+        "union": 1,
+        "string": 1,
+        "boolean": 1,
+        "float64": 1
+      },
+      "scalarRelationships": 6
+    },
+    {
+      "table": "drafts",
+      "fields": 12,
+      "optionalFields": 8,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 5,
+        "union": 3,
+        "array": 1,
+        "float64": 2
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "products",
+      "fields": 14,
+      "optionalFields": 6,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 7,
+        "float64": 4,
+        "boolean": 1,
+        "array": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "cartItems",
+      "fields": 5,
+      "optionalFields": 1,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "float64": 2,
+        "any": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "orders",
+      "fields": 8,
+      "optionalFields": 2,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "float64": 2,
+        "string": 2,
+        "union": 1,
+        "any": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "orderItems",
+      "fields": 5,
+      "optionalFields": 1,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "float64": 2,
+        "any": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "auctions",
+      "fields": 9,
+      "optionalFields": 1,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "float64": 4,
+        "string": 2,
+        "union": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "auctionBids",
+      "fields": 4,
+      "optionalFields": 0,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "float64": 2
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "cryptoWallets",
+      "fields": 6,
+      "optionalFields": 1,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 3,
+        "boolean": 1,
+        "float64": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "userWallets",
+      "fields": 10,
+      "optionalFields": 6,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "float64": 3,
+        "string": 6
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "walletTransactions",
+      "fields": 21,
+      "optionalFields": 14,
+      "indexes": 5,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 4,
+        "string": 10,
+        "float64": 3,
+        "union": 3,
+        "any": 1
+      },
+      "scalarRelationships": 4
+    },
+    {
+      "table": "marketTransactions",
+      "fields": 31,
+      "optionalFields": 18,
+      "indexes": 4,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 19,
+        "union": 1,
+        "float64": 9,
+        "any": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "subscriptionPlatforms",
+      "fields": 9,
+      "optionalFields": 2,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "string": 6,
+        "boolean": 1,
+        "float64": 2
+      },
+      "scalarRelationships": 0
+    },
+    {
+      "table": "subscriptionListings",
+      "fields": 26,
+      "optionalFields": 13,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "string": 13,
+        "float64": 7,
+        "union": 1,
+        "boolean": 2,
+        "array": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "subscriptionSlots",
+      "fields": 11,
+      "optionalFields": 5,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 4,
+        "float64": 5,
+        "union": 2
+      },
+      "scalarRelationships": 4
+    },
+    {
+      "table": "subscriptionReservations",
+      "fields": 12,
+      "optionalFields": 2,
+      "indexes": 4,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 3,
+        "float64": 5,
+        "string": 2,
+        "union": 2
+      },
+      "scalarRelationships": 3
+    },
+    {
+      "table": "subscriptionMemberships",
+      "fields": 20,
+      "optionalFields": 11,
+      "indexes": 6,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 4,
+        "union": 3,
+        "float64": 8,
+        "string": 3,
+        "boolean": 2
+      },
+      "scalarRelationships": 4
+    },
+    {
+      "table": "subscriptionAuditLogs",
+      "fields": 7,
+      "optionalFields": 2,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 3,
+        "string": 2,
+        "any": 1,
+        "float64": 1
+      },
+      "scalarRelationships": 3
+    },
+    {
+      "table": "creatorSubscriptions",
+      "fields": 19,
+      "optionalFields": 8,
+      "indexes": 7,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "union": 2,
+        "float64": 6,
+        "string": 9,
+        "boolean": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "creatorApplications",
+      "fields": 12,
+      "optionalFields": 4,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "union": 2,
+        "string": 5,
+        "float64": 3
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "platformSettings",
+      "fields": 4,
+      "optionalFields": 1,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "string": 2,
+        "float64": 1,
+        "id": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "auditLog",
+      "fields": 6,
+      "optionalFields": 3,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 4,
+        "float64": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "communitySuggestions",
+      "fields": 15,
+      "optionalFields": 9,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 3,
+        "string": 8,
+        "union": 1,
+        "float64": 3
+      },
+      "scalarRelationships": 3
+    },
+    {
+      "table": "adminSessions",
+      "fields": 3,
+      "optionalFields": 0,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 1,
+        "float64": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "fcmTokens",
+      "fields": 5,
+      "optionalFields": 1,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 2,
+        "float64": 2
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "pushSubscriptions",
+      "fields": 13,
+      "optionalFields": 5,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 8,
+        "float64": 3,
+        "boolean": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "reports",
+      "fields": 18,
+      "optionalFields": 10,
+      "indexes": 5,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 4,
+        "union": 3,
+        "string": 8,
+        "float64": 3
+      },
+      "scalarRelationships": 4
+    },
+    {
+      "table": "moderationReasons",
+      "fields": 9,
+      "optionalFields": 0,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "string": 4,
+        "union": 1,
+        "boolean": 1,
+        "float64": 3
+      },
+      "scalarRelationships": 0
+    },
+    {
+      "table": "topics",
+      "fields": 17,
+      "optionalFields": 7,
+      "indexes": 4,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "string": 5,
+        "float64": 3,
+        "boolean": 9
+      },
+      "scalarRelationships": 0
+    },
+    {
+      "table": "roomyProfiles",
+      "fields": 15,
+      "optionalFields": 12,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 8,
+        "array": 2,
+        "float64": 4
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "roomyListings",
+      "fields": 19,
+      "optionalFields": 12,
+      "indexes": 4,
+      "searchIndexes": 2,
+      "validatorKinds": {
+        "id": 1,
+        "union": 2,
+        "string": 10,
+        "float64": 4,
+        "array": 2
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "roomySaves",
+      "fields": 3,
+      "optionalFields": 0,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "float64": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "roomyInspections",
+      "fields": 8,
+      "optionalFields": 1,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 3,
+        "union": 1,
+        "string": 2,
+        "float64": 2
+      },
+      "scalarRelationships": 3
+    },
+    {
+      "table": "recommendations",
+      "fields": 9,
+      "optionalFields": 2,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "string": 3,
+        "union": 1,
+        "float64": 3,
+        "boolean": 1,
+        "id": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "recommendationInteractions",
+      "fields": 5,
+      "optionalFields": 0,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 2,
+        "union": 1,
+        "float64": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "recommendationDismissals",
+      "fields": 3,
+      "optionalFields": 0,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 1,
+        "float64": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "rallies",
+      "fields": 24,
+      "optionalFields": 18,
+      "indexes": 4,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "union": 5,
+        "string": 8,
+        "float64": 8,
+        "array": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "rallyParticipants",
+      "fields": 3,
+      "optionalFields": 0,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "float64": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "pageEvents",
+      "fields": 20,
+      "optionalFields": 11,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 10,
+        "boolean": 3,
+        "float64": 5,
+        "any": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "apiPartners",
+      "fields": 9,
+      "optionalFields": 3,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "string": 6,
+        "union": 1,
+        "float64": 2
+      },
+      "scalarRelationships": 0
+    },
+    {
+      "table": "apiPlans",
+      "fields": 10,
+      "optionalFields": 0,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 2,
+        "float64": 6,
+        "union": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "apiCredentials",
+      "fields": 7,
+      "optionalFields": 2,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "union": 1,
+        "string": 2,
+        "float64": 3
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "apiPermissions",
+      "fields": 3,
+      "optionalFields": 0,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 1,
+        "float64": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "apiUsage",
+      "fields": 8,
+      "optionalFields": 0,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "union": 1,
+        "string": 3,
+        "float64": 3
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "apiBilling",
+      "fields": 9,
+      "optionalFields": 1,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 2,
+        "float64": 5,
+        "union": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "partnerEvents",
+      "fields": 21,
+      "optionalFields": 13,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 14,
+        "float64": 5,
+        "union": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "cycleStories",
+      "fields": 19,
+      "optionalFields": 12,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 3,
+        "union": 2,
+        "string": 6,
+        "float64": 7,
+        "array": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "cycleStoryInteractions",
+      "fields": 5,
+      "optionalFields": 1,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "union": 1,
+        "string": 1,
+        "float64": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "betaTesters",
+      "fields": 9,
+      "optionalFields": 1,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 6,
+        "float64": 1,
+        "union": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "betaFeedback",
+      "fields": 13,
+      "optionalFields": 4,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 7,
+        "union": 3,
+        "array": 1,
+        "float64": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "betaReleases",
+      "fields": 8,
+      "optionalFields": 0,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "string": 5,
+        "float64": 1,
+        "boolean": 1,
+        "union": 1
+      },
+      "scalarRelationships": 0
+    },
+    {
+      "table": "betaSettings",
+      "fields": 3,
+      "optionalFields": 0,
+      "indexes": 0,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "string": 2,
+        "array": 1
+      },
+      "scalarRelationships": 0
+    },
+    {
+      "table": "sounds",
+      "fields": 21,
+      "optionalFields": 11,
+      "indexes": 5,
+      "searchIndexes": 1,
+      "validatorKinds": {
+        "id": 2,
+        "string": 6,
+        "union": 3,
+        "array": 2,
+        "float64": 6,
+        "boolean": 2
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "soundFavourites",
+      "fields": 3,
+      "optionalFields": 0,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "float64": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "plumProfiles",
+      "fields": 24,
+      "optionalFields": 7,
+      "indexes": 4,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 7,
+        "float64": 8,
+        "array": 4,
+        "union": 2,
+        "boolean": 2
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "plumPrivatePhotoAccess",
+      "fields": 4,
+      "optionalFields": 0,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "float64": 1,
+        "union": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "plumFlashes",
+      "fields": 4,
+      "optionalFields": 1,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "string": 1,
+        "float64": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "plumGifts",
+      "fields": 8,
+      "optionalFields": 1,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "string": 4,
+        "float64": 2
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "plumReports",
+      "fields": 6,
+      "optionalFields": 1,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "string": 2,
+        "float64": 1,
+        "union": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "plumFavorites",
+      "fields": 3,
+      "optionalFields": 0,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "float64": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "plumInterests",
+      "fields": 3,
+      "optionalFields": 0,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "float64": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "userTopicPreferences",
+      "fields": 4,
+      "optionalFields": 0,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 1,
+        "union": 1,
+        "float64": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "userPagePreferences",
+      "fields": 4,
+      "optionalFields": 0,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 1,
+        "boolean": 1,
+        "float64": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "recentSearches",
+      "fields": 10,
+      "optionalFields": 6,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 6,
+        "union": 1,
+        "boolean": 1,
+        "float64": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "adCampaigns",
+      "fields": 20,
+      "optionalFields": 6,
+      "indexes": 5,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 4,
+        "string": 3,
+        "union": 4,
+        "float64": 5,
+        "object": 4
+      },
+      "scalarRelationships": 4
+    },
+    {
+      "table": "adPayments",
+      "fields": 14,
+      "optionalFields": 6,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "float64": 4,
+        "string": 7,
+        "union": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "bachsWebhookEvents",
+      "fields": 3,
+      "optionalFields": 0,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "string": 2,
+        "float64": 1
+      },
+      "scalarRelationships": 0
+    },
+    {
+      "table": "adEvents",
+      "fields": 8,
+      "optionalFields": 2,
+      "indexes": 3,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "union": 1,
+        "string": 3,
+        "float64": 2
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "adModerationLogs",
+      "fields": 6,
+      "optionalFields": 2,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "union": 1,
+        "string": 2,
+        "float64": 1
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "userRewardBalances",
+      "fields": 7,
+      "optionalFields": 0,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "float64": 6
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "rewardTransactions",
+      "fields": 13,
+      "optionalFields": 5,
+      "indexes": 4,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 4,
+        "union": 2,
+        "string": 2,
+        "float64": 4,
+        "any": 1
+      },
+      "scalarRelationships": 4
+    },
+    {
+      "table": "rewardCatalogue",
+      "fields": 17,
+      "optionalFields": 9,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "string": 4,
+        "union": 2,
+        "float64": 7,
+        "any": 2,
+        "id": 2
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "rewardRedemptions",
+      "fields": 14,
+      "optionalFields": 5,
+      "indexes": 5,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 3,
+        "string": 5,
+        "float64": 4,
+        "union": 1,
+        "any": 1
+      },
+      "scalarRelationships": 3
+    },
+    {
+      "table": "referralCodes",
+      "fields": 8,
+      "optionalFields": 0,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 1,
+        "boolean": 1,
+        "float64": 5
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "referralRelationships",
+      "fields": 10,
+      "optionalFields": 2,
+      "indexes": 4,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 2,
+        "string": 2,
+        "union": 1,
+        "float64": 5
+      },
+      "scalarRelationships": 2
+    },
+    {
+      "table": "rewardConfiguration",
+      "fields": 5,
+      "optionalFields": 1,
+      "indexes": 1,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "string": 3,
+        "id": 1,
+        "float64": 1
+      },
+      "scalarRelationships": 1
+    },
+    {
+      "table": "rewardAdminAudit",
+      "fields": 6,
+      "optionalFields": 3,
+      "indexes": 2,
+      "searchIndexes": 0,
+      "validatorKinds": {
+        "id": 1,
+        "string": 4,
+        "float64": 1
+      },
+      "scalarRelationships": 1
+    }
+  ]
+}

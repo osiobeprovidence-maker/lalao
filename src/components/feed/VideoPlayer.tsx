@@ -94,6 +94,16 @@ export const VideoPlayer = React.memo(
       if (match && match[1]) effectivePlaybackId = match[1];
     }
 
+    // Reset transient player state when a recycled feed card receives another source.
+    useEffect(() => {
+      setHasError(false);
+      setIsLoading(true);
+      setIsPlaying(false);
+      setDuration(0);
+      setCurrentTime(0);
+      setExactAspectRatio(mediaWidth && mediaHeight ? mediaWidth / mediaHeight : fallbackAspectRatio);
+    }, [mediaUrl, effectivePlaybackId, mediaWidth, mediaHeight]);
+
     const isMuxReady = Boolean(effectivePlaybackId);
     const isFallbackVideo =
       !isMuxReady &&
@@ -112,9 +122,10 @@ export const VideoPlayer = React.memo(
     // Viewport detection
     useEffect(() => {
       if (!containerRef.current) return;
+      // Reduced rootMargin to start loading videos earlier in the feed
       const nearObserver = new IntersectionObserver(
         ([entry]) => setIsNearViewport(entry.isIntersecting),
-        { rootMargin: '300% 0px' },
+        { rootMargin: '150% 0px' },
       );
       const inObserver = new IntersectionObserver(
         ([entry]) => setIsInViewport(entry.isIntersecting),
@@ -271,19 +282,14 @@ export const VideoPlayer = React.memo(
       playerRef.current.currentTime = newTime;
     };
 
-    // Keep the wrapper and media at the same intrinsic ratio. The width cap
-    // prevents tall portrait videos from exceeding the usable viewport height
-    // without reserving blank space beneath the video.
+    // Keep the media at its intrinsic ratio while letting it use the full feed
+    // width. Capping width by viewport height made portrait videos look narrow.
     const wrapperStyle = exactAspectRatio
       ? {
           aspectRatio: exactAspectRatio,
-          maxWidth: `min(100%, calc(70vh * ${exactAspectRatio}))`,
-          marginInline: 'auto',
         }
       : undefined;
-    const playerMediaClass = exactAspectRatio
-      ? 'block w-full h-full object-contain object-center'
-      : 'block w-full h-auto max-h-[70vh] object-contain object-center';
+    const playerMediaClass = 'block w-full h-full object-contain object-center';
 
     // Loading / error UI
     if (mediaStatus === 'uploading') {
@@ -383,6 +389,7 @@ export const VideoPlayer = React.memo(
           playsInline
           preload="metadata"
           controls={false}
+          style={{ objectFit: 'contain' }}
           className={playerMediaClass}
         />
       );

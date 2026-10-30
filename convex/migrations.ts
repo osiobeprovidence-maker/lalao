@@ -177,4 +177,216 @@ export const mergeAndSetMainAccount = mutation({
   },
 });
 
+/**
+ * Idempotently seed the first 5 General Demo Chatrooms.
+ */
+export const seedDemoChatrooms = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    // 1. Find or create a designated system/demo administrator identity
+    let systemUser = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q: any) => q.eq("username", "lalao"))
+      .first();
+
+    if (!systemUser) {
+      systemUser = await ctx.db
+        .query("users")
+        .withIndex("by_role", (q: any) => q.eq("role", "super_admin"))
+        .first();
+    }
+
+    if (!systemUser) {
+      // Find the first user or create a system demo owner
+      const firstUser = await ctx.db.query("users").first();
+      if (firstUser) {
+        systemUser = firstUser;
+      } else {
+        const now = Date.now();
+        const sysId = await ctx.db.insert("users", {
+          tokenIdentifier: "system|lalao_chatrooms_demo",
+          name: "LaLao Community",
+          username: "lalao_official",
+          role: "admin",
+          onboardingStep: "complete",
+          createdAt: now,
+          updatedAt: now,
+        });
+        systemUser = await ctx.db.get(sysId);
+      }
+    }
+
+    const demoRooms = [
+      {
+        name: "General Chat",
+        username: "room-general-chat",
+        category: "General",
+        description: "Talk about anything, introduce yourself, ask questions and meet new people.",
+        roomIcon: "Users",
+        coverImage: "https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=1200&auto=format&fit=crop&q=80",
+        avatarUrl: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&auto=format&fit=crop&q=80",
+        rules: [
+          "Be kind and welcoming to everyone.",
+          "Keep discussions clean and family-friendly.",
+          "No spam, excessive links, or unsolicited advertising.",
+          "Respect diverse viewpoints and privacy."
+        ],
+      },
+      {
+        name: "Meet & Connect",
+        username: "room-meet-connect",
+        category: "Social",
+        description: "Make new friends, discover shared interests and build meaningful friendships.",
+        roomIcon: "UserPlus",
+        coverImage: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1200&auto=format&fit=crop&q=80",
+        avatarUrl: "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=400&auto=format&fit=crop&q=80",
+        rules: [
+          "Introduce yourself genuinely.",
+          "Respect boundaries and personal space.",
+          "Harassment and unsolicited private solicitation are strictly prohibited.",
+          "Support and encourage your peers."
+        ],
+      },
+      {
+        name: "Entertainment Zone",
+        username: "room-entertainment-zone",
+        category: "Entertainment",
+        description: "Discuss games, anime, music, movies and entertainment.",
+        roomIcon: "Gamepad2",
+        coverImage: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=1200&auto=format&fit=crop&q=80",
+        avatarUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&auto=format&fit=crop&q=80",
+        rules: [
+          "Use spoiler alerts when discussing recent plotlines or releases.",
+          "Constructive debate about games, shows, and music is welcome.",
+          "No piracy or unauthorized download links."
+        ],
+      },
+      {
+        name: "Ideas & Trending",
+        username: "room-ideas-trending",
+        category: "Discussion",
+        description: "Share opinions, discuss interesting topics, technology and trending conversations.",
+        roomIcon: "Lightbulb",
+        coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&auto=format&fit=crop&q=80",
+        avatarUrl: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&auto=format&fit=crop&q=80",
+        rules: [
+          "Ground arguments with factual insights and respect.",
+          "Encourage innovation, technology, and visionary projects.",
+          "Stay on-topic and avoid bad-faith debate."
+        ],
+      },
+      {
+        name: "Naija Connect",
+        username: "room-naija-connect",
+        category: "Nigeria",
+        description: "Discuss Nigerian culture, everyday life, opportunities and local happenings.",
+        roomIcon: "MapPin",
+        coverImage: "https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=1200&auto=format&fit=crop&q=80",
+        avatarUrl: "https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?w=400&auto=format&fit=crop&q=80",
+        rules: [
+          "Celebrate Nigerian culture, languages, innovation, and unity.",
+          "Keep conversations respectful and constructive.",
+          "No tribalism, hate speech, or defamatory conduct."
+        ],
+      },
+    ];
+
+    const results = [];
+    const now = Date.now();
+
+    for (const room of demoRooms) {
+      // Idempotency check: see if groupChat with this username already exists
+      let existing = await ctx.db
+        .query("groupChats")
+        .withIndex("by_username", (q: any) => q.eq("username", room.username))
+        .first();
+
+      if (existing) {
+        // Ensure isChatroom flag, roomIcon, and allowPublicPreview are set
+        await ctx.db.patch(existing._id, {
+          isChatroom: true,
+          allowPublicPreview: true,
+          roomIcon: room.roomIcon,
+          category: room.category,
+          rules: room.rules,
+          visibility: "public",
+          coverImage: existing.coverImage || room.coverImage,
+          avatarUrl: existing.avatarUrl || room.avatarUrl,
+        });
+
+        // Ensure shared core conversation exists
+        let convo = await ctx.db
+          .query("conversations")
+          .withIndex("by_group_chat", (q: any) => q.eq("groupChatId", existing._id))
+          .first();
+
+        if (!convo) {
+          await ctx.db.insert("conversations", {
+            userA: existing.creatorId,
+            groupChatId: existing._id,
+            updatedAt: now,
+          });
+        }
+
+        results.push({ id: existing._id, name: existing.name, status: "updated" });
+      } else {
+        const creatorId = systemUser!._id;
+        const groupId = await ctx.db.insert("groupChats", {
+          name: room.name,
+          username: room.username,
+          description: room.description,
+          category: room.category,
+          avatarUrl: room.avatarUrl,
+          coverImage: room.coverImage,
+          roomIcon: room.roomIcon,
+          isChatroom: true,
+          allowPublicPreview: true,
+          creatorId,
+          memberIds: [creatorId],
+          interests: [room.category.toLowerCase()],
+          rules: room.rules,
+          visibility: "public",
+          communityEnabled: true,
+          communityFeatures: {
+            posts: true,
+            replies: true,
+            media: true,
+            rallies: false,
+          },
+          publishingPermissions: {
+            canPost: "all_members",
+            canReply: "all_members",
+            canUploadMedia: "all_members",
+            canCreateRallies: "admins_only",
+          },
+          createdAt: now,
+          updatedAt: now,
+        });
+
+        // Seed owner member record
+        await ctx.db.insert("groupMembers", {
+          groupId,
+          userId: creatorId,
+          role: "owner",
+          joinedAt: now,
+        });
+
+        // Seed linked core conversation for real-time messaging
+        await ctx.db.insert("conversations", {
+          userA: creatorId,
+          groupChatId: groupId,
+          updatedAt: now,
+        });
+
+        results.push({ id: groupId, name: room.name, status: "created" });
+      }
+    }
+
+    return {
+      success: true,
+      seededRooms: results,
+    };
+  },
+});
+
 

@@ -6,7 +6,6 @@ import {
   Pause,
   Music,
   Bookmark,
-  Sparkles,
   TrendingUp,
   Sliders,
   Video,

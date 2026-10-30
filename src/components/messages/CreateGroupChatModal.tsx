@@ -10,7 +10,6 @@ import {
   Globe, 
   Lock, 
   EyeOff, 
-  Sparkles, 
   MessageSquare, 
   FileText, 
   Flame, 
@@ -279,7 +278,6 @@ export const CreateGroupChatModal: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-[#5E43F3]/10 text-[#5E43F3] flex items-center justify-center">
-                  <Sparkles className="w-4 h-4" />
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-theme-primary">Enable Community Page</h4>

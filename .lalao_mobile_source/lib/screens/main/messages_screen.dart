@@ -217,7 +217,14 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   Row(
                     children: [
                       Flexible(child: Text(chat.contact.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                      if (chat.isBusinessChat) ...[
+                      if (chat.isChatroom) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(color: const Color(0xFF5E43F3).withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                          child: const Text('CHATROOM', style: TextStyle(color: Color(0xFF5E43F3), fontSize: 10, fontWeight: FontWeight.bold)),
+                        )
+                      ] else if (chat.isBusinessChat) ...[
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

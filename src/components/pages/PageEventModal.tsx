@@ -9,7 +9,6 @@ import {
   Image as ImageIcon,
   Check,
   Globe,
-  Sparkles,
   DollarSign,
 } from 'lucide-react';
 import { OrgEvent, Page } from '../../types';
