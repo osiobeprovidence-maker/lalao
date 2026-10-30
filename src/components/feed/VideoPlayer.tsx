@@ -11,6 +11,7 @@ import {
   VolumeX,
   Rewind,
   FastForward,
+  RotateCcw,
   Maximize2,
   Minimize2,
   Settings,
@@ -71,6 +72,7 @@ export const VideoPlayer = React.memo(
     }, [muted]);
 
     const [isPlaying, setIsPlaying] = useState(false);
+    const [hasEnded, setHasEnded] = useState(false);
     const [volume, setVolume] = useState(1);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
@@ -96,9 +98,10 @@ export const VideoPlayer = React.memo(
 
     // Reset transient player state when a recycled feed card receives another source.
     useEffect(() => {
-      setHasError(false);
       setIsLoading(true);
       setIsPlaying(false);
+      setHasEnded(false);
+      setHasError(false);
       setDuration(0);
       setCurrentTime(0);
       setExactAspectRatio(mediaWidth && mediaHeight ? mediaWidth / mediaHeight : fallbackAspectRatio);
@@ -155,13 +158,13 @@ export const VideoPlayer = React.memo(
       }
     }, [isInViewport, autoPlay]);
 
-    // Media event listeners
+    // Bind events when the viewport-deferred media element actually mounts.
     useEffect(() => {
       const videoEl = playerRef.current?.getInternalPlayer?.() || playerRef.current;
-      if (!videoEl) return;
+      if (!videoEl || typeof videoEl.addEventListener !== 'function') return;
       const onLoadedMetadata = () => {
         setDuration(videoEl.duration);
-        setIsLoading(false);
+        if (videoEl.readyState >= 2) setIsLoading(false);
         // Aspect‑ratio detection
         const w = videoEl.videoWidth;
         const h = videoEl.videoHeight;
@@ -172,16 +175,22 @@ export const VideoPlayer = React.memo(
       const onTimeUpdate = () => setCurrentTime(videoEl.currentTime);
       const onPlay = () => setIsPlaying(true);
       const onPause = () => setIsPlaying(false);
-      const onEnded = () => setIsPlaying(false);
+      const onEnded = () => {
+        setIsPlaying(false);
+        setHasEnded(true);
+        setCurrentTime(Number.isFinite(videoEl.duration) ? videoEl.duration : videoEl.currentTime);
+        setIsLoading(false);
+      };
       const onVolumeChange = () => {
         setVolume(videoEl.volume);
         setIsMuted(videoEl.muted);
       };
       const onWaiting = () => setIsLoading(true);
-      const onCanPlay = () => setIsLoading(false);
-      const onError = () => setHasError(true);
+      const onCanPlay = () => { setIsLoading(false); setHasError(false); };
+      const onError = () => { setHasError(true); setIsLoading(false); setIsPlaying(false); };
 
       videoEl.addEventListener('loadedmetadata', onLoadedMetadata);
+      videoEl.addEventListener('loadeddata', onCanPlay);
       videoEl.addEventListener('timeupdate', onTimeUpdate);
       videoEl.addEventListener('play', onPlay);
       videoEl.addEventListener('pause', onPause);
@@ -193,6 +202,7 @@ export const VideoPlayer = React.memo(
 
       return () => {
         videoEl.removeEventListener('loadedmetadata', onLoadedMetadata);
+        videoEl.removeEventListener('loadeddata', onCanPlay);
         videoEl.removeEventListener('timeupdate', onTimeUpdate);
         videoEl.removeEventListener('play', onPlay);
         videoEl.removeEventListener('pause', onPause);
@@ -202,7 +212,7 @@ export const VideoPlayer = React.memo(
         videoEl.removeEventListener('canplay', onCanPlay);
         videoEl.removeEventListener('error', onError);
       };
-    }, [playerRef.current]);
+    }, [isNearViewport, effectivePlaybackId, mediaUrl]);
 
     // PiP support detection (run once)
     useEffect(() => {
@@ -223,8 +233,24 @@ export const VideoPlayer = React.memo(
 
     const togglePlayPause = () => {
       if (!playerRef.current) return;
-      if (isPlaying) playerRef.current.pause();
-      else playerRef.current.play();
+      const video = playerRef.current?.getInternalPlayer?.() || playerRef.current;
+      if (isPlaying) video.pause();
+      else {
+        if (hasEnded) video.currentTime = 0;
+        setHasEnded(false);
+        setHasError(false);
+        Promise.resolve(video.play()).catch(() => setHasError(true));
+      }
+    };
+    const replay = (event?: React.MouseEvent) => {
+      event?.stopPropagation();
+      const video = playerRef.current?.getInternalPlayer?.() || playerRef.current;
+      if (!video) return;
+      setCurrentTime(0);
+      setHasEnded(false);
+      setIsLoading(false);
+      video.currentTime = 0;
+      Promise.resolve(video.play()).catch(() => setHasError(true));
     };
     const toggleMute = () => {
       if (!playerRef.current) return;
@@ -398,7 +424,7 @@ export const VideoPlayer = React.memo(
     return (
       <div
         ref={containerRef}
-        className={`relative w-full overflow-hidden rounded-[12px] bg-black ${className.replace('w-fit', '').replace('max-w-full', '').replace('mx-auto', '')}`}
+        className={`relative w-full overflow-hidden rounded-[12px] bg-black ${className.replace('w-fit', '').replace('max-w-full', '').replace('mx-auto', '').replace('h-full', '').replace('!w-auto', '')}`}
         onMouseMove={showControls}
         onTouchStart={showControls}
         style={wrapperStyle}
@@ -447,10 +473,11 @@ export const VideoPlayer = React.memo(
 
         {/* Play/Pause Indicator (Fades out when playing) */}
         {!isPlaying && isNearViewport && !isLoading && !hasError && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20">
-            <div className="w-16 h-16 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center border border-white/20">
-              <Play className="w-8 h-8 text-white ml-1" />
-            </div>
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 z-10">
+            <button type="button" aria-label={hasEnded ? 'Replay video' : 'Play video'} onClick={hasEnded ? replay : togglePlayPause} className="w-16 h-16 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm flex items-center justify-center border border-white/30 text-white pointer-events-auto">
+              {hasEnded ? <RotateCcw className="w-8 h-8" /> : <Play className="w-8 h-8 ml-1" />}
+              <span className="sr-only">{hasEnded ? 'Replay' : 'Play'}</span>
+            </button>
           </div>
         )}
 

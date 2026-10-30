@@ -592,7 +592,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
           {((post?.mediaUrl || (post as any)?.muxUploadId) && !linkedRally) && (
             <div className="mt-3 w-full"> 
               {post.mediaType === 'video' ? (
-                <div className={`w-full rounded-[16px] overflow-hidden border border-theme-divider-light bg-black/5 dark:bg-theme-surface/5 min-h-[300px]`}>
+                <div className="w-full rounded-[16px] overflow-hidden border border-theme-divider-light bg-black">
                   <VideoPlayer
                     muxPlaybackId={(post as any).muxPlaybackId}
                     mediaUrl={post.mediaUrl}
