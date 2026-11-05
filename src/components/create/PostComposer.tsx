@@ -273,30 +273,67 @@ function PostComposerInner({
   const generateVideoPoster = (file: File): Promise<{ dataUrl: string, width: number, height: number }> =>
     new Promise((resolve) => {
       const video = document.createElement('video');
+      const objectUrl = URL.createObjectURL(file);
+      let resolved = false;
+      let attempt = 0;
+      const finish = (dataUrl: string, width: number, height: number) => {
+        if (resolved) return;
+        resolved = true;
+        video.removeAttribute('src');
+        video.load();
+        URL.revokeObjectURL(objectUrl);
+        resolve({ dataUrl, width, height });
+      };
+      const seekToCandidate = () => {
+        const times = [1.5, 1, Math.min(3, Math.max(0.1, video.duration * 0.75))];
+        const time = times[attempt];
+        if (time === undefined) return;
+        video.currentTime = Math.min(time, Math.max(0.1, video.duration - 0.1));
+      };
+
       video.preload = 'metadata';
-      video.src = URL.createObjectURL(file);
-      video.currentTime = 0.5;
       video.muted = true;
       video.playsInline = true;
-      video.onloadeddata = () => {
+      video.onloadedmetadata = seekToCandidate;
+      video.onseeked = () => {
+        const sourceWidth = video.videoWidth || 640;
+        const sourceHeight = video.videoHeight || 360;
         const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 360;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-          URL.revokeObjectURL(video.src);
-          resolve({ dataUrl, width: canvas.width, height: canvas.height });
-        } else {
-          URL.revokeObjectURL(video.src);
-          resolve({ dataUrl: '', width: canvas.width, height: canvas.height });
+        canvas.width = Math.min(sourceWidth, 1280);
+        canvas.height = Math.max(1, Math.round(canvas.width * (sourceHeight / sourceWidth)));
+        const context = canvas.getContext('2d');
+        if (!context) {
+          finish('', sourceWidth, sourceHeight);
+          return;
+        }
+
+        try {
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const sampleWidth = Math.min(canvas.width, 32);
+          const sampleHeight = Math.min(canvas.height, 32);
+          const pixels = context.getImageData(
+            Math.floor((canvas.width - sampleWidth) / 2),
+            Math.floor((canvas.height - sampleHeight) / 2),
+            sampleWidth,
+            sampleHeight,
+          ).data;
+          let brightness = 0;
+          for (let index = 0; index < pixels.length; index += 4) {
+            brightness += (pixels[index] * 0.2126) + (pixels[index + 1] * 0.7152) + (pixels[index + 2] * 0.0722);
+          }
+          const averageBrightness = brightness / Math.max(1, pixels.length / 4);
+          if (averageBrightness < 14 && attempt < 2 && video.duration > 1.5) {
+            attempt += 1;
+            seekToCandidate();
+            return;
+          }
+          finish(canvas.toDataURL('image/jpeg', 0.82), sourceWidth, sourceHeight);
+        } catch {
+          finish('', sourceWidth, sourceHeight);
         }
       };
-      video.onerror = () => {
-        URL.revokeObjectURL(video.src);
-        resolve({ dataUrl: '', width: 640, height: 360 });
-      };
+      video.onerror = () => finish('', 640, 360);
+      video.src = objectUrl;
     });
 
   const uploadFileWithProgress = (

@@ -338,14 +338,18 @@ export const DiscoverView: React.FC = () => {
   }, [posts, locationMode, maxRadiusMeters]);
 
   const isSearching = debouncedQuery.length > 0;
+  const isVideoDiscovery = activeFilter === 'videos';
 
   return (
-    <div id="discover-view-container" className="min-h-screen bg-theme-base pb-24">
+    <div
+      id="discover-view-container"
+      className={`min-h-screen pb-24 ${isVideoDiscovery ? 'bg-[#0D0D0D] text-white' : 'bg-theme-base'}`}
+    >
       {/* Top Search Header */}
-      <div className="sticky top-0 z-20 bg-theme-base/95 backdrop-blur-md border-b border-theme-divider/80 px-4 py-2.5 space-y-2">
+      <div className={`sticky top-0 z-20 backdrop-blur-md border-b px-4 py-2.5 space-y-2 ${isVideoDiscovery ? 'bg-[#0D0D0D]/95 border-white/10' : 'bg-theme-base/95 border-theme-divider/80'}`}>
         <div className="flex items-center gap-1.5">
           <div className="relative flex-1 flex items-center">
-            <Search className="w-4 h-4 text-theme-tertiary absolute left-3 pointer-events-none" />
+            <Search className={`w-4 h-4 absolute left-3 pointer-events-none ${isVideoDiscovery ? 'text-white/55' : 'text-theme-tertiary'}`} />
             <input
               id="input-discover-search"
               type="text"
@@ -353,12 +357,13 @@ export const DiscoverView: React.FC = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleSearchKeyDown}
               placeholder={`Search people, content, pages...`}
-              className="w-full pl-9 pr-9 py-2 rounded-full bg-theme-surface-hover hover:bg-theme-surface-active/60 focus:bg-theme-surface focus:ring-2 focus:ring-[#5E43F3]/20 focus:border-[#5E43F3] border border-transparent text-sm text-theme-primary placeholder:text-theme-tertiary transition-all outline-none"
+              className={`w-full pl-9 pr-9 py-2 rounded-full focus:ring-2 focus:ring-[#5E43F3]/20 focus:border-[#5E43F3] border transition-all outline-none ${isVideoDiscovery ? 'bg-[#141414] hover:bg-[#191919] focus:bg-[#141414] border-white/10 text-white placeholder:text-white/50' : 'bg-theme-surface-hover hover:bg-theme-surface-active/60 focus:bg-theme-surface border-transparent text-theme-primary placeholder:text-theme-tertiary'}`}
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 p-1 rounded-full text-theme-tertiary hover:text-theme-secondary cursor-pointer"
+                className={`absolute right-3 p-1 rounded-full cursor-pointer ${isVideoDiscovery ? 'text-white/55 hover:bg-white/10 hover:text-white' : 'text-theme-tertiary hover:text-theme-secondary'}`}
+                aria-label="Clear search"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -383,7 +388,7 @@ export const DiscoverView: React.FC = () => {
             </button>
 
             {isLocationModeMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-48 bg-theme-surface rounded-xl shadow-xl border border-theme-divider-light overflow-hidden z-50">
+              <div className={`absolute right-0 top-full mt-2 w-48 rounded-xl shadow-xl border overflow-hidden z-50 ${isVideoDiscovery ? 'bg-[#141414] border-white/10' : 'bg-theme-surface border-theme-divider-light'}`}>
                 <div className="p-2 space-y-1">
                   <button
                     onClick={() => {
@@ -391,7 +396,7 @@ export const DiscoverView: React.FC = () => {
                       setIsLocationModeMenuOpen(false);
                     }}
                     className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                      locationMode === 'current' ? 'bg-[#5E43F3]/10 text-[#5E43F3]' : 'text-theme-secondary hover:bg-theme-base'
+                      locationMode === 'current' ? 'bg-[#5E43F3]/10 text-[#5E43F3]' : isVideoDiscovery ? 'text-white/75 hover:bg-white/10 hover:text-white' : 'text-theme-secondary hover:bg-theme-base'
                     }`}
                   >
                     <div className="flex items-center gap-2">
@@ -407,7 +412,7 @@ export const DiscoverView: React.FC = () => {
                       setActiveTab('location');
                     }}
                     className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                      locationMode === 'selected' ? 'bg-[#5E43F3]/10 text-[#5E43F3]' : 'text-theme-secondary hover:bg-theme-base'
+                      locationMode === 'selected' ? 'bg-[#5E43F3]/10 text-[#5E43F3]' : isVideoDiscovery ? 'text-white/75 hover:bg-white/10 hover:text-white' : 'text-theme-secondary hover:bg-theme-base'
                     }`}
                   >
                     <div className="flex items-center gap-2">
@@ -422,7 +427,7 @@ export const DiscoverView: React.FC = () => {
                       setIsLocationModeMenuOpen(false);
                     }}
                     className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                      locationMode === 'global' ? 'bg-[#5E43F3]/10 text-[#5E43F3]' : 'text-theme-secondary hover:bg-theme-base'
+                      locationMode === 'global' ? 'bg-[#5E43F3]/10 text-[#5E43F3]' : isVideoDiscovery ? 'text-white/75 hover:bg-white/10 hover:text-white' : 'text-theme-secondary hover:bg-theme-base'
                     }`}
                   >
                     <div className="flex items-center gap-2">
@@ -444,9 +449,13 @@ export const DiscoverView: React.FC = () => {
               key={filter}
               onClick={() => setActiveFilter(filter as any)}
               className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                activeFilter === filter
-                  ? 'bg-theme-inverse text-theme-text-inverse shadow-sm'
-                  : 'bg-theme-surface text-theme-secondary border border-theme-divider/80 hover:bg-theme-base hover:text-theme-primary'
+                isVideoDiscovery
+                  ? activeFilter === filter
+                    ? 'bg-[#5E43F3] text-white shadow-sm shadow-[#5E43F3]/20'
+                    : 'bg-[#141414] text-white/70 border border-white/10 hover:bg-[#1B1B1B] hover:text-white'
+                  : activeFilter === filter
+                    ? 'bg-theme-inverse text-theme-text-inverse shadow-sm'
+                    : 'bg-theme-surface text-theme-secondary border border-theme-divider/80 hover:bg-theme-base hover:text-theme-primary'
               }`}
             >
               {filter.charAt(0).toUpperCase() + filter.slice(1)}
@@ -457,11 +466,11 @@ export const DiscoverView: React.FC = () => {
 
       {/* Recent Searches Section (when not actively searching) */}
       {!isSearching && recentSearches && recentSearches.length > 0 && (
-        <div id="discover-recent-searches-section" className="px-4 mt-3 animate-in fade-in duration-200">
+        <div id="discover-recent-searches-section" className={`px-4 mt-3 animate-in fade-in duration-200 ${isVideoDiscovery ? 'text-white' : ''}`}>
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-theme-tertiary" />
-              <span className="text-xs font-bold text-theme-primary">Recent Searches</span>
+              <Clock className={`w-3.5 h-3.5 ${isVideoDiscovery ? 'text-white/55' : 'text-theme-tertiary'}`} />
+              <span className={`text-xs font-bold ${isVideoDiscovery ? 'text-white' : 'text-theme-primary'}`}>Recent Searches</span>
             </div>
             <button
               id="btn-discover-view-all-recent"
@@ -503,7 +512,7 @@ export const DiscoverView: React.FC = () => {
                     setDebouncedQuery(item.query);
                   }
                 }}
-                className="group flex items-center gap-2 pl-2 pr-1.5 py-1.5 rounded-full bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider/80 transition-all cursor-pointer shrink-0 shadow-2xs"
+                className={`group flex items-center gap-2 pl-2 pr-1.5 py-1.5 rounded-full border transition-all cursor-pointer shrink-0 shadow-2xs ${isVideoDiscovery ? 'bg-[#141414] hover:bg-[#1B1B1B] border-white/10' : 'bg-theme-surface hover:bg-theme-surface-hover border-theme-divider/80'}`}
               >
                 {item.type === 'person' ? (
                   <Avatar src={item.avatarUrl} alt={item.title || item.query} size="xs" />
@@ -514,7 +523,7 @@ export const DiscoverView: React.FC = () => {
                     <Clock className="w-3 h-3" />
                   </div>
                 )}
-                <span className="text-xs font-semibold text-theme-primary max-w-[120px] truncate">
+                <span className={`text-xs font-semibold max-w-[120px] truncate ${isVideoDiscovery ? 'text-white' : 'text-theme-primary'}`}>
                   {item.title || item.query}
                 </span>
                 <button
@@ -524,7 +533,7 @@ export const DiscoverView: React.FC = () => {
                     e.stopPropagation();
                     void removeSearchAndMirror(item._id).catch(() => {});
                   }}
-                  className="w-4 h-4 rounded-full flex items-center justify-center text-theme-tertiary hover:text-red-500 hover:bg-red-500/10 transition-colors ml-0.5 cursor-pointer"
+                  className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors ml-0.5 cursor-pointer ${isVideoDiscovery ? 'text-white/55 hover:text-red-400 hover:bg-red-500/10' : 'text-theme-tertiary hover:text-red-500 hover:bg-red-500/10'}`}
                   title="Remove"
                 >
                   <X className="w-3 h-3 stroke-[2.5]" />

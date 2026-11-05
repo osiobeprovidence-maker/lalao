@@ -1,158 +1,312 @@
-import React, { useState } from 'react';
-import { Play, Heart, MessageCircle, Video as VideoIcon, Loader2 } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Clock3, Heart, MessageCircle, Play, Repeat2, Video as VideoIcon } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import { Post } from '../../types';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { VerificationBadge } from '../common/VerificationBadge';
 import { getPublicIdentityLabel } from '../common/UserIdentity';
 
+type VideoDiscoveryPost = Pick<
+  Post,
+  'id' | 'author' | 'text' | 'mediaUrl' | 'mediaType' | 'createdAt' | 'likesCount' | 'commentsCount' | 'repostsCount'
+> & {
+  muxPlaybackId?: string;
+  createdAtMs?: number;
+  duration?: number;
+};
+
+type SortMode = 'for-you' | 'newest' | 'most-liked';
+
+const muxThumbnailUrl = (playbackId: string, time: number) =>
+  `https://image.mux.com/${playbackId}/thumbnail.jpg?time=${time}&width=640&fit_mode=preserve`;
+
+const isImageUrl = (url?: string) => Boolean(url && (
+  url.startsWith('data:image/') ||
+  /\.(?:avif|gif|jpe?g|png|webp)(?:[?#]|$)/i.test(url) ||
+  url.includes('image.mux.com')
+));
+
+const formatDuration = (seconds: number) => {
+  const safeSeconds = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(safeSeconds / 60)}:${String(safeSeconds % 60).padStart(2, '0')}`;
+};
+
+const VideoPreview: React.FC<{ post: VideoDiscoveryPost }> = ({ post }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const seekAttemptRef = useRef(0);
+  const [shouldLoadMetadata, setShouldLoadMetadata] = useState(false);
+  const [thumbnailIndex, setThumbnailIndex] = useState(0);
+  const [generatedThumbnail, setGeneratedThumbnail] = useState<string>();
+  const [duration, setDuration] = useState(post.duration);
+
+  const thumbnailCandidates = useMemo(() => {
+    const candidates = post.muxPlaybackId
+      ? [2, 1, 3].map((time) => muxThumbnailUrl(post.muxPlaybackId!, time))
+      : [];
+    if (isImageUrl(post.mediaUrl) && post.mediaUrl && !candidates.includes(post.mediaUrl)) {
+      candidates.push(post.mediaUrl);
+    }
+    return candidates;
+  }, [post.mediaUrl, post.muxPlaybackId]);
+
+  const videoSource = post.muxPlaybackId
+    ? `https://stream.mux.com/${post.muxPlaybackId}/medium.mp4`
+    : post.mediaType === 'video' && !isImageUrl(post.mediaUrl)
+      ? post.mediaUrl
+      : undefined;
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) return;
+    if (!('IntersectionObserver' in window)) {
+      setShouldLoadMetadata(true);
+      return;
+    }
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        setShouldLoadMetadata(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: '220px 0px' });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  const seekToPreviewFrame = () => {
+    const video = videoRef.current;
+    if (!video || !Number.isFinite(video.duration) || video.duration <= 0) return;
+    const targets = [1.5, 1, 3]
+      .map((time) => Math.min(time, Math.max(0.1, video.duration * 0.45)))
+      .filter((time, index, values) => values.findIndex((value) => Math.abs(value - time) < 0.1) === index);
+    const target = targets[seekAttemptRef.current];
+    if (target === undefined) return;
+    if (Math.abs(video.currentTime - target) < 0.1 && video.readyState >= 2) {
+      video.dispatchEvent(new Event('seeked'));
+    } else {
+      video.currentTime = target;
+    }
+  };
+
+  const handleVideoMetadata = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (Number.isFinite(video.duration) && video.duration > 0) setDuration(video.duration);
+    if (thumbnailCandidates.length === 0) seekToPreviewFrame();
+  };
+
+  const handlePosterError = () => {
+    setThumbnailIndex((index) => {
+      const nextIndex = index + 1;
+      if (nextIndex >= thumbnailCandidates.length) {
+        window.requestAnimationFrame(seekToPreviewFrame);
+      }
+      return nextIndex;
+    });
+  };
+
+  const handleVideoSeeked = () => {
+    const video = videoRef.current;
+    if (!video || generatedThumbnail || thumbnailIndex < thumbnailCandidates.length) return;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.min(video.videoWidth || 640, 640);
+      canvas.height = Math.max(1, Math.round(canvas.width * ((video.videoHeight || 360) / (video.videoWidth || 640))));
+      const context = canvas.getContext('2d');
+      if (!context) return;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const pixels = context.getImageData(0, 0, Math.min(canvas.width, 32), Math.min(canvas.height, 32)).data;
+      let brightness = 0;
+      for (let index = 0; index < pixels.length; index += 4) {
+        brightness += (pixels[index] * 0.2126) + (pixels[index + 1] * 0.7152) + (pixels[index + 2] * 0.0722);
+      }
+      const averageBrightness = brightness / Math.max(1, pixels.length / 4);
+      const videoDuration = Number.isFinite(video.duration) ? video.duration : 0;
+      if (averageBrightness < 14 && seekAttemptRef.current < 2 && videoDuration > 1.5) {
+        seekAttemptRef.current += 1;
+        seekToPreviewFrame();
+        return;
+      }
+      setGeneratedThumbnail(canvas.toDataURL('image/jpeg', 0.82));
+    } catch {
+      // Cross-origin video sources may prevent canvas capture; keep the styled fallback visible.
+    }
+  };
+
+  const hasStaticThumbnail = thumbnailIndex < thumbnailCandidates.length;
+
+  return (
+    <div ref={containerRef} className="absolute inset-0 overflow-hidden bg-black">
+      {generatedThumbnail ? (
+        <img src={generatedThumbnail} alt="Video preview frame" className="absolute inset-0 h-full w-full object-cover" />
+      ) : hasStaticThumbnail ? (
+        <img
+          src={thumbnailCandidates[thumbnailIndex]}
+          alt="Video preview frame"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+          loading="lazy"
+          decoding="async"
+          onError={handlePosterError}
+        />
+      ) : (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#191527] via-[#111111] to-black text-white/60">
+          <VideoIcon className="h-9 w-9 text-[#5E43F3]/75" />
+          <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">Preview unavailable</span>
+        </div>
+      )}
+
+      {shouldLoadMetadata && videoSource && !generatedThumbnail && (
+        <video
+          ref={videoRef}
+          src={videoSource}
+          crossOrigin="anonymous"
+          preload="metadata"
+          muted
+          playsInline
+          aria-hidden="true"
+          className="pointer-events-none absolute h-px w-px opacity-0"
+          onLoadedMetadata={handleVideoMetadata}
+          onSeeked={handleVideoSeeked}
+          onError={() => undefined}
+        />
+      )}
+
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-black/15 pointer-events-none" />
+      <span className="absolute right-2.5 top-2.5 inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/70 px-2 py-1 text-[10px] font-bold tabular-nums text-white shadow-sm backdrop-blur-sm">
+        <Clock3 className="h-3 w-3 text-white/75" />
+        {duration && Number.isFinite(duration) ? formatDuration(duration) : 'VIDEO'}
+      </span>
+      <span className="absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/35 bg-black/50 text-white shadow-lg backdrop-blur-sm transition-all group-hover:scale-110 group-hover:bg-[#5E43F3]">
+        <Play className="ml-0.5 h-5 w-5 fill-current" />
+      </span>
+    </div>
+  );
+};
+
 export const VideosDiscoveryView: React.FC = () => {
   const { setActiveVideoFeedPostId } = useLalao();
   const [cursor, setCursor] = useState<number | undefined>(undefined);
-  const [accumulatedPosts, setAccumulatedPosts] = useState<any[]>([]);
+  const [sortMode, setSortMode] = useState<SortMode>('for-you');
+  const [accumulatedPosts, setAccumulatedPosts] = useState<VideoDiscoveryPost[]>([]);
 
-  // Fetch paginated videos
-  const result = useQuery(api.social.listVideoPosts, {
-    limit: 24,
-    cursor,
-  });
+  const result = useQuery(api.social.listVideoPosts, { limit: 24, cursor });
 
-  // Keep track of accumulated pages
-  React.useEffect(() => {
+  useEffect(() => {
     if (result?.posts) {
-      setAccumulatedPosts((prev) => {
-        const existingIds = new Set(prev.map((p) => p.id));
-        const newPosts = result.posts.filter((p: any) => !existingIds.has(p.id));
-        return [...prev, ...newPosts];
+      setAccumulatedPosts((previous) => {
+        const existingIds = new Set(previous.map((post) => post.id));
+        const newPosts = result.posts.filter((post: VideoDiscoveryPost) => !existingIds.has(post.id));
+        return [...previous, ...newPosts];
       });
     }
   }, [result]);
+
+  const sortedPosts = useMemo(() => {
+    const posts = [...accumulatedPosts];
+    if (sortMode === 'most-liked') {
+      return posts.sort((a, b) => (b.likesCount || 0) - (a.likesCount || 0));
+    }
+    if (sortMode === 'newest') {
+      return posts.sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
+    }
+    return posts.sort((a, b) => {
+      const engagementA = (a.likesCount || 0) + (a.commentsCount || 0) * 2 + (a.repostsCount || 0) * 3;
+      const engagementB = (b.likesCount || 0) + (b.commentsCount || 0) * 2 + (b.repostsCount || 0) * 3;
+      return engagementB - engagementA || (b.createdAtMs || 0) - (a.createdAtMs || 0);
+    });
+  }, [accumulatedPosts, sortMode]);
 
   const isLoadingInitial = result === undefined && accumulatedPosts.length === 0;
 
   if (isLoadingInitial) {
     return (
-      <div className="px-4 py-12 flex flex-col items-center justify-center space-y-3">
+      <div className="bg-[#0D0D0D] px-4 py-12 text-white flex flex-col items-center justify-center space-y-3">
         <div className="w-8 h-8 border-2 border-[#5E43F3] border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs text-theme-tertiary font-medium">Loading videos...</p>
-      </div>
-    );
-  }
-
-  if (accumulatedPosts.length === 0) {
-    return (
-      <div className="px-4 py-16 text-center space-y-3">
-        <div className="w-14 h-14 mx-auto rounded-2xl bg-[#5E43F3]/10 flex items-center justify-center text-[#5E43F3]">
-          <VideoIcon className="w-7 h-7" />
-        </div>
-        <h3 className="text-sm font-bold text-theme-primary">No videos discovered yet</h3>
-        <p className="text-xs text-theme-tertiary max-w-[260px] mx-auto leading-relaxed">
-          Be the first to share a video or clip with the Lalao community.
-        </p>
+        <p className="text-xs text-white/65 font-medium">Loading videos...</p>
       </div>
     );
   }
 
   return (
-    <section className="px-4 pb-12 animate-in fade-in duration-200">
-      <div className="flex items-center justify-between mb-3.5">
-        <div className="flex items-center gap-1.5">
-          <VideoIcon className="w-4 h-4 text-[#5E43F3]" />
-          <h2 className="text-sm font-bold text-theme-primary tracking-tight">Discover Videos</h2>
-          <span className="text-xs text-theme-tertiary">({accumulatedPosts.length})</span>
+    <section
+      id="videos-discovery-section"
+      className="relative left-1/2 w-full -translate-x-1/2 bg-[#0D0D0D] px-4 pb-12 pt-4 text-white animate-in fade-in duration-200 lg:w-[min(920px,calc(100vw_-_520px))]"
+    >
+      <div className="mb-5 flex items-end justify-between gap-3 sm:items-center">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <VideoIcon className="h-5 w-5 shrink-0 text-[#5E43F3]" />
+            <h1 className="truncate text-xl font-black tracking-tight sm:text-2xl">Discover Videos</h1>
+          </div>
+          <p className="mt-1 pl-7 text-xs text-white/65">
+            {accumulatedPosts.length} {accumulatedPosts.length === 1 ? 'video' : 'videos'} loaded
+          </p>
         </div>
+        <label className="flex shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-[#141414] px-3 py-2 text-xs text-white/65 focus-within:border-[#5E43F3]">
+          <span className="sr-only">Sort videos</span>
+          <select
+            aria-label="Sort videos"
+            value={sortMode}
+            onChange={(event) => setSortMode(event.target.value as SortMode)}
+            className="max-w-[116px] cursor-pointer appearance-none bg-transparent font-semibold text-white outline-none"
+          >
+            <option value="for-you" className="bg-[#141414]">For You</option>
+            <option value="newest" className="bg-[#141414]">Newest</option>
+            <option value="most-liked" className="bg-[#141414]">Most liked</option>
+          </select>
+        </label>
       </div>
 
-      {/* Responsive Video Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
-        {accumulatedPosts.map((post) => {
-          // Determine best thumbnail: Mux animated/still thumbnail or mediaUrl fallback
-          const thumbnailUrl = post.muxPlaybackId
-            ? `https://image.mux.com/${post.muxPlaybackId}/thumbnail.jpg?time=0`
-            : post.mediaUrl;
-
-          return (
-            <div
-              key={post.id}
-              onClick={() => setActiveVideoFeedPostId(post.id)}
-              className="group relative aspect-[9/16] rounded-2xl overflow-hidden bg-theme-surface border border-theme-divider/70 cursor-pointer shadow-2xs hover:shadow-md hover:border-[#5E43F3]/50 transition-all"
-            >
-              {/* Video Thumbnail / Preview */}
-              {thumbnailUrl ? (
-                <img
-                  src={thumbnailUrl}
-                  alt={post.text || 'Lalao Video'}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  loading="lazy"
-                  onError={(e) => {
-                    // Fallback to dark gradient if image thumbnail fails
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-indigo-900/60 via-purple-900/40 to-black/80 flex items-center justify-center">
-                  <Play className="w-10 h-10 text-white/40" />
-                </div>
-              )}
-
-              {/* Gradient Dark Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/10 group-hover:from-black/90 transition-colors pointer-events-none" />
-
-              {/* Play Badge Top-Right */}
-              <div className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white shadow-sm group-hover:bg-[#5E43F3] group-hover:scale-110 transition-all pointer-events-none">
-                <Play className="w-3.5 h-3.5 fill-white translate-x-0.5" />
-              </div>
-
-              {/* Creator & Stats Info Bottom */}
-              <div className="absolute inset-x-0 bottom-0 p-2.5 sm:p-3 text-white pointer-events-none flex flex-col justify-end">
-                {/* Author row */}
-                {post.author && (
-                  <div className="flex items-center gap-1.5 mb-1 min-w-0">
-                    <Avatar
-                      src={post.author.avatar}
-                      alt={getPublicIdentityLabel(post.author)}
-                      size="xs"
-                      className="ring-1 ring-white/30 shrink-0"
-                    />
-                    <span className="text-[11px] font-semibold text-white/95 truncate">
-                      {getPublicIdentityLabel(post.author)}
-                    </span>
+      {sortedPosts.length === 0 ? (
+        <div className="rounded-2xl border border-white/10 bg-[#141414] px-4 py-16 text-center">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#5E43F3]/15 text-[#8B79FF]">
+            <VideoIcon className="h-7 w-7" />
+          </div>
+          <h2 className="text-sm font-bold text-white">No videos discovered yet</h2>
+          <p className="mx-auto mt-2 max-w-[280px] text-xs leading-relaxed text-white/65">
+            Be the first to share a video or clip with the Lalao community.
+          </p>
+        </div>
+      ) : (
+        <div id="videos-discovery-grid" className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+          {sortedPosts.map((post) => {
+            const creatorName = getPublicIdentityLabel(post.author);
+            return (
+              <button
+                key={post.id}
+                type="button"
+                onClick={() => setActiveVideoFeedPostId(post.id)}
+                aria-label={`Play video by ${creatorName}`}
+                className="group relative aspect-[9/15] min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#141414] text-left shadow-lg shadow-black/20 transition-all hover:-translate-y-0.5 hover:border-[#5E43F3]/70 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5E43F3]"
+              >
+                <VideoPreview post={post} />
+                <span className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col justify-end p-2.5 sm:p-3">
+                  <span className="mb-1.5 flex min-w-0 items-center gap-1.5">
+                    <Avatar src={post.author.avatar} alt={creatorName} size="xs" className="shrink-0 ring-1 ring-white/30" />
+                    <span className="truncate text-[11px] font-bold text-white">{creatorName}</span>
                     <VerificationBadge user={post.author} size="xs" />
-                  </div>
-                )}
+                  </span>
+                  {post.text && <span className="mb-2 line-clamp-2 break-words text-[11px] leading-snug text-white/85">{post.text}</span>}
+                  <span className="flex items-center gap-2.5 text-[10px] font-semibold tabular-nums text-white/80">
+                    <span className="inline-flex items-center gap-1"><Heart className="h-3 w-3 fill-white/65 text-white/65" />{post.likesCount || 0}</span>
+                    <span className="inline-flex items-center gap-1"><MessageCircle className="h-3 w-3 text-white/70" />{post.commentsCount || 0}</span>
+                    <span className="inline-flex items-center gap-1"><Repeat2 className="h-3 w-3 text-white/70" />{post.repostsCount || 0}</span>
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
-                {/* Caption preview */}
-                {post.text && (
-                  <p className="text-[11px] text-white/80 line-clamp-2 leading-tight mb-1.5 font-normal">
-                    {post.text}
-                  </p>
-                )}
-
-                {/* Engagement metrics */}
-                <div className="flex items-center gap-3 text-[10px] text-white/75 font-medium">
-                  <div className="flex items-center gap-1">
-                    <Heart className="w-3 h-3 fill-white/60 text-white/60" />
-                    <span>{post.likesCount || 0}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <MessageCircle className="w-3 h-3 text-white/60" />
-                    <span>{post.commentsCount || 0}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Infinite scrolling / Load More */}
       {result?.nextCursor && (
-        <div className="mt-6 text-center">
+        <div className="mt-7 text-center">
           <button
             type="button"
-            onClick={() => setCursor(result.nextCursor)}
-            className="px-5 py-2 rounded-full bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider text-xs font-bold text-theme-primary transition-all cursor-pointer shadow-2xs"
+            onClick={() => setCursor(result.nextCursor || undefined)}
+            className="rounded-full border border-[#5E43F3]/50 bg-[#5E43F3]/15 px-5 py-2.5 text-xs font-bold text-white transition-colors hover:bg-[#5E43F3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5E43F3]"
           >
             Load More Videos
           </button>
