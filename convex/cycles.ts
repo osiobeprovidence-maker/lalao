@@ -3,10 +3,12 @@ import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { getAuthedUser, getRelationshipSets } from "./social";
 import { resolveUserVerification } from "./social";
+import { requireAuthenticatedUploadIdentity } from "./lib/uploadSecurity";
 
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireAuthenticatedUploadIdentity(ctx);
     return await ctx.storage.generateUploadUrl();
   },
 });

@@ -1,8 +1,8 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useQuery } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
 import { useAuth } from '../../context/AuthContext';
+import { useCurrentUserQuery } from '../../hooks/useCurrentUserQuery';
+import { BackendConnectionError } from '../../components/common/BackendConnectionError';
 
 /**
  * Wraps onboarding routes. If the user has already completed onboarding
@@ -12,7 +12,9 @@ import { useAuth } from '../../context/AuthContext';
  */
 export const OnboardingGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
-  const currentUser = useQuery(api.users.getCurrentUser);
+  const { data: currentUser, error, retry } = useCurrentUserQuery();
+
+  if (error) return <BackendConnectionError onRetry={retry} />;
 
   // Still loading – render nothing so we don't flash the wrong page
   if (isAuthLoading || (isAuthenticated && currentUser === undefined)) {

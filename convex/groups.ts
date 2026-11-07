@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { getAuthedUser, resolveUserVerification } from "./social";
+import { canAccessGroupChat } from "./groupAccess";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    HELPERS
@@ -421,6 +422,7 @@ export const listDiscoverableGroups = query({
       if (args.isChatroom !== undefined) {
         const matchesRoom = !!g.isChatroom === !!args.isChatroom;
         if (!matchesRoom) return false;
+        if (args.isChatroom && g.chatroomStatus === "inactive") return false;
       }
 
       const visibility = g.visibility ?? "private_discoverable";
@@ -469,12 +471,61 @@ export const listDiscoverableGroups = query({
         memberCount: g.memberIds.length,
         isMember,
         isChatroom: g.isChatroom ?? false,
+        chatroomStatus: g.chatroomStatus ?? "active",
         allowPublicPreview: g.allowPublicPreview ?? true,
         roomIcon: g.roomIcon,
         conversationId: conversation ? conversation._id : null,
         createdAt: g.createdAt,
       };
     }));
+  },
+});
+
+/** Fetch only one chatroom's messages for the isolated Live Rooms surface. */
+export const getChatroomConversation = query({
+  args: { groupId: v.string() },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return null;
+
+    const groupId = ctx.db.normalizeId("groupChats", args.groupId);
+    const group = groupId ? await ctx.db.get(groupId) : null;
+    if (!group?.isChatroom) return null;
+
+    // Match the existing send/read authorization, so history is available only
+    // to the same authenticated room members who can use its conversation.
+    if (!canAccessGroupChat(
+      currentUser._id.toString(),
+      group.creatorId.toString(),
+      group.memberIds.map((memberId: any) => memberId.toString()),
+    )) return null;
+
+    const conversation = await ctx.db.query("conversations")
+      .withIndex("by_group_chat", (q: any) => q.eq("groupChatId", group._id))
+      .first();
+    if (!conversation) return null;
+
+    const messages = await ctx.db.query("messages")
+      .withIndex("by_conversation", (q: any) => q.eq("conversationId", conversation._id))
+      .order("asc")
+      .collect();
+
+    return {
+      id: conversation._id,
+      groupChatId: group._id,
+      messages: await Promise.all(messages.map(async (message: any) => ({
+        id: message._id,
+        senderId: message.senderId,
+        text: message.text,
+        createdAt: message.createdAt,
+        isMine: message.senderId === currentUser._id,
+        isEdited: message.isEdited,
+        type: message.type ?? "text",
+        mediaUrl: message.mediaStorageId ? await ctx.storage.getUrl(message.mediaStorageId) : undefined,
+        mimeType: message.mimeType,
+        fileName: message.fileName,
+      }))),
+    };
   },
 });
 
@@ -632,6 +683,8 @@ export const createGroup = mutation({
     isChatroom: v.optional(v.boolean()),
     allowPublicPreview: v.optional(v.boolean()),
     roomIcon: v.optional(v.string()),
+    welcomeMessage: v.optional(v.string()),
+    requiresJoinApproval: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     let currentUser = await getAuthedUser(ctx);
@@ -682,6 +735,9 @@ export const createGroup = mutation({
       coverImage: args.coverImage,
       roomIcon: args.roomIcon,
       isChatroom: args.isChatroom,
+      chatroomStatus: args.isChatroom ? "active" : undefined,
+      welcomeMessage: args.welcomeMessage,
+      requiresJoinApproval: args.requiresJoinApproval,
       allowPublicPreview: args.allowPublicPreview,
       category: args.category?.trim() || "General",
       rules: args.rules || [
@@ -864,6 +920,9 @@ export const requestToJoin = mutation({
 
     const resolved = await resolveGroupContext(ctx, args.groupId, currentUser);
     if (!resolved) throw new ConvexError("Group not found");
+    if (resolved.group.isChatroom && resolved.group.chatroomStatus === "inactive") {
+      throw new ConvexError("This chatroom is currently inactive");
+    }
 
     if (resolved.isMember) {
       throw new ConvexError("You are already a member of this group");
@@ -873,7 +932,7 @@ export const requestToJoin = mutation({
     const now = Date.now();
 
     // If group is Public, immediately admit the user
-    if (visibility === "public") {
+    if (visibility === "public" && !(resolved.group.isChatroom && resolved.group.requiresJoinApproval)) {
       await ctx.db.insert("groupMembers", {
         groupId: resolved.groupId,
         userId: currentUser._id,
@@ -1284,5 +1343,198 @@ export const toggleFollow = mutation({
       });
       return { isFollowing: true };
     }
+  },
+});
+
+/** Platform chatroom controls. All operations are restricted to platform admins. */
+export const listChatroomsForAdmin = query({
+  args: {},
+  handler: async (ctx) => {
+    const { requireAdmin } = await import("./admin");
+    await requireAdmin(ctx, ["super_admin", "admin"]);
+    const groups = await ctx.db.query("groupChats").collect();
+    const rooms = groups.filter((group) => group.isChatroom === true);
+    return Promise.all(rooms.map(async (room) => {
+      const conversation = await ctx.db.query("conversations")
+        .withIndex("by_group_chat", (q: any) => q.eq("groupChatId", room._id)).first();
+      return {
+        ...room,
+        memberCount: room.memberIds.length,
+        conversationId: conversation?._id ?? null,
+        chatroomStatus: room.chatroomStatus ?? "active",
+      };
+    }));
+  },
+});
+
+/** Room-banner fallback storage is restricted to the same admins who manage rooms. */
+export const generateChatroomBannerUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const { requireAdmin } = await import("./admin");
+    await requireAdmin(ctx, ["super_admin", "admin"]);
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const resolveChatroomBannerStorageUrl = mutation({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    const { requireAdmin } = await import("./admin");
+    await requireAdmin(ctx, ["super_admin", "admin"]);
+    return await ctx.storage.getUrl(args.storageId);
+  },
+});
+
+export const ensureDefaultChatroomForAdmin = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const { requireAdmin } = await import("./admin");
+    const admin = await requireAdmin(ctx, ["super_admin", "admin"]);
+    const username = "room-lalao-general";
+    const existing = await ctx.db.query("groupChats").withIndex("by_username", (q: any) => q.eq("username", username)).first();
+    if (existing) {
+      if (existing.isChatroom) return { groupId: existing._id, created: false };
+      throw new ConvexError("The default room username is already used by a non-room group");
+    }
+    const now = Date.now();
+    const groupId = await ctx.db.insert("groupChats", {
+      name: "Lalao General", username,
+      description: "Welcome to Lalao! Connect, share ideas, meet new people and join conversations with the community.",
+      creatorId: admin._id, memberIds: [admin._id], category: "General", interests: ["general"], rules: [],
+      visibility: "public", isChatroom: true, chatroomStatus: "active", allowPublicPreview: true,
+      requiresJoinApproval: false, communityEnabled: false,
+      communityFeatures: { posts: false, replies: false, media: false, rallies: false },
+      publishingPermissions: { canPost: "admins_only", canReply: "all_members", canUploadMedia: "admins_only", canCreateRallies: "admins_only" },
+      createdAt: now, updatedAt: now,
+    });
+    await ctx.db.insert("groupMembers", { groupId, userId: admin._id, role: "owner", joinedAt: now });
+    await ctx.db.insert("conversations", { userA: admin._id, groupChatId: groupId, updatedAt: now });
+    return { groupId, created: true };
+  },
+});
+
+export const createChatroomForAdmin = mutation({
+  args: {
+    name: v.string(), description: v.string(), coverImage: v.string(), category: v.string(),
+    visibility: v.union(v.literal("public"), v.literal("private_discoverable")),
+    chatroomStatus: v.union(v.literal("active"), v.literal("inactive")),
+    roomIcon: v.optional(v.string()), welcomeMessage: v.optional(v.string()),
+    requiresJoinApproval: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const { requireAdmin } = await import("./admin");
+    const admin = await requireAdmin(ctx, ["super_admin", "admin"]);
+    const name = args.name.trim();
+    if (!name || !args.description.trim() || !args.coverImage.trim()) throw new ConvexError("Name, description, and banner are required");
+    const username = `room-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
+    const existing = await ctx.db.query("groupChats").withIndex("by_username", (q: any) => q.eq("username", username)).first();
+    if (existing) throw new ConvexError("A room with this name already exists");
+    const now = Date.now();
+    const groupId = await ctx.db.insert("groupChats", {
+      name, username, description: args.description.trim(), creatorId: admin._id, memberIds: [admin._id],
+      coverImage: args.coverImage, category: args.category.trim() || "General", rules: [], interests: [],
+      visibility: args.visibility, isChatroom: true, chatroomStatus: args.chatroomStatus,
+      allowPublicPreview: true, roomIcon: args.roomIcon, welcomeMessage: args.welcomeMessage?.trim(),
+      requiresJoinApproval: args.requiresJoinApproval ?? false, communityEnabled: false,
+      communityFeatures: { posts: false, replies: false, media: false, rallies: false },
+      publishingPermissions: { canPost: "admins_only", canReply: "all_members", canUploadMedia: "admins_only", canCreateRallies: "admins_only" },
+      createdAt: now, updatedAt: now,
+    });
+    await ctx.db.insert("groupMembers", { groupId, userId: admin._id, role: "owner", joinedAt: now });
+    const conversationId = await ctx.db.insert("conversations", { userA: admin._id, groupChatId: groupId, updatedAt: now });
+    return { groupId, conversationId };
+  },
+});
+
+export const updateChatroomForAdmin = mutation({
+  args: {
+    groupId: v.string(), name: v.string(), description: v.string(), coverImage: v.string(), category: v.string(),
+    visibility: v.union(v.literal("public"), v.literal("private_discoverable")),
+    chatroomStatus: v.union(v.literal("active"), v.literal("inactive")),
+    roomIcon: v.optional(v.string()), welcomeMessage: v.optional(v.string()), requiresJoinApproval: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const { requireAdmin } = await import("./admin");
+    await requireAdmin(ctx, ["super_admin", "admin"]);
+    const groupId = ctx.db.normalizeId("groupChats", args.groupId);
+    const room = groupId ? await ctx.db.get(groupId) : null;
+    if (!room?.isChatroom) throw new ConvexError("Chatroom not found");
+    const name = args.name.trim();
+    const username = `room-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
+    const duplicate = await ctx.db.query("groupChats").withIndex("by_username", (q: any) => q.eq("username", username)).first();
+    if (duplicate && duplicate._id !== room._id) throw new ConvexError("A room with this name already exists");
+    await ctx.db.patch(room._id, {
+      name, username, description: args.description.trim(), coverImage: args.coverImage,
+      category: args.category.trim() || "General", visibility: args.visibility, chatroomStatus: args.chatroomStatus,
+      roomIcon: args.roomIcon, welcomeMessage: args.welcomeMessage?.trim(), requiresJoinApproval: args.requiresJoinApproval ?? false,
+      updatedAt: Date.now(),
+    });
+    return { success: true };
+  },
+});
+
+export const setChatroomMemberRoleForAdmin = mutation({
+  args: { groupId: v.string(), userId: v.string(), role: v.union(v.literal("admin"), v.literal("moderator"), v.literal("member")) },
+  handler: async (ctx, args) => {
+    const { requireAdmin } = await import("./admin");
+    await requireAdmin(ctx, ["super_admin", "admin"]);
+    const groupId = ctx.db.normalizeId("groupChats", args.groupId);
+    const userId = ctx.db.normalizeId("users", args.userId);
+    const room = groupId ? await ctx.db.get(groupId) : null;
+    if (!room?.isChatroom || !userId || !room.memberIds.some((id: any) => id.toString() === userId.toString())) throw new ConvexError("Room member not found");
+    if (room.creatorId === userId) throw new ConvexError("The room owner role cannot be changed here");
+    const membership = await ctx.db.query("groupMembers").withIndex("by_group_user", (q: any) => q.eq("groupId", groupId).eq("userId", userId)).first();
+    if (membership) await ctx.db.patch(membership._id, { role: args.role });
+    return { success: true };
+  },
+});
+
+export const getChatroomMembersForAdmin = query({
+  args: { groupId: v.string() },
+  handler: async (ctx, args) => {
+    const { requireAdmin } = await import("./admin");
+    await requireAdmin(ctx, ["super_admin", "admin"]);
+    const groupId = ctx.db.normalizeId("groupChats", args.groupId);
+    const room = groupId ? await ctx.db.get(groupId) : null;
+    if (!room?.isChatroom) throw new ConvexError("Chatroom not found");
+    const memberRows = await ctx.db.query("groupMembers").withIndex("by_group", (q: any) => q.eq("groupId", groupId)).collect();
+    const memberMap = new Map(memberRows.map((row: any) => [row.userId.toString(), row]));
+    return Promise.all(room.memberIds.map(async (memberId: any) => {
+      const user = await ctx.db.get(ctx.db.normalizeId("users", memberId.toString())!);
+      if (!user) return null;
+      const membership: any = memberMap.get(memberId.toString());
+      return { id: user._id, name: user.name ?? "User", username: user.username ?? "user", avatar: user.avatarUrl ?? "", role: user._id === room.creatorId ? "owner" : membership?.role ?? "member" };
+    })).then((result: any[]) => result.filter(Boolean));
+  },
+});
+
+export const removeChatroomMemberForAdmin = mutation({
+  args: { groupId: v.string(), userId: v.string() },
+  handler: async (ctx, args) => {
+    const { requireAdmin } = await import("./admin");
+    await requireAdmin(ctx, ["super_admin", "admin"]);
+    const groupId = ctx.db.normalizeId("groupChats", args.groupId);
+    const userId = ctx.db.normalizeId("users", args.userId);
+    const room = groupId ? await ctx.db.get(groupId) : null;
+    if (!room?.isChatroom || !userId || room.creatorId === userId) throw new ConvexError("Room member cannot be removed");
+    const membership = await ctx.db.query("groupMembers").withIndex("by_group_user", (q: any) => q.eq("groupId", groupId).eq("userId", userId)).first();
+    if (membership) await ctx.db.delete(membership._id);
+    await ctx.db.patch(groupId, { memberIds: room.memberIds.filter((id: any) => id.toString() !== userId.toString()), updatedAt: Date.now() });
+    return { success: true };
+  },
+});
+
+// Archive instead of deleting: this preserves linked conversations and messages.
+export const archiveChatroomForAdmin = mutation({
+  args: { groupId: v.string() },
+  handler: async (ctx, args) => {
+    const { requireAdmin } = await import("./admin");
+    await requireAdmin(ctx, ["super_admin", "admin"]);
+    const groupId = ctx.db.normalizeId("groupChats", args.groupId);
+    const room = groupId ? await ctx.db.get(groupId) : null;
+    if (!room?.isChatroom) throw new ConvexError("Chatroom not found");
+    await ctx.db.patch(room._id, { chatroomStatus: "inactive", visibility: "private_hidden", updatedAt: Date.now() });
+    return { success: true };
   },
 });

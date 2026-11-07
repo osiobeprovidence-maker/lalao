@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { OnboardingLayout } from './OnboardingLayout';
-import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import { useUserBackendMutation } from '../../hooks/useUserBackendMutation';
 
 const INTERESTS = [
   { id: 'anime', label: 'Anime' },
@@ -30,7 +30,7 @@ const INTERESTS = [
 
 export const InterestsPage: React.FC = () => {
   const navigate = useNavigate();
-  const updateInterests = useMutation(api.users.updateInterests);
+  const updateInterests = useUserBackendMutation(api.users.updateInterests, 'updateInterests');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const MIN_REQUIRED = 3;

@@ -24,6 +24,7 @@ export type SnapshotValidationReport = {
   validRecords: number;
   issueCount: number;
   unresolvedReferenceCount: number;
+  sensitiveWalletCredentialDocuments: number;
   tables: TableResult[];
   issues: Issue[];
 };
@@ -102,6 +103,7 @@ export function validateSnapshotDirectory(snapshotDir: string): SnapshotValidati
   let tableFiles = 0;
   let records = 0;
   let unresolvedReferenceCount = 0;
+  let sensitiveWalletCredentialDocuments = 0;
 
   for (const table of tableNames) {
     const file = join(root, table, "documents.jsonl");
@@ -136,6 +138,22 @@ export function validateSnapshotDirectory(snapshotDir: string): SnapshotValidati
       } catch {
         issues.push({ table, line, code: "invalid_json", message: "Line is not a JSON object" });
         continue;
+      }
+      if (table === "userWallets") {
+        const credentialFields = ["walletPin", "pinResetOtp"] as const;
+        const hasCredential = credentialFields.some((field) => {
+          const value = document[field];
+          return typeof value === "string" && value.length > 0;
+        });
+        if (hasCredential) {
+          sensitiveWalletCredentialDocuments += 1;
+          issues.push({
+            table,
+            line,
+            code: "sensitive_wallet_credential",
+            message: "Wallet PIN and reset OTP data must be cleared before import; affected users must set a new PIN. Record contents are not reported.",
+          });
+        }
       }
       if (typeof document._id !== "string" || !document._id) {
         issues.push({ table, line, code: "invalid_id", message: "Document requires a non-empty string _id" });
@@ -198,6 +216,7 @@ export function validateSnapshotDirectory(snapshotDir: string): SnapshotValidati
     validRecords,
     issueCount: issues.length,
     unresolvedReferenceCount,
+    sensitiveWalletCredentialDocuments,
     tables: tableResults,
     issues,
   };

@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { getAuthedUser } from "./social";
+import { requireAuthenticatedUploadIdentity } from "./lib/uploadSecurity";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    HELPERS
@@ -58,6 +59,7 @@ async function enrichSoundWithCreator(ctx: any, sound: any, currentUserId?: Id<"
 export const generateAudioUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireAuthenticatedUploadIdentity(ctx);
     return await ctx.storage.generateUploadUrl();
   },
 });

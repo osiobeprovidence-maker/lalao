@@ -44,6 +44,23 @@ export async function requireAdmin(ctx: any, allowedRoles = ["super_admin", "adm
   return user;
 }
 
+/** Admin console uploads use separate storage endpoints from general user media. */
+export const generateAdminUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const resolveAdminStorageUrl = mutation({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    return await ctx.storage.getUrl(args.storageId);
+  },
+});
+
 /**
  * Asserts the caller is authenticated and has role 'super_admin'.
  */

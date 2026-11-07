@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Loader2, Check } from 'lucide-react';
 import { OnboardingLayout } from './OnboardingLayout';
-import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import { useUserBackendMutation } from '../../hooks/useUserBackendMutation';
 
 const PRONOUN_OPTIONS = [
   { id: 'he', label: 'He / Him' },
@@ -15,7 +15,7 @@ const PRONOUN_OPTIONS = [
 
 export const PronounsPage: React.FC = () => {
   const navigate = useNavigate();
-  const updatePronouns = useMutation(api.users.updatePronouns);
+  const updatePronouns = useUserBackendMutation(api.users.updatePronouns, 'updatePronouns');
   const [selected, setSelected] = useState<string | null>(null);
   const [customPronoun, setCustomPronoun] = useState('');
   const [isLoading, setIsLoading] = useState(false);

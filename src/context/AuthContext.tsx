@@ -7,6 +7,12 @@ import {
   logoutPlaysole,
   PlaysoleSession,
 } from '../lib/playsoleAuth';
+import {
+  invokeSupabaseFunction,
+  isSupabaseNotificationsBackendEnabled,
+  setSupabaseAccessTokenProvider,
+} from '../lib/supabase';
+import { getTokenForSelectedIdentity } from '../lib/selectedIdentityToken';
 
 export interface UnifiedAuthUser {
   uid: string;
@@ -24,7 +30,9 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   isPlaysoleAuth: boolean;
+  authError: string | null;
   fetchAccessToken: (args: { forceRefreshToken: boolean }) => Promise<string | null>;
+  selectFirebaseIdentity: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -33,19 +41,26 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   isAuthenticated: false,
   isPlaysoleAuth: false,
+  authError: null,
   fetchAccessToken: async () => null,
+  selectFirebaseIdentity: async () => {},
   logout: async () => {},
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [playsoleSession, setPlaysoleSession] = useState<PlaysoleSession | null>(() => getPlaysoleSession());
+  const [playsoleAuthError, setPlaysoleAuthError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Sync Playsole session state on local storage / custom events
   useEffect(() => {
     const handlePlaysoleChange = () => {
-      setPlaysoleSession(getPlaysoleSession());
+      const nextSession = getPlaysoleSession();
+      setPlaysoleSession(nextSession);
+      // A newly established Playsole session clears a failed Playsole identity
+      // lock. Firebase cannot silently take over.
+      if (nextSession) setPlaysoleAuthError(null);
     };
 
     window.addEventListener('playsole_auth_changed', handlePlaysoleChange);
@@ -67,57 +82,82 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
-  // Determine active user (Playsole prioritized if active, otherwise Firebase)
-  const isPlaysole = !!playsoleSession;
-  const unifiedUser: User | UnifiedAuthUser | null = playsoleSession
-    ? {
+  // Once Playsole is selected, refresh failure keeps that identity selected
+  // until Playsole reauthentication or an explicit logout.
+  const playsoleSelected = !!playsoleSession || !!playsoleAuthError;
+  const unifiedUser: User | UnifiedAuthUser | null = playsoleSelected
+    ? (playsoleSession && !playsoleAuthError ? {
         uid: playsoleSession.user.sub,
         email: playsoleSession.user.email ?? null,
         displayName: playsoleSession.user.name ?? null,
         photoURL: playsoleSession.user.picture ?? null,
         provider: 'playsole',
         lastSignInProvider: 'playsole',
-        getIdToken: async () => refreshPlaysoleTokenIfNeeded(),
-      }
+        getIdToken: async () => {
+          try {
+            const token = await refreshPlaysoleTokenIfNeeded();
+            if (!token) setPlaysoleAuthError('Your Playsole session expired or could not be refreshed. Sign in with Playsole again.');
+            return token;
+          } catch {
+            setPlaysoleAuthError('Your Playsole session could not be refreshed. Sign in with Playsole again.');
+            return null;
+          }
+        },
+      } : null)
     : firebaseUser;
 
   const fetchAccessToken = useCallback(async ({ forceRefreshToken }: { forceRefreshToken: boolean }) => {
-    // 1. If Playsole One session is active, prioritize Playsole OIDC token
-    if (playsoleSession) {
-      try {
-        const token = await refreshPlaysoleTokenIfNeeded();
-        if (token) return token;
-      } catch (error) {
-        console.warn('Error fetching Playsole token:', error);
-      }
-    }
+    // A selected Playsole identity must never fall through to Firebase.
+    return getTokenForSelectedIdentity({
+      playsoleSelected,
+      getPlaysoleToken: async () => {
+        if (playsoleAuthError) return null;
+        try {
+          const token = await refreshPlaysoleTokenIfNeeded();
+          if (token) return token;
+          setPlaysoleAuthError('Your Playsole session expired or could not be refreshed. Sign in with Playsole again.');
+          return null;
+        } catch {
+          console.warn('Error fetching Playsole token. Reauthentication is required.');
+          setPlaysoleAuthError('Your Playsole session could not be refreshed. Sign in with Playsole again.');
+          return null;
+        }
+      },
+      getFirebaseToken: async () => {
+        if (!(firebaseUser ?? auth.currentUser)) return null;
+        try {
+          const u = firebaseUser ?? auth.currentUser;
+          return await u!.getIdToken(forceRefreshToken);
+        } catch (error) {
+          console.warn('Error fetching Firebase token:', error);
+          return null;
+        }
+      },
+    });
+  }, [playsoleSelected, playsoleAuthError, playsoleSession, firebaseUser]);
 
-    // 2. Fallback to Firebase user if active
-    if (firebaseUser ?? auth.currentUser) {
-      try {
-        const u = firebaseUser ?? auth.currentUser;
-        return await u!.getIdToken(forceRefreshToken);
-      } catch (error) {
-        console.warn('Error fetching Firebase token:', error);
-      }
-    }
+  useEffect(() => {
+    setSupabaseAccessTokenProvider(async () => fetchAccessToken({ forceRefreshToken: false }));
+    return () => setSupabaseAccessTokenProvider(null);
+  }, [fetchAccessToken]);
 
-    return null;
-  }, [playsoleSession, firebaseUser]);
+  const selectFirebaseIdentity = useCallback(async () => {
+    // This is called only from an explicit Firebase sign-in action. It permits
+    // an intentional provider switch without ever substituting tokens silently.
+    if (playsoleSession || playsoleAuthError) await logoutPlaysole();
+    setPlaysoleSession(null);
+    setPlaysoleAuthError(null);
+  }, [playsoleSession, playsoleAuthError]);
 
   const logout = useCallback(async () => {
     try {
       const { getCurrentWebPushSubscription } = await import('../lib/push');
       const sub = await getCurrentWebPushSubscription();
       if (sub) {
-        const convexUrl = import.meta.env.VITE_CONVEX_URL;
-        if (convexUrl) {
-          // Direct fetch to Convex HTTP mutation or client action
-          const { ConvexHttpClient } = await import('convex/browser');
-          const { api } = await import('../../convex/_generated/api');
-          const client = new ConvexHttpClient(convexUrl);
-          await client.mutation(api.push.deactivateWebPushSubscription, {
-            endpoint: sub.endpoint,
+        if (isSupabaseNotificationsBackendEnabled() && (firebaseUser || playsoleSession)) {
+          await invokeSupabaseFunction<boolean>('app-social', {
+            operation: 'deactivateWebPushSubscription',
+            payload: { endpoint: sub.endpoint },
           });
         }
       }
@@ -136,6 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await logoutPlaysole();
       setPlaysoleSession(null);
+      setPlaysoleAuthError(null);
     } catch (e) {
       console.warn('Playsole logout error:', e);
     }
@@ -146,16 +187,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e) {
       console.warn('[AuthContext] OneSignal logout error:', e);
     }
-  }, [firebaseUser]);
+  }, [firebaseUser, playsoleSession]);
 
   const contextValue = useMemo(() => ({
     user: unifiedUser,
     isLoading,
     isAuthenticated: !!unifiedUser,
-    isPlaysoleAuth: isPlaysole,
+    isPlaysoleAuth: playsoleSelected,
+    authError: playsoleAuthError,
     fetchAccessToken,
+    selectFirebaseIdentity,
     logout,
-  }), [unifiedUser, isLoading, isPlaysole, fetchAccessToken, logout]);
+  }), [unifiedUser, isLoading, playsoleSelected, playsoleAuthError, fetchAccessToken, selectFirebaseIdentity, logout]);
 
   return (
     <AuthContext.Provider value={contextValue}>

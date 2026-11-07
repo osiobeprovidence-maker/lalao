@@ -25,6 +25,8 @@ import { VerificationBadge } from '../common/VerificationBadge';
 import { getPublicIdentityLabel } from '../common/UserIdentity';
 import { ChatModal } from './ChatModal';
 import { AddPeopleModal } from './AddPeopleModal';
+import { useSocialBackendQuery } from '../../hooks/useSocialBackendQuery';
+import { isSupabasePeopleDiscoveryBackendEnabled } from '../../lib/supabase';
 
 export const MessagesView: React.FC = () => {
   const {
@@ -41,7 +43,13 @@ export const MessagesView: React.FC = () => {
     setIsCreateGroupChatOpen,
   } = useLalao();
 
-  const discoverableCount = useQuery(api.social.getDiscoverablePeopleCount) ?? 0;
+  const { data: discoverableCount } = useSocialBackendQuery<number>(
+    api.social.getDiscoverablePeopleCount,
+    'getDiscoverablePeopleCount',
+    {},
+    0,
+    isSupabasePeopleDiscoveryBackendEnabled(),
+  );
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);

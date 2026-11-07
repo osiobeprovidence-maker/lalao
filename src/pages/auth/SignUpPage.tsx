@@ -2,16 +2,17 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, MapPin, Users, Calendar, Chrome, Loader2 } from 'lucide-react';
 import { AppIcon } from '../../components/common/AppIcon';
-import { useMutation } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
 import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
+import { useAuth } from '../../context/AuthContext';
 import { initiatePlaysoleLogin } from '../../lib/playsoleAuth';
+import { ensureCurrentUserRecord, getConvexDeploymentUrl } from '../../lib/supabase';
 
 export const SignUpPage: React.FC = () => {
   const navigate = useNavigate();
-  const createUserRecord = useMutation(api.users.createUserRecord);
-  
+  const canUsePlaysole = getConvexDeploymentUrl() !== null;
+  const { selectFirebaseIdentity } = useAuth();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -26,17 +27,18 @@ export const SignUpPage: React.FC = () => {
     setError('');
     setIsLoading(true);
     try {
+      await selectFirebaseIdentity();
       const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
       const readyUser = userCredential.user ?? auth.currentUser;
       if (!readyUser) {
         throw new Error('Authentication is still loading. Please try again.');
       }
       await readyUser.getIdToken(true);
-      
+
       let attempts = 0;
       while (attempts < 15) {
         try {
-          await createUserRecord({ 
+          await ensureCurrentUserRecord({
             email: readyUser.email ?? undefined,
             name: readyUser.displayName ?? undefined,
             avatarUrl: readyUser.photoURL ?? undefined,
@@ -69,7 +71,7 @@ export const SignUpPage: React.FC = () => {
     <div className="min-h-screen flex bg-theme-surface">
       {/* Left Panel: Brand & Benefits */}
       <div className="hidden lg:flex lg:w-[45%] xl:w-1/2 bg-theme-base flex-col p-12 xl:p-16 justify-between border-r border-indigo-50">
-        
+
         <div>
           {/* Logo */}
           <div className="flex items-center gap-2.5 mb-16">
@@ -111,7 +113,7 @@ export const SignUpPage: React.FC = () => {
 
       {/* Right Panel: Registration Form */}
       <div className="flex-1 flex flex-col px-6 py-8 sm:px-12 lg:px-16 xl:px-24 justify-center items-center relative">
-        
+
         {/* Mobile Header */}
         <div className="lg:hidden w-full max-w-sm mb-10 flex items-center gap-2.5">
           <AppIcon className="w-8 h-8 rounded-full overflow-hidden object-cover shrink-0" fallbackClassName="text-[#5E43F3] fill-[#5E43F3]" />
@@ -176,24 +178,26 @@ export const SignUpPage: React.FC = () => {
             <div className="space-y-3">
               <button
                 type="button"
-                onClick={() => initiatePlaysoleLogin()}
-                className="w-full py-3.5 rounded-xl border border-black/10 dark:border-white/15 bg-black text-white hover:bg-neutral-900 font-bold text-base flex items-center justify-center gap-3 active:scale-[0.98] transition-all cursor-pointer shadow-sm"
+                disabled={!canUsePlaysole}
+                onClick={() => { if (canUsePlaysole) initiatePlaysoleLogin(); }}
+                className="w-full py-3.5 rounded-xl border border-black/10 dark:border-white/15 bg-black text-white hover:bg-neutral-900 font-bold text-base flex items-center justify-center gap-3 active:scale-[0.98] transition-all cursor-pointer shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <img 
-                  src="https://one.playsole.xyz/brand/playsole-logo.png" 
-                  alt="Playsole" 
-                  className="w-5 h-5 object-contain" 
+                <img
+                  src="https://one.playsole.xyz/brand/playsole-logo.png"
+                  alt="Playsole"
+                  className="w-5 h-5 object-contain"
                   onError={(e) => {
                     (e.currentTarget as HTMLImageElement).src = 'https://one.playsole.xyz/brand/playsole-logo.png';
-                  }} 
+                  }}
                 />
-                <span>Sign in with Playsole</span>
+                <span>{canUsePlaysole ? 'Sign in with Playsole' : 'Playsole sign-in unavailable'}</span>
               </button>
 
               <button
                 type="button"
                 onClick={async () => {
                   try {
+                    await selectFirebaseIdentity();
                     const provider = new GoogleAuthProvider();
                     const credential = await signInWithPopup(auth, provider);
                     await credential.user.getIdToken(true);
@@ -201,7 +205,7 @@ export const SignUpPage: React.FC = () => {
                     let attempts = 0;
                     while (attempts < 15) {
                       try {
-                        await createUserRecord({ 
+                        await ensureCurrentUserRecord({
                           email: credential.user.email ?? undefined,
                           name: credential.user.displayName ?? undefined,
                           avatarUrl: credential.user.photoURL ?? undefined,

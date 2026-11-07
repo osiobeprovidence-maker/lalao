@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Loader2, MapPin } from 'lucide-react';
 import { OnboardingLayout } from './OnboardingLayout';
-import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import { useUserBackendMutation } from '../../hooks/useUserBackendMutation';
 
 export const LocationSetupPage: React.FC = () => {
   const navigate = useNavigate();
-  const updateLocation = useMutation(api.users.updateLocation);
+  const updateLocation = useUserBackendMutation(api.users.updateLocation, 'updateLocation');
   const [isDetecting, setIsDetecting] = useState(false);
   const [detectedLocation, setDetectedLocation] = useState<string | null>(null);
   const [latLng, setLatLng] = useState<{ latitude: number; longitude: number } | null>(null);

@@ -8,13 +8,15 @@ import {
   Check,
   UserCheck,
 } from 'lucide-react';
-import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { VerificationBadge } from '../common/VerificationBadge';
 import { getPublicIdentityLabel } from '../common/UserIdentity';
 import { User } from '../../types';
+import { useUserBackendMutation } from '../../hooks/useUserBackendMutation';
+import { useSocialBackendQuery } from '../../hooks/useSocialBackendQuery';
+import { isSupabasePeopleDiscoveryBackendEnabled } from '../../lib/supabase';
 
 interface AddPeopleModalProps {
   isOpen: boolean;
@@ -34,8 +36,18 @@ export const AddPeopleModal: React.FC<AddPeopleModalProps> = ({ isOpen, onClose 
   const [followingStates, setFollowingStates] = useState<Record<string, boolean>>({});
 
   // Query real discoverable people from the backend
-  const discoverablePeople = useQuery(api.social.getDiscoverablePeople, { limit: 50 }) as User[] | undefined;
-  const toggleFollowUser = useMutation(api.social.toggleFollowUser);
+  const { data: discoverablePeople } = useSocialBackendQuery<User[]>(
+    api.social.getDiscoverablePeople,
+    'getDiscoverablePeople',
+    { limit: 50 },
+    0,
+    isSupabasePeopleDiscoveryBackendEnabled(),
+  );
+  const toggleFollowUser = useUserBackendMutation(
+    api.social.toggleFollowUser,
+    'toggleFollowUser',
+    'app-social',
+  );
 
   // Combine discoverable people with existing message contacts for searchability
   const availablePeople = useMemo(() => {

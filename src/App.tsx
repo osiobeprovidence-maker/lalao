@@ -62,12 +62,18 @@ import { VerificationPageView } from './components/creators/VerificationPageView
 import { BetaTesterView } from './components/beta/BetaTesterView';
 import { AdvertiserDashboard } from './components/ads/AdvertiserDashboard';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { hasConvexDeployment, isSupabaseConfigured } from './lib/supabase';
+import { ConvexAppBoundary } from './components/common/ConvexAppBoundary';
+import { ConvexRoomsBoundary } from './components/common/ConvexRoomsBoundary';
+import { SupabaseCoreApp } from './components/core/SupabaseCoreApp';
 import { InstallAppModal } from './components/common/InstallAppModal';
-import { Check, Plus } from 'lucide-react';
+import { Check, Plus, MessagesSquare, LogOut as LogOutIcon } from 'lucide-react';
 
 // Router
-import { Routes, Route, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import { useCurrentUserQuery } from './hooks/useCurrentUserQuery';
+import { BackendConnectionError } from './components/common/BackendConnectionError';
 
 
 /**
@@ -112,6 +118,71 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return <>{children}</>;
 };
+
+const ConvexLalaoApp: React.FC = () => (
+  <ConvexAppBoundary>
+    <LalaoApp />
+  </ConvexAppBoundary>
+);
+
+const LazyAdminChatRooms = React.lazy(() => import('./pages/admin/AdminChatRooms').then((module) => ({ default: module.AdminChatRooms })));
+
+/** Narrow admin guard for the existing room manager; room RPCs also authorize server-side. */
+const AdminChatRoomsRoute: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+  const navigate = useNavigate();
+  const role = useQuery(api.admin.getMyRole);
+  const token = typeof window !== 'undefined' ? sessionStorage.getItem('lalao_admin_token') : null;
+  const sessionValid = useQuery(api.admin.verifyAdminSession, token ? { token } : 'skip');
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center bg-theme-inverse"><p className="text-sm text-theme-tertiary">Verifying room access…</p></div>;
+  }
+
+  if (!isAuthenticated) return <Navigate to="/app" replace />;
+
+  if (role === undefined || (!!token && sessionValid === undefined)) {
+    return <div className="min-h-screen flex items-center justify-center bg-theme-inverse"><p className="text-sm text-theme-tertiary">Verifying room access…</p></div>;
+  }
+
+  if (!isAuthenticated || (role !== 'admin' && role !== 'super_admin') || (!!token && sessionValid !== true)) {
+    return <Navigate to="/app" replace />;
+  }
+
+  return <div className="min-h-screen bg-theme-base text-theme-primary font-sans">
+    <div className="flex h-screen overflow-hidden">
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-theme-divider/80 bg-theme-base md:flex">
+        <div className="flex h-16 shrink-0 items-center gap-2 border-b border-theme-divider/80 px-6"><span className="lalao-wordmark text-[28px] text-theme-primary">lalao</span><span className="mt-1 text-sm font-semibold uppercase tracking-wider text-theme-tertiary">Admin</span></div>
+        <div className="flex-1 overflow-y-auto px-4 py-6"><h3 className="mb-3 px-2 text-xs font-semibold uppercase tracking-wider text-theme-tertiary">Operations</h3><NavLink to="/admin/chat-rooms" className="flex items-center gap-3 rounded-xl bg-[#5E43F3]/10 px-3 py-2.5 text-sm font-medium text-[#5E43F3]"><MessagesSquare className="h-5 w-5"/>Chat Rooms</NavLink></div>
+        <div className="border-t border-theme-divider/80 p-4"><button onClick={() => navigate('/app')} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-theme-secondary hover:bg-theme-surface-hover"><LogOutIcon className="h-5 w-5"/>Exit Admin</button></div>
+      </aside>
+      <main className="relative flex min-w-0 flex-1 flex-col overflow-x-hidden">
+        <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between border-b border-theme-divider/80 bg-theme-surface/80 px-4 backdrop-blur-xl sm:px-6"><h1 className="truncate text-base font-bold sm:text-lg">Platform Control Center</h1><button type="button" onClick={() => navigate('/app')} className="rounded-lg border border-theme-divider px-3 py-2 text-sm md:hidden">Back to Lalao</button></header>
+        <div className="flex-1 overflow-y-auto bg-theme-base p-4 md:p-8"><div className="mx-auto w-full max-w-6xl"><React.Suspense fallback={<div className="p-8 text-center text-theme-tertiary">Loading room management…</div>}><LazyAdminChatRooms /></React.Suspense></div></div>
+      </main>
+    </div>
+  </div>;
+};
+
+const IsolatedAdminChatRoomsRoute: React.FC = () => (
+  <ConvexRoomsBoundary>
+    <AdminChatRoomsRoute />
+  </ConvexRoomsBoundary>
+);
+
+const LegacyAdminAppRoute: React.FC = () => (
+  <ConvexAppBoundary feature="Administration">
+    <AdminRoute>
+      <EventDistributionProvider>
+        <LalaoProvider>
+          <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#0B0F19]"><div className="w-8 h-8 rounded-full border-4 border-white/30 border-t-indigo-500 animate-spin" /></div>}>
+            <AdminApp />
+          </React.Suspense>
+        </LalaoProvider>
+      </EventDistributionProvider>
+    </AdminRoute>
+  </ConvexAppBoundary>
+);
 
 // Auth pages
 import { LoginPage } from './pages/auth/LoginPage';
@@ -341,7 +412,10 @@ const LalaoAppContent: React.FC = () => {
     }
   }, [location.pathname]);
 
-  const platformSettings = useQuery(api.platformSettings.getBrandingSettings);
+  const platformSettings = useQuery(
+    api.platformSettings.getBrandingSettings,
+    isSupabaseConfigured() ? 'skip' : {},
+  );
 
   useEffect(() => {
     if (platformSettings?.faviconUrl) {
@@ -426,7 +500,9 @@ const LalaoAppContent: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [activeTab]);
 
-  const currentUserQuery = useQuery(api.users.getCurrentUser);
+  const { data: currentUserQuery, error: currentUserError, retry: retryCurrentUser } = useCurrentUserQuery();
+
+  if (currentUserError) return <BackendConnectionError onRetry={retryCurrentUser} />;
   
   // Normal loading screen while resolving auth/user
   if (isAuthLoading || currentUserQuery === undefined) {
@@ -684,6 +760,7 @@ const LalaoApp: React.FC = () => (
   <KlyroWalletProvider>
     <EventDistributionProvider>
       <LalaoProvider>
+        <ReferralCapture />
         <CallProvider>
           <LalaoAppContent />
         </CallProvider>
@@ -695,14 +772,13 @@ const LalaoApp: React.FC = () => (
 export default function App() {
   return (
     <>
-    <ReferralCapture />
     <Routes>
       <Route path="/" element={<Navigate to="/app" replace />} />
 
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignUpPage />} />
       <Route path="/referral/:code" element={<ReferralLanding />} />
-      <Route path="/auth/playsole/callback" element={<PlaysoleCallbackPage />} />
+      <Route path="/auth/playsole/callback" element={<ConvexAppBoundary feature="Playsole callback"><PlaysoleCallbackPage /></ConvexAppBoundary>} />
       <Route path="/verify" element={<OTPVerifyPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -715,35 +791,22 @@ export default function App() {
       <Route path="/onboarding/pronouns" element={<OnboardingGuard><PronounsPage /></OnboardingGuard>} />
       <Route path="/onboarding/location" element={<OnboardingGuard><LocationSetupPage /></OnboardingGuard>} />
       <Route path="/onboarding/interests" element={<OnboardingGuard><InterestsPage /></OnboardingGuard>} />
-      <Route path="/onboarding/recommendations" element={<OnboardingGuard><RecommendationsPage /></OnboardingGuard>} />
+      <Route path="/onboarding/recommendations" element={<OnboardingGuard><ConvexAppBoundary feature="Onboarding recommendations"><RecommendationsPage /></ConvexAppBoundary></OnboardingGuard>} />
       <Route path="/onboarding/complete" element={<OnboardingGuard><CompletePage /></OnboardingGuard>} />
 
-      <Route path="/creator-hub" element={<LalaoApp />} />
-      <Route path="/beta-tester" element={<LalaoApp />} />
-      <Route path="/sounds" element={<LalaoApp />} />
-      <Route path="/sounds/:soundId" element={<LalaoApp />} />
-      <Route path="/manga/:username" element={<LalaoApp />} />
-      <Route path="/app" element={<LalaoApp />} />
-      <Route path="/app/*" element={<LalaoApp />} />
-      <Route path="/rewards" element={<LalaoApp />}>
+      <Route path="/creator-hub" element={<ConvexLalaoApp />} />
+      <Route path="/beta-tester" element={<ConvexLalaoApp />} />
+      <Route path="/sounds" element={<ConvexLalaoApp />} />
+      <Route path="/sounds/:soundId" element={<ConvexLalaoApp />} />
+      <Route path="/manga/:username" element={<ConvexLalaoApp />} />
+      <Route path="/app" element={hasConvexDeployment() ? <ConvexLalaoApp /> : <SupabaseCoreApp />} />
+      <Route path="/app/*" element={hasConvexDeployment() ? <ConvexLalaoApp /> : <SupabaseCoreApp />} />
+      <Route path="/rewards" element={<ConvexLalaoApp />}>
         <Route index element={<RewardsPage />} />
       </Route>
 
-      <Route path="/admin/*" element={
-        <AdminRoute>
-          <EventDistributionProvider>
-            <LalaoProvider>
-              <React.Suspense fallback={
-                <div className="min-h-screen flex items-center justify-center bg-[#0B0F19]">
-                  <div className="w-8 h-8 rounded-full border-4 border-white/30 border-t-indigo-500 animate-spin" />
-                </div>
-              }>
-                <AdminApp />
-              </React.Suspense>
-            </LalaoProvider>
-          </EventDistributionProvider>
-        </AdminRoute>
-      } />
+      <Route path="/admin/chat-rooms/*" element={hasConvexDeployment() ? <LegacyAdminAppRoute /> : <IsolatedAdminChatRoomsRoute />} />
+      <Route path="/admin/*" element={<LegacyAdminAppRoute />} />
 
       <Route path="*" element={<Navigate to="/app" replace />} />
     </Routes>

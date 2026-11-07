@@ -7,7 +7,7 @@ const { sql, coverage } = buildSupabaseSchemaSql();
 const details = coverage.tablesDetail as Array<{ table: string; fields: number; indexes: number; searchIndexes: number }>;
 
 assert.equal(coverage.tables, 102, "all current Convex tables are represented");
-assert.equal(coverage.declaredFields, 1100, "all current declared fields are represented");
+assert.equal(coverage.declaredFields, 1103, "all current declared fields are represented");
 assert.equal(coverage.regularIndexes, 260, "all regular Convex indexes are represented");
 assert.equal(coverage.searchIndexes, 10, "all Convex search indexes are represented");
 assert.equal(details.length, 102, "coverage records every table independently");
@@ -26,6 +26,9 @@ assert.match(sql, /uq_bachsWebhookEvents_eventId/);
 assert.match(sql, /uq_authIdentities_issuer_subject/);
 assert.match(sql, /Convex relationship target _storage/);
 assert.match(sql, /Polymorphic Convex relationship retained as text without an FK/);
+assert.match(sql, /"chatroomStatus" text CONSTRAINT "ck_groupChats_chatroomStatus_enum" CHECK \("chatroomStatus" IN \('active', 'inactive'\)\)/);
+assert.match(sql, /"welcomeMessage" text/);
+assert.match(sql, /"requiresJoinApproval" boolean/);
 
 const orderingMigration = readFileSync(resolve("supabase/migrations/20261030000000_recent_search_shadow_ordering.sql"), "utf8");
 const batchPaymentsMigration = readFileSync(resolve("supabase/migrations/20261030000001_batch_subscription_payments.sql"), "utf8");

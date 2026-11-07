@@ -3,6 +3,7 @@
  * Conforms to RFC 7636 (PKCE), RFC 7009 (Token Revocation), and OIDC 1.0.
  * Specification: https://one.playsole.xyz/developers
  */
+import { getConvexDeploymentUrl } from './supabase';
 
 export const PLAYSOLE_CONFIG = {
   issuer: 'https://one.playsole.xyz',
@@ -10,7 +11,7 @@ export const PLAYSOLE_CONFIG = {
   tokenEndpoint: 'https://one.playsole.xyz/token',
   userinfoEndpoint: 'https://one.playsole.xyz/userinfo',
   revokeEndpoint: 'https://one.playsole.xyz/revoke',
-  clientId: (import.meta.env.VITE_PLAYSOLE_CLIENT_ID as string) || 'lalao',
+  clientId: ((import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.VITE_PLAYSOLE_CLIENT_ID) || 'lalao',
   scopes: 'openid profile email',
   storageKey: 'lalao_playsole_session',
   linkChallengeKey: 'lalao_playsole_link_challenge',
@@ -46,6 +47,56 @@ export interface PlaysoleSession {
   expiresAt: number; // epoch ms
   user: PlaysoleUserProfile;
   loginStatus?: 'ready' | 'link_required' | 'email_verification_required';
+}
+
+/** Apply and validate a refresh response without changing the selected OIDC subject. */
+export function applyPlaysoleRefreshResponse(
+  current: PlaysoleSession,
+  tokenData: PlaysoleTokenResponse,
+  now = Date.now(),
+): PlaysoleSession {
+  if (!tokenData || typeof tokenData.access_token !== 'string' || typeof tokenData.id_token !== 'string') {
+    throw new Error('Playsole token refresh returned an incomplete response.');
+  }
+  const claims = decodeJwtPayload<any>(tokenData.id_token);
+  const audiences = Array.isArray(claims?.aud) ? claims.aud : [claims?.aud];
+  if (
+    !claims ||
+    claims.iss !== PLAYSOLE_CONFIG.issuer ||
+    !audiences.includes(PLAYSOLE_CONFIG.clientId) ||
+    claims.sub !== current.user.sub ||
+    typeof claims.exp !== 'number' ||
+    claims.exp <= Math.floor(now / 1000)
+  ) {
+    throw new Error('Refreshed Playsole identity token did not match the active account. Sign in with Playsole again.');
+  }
+
+  const advertisedSeconds = Number(tokenData.expires_in);
+  const advertisedExpiresAt = Number.isFinite(advertisedSeconds) && advertisedSeconds > 0
+    ? now + advertisedSeconds * 1000
+    : claims.exp * 1000;
+  return {
+    ...current,
+    accessToken: tokenData.access_token,
+    idToken: tokenData.id_token,
+    refreshToken: tokenData.refresh_token || current.refreshToken,
+    expiresAt: Math.min(claims.exp * 1000, advertisedExpiresAt),
+  };
+}
+
+/** Refresh only when the session is near expiry; exposed for focused policy tests. */
+export async function refreshPlaysoleSession(
+  current: PlaysoleSession,
+  refresh: (refreshToken: string) => Promise<PlaysoleTokenResponse>,
+  now = Date.now(),
+): Promise<PlaysoleSession> {
+  if (current.expiresAt - now >= 5 * 60 * 1000) return current;
+  if (!current.refreshToken) {
+    if (current.expiresAt > now) return current;
+    throw new Error('Your Playsole session expired. Sign in with Playsole again.');
+  }
+  const response = await refresh(current.refreshToken);
+  return applyPlaysoleRefreshResponse(current, response, now);
 }
 
 /**
@@ -393,64 +444,39 @@ export async function refreshPlaysoleTokenIfNeeded(): Promise<string | null> {
     const current = getPlaysoleSession();
     if (!current) return null;
 
-    if (!current.refreshToken) {
-      // Expired without a refresh token: end the stale session so the app
-      // shows the sign-in screen instead of making unauthenticated calls.
-      if (current.expiresAt <= Date.now()) clearPlaysoleSession();
-      return current.expiresAt > Date.now() ? current.idToken : null;
-    }
-
     try {
-      const { ConvexHttpClient } = await import('convex/browser');
-      const { api } = await import('../../convex/_generated/api');
-      const convexUrl = import.meta.env.VITE_CONVEX_URL as string | undefined;
-      if (!convexUrl) throw new Error('Lalao authentication is not configured.');
+      const convexUrl = getConvexDeploymentUrl();
+      if (!convexUrl) throw new Error('Playsole token refresh is unavailable. Sign in with Playsole again.');
 
-      const client = new ConvexHttpClient(convexUrl);
+      const refreshedSession = await refreshPlaysoleSession(current, async (refreshToken) => {
+        const { ConvexHttpClient } = await import('convex/browser');
+        const { api } = await import('../../convex/_generated/api');
+        const client = new ConvexHttpClient(convexUrl);
 
-      let tokenData: any = null;
-      let lastError: Error | null = null;
-      const backoffMs = [0, 500, 1500];
-      for (const delay of backoffMs) {
-        if (delay) await sleep(delay);
-        try {
-          tokenData = await client.action(api.playsole.refreshPlaysoleToken, {
-            refreshToken: current.refreshToken,
-          });
-          lastError = null;
-          break;
-        } catch (err) {
-          lastError = err instanceof Error ? err : new Error(String(err));
-          if (isDefinitiveRefreshFailure(lastError.message)) break;
+        let tokenData: PlaysoleTokenResponse | null = null;
+        let lastError: Error | null = null;
+        const backoffMs = [0, 500, 1500];
+        for (const delay of backoffMs) {
+          if (delay) await sleep(delay);
+          try {
+            tokenData = await client.action(api.playsole.refreshPlaysoleToken, { refreshToken });
+            lastError = null;
+            break;
+          } catch (err) {
+            lastError = err instanceof Error ? err : new Error(String(err));
+            if (isDefinitiveRefreshFailure(lastError.message)) break;
+          }
         }
-      }
-      if (!tokenData) throw lastError ?? new Error('Playsole token refresh failed.');
+        if (!tokenData) throw lastError ?? new Error('Playsole token refresh failed.');
+        return tokenData;
+      });
 
-      const idClaims = decodeJwtPayload<any>(tokenData.id_token);
-      const audiences = Array.isArray(idClaims?.aud) ? idClaims.aud : [idClaims?.aud];
-      if (
-        !idClaims ||
-        idClaims.iss !== PLAYSOLE_CONFIG.issuer ||
-        !audiences.includes(PLAYSOLE_CONFIG.clientId) ||
-        !idClaims.sub ||
-        typeof idClaims.exp !== 'number' ||
-        idClaims.exp <= Math.floor(Date.now() / 1000)
-      ) {
-        throw new Error('Refreshed Playsole identity token was invalid.');
-      }
-
-      current.accessToken = tokenData.access_token;
-      current.idToken = tokenData.id_token;
-      if (tokenData.refresh_token) current.refreshToken = tokenData.refresh_token;
-      const advertisedExpiresAt = Date.now() + (tokenData.expires_in || 3600) * 1000;
-      current.expiresAt = Math.min(idClaims.exp * 1000, advertisedExpiresAt);
-
-      savePlaysoleSession(current);
-      return current.idToken;
+      if (refreshedSession !== current) savePlaysoleSession(refreshedSession);
+      return refreshedSession.idToken;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.warn('Playsole token refresh failed:', message);
-      // Keep using the current token if it has not expired yet.
+      // Keep using the current identity token only while it remains valid.
       if (current.expiresAt > Date.now()) return current.idToken;
       // A transient failure (network, Convex restart, deployment hiccup) must
       // not destroy a still-valid refresh token: leave the session in place so

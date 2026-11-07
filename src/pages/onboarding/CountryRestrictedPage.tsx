@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, Loader2, Globe } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import { useUserBackendMutation } from '../../hooks/useUserBackendMutation';
 
 export const CountryRestrictedPage: React.FC = () => {
   const { logout } = useAuth();
-  const joinWaitlist = useMutation(api.users.joinWaitlist);
+  const joinWaitlist = useUserBackendMutation(api.users.joinWaitlist, 'joinWaitlist');
   const navigate = useNavigate();
   
   const [isLoading, setIsLoading] = useState(false);
@@ -48,7 +48,7 @@ export const CountryRestrictedPage: React.FC = () => {
           </h1>
           
           <p className="text-theme-secondary mb-8 leading-relaxed">
-            Lalao is currently available only in Nigeria. Join the waitlist and we'll notify you when Lalao becomes available in your country.
+            Lalao is currently available in Nigeria, Kenya, and Ghana. Join the waitlist and we'll notify you when Lalao becomes available in your country.
           </p>
 
           {error && (

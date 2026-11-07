@@ -5,6 +5,8 @@ import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { canAccessGroupChat } from "./groupAccess";
 import { isPostMatchingTopic, getKeywordsForTopic } from "./topicKeywords";
+import { canViewProfilePost } from "./lib/profilePostVisibility";
+import { requireAuthenticatedUploadIdentity } from "./lib/uploadSecurity";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    AUTH HELPERS
@@ -168,6 +170,7 @@ async function resolveAuthor(ctx: any, authorDoc: any, currentUserId: string | n
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireAuthenticatedUploadIdentity(ctx);
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -175,6 +178,7 @@ export const generateUploadUrl = mutation({
 export const resolveStorageUrl = mutation({
   args: { storageId: v.id("_storage") },
   handler: async (ctx, args) => {
+    await requireAuthenticatedUploadIdentity(ctx);
     return await ctx.storage.getUrl(args.storageId);
   },
 });
@@ -182,6 +186,7 @@ export const resolveStorageUrl = mutation({
 export const getStorageUrl = query({
   args: { storageId: v.id("_storage") },
   handler: async (ctx, args) => {
+    await requireAuthenticatedUploadIdentity(ctx);
     return await ctx.storage.getUrl(args.storageId);
   },
 });
@@ -835,6 +840,7 @@ async function fetchPostsForProfileUser(
   const results: any[] = [];
   for (const post of posts) {
     if (post.moderationStatus === "removed") continue;
+    if (!canViewProfilePost(post, currentUser?._id ?? null)) continue;
 
     let isLiked = false;
     if (currentUser) {
@@ -3785,5 +3791,4 @@ export const updateDisappearingMessages = mutation({
     });
   },
 });
-
 

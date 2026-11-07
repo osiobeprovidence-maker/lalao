@@ -25,13 +25,19 @@ try {
   writeTable("recentSearches", [{
     _id: "search_synthetic_1", _creationTime: 2, userId: "users_synthetic_1", query: "synthetic", type: "keyword", timestamp: 2,
   }]);
+  writeTable("userWallets", [{
+    _id: "wallet_synthetic_1", _creationTime: 3, userId: "users_synthetic_1", balance: 0, currency: "LC",
+    walletPin: "1234", updatedAt: 3,
+  }]);
   const valid = validateSnapshotDirectory(root);
   assert.equal(valid.mode, "dry-run");
   assert.equal(valid.sourceTables, 102);
   assert.equal(valid.tableFiles, 102);
-  assert.equal(valid.records, 2);
+  assert.equal(valid.records, 3);
   assert.equal(valid.validRecords, 2);
-  assert.equal(valid.issueCount, 0);
+  assert.equal(valid.sensitiveWalletCredentialDocuments, 1);
+  assert.equal(valid.issues.filter((issue) => issue.code === "sensitive_wallet_credential").length, 1);
+  assert.ok(!JSON.stringify(valid).includes("1234"), "sensitive wallet credentials must never be reported");
 
   writeTable("recentSearches", [
     { _id: "search_synthetic_1", _creationTime: 2, userId: "users_synthetic_1", query: "synthetic", type: "keyword", timestamp: 2 },
@@ -48,7 +54,7 @@ try {
   assert.equal(dangling.issues.filter((issue) => issue.code === "dangling_reference").length, 1);
   assert.equal(dangling.validRecords, 1);
   assert.ok(!JSON.stringify(dangling).includes("users_absent"), "report must not include record IDs or values");
-  console.log("Supabase snapshot validation tests passed (synthetic schema-complete snapshot, duplicates, dangling FK, redacted report).");
+  console.log("Supabase snapshot validation tests passed (synthetic schema, duplicate IDs, dangling FK, sensitive wallet credential redaction).");
 } finally {
   rmSync(root, { recursive: true, force: true });
 }

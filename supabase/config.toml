@@ -6,17 +6,41 @@ schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
+port = 54321
 [db]
 port = 54322
-shadow_port = 54320
-major_version = 15
-
+shadow_port = 56004
+major_version = 17
 [db.seed]
 enabled = false
 
 [studio]
 enabled = true
-port = 54323
+port = 56000
 
 [analytics]
 enabled = false
+
+[functions.app-user]
+# Provider JWTs are verified in-function by _shared/verifyLalaoJwt.ts.
+# Function-level verification is mandatory while gateway JWT verification is disabled.
+verify_jwt = false
+
+[functions.app-search]
+verify_jwt = false
+
+[functions.app-social]
+verify_jwt = false
+
+[functions.app-wallet]
+verify_jwt = false
+
+[functions.app-bachs-webhook]
+verify_jwt = false
+
+
+[inbucket]
+enabled = true
+port = 56001
+smtp_port = 56002
+pop3_port = 56003

@@ -45,6 +45,7 @@ import {
 import { User } from '../../types';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import { useRecentSearches } from '../../hooks/useRecentSearches';
 
 export const DiscoverView: React.FC = () => {
   const {
@@ -122,9 +123,7 @@ export const DiscoverView: React.FC = () => {
   });
 
   // Recent searches integration
-  const recentSearches = useQuery(api.search.getRecentSearches, { limit: 10 });
-  const recordSearch = useMutation(api.search.recordRecentSearch);
-  const removeSearch = useMutation(api.search.removeRecentSearch);
+  const { data: recentSearches, recordSearch, removeSearch } = useRecentSearches(10);
   const requestToJoinRoom = useMutation(api.groups.requestToJoin);
 
   const recordSearchAndMirror = useCallback(async (args: any) => {

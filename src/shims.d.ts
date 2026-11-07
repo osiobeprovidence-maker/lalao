@@ -11,6 +11,7 @@ declare module 'convex/react' {
 
 interface ImportMetaEnv {
   readonly VITE_CONVEX_URL: string;
+  readonly VITE_ENABLE_LEGACY_CONVEX_FEATURES?: string;
   readonly VITE_APP_URL?: string;
   readonly VITE_CLOUDINARY_CLOUD_NAME?: string;
   readonly VITE_FIREBASE_VAPID_KEY?: string;

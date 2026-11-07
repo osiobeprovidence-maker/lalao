@@ -13,7 +13,7 @@
  */
 
 export const ONESIGNAL_APP_ID =
-  (import.meta.env.VITE_ONESIGNAL_APP_ID as string | undefined) ||
+  ((import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.VITE_ONESIGNAL_APP_ID) ||
   "0da46499-22a0-4035-8dfa-49f4395367da";
 
 declare global {

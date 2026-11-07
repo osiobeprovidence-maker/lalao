@@ -34,6 +34,9 @@ import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
 import { VerificationBadge } from '../common/VerificationBadge';
 import { getPublicIdentityLabel } from '../common/UserIdentity';
+import { useUserByUsernameQuery } from '../../hooks/useUserByUsernameQuery';
+import { useSocialBackendQuery } from '../../hooks/useSocialBackendQuery';
+import { isSupabaseProfileReadsBackendEnabled } from '../../lib/supabase';
 import { PostItem } from '../feed/PostItem';
 import { Post, Rally } from '../../types';
 
@@ -74,13 +77,25 @@ export const UserProfileModal: React.FC = () => {
   // Only query relationship if the ID looks like a real Convex ID (no hyphens, usually ~32 chars)
   const isValidConvexId = activeUserProfile?.id && !activeUserProfile.id.includes('-');
 
-  const liveRelationship = useQuery(
+  const { data: liveRelationship, error: relationshipError } = useSocialBackendQuery<{
+    isFollowing: boolean;
+    followsMe: boolean;
+    isFriend: boolean;
+    relationship: 'none' | 'following' | 'follower' | 'friends';
+  }>(
     api.social.getRelationship,
-    activeUserProfile && isValidConvexId ? { targetUserId: activeUserProfile.id as any } : "skip"
+    'getRelationship',
+    activeUserProfile && isValidConvexId ? { targetUserId: activeUserProfile.id } : 'skip',
+    0,
+    isSupabaseProfileReadsBackendEnabled(),
   );
 
   const displayedRelationship = liveRelationship?.relationship || activeUserProfile?.relationship || 'none';
   const isFollowing = liveRelationship?.isFollowing ?? activeUserProfile?.isFollowing ?? false;
+
+  useEffect(() => {
+    if (relationshipError) triggerShareToast('Could not refresh this relationship');
+  }, [relationshipError, triggerShareToast]);
 
   useEffect(() => {
     if (activeUserProfile) {
@@ -92,18 +107,25 @@ export const UserProfileModal: React.FC = () => {
   const isOwnProfile = activeUserProfile?.id === currentUser.id;
 
   // Live query for the latest target user profile to resolve verification status in real-time
-  const liveUser = useQuery(
-    api.users.getUserByUsername,
-    activeUserProfile?.username ? { username: activeUserProfile.username } : "skip"
-  );
+  const { data: liveUser, error: liveUserError } = useUserByUsernameQuery(activeUserProfile?.username);
+
+  useEffect(() => {
+    if (liveUserError) {
+      triggerShareToast('Could not refresh this profile');
+      setActiveUserProfile(null);
+    } else if (liveUser === null && activeUserProfile?.id !== currentUser.id) {
+      setActiveUserProfile(null);
+    }
+  }, [liveUser, liveUserError, activeUserProfile?.id, currentUser.id, setActiveUserProfile, triggerShareToast]);
 
   const effectiveProfile = useMemo(() => {
-    if (!activeUserProfile) return null;
+    if (!activeUserProfile || (!isOwnProfile && (liveUser === null || liveUserError))) return null;
     if (isOwnProfile) return currentUser;
     if (!liveUser) return activeUserProfile;
     return {
       ...activeUserProfile,
       ...liveUser,
+      dateOfBirth: liveUser.birthDateVisibility === 'public' ? liveUser.dateOfBirth : undefined,
       id: activeUserProfile.id || (liveUser as any)._id,
       isVerified: (liveUser as any).isVerified ?? activeUserProfile.isVerified,
       verificationTier: (liveUser as any).verificationTier ?? activeUserProfile.verificationTier,
@@ -471,9 +493,14 @@ export const UserProfileModal: React.FC = () => {
                 })()}
 
                 {/* Birthday / Age if visible */}
-                {activeUserProfile.dateOfBirth && activeUserProfile.birthDateVisibility && activeUserProfile.birthDateVisibility !== 'private' && (() => {
+                {effectiveProfile?.birthDateVisibility === 'age_only' && typeof (effectiveProfile as any).age === 'number' ? (
+                  <div className="flex items-center gap-1.5 text-xs text-theme-secondary font-medium">
+                    <Calendar className="w-3.5 h-3.5 text-[#5E43F3] shrink-0" />
+                    <span>{(effectiveProfile as any).age} years old</span>
+                  </div>
+                ) : effectiveProfile?.dateOfBirth && effectiveProfile.birthDateVisibility === 'public' ? (() => {
                   try {
-                    const birth = new Date(activeUserProfile.dateOfBirth);
+                    const birth = new Date(effectiveProfile.dateOfBirth);
                     const now = new Date();
                     let age = now.getFullYear() - birth.getFullYear();
                     const m = now.getMonth() - birth.getMonth();
@@ -484,8 +511,6 @@ export const UserProfileModal: React.FC = () => {
                       const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
                       label = `Born ${months[birth.getMonth()]} ${birth.getDate()}`;
                       if (!isNaN(age) && age >= 0) label += ` (${age} yrs)`;
-                    } else if (activeUserProfile.birthDateVisibility === 'age_only') {
-                      label = !isNaN(age) && age >= 0 ? `${age} years old` : '';
                     }
 
                     return label ? (
@@ -497,7 +522,7 @@ export const UserProfileModal: React.FC = () => {
                   } catch {
                     return null;
                   }
-                })()}
+                })() : null}
 
                 {/* 5. Connected community information (On one line with graceful mobile wrap/truncation) */}
                 <div className="flex items-center gap-1.5 text-xs text-theme-tertiary min-w-0">

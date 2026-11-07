@@ -483,6 +483,9 @@ export default defineSchema({
       })
     ),
     isChatroom: v.optional(v.boolean()),
+    chatroomStatus: v.optional(v.union(v.literal("active"), v.literal("inactive"))),
+    welcomeMessage: v.optional(v.string()),
+    requiresJoinApproval: v.optional(v.boolean()),
     allowPublicPreview: v.optional(v.boolean()),
     roomIcon: v.optional(v.string()),
     createdAt: v.number(),

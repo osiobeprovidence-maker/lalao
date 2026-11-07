@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useAction } from "convex/react";
+import { useCurrentUserQuery } from '../../hooks/useCurrentUserQuery';
+import { notifyWalletDataUpdated, useWalletBackend, useWalletBackendData } from '../../hooks/useWalletBackend';
+import { invokeSupabaseFunction, isSupabaseDataBackendEnabled } from '../../lib/supabase';
 import { api } from "../../../convex/_generated/api";
 import {
   ArrowLeft, ArrowUpRight, Copy, Plus, Check, Settings,
@@ -85,9 +88,25 @@ export const WalletModal: React.FC = () => {
     triggerShareToast
   } = useLalao();
 
-  const wallet = useQuery(api.wallet.getWallet);
-  const dbTransactions = useQuery(api.wallet.getTransactions);
-  const currentUser = useQuery(api.users.getCurrentUser);
+  const supabaseWalletEnabled = isSupabaseDataBackendEnabled();
+  const convexWallet = useQuery(api.wallet.getWallet, supabaseWalletEnabled ? 'skip' : {});
+  const convexTransactions = useQuery(api.wallet.getTransactions, supabaseWalletEnabled ? 'skip' : {});
+  const supabaseWalletData = useWalletBackendData();
+  const walletBackend = useWalletBackend();
+  const wallet = supabaseWalletEnabled ? supabaseWalletData.wallet : convexWallet;
+  const dbTransactions = supabaseWalletEnabled ? supabaseWalletData.transactions : convexTransactions;
+
+  // When Supabase is the wallet backend, a secure (hashed) PIN is the source of
+  // truth. Legacy wallets migrated from Convex plaintext credentials flag
+  // `pinRequiresSetup` and must establish a new PIN before PIN-authorized
+  // transactions, even though the legacy `hasPin` flag may still be true.
+  const walletNeedsPinSetup = supabaseWalletEnabled
+    ? Boolean((wallet as any)?.pinRequiresSetup || !(wallet as any)?.hasPin)
+    : !(wallet as any)?.hasPin;
+  const walletPinEnabled = supabaseWalletEnabled
+    ? Boolean((wallet as any)?.hasPin && !(wallet as any)?.pinRequiresSetup)
+    : Boolean((wallet as any)?.hasPin);
+  const { data: currentUser } = useCurrentUserQuery();
   const userRole = useQuery(api.admin.getMyRole);
   const isDevAdmin = userRole === 'super_admin' || userRole === 'admin';
   // Reward balance powers the wallet's points pill and inline Rewards screen.
@@ -117,7 +136,57 @@ export const WalletModal: React.FC = () => {
   const [isRequestingOtp, setIsRequestingOtp] = useState(false);
   const performInitializeFunding = useAction((api as any).bachs?.initializeBachsFunding || api.wallet.initializeFunding);
   const performVerifyFunding = useAction(api.bachs.verifyBachsFunding);
+  const initializeWalletFunding = useCallback((args: { amount: number; reference: string; userId?: string }): Promise<any> => {
+    return supabaseWalletEnabled
+      ? invokeSupabaseFunction<any>('app-wallet', { operation: 'initializeFunding', payload: args })
+      : performInitializeFunding(args);
+  }, [supabaseWalletEnabled, performInitializeFunding]);
+  const verifyWalletFunding = useCallback(async (args: { reference: string; sessionId?: string }): Promise<any> => {
+    if (!supabaseWalletEnabled) return performVerifyFunding(args);
+    const result = await invokeSupabaseFunction<any>('app-wallet', { operation: 'verifyFunding', payload: args });
+    if (result?.success) notifyWalletDataUpdated();
+    return result;
+  }, [supabaseWalletEnabled, performVerifyFunding]);
+
+  // Supabase-backed PIN operations. When the staged backend is enabled, PIN
+  // creation/change/reset are verified server-side (never client-supplied IDs)
+  // and the plaintext PIN never travels beyond the Edge Function.
+  const handleSetWalletPin = useCallback(async (args: { pin: string; oldPin?: string }): Promise<any> => {
+    if (supabaseWalletEnabled) {
+      if (args.oldPin) {
+        return walletBackend.changeWalletPin({ oldPin: args.oldPin, newPin: args.pin });
+      }
+      return walletBackend.createWalletPin(args.pin);
+    }
+    return performSetWalletPin(args);
+  }, [supabaseWalletEnabled, walletBackend, performSetWalletPin]);
+
+  const handleRequestPinResetOtp = useCallback(async (): Promise<any> => {
+    if (supabaseWalletEnabled) return walletBackend.requestPinResetOtp();
+    return performRequestPinResetOtp();
+  }, [supabaseWalletEnabled, walletBackend, performRequestPinResetOtp]);
+
+  const handleResetWalletPinWithOtp = useCallback(async (args: { otp: string; newPin: string }): Promise<any> => {
+    if (supabaseWalletEnabled) return walletBackend.resetPinWithOtp(args);
+    return performResetWalletPinWithOtp(args);
+  }, [supabaseWalletEnabled, walletBackend, performResetWalletPinWithOtp]);
+
+  const handleTransferCredits = useCallback(async (args: { amount: number; recipientPageId: string; pin: string }): Promise<any> => {
+    if (supabaseWalletEnabled) return walletBackend.transferCredits(args);
+    return performTransferCredits(args);
+  }, [supabaseWalletEnabled, walletBackend, performTransferCredits]);
+
   const performPurchaseService = useAction(api.market.purchaseService);
+
+  const handleMarketPurchase = useCallback(async (args: {
+    serviceCategory: string; provider: string; customerIdentifier: string;
+    product?: string; variationId?: string; amount: number; fee?: number;
+    pin: string; network?: string; meterType?: string;
+  }): Promise<any> => {
+    if (supabaseWalletEnabled) return walletBackend.marketPurchase(args);
+    return performPurchaseService(args);
+  }, [supabaseWalletEnabled, walletBackend, performPurchaseService]);
+
   const fetchVariations = useAction(api.market.getVariations);
   const fetchCablePackages = useAction(api.market.getCablePackages);
   const verifyElectricityMeter = useAction(api.market.verifyElectricityMeter);
@@ -206,6 +275,7 @@ export const WalletModal: React.FC = () => {
   const [fundingError, setFundingError] = useState('');
   const [fundingStatusMessage, setFundingStatusMessage] = useState('');
   const [activePaymentRef, setActivePaymentRef] = useState<string>('');
+  const [activeBatchSessionId, setActiveBatchSessionId] = useState<string>('');
 
   // Withdrawal Mock State
   const [withdrawalAccounts, setWithdrawalAccounts] = useState<WithdrawalAccount[]>([
@@ -255,9 +325,9 @@ export const WalletModal: React.FC = () => {
     setFundingStatusMessage('Verifying payment with BACHS gateway...');
     navigateTo('fund_pending');
     try {
-      const result = await performVerifyFunding({
+      const result = await verifyWalletFunding({
         reference: referenceToVerify,
-        sessionId,
+        sessionId: sessionId || activeBatchSessionId || undefined,
       });
 
       if (result.success) {
@@ -414,7 +484,7 @@ export const WalletModal: React.FC = () => {
     const amt = parseFloat(flowAmount);
     try {
       if (flowAssetType === 'LALAO_CREDITS') {
-        const result = await performTransferCredits({
+        const result = await handleTransferCredits({
           amount: amt,
           recipientPageId: flowRecipient?.id as any,
           pin: pin
@@ -924,7 +994,7 @@ export const WalletModal: React.FC = () => {
                       )}
 
                       {/* CASE 1: PIN is already set, showing clean active status card with action buttons */}
-                      {(wallet as any)?.hasPin && !isChangingPin && !isForgotPinMode && (
+                      {walletPinEnabled && !isChangingPin && !isForgotPinMode && (
                         <div className="space-y-4 pt-1">
                           <div className="bg-theme-base/60 border border-theme-divider-light rounded-xl p-3.5 flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -961,7 +1031,7 @@ export const WalletModal: React.FC = () => {
                                 setPinChangeSuccess('');
                                 setIsRequestingOtp(true);
                                 try {
-                                  const res = await performRequestPinResetOtp();
+                                  const res = await handleRequestPinResetOtp();
                                   setForgotPinEmailMasked(res.email || '');
                                   setIsForgotPinMode(true);
                                   setIsChangingPin(false);
@@ -982,7 +1052,7 @@ export const WalletModal: React.FC = () => {
                       )}
 
                       {/* CASE 2: Change PIN form (revealed when user clicks "Change PIN") */}
-                      {(wallet as any)?.hasPin && isChangingPin && !isForgotPinMode && (
+                      {walletPinEnabled && isChangingPin && !isForgotPinMode && (
                         <div className="space-y-3 pt-1">
                           <div className="flex items-center justify-between pb-1">
                             <span className="text-xs font-black text-theme-primary uppercase tracking-wider">Change Security PIN</span>
@@ -1064,7 +1134,7 @@ export const WalletModal: React.FC = () => {
                                 }
                                 setIsProcessing(true);
                                 try {
-                                  const res = await performSetWalletPin({
+                                  const res = await handleSetWalletPin({
                                     pin: newWalletPinInput,
                                     oldPin: oldWalletPinInput,
                                   });
@@ -1094,7 +1164,7 @@ export const WalletModal: React.FC = () => {
                                 setPinChangeSuccess('');
                                 setIsRequestingOtp(true);
                                 try {
-                                  const res = await performRequestPinResetOtp();
+                                  const res = await handleRequestPinResetOtp();
                                   setForgotPinEmailMasked(res.email || '');
                                   setIsForgotPinMode(true);
                                   setIsChangingPin(false);
@@ -1200,7 +1270,7 @@ export const WalletModal: React.FC = () => {
                                 }
                                 setIsProcessing(true);
                                 try {
-                                  const res = await performResetWalletPinWithOtp({
+                                  const res = await handleResetWalletPinWithOtp({
                                     otp: forgotPinOtp,
                                     newPin: forgotPinNewPin,
                                   });
@@ -1230,7 +1300,7 @@ export const WalletModal: React.FC = () => {
                                 setPinChangeSuccess('');
                                 setIsRequestingOtp(true);
                                 try {
-                                  const res = await performRequestPinResetOtp();
+                                  const res = await handleRequestPinResetOtp();
                                   setForgotPinEmailMasked(res.email || '');
                                   setPinChangeSuccess(`New code sent to ${res.email || 'your email'}.`);
                                 } catch (err: any) {
@@ -1248,7 +1318,7 @@ export const WalletModal: React.FC = () => {
                       )}
 
                       {/* CASE 4: Initial PIN setup when no PIN is yet configured */}
-                      {!(wallet as any)?.hasPin && !isForgotPinMode && (
+                      {walletNeedsPinSetup && !isForgotPinMode && (
                         <div className="space-y-3 pt-1">
                           <div>
                             <label className="block text-xs font-bold text-theme-tertiary uppercase tracking-wider mb-1.5">Create 4-Digit PIN</label>
@@ -1285,7 +1355,7 @@ export const WalletModal: React.FC = () => {
                               }
                               setIsProcessing(true);
                               try {
-                                const res = await performSetWalletPin({
+                                const res = await handleSetWalletPin({
                                   pin: newWalletPinInput,
                                 });
                                 setPinChangeSuccess(res.message || "PIN saved successfully!");
@@ -1855,9 +1925,10 @@ export const WalletModal: React.FC = () => {
                    <button
                      onClick={async () => {
                        setIsProcessing(true);
+                       setActiveBatchSessionId('');
                        setFundingStatusMessage('Initializing secure BACHS checkout...');
                        try {
-                         const initRes = await performInitializeFunding({
+                         const initRes = await initializeWalletFunding({
                            amount: parseFloat(flowAmount),
                            reference: currentFundingReference,
                            userId: currentUser?.id,
@@ -1866,6 +1937,7 @@ export const WalletModal: React.FC = () => {
                          if (initRes && initRes.reference) {
                            setActivePaymentRef(initRes.reference);
                          }
+                         if (typeof initRes?.sessionId === 'string') setActiveBatchSessionId(initRes.sessionId);
 
                          if (initRes?.checkoutUrl) {
                            // Navigate to pending while opening BACHS hosted checkout
@@ -1926,7 +1998,7 @@ export const WalletModal: React.FC = () => {
                  </div>
 
                  <button
-                   onClick={() => handleVerifyBachsPayment(currentFundingReference)}
+                   onClick={() => handleVerifyBachsPayment(currentFundingReference, activeBatchSessionId || undefined)}
                    disabled={isProcessing}
                    className="px-6 py-3 rounded-xl bg-theme-surface hover:bg-theme-surface-hover border border-theme-divider text-theme-primary font-bold text-sm transition-all"
                  >
@@ -4381,7 +4453,7 @@ export const WalletModal: React.FC = () => {
                  onClick={async () => {
                    setIsProcessing(true);
                    try {
-                     const res = await performPurchaseService({
+                     const res = await handleMarketPurchase({
                        serviceCategory: marketServiceType,
                        provider: marketProvider,
                        customerIdentifier: marketCustomerIdentifier,

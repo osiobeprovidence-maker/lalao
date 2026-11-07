@@ -2,15 +2,19 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { OnboardingLayout } from './OnboardingLayout';
-import { useMutation, useQuery } from 'convex/react';
+import { useCurrentUserQuery } from '../../hooks/useCurrentUserQuery';
 import { api } from '../../../convex/_generated/api';
-import parsePhoneNumberFromString from 'libphonenumber-js';
+import type { CountryCode } from 'libphonenumber-js';
+import { isCountryAvailable } from '../../lib/countryAccess';
+import { parseLalaoPhoneNumber } from '../../lib/phoneNumber';
+import { useUserBackendMutation } from '../../hooks/useUserBackendMutation';
 
 export const PhoneSetupPage: React.FC = () => {
   const navigate = useNavigate();
-  const updatePhoneSetup = useMutation(api.users.updatePhoneSetup);
-  const currentUser = useQuery(api.users.getCurrentUser);
+  const updatePhoneSetup = useUserBackendMutation(api.users.updatePhoneSetup, 'updatePhoneSetup');
+  const { data: currentUser } = useCurrentUserQuery();
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [defaultCountry, setDefaultCountry] = useState<CountryCode>('NG');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -21,32 +25,23 @@ export const PhoneSetupPage: React.FC = () => {
       return;
     }
     
-    // Attempt to parse phone number (default NG if no country code provided, but user might enter international)
-    let parsedNumber = parsePhoneNumberFromString(phoneNumber, 'NG');
-    if (!parsedNumber || !parsedNumber.isValid()) {
-       // try parsing with a strict format
-       parsedNumber = parsePhoneNumberFromString('+' + phoneNumber.replace(/\D/g, ''));
-       if (!parsedNumber || !parsedNumber.isValid()) {
-         setError('Please enter a valid phone number.');
-         return;
-       }
+    const parsedNumber = parseLalaoPhoneNumber(phoneNumber, defaultCountry);
+    if (!parsedNumber) {
+      setError('Enter a valid phone number, including its country code if needed.');
+      return;
     }
 
     setError('');
     setIsLoading(true);
     try {
-      const formattedNumber = parsedNumber.format('E.164');
-      const countryCode = parsedNumber.country || 'UNKNOWN';
-      const phoneCountryCode = parsedNumber.countryCallingCode.toString();
-      
       const accessStatus = await updatePhoneSetup({
-        phoneNumber: formattedNumber,
-        countryCode: countryCode,
-        countryName: countryCode, 
-        phoneCountryCode: phoneCountryCode,
+        phoneNumber: parsedNumber.e164,
+        countryCode: parsedNumber.countryCode,
+        countryName: parsedNumber.countryCode,
+        phoneCountryCode: parsedNumber.countryCallingCode,
       });
 
-      if (accessStatus === 'available') {
+      if (accessStatus === 'available' || isCountryAvailable(parsedNumber.countryCode)) {
         if (currentUser?.onboardingStep === 'complete') {
           navigate('/app');
         } else {
@@ -79,14 +74,21 @@ export const PhoneSetupPage: React.FC = () => {
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-theme-tertiary tracking-wider uppercase">Phone Number</label>
           <div className="flex gap-2">
-            <div className="px-4 py-3.5 rounded-xl border-2 border-theme-divider bg-theme-base text-base text-theme-primary flex items-center justify-center font-semibold select-none">
-              +234
-            </div>
+            <select
+              aria-label="Default phone country"
+              value={defaultCountry}
+              onChange={(event) => setDefaultCountry(event.target.value as CountryCode)}
+              className="px-3 py-3.5 rounded-xl border-2 border-theme-divider bg-theme-base text-sm text-theme-primary font-semibold"
+            >
+              <option value="NG">Nigeria (+234)</option>
+              <option value="KE">Kenya (+254)</option>
+              <option value="GH">Ghana (+233)</option>
+            </select>
             <input
               type="tel"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder="e.g. 08012345678"
+              placeholder={defaultCountry === 'KE' ? 'e.g. 0712345678' : defaultCountry === 'GH' ? 'e.g. 0241234567' : 'e.g. 08012345678 or +254712345678'}
               className="flex-1 px-4 py-3.5 rounded-xl border-2 border-theme-divider bg-theme-surface text-base text-theme-primary placeholder-neutral-400 focus:outline-none focus:border-[#3823A4] focus:ring-4 focus:ring-[#3823A4]/10 transition-all"
               autoFocus
             />

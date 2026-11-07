@@ -3,6 +3,7 @@ import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { resolveUserVerification } from "./social";
+import { isCountryAvailable } from "../src/lib/countryAccess";
 
 function firebaseSignInMethod(identity: unknown): string {
   if (!identity || typeof identity !== "object") return "firebase";
@@ -83,6 +84,7 @@ export const getUserByUsername = query({
       .unique();
 
     if (!user) return null;
+    if (user.suspended) return null;
     // Resolve avatar URL for public user profiles.
     let effectiveAvatar = user.avatarUrl || "";
     if (!effectiveAvatar && (user as any).avatarStorageId) {
@@ -97,12 +99,51 @@ export const getUserByUsername = query({
     if (!effectiveAvatar && (user as any).avatar) {
       effectiveAvatar = (user as any).avatar;
     }
-    return {
-      ...user,
+    const profile: Record<string, unknown> = Object.fromEntries(Object.entries({
+      _id: user._id,
+      name: user.name,
+      username: user.username,
       avatarUrl: effectiveAvatar,
       avatar: effectiveAvatar,
+      bio: user.bio,
+      pronouns: user.pronouns,
+      userType: user.userType,
+      locationName: user.locationName,
+      location: user.locationName,
+      followersCount: user.followersCount,
+      followingCount: user.followingCount,
+      publicIdentityType: user.publicIdentityType,
+      birthDateVisibility: user.birthDateVisibility,
       ...resolveUserVerification(user),
-    };
+    }).filter(([, value]) => value !== undefined));
+
+    if (user.birthDateVisibility === "public") {
+      profile.dateOfBirth = user.dateOfBirth;
+    } else if (user.birthDateVisibility === "age_only" && user.dateOfBirth) {
+      const birthDate = new Date(user.dateOfBirth);
+      if (!Number.isNaN(birthDate.getTime()) && birthDate <= new Date()) {
+        const now = new Date();
+        let age = now.getFullYear() - birthDate.getFullYear();
+        if (now.getMonth() < birthDate.getMonth()
+          || (now.getMonth() === birthDate.getMonth() && now.getDate() < birthDate.getDate())) {
+          age -= 1;
+        }
+        if (age >= 0) profile.age = age;
+      }
+    }
+
+    if (user.creatorAccountStatus !== "suspended" && user.creatorAccountStatus !== "closed") {
+      Object.assign(profile, Object.fromEntries(Object.entries({
+        creatorCategory: user.creatorCategory,
+        creatorType: user.creatorType,
+        mangaPublisherName: user.mangaPublisherName,
+        mangaCreatorAbout: user.mangaCreatorAbout,
+        shortMovieStudioName: user.shortMovieStudioName,
+        shortMovieCreatorAbout: user.shortMovieCreatorAbout,
+        creatorLevel: user.creatorLevel,
+      }).filter(([, value]) => value !== undefined)));
+    }
+    return profile;
   },
 });
 
@@ -552,7 +593,22 @@ export const updatePhoneSetup = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    const accessStatus = args.countryCode === "NG" ? "available" : "country_restricted";
+    if (!/^\+[1-9]\d{7,14}$/.test(args.phoneNumber)) {
+      throw new Error("Invalid phone number.");
+    }
+    const callingCodeByCountry: Record<string, string> = { NG: "234", KE: "254", GH: "233" };
+    const expectedCallingCode = callingCodeByCountry[args.countryCode];
+    if (expectedCallingCode && (
+      args.phoneCountryCode !== expectedCallingCode || !args.phoneNumber.startsWith(`+${expectedCallingCode}`)
+    )) {
+      throw new Error("Phone number country does not match the selected country.");
+    }
+    const duplicate = (await ctx.db.query("users").collect()).some((user) =>
+      user._id !== userId && (user.phoneNumber === args.phoneNumber || user.phone === args.phoneNumber)
+    );
+    if (duplicate) throw new Error("This phone number is already linked to another account.");
+
+    const accessStatus = isCountryAvailable(args.countryCode) ? "available" : "country_restricted";
 
     await ctx.db.patch(userId, {
       phoneNumber: args.phoneNumber,
@@ -644,4 +700,3 @@ export const updateNotificationPrefs = mutation({
     await ctx.db.patch(user._id, { notificationPrefs: { ...currentPrefs, ...prefs } } as any);
   },
 });
-

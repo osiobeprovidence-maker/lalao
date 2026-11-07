@@ -1,17 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { useAction } from 'convex/react';
 import { ConvexHttpClient } from 'convex/browser';
 import { api } from '../../../convex/_generated/api';
 import { handlePlaysoleCallback, initiatePlaysoleLogin, PLAYSOLE_CONFIG, savePlaysoleSession } from '../../lib/playsoleAuth';
+import { getConvexDeploymentUrl } from '../../lib/supabase';
 import { AppIcon } from '../../components/common/AppIcon';
 import { Loader2, AlertCircle, ArrowLeft, CheckCircle } from 'lucide-react';
 
 export const PlaysoleCallbackPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const exchangeAuthCode = useAction(api.playsole.exchangeAuthCode);
-
   const [statusMessage, setStatusMessage] = useState('Verifying credentials with Playsole One...');
   const [error, setError] = useState<string | null>(null);
   const [isComplete, setIsComplete] = useState(false);
@@ -53,10 +51,11 @@ export const PlaysoleCallbackPage: React.FC = () => {
       }
 
       try {
+        const convexUrl = getConvexDeploymentUrl();
+        if (!convexUrl) throw new Error('Playsole sign-in is not configured for this application. Please try again later.');
+        const client = new ConvexHttpClient(convexUrl);
         setStatusMessage('Exchanging authorization code...');
-        const exchangeFn = typeof exchangeAuthCode === 'function'
-          ? (args: any) => exchangeAuthCode(args)
-          : undefined;
+        const exchangeFn = (args: any) => client.action(api.playsole.exchangeAuthCode, args);
 
         const session = await handlePlaysoleCallback(code, state || '', exchangeFn, {
           persist: false,
@@ -70,10 +69,6 @@ export const PlaysoleCallbackPage: React.FC = () => {
           setError('Verify your email with Playsole One before using it to sign in to Lalao.');
           return;
         }
-        const convexUrl = import.meta.env.VITE_CONVEX_URL;
-        if (!convexUrl) throw new Error('Lalao authentication is temporarily unavailable. Please try again later.');
-
-        const client = new ConvexHttpClient(convexUrl);
         client.setAuth(session.idToken);
 
         // The single-use challenge was created under the existing account's
