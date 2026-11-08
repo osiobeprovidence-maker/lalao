@@ -12,6 +12,7 @@ import {
   Download,
   Flame,
   History,
+  MessagesSquare,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { usePWA } from '../../hooks/usePWA';

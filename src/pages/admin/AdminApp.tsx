@@ -26,6 +26,7 @@ import {
   Zap,
   BookOpen,
   Award,
+  MessagesSquare,
 } from 'lucide-react';
 
 import { AdminDashboard } from './AdminDashboard';

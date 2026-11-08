@@ -19,6 +19,7 @@ import {
   Briefcase,
   History,
   Megaphone,
+  MessagesSquare,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useLalao } from '../../context/LalaoContext';
