@@ -49,6 +49,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
     { id: 'following', label: 'Following', icon: Users },
     { id: 'saved', label: 'Saved', icon: Bookmark },
     { id: 'liked', label: 'Liked', icon: Heart },
+    { id: 'rooms', label: 'Live Rooms', icon: MessagesSquare },
     { id: 'recent-searches', label: 'Recent Searches', icon: History },
   ] as const;
 

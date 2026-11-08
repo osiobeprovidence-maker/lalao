@@ -49,6 +49,7 @@ import { AdminLocationRules } from './AdminLocationRules';
 import { AdminMangaCreatorApplications } from './AdminMangaCreatorApplications';
 import { AdminBetaTesters } from './AdminBetaTesters';
 import { AdminRewards } from './AdminRewards';
+import { AdminChatRooms } from './AdminChatRooms';
 import { useAuth } from '../../context/AuthContext';
 import { useLalao } from '../../context/LalaoContext';
 import { useQuery, useMutation } from 'convex/react';
@@ -105,6 +106,7 @@ export const AdminApp: React.FC = () => {
         { path: '/admin/creator-applications', label: 'Creator Applications', icon: BookOpen },
         { path: '/admin/reports', label: 'Reports', icon: FileText },
         { path: '/admin/communities', label: 'Communities', icon: Users },
+        { path: '/admin/chat-rooms', label: 'Chat Rooms', icon: MessagesSquare },
         { path: '/admin/community-suggestions', label: 'Community Suggestions', icon: Users },
         { path: '/admin/moderation', label: 'Moderation', icon: ShieldAlert },
         { path: '/admin/notifications', label: 'Notifications', icon: BellRing },
@@ -253,6 +255,8 @@ export const AdminApp: React.FC = () => {
                 <Route path="/monetization" element={<AdminComingSoon title="Creator Monetization" />} />
                 <Route path="/reports" element={<AdminReports />} />
                 <Route path="/communities" element={<AdminCommunities />} />
+                <Route path="/chat-rooms" element={role === 'admin' || role === 'super_admin' ? <AdminChatRooms /> : <Navigate to="/admin" replace />} />
+                <Route path="/chatrooms" element={<Navigate to="/admin/chat-rooms" replace />} />
                 <Route path="/community-suggestions" element={<AdminCommunitySuggestions />} />
                 <Route path="/recommendations" element={<AdminRecommendations />} />
                 <Route path="/creator-applications" element={<AdminMangaCreatorApplications />} />

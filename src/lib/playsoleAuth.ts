@@ -10,7 +10,7 @@ export const PLAYSOLE_CONFIG = {
   tokenEndpoint: 'https://one.playsole.xyz/token',
   userinfoEndpoint: 'https://one.playsole.xyz/userinfo',
   revokeEndpoint: 'https://one.playsole.xyz/revoke',
-  clientId: (import.meta.env.VITE_PLAYSOLE_CLIENT_ID as string) || 'lalao',
+  clientId: ((import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.VITE_PLAYSOLE_CLIENT_ID) || 'lalao',
   scopes: 'openid profile email',
   storageKey: 'lalao_playsole_session',
   linkChallengeKey: 'lalao_playsole_link_challenge',
@@ -111,6 +111,57 @@ export function decodeJwtPayload<T = any>(token: string): T | null {
     return null;
   }
 }
+
+/** Apply and validate a refresh response without changing the selected OIDC subject. */
+export function applyPlaysoleRefreshResponse(
+  current: PlaysoleSession,
+  tokenData: PlaysoleTokenResponse,
+  now = Date.now(),
+): PlaysoleSession {
+  if (!tokenData || typeof tokenData.access_token !== 'string' || typeof tokenData.id_token !== 'string') {
+    throw new Error('Playsole token refresh returned an incomplete response.');
+  }
+  const claims = decodeJwtPayload<any>(tokenData.id_token);
+  const audiences = Array.isArray(claims?.aud) ? claims.aud : [claims?.aud];
+  if (
+    !claims ||
+    claims.iss !== PLAYSOLE_CONFIG.issuer ||
+    !audiences.includes(PLAYSOLE_CONFIG.clientId) ||
+    claims.sub !== current.user.sub ||
+    typeof claims.exp !== 'number' ||
+    claims.exp <= Math.floor(now / 1000)
+  ) {
+    throw new Error('Refreshed Playsole identity token did not match the active account. Sign in with Playsole again.');
+  }
+
+  const advertisedSeconds = Number(tokenData.expires_in);
+  const advertisedExpiresAt = Number.isFinite(advertisedSeconds) && advertisedSeconds > 0
+    ? now + advertisedSeconds * 1000
+    : claims.exp * 1000;
+  return {
+    ...current,
+    accessToken: tokenData.access_token,
+    idToken: tokenData.id_token,
+    refreshToken: tokenData.refresh_token || current.refreshToken,
+    expiresAt: Math.min(claims.exp * 1000, advertisedExpiresAt),
+  };
+}
+
+/** Refresh Playsole tokens using a provider action when within the refresh window. */
+export async function refreshPlaysoleSession(
+  current: PlaysoleSession,
+  refresh: (refreshToken: string) => Promise<PlaysoleTokenResponse>,
+  now = Date.now(),
+): Promise<PlaysoleSession> {
+  if (current.expiresAt - now >= 5 * 60 * 1000) return current;
+  if (!current.refreshToken) {
+    if (current.expiresAt > now) return current;
+    throw new Error('Your Playsole session expired. Sign in with Playsole again.');
+  }
+  const response = await refresh(current.refreshToken);
+  return applyPlaysoleRefreshResponse(current, response, now);
+}
+
 
 /**
  * Get current Redirect URI based on window location

@@ -67,6 +67,7 @@ export type NavTab =
   | 'creator-hub'
   | 'sounds'
   | 'plum'
+  | 'rooms'
   | 'recent-searches'
   | 'ads';
 export type FeedTab = 'for_you' | 'following' | 'community' | 'nearby' | (string & {});

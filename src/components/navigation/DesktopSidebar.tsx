@@ -164,6 +164,7 @@ export const DesktopSidebar: React.FC = () => {
     { id: 'following', label: 'Following', icon: Users },
     { id: 'saved', label: 'Saved', icon: Bookmark },
     { id: 'liked', label: 'Liked', icon: Heart },
+    { id: 'rooms', label: 'Live Rooms', icon: MessagesSquare },
     { id: 'recent-searches', label: 'Recent Searches', icon: History },
   ] as const;
 
@@ -175,7 +176,7 @@ export const DesktopSidebar: React.FC = () => {
   ] as const;
 
   const isMenuItemActive = (id: string) =>
-    ['following', 'saved', 'liked', 'recent-searches'].includes(id) && activeTab === id;
+    ['following', 'saved', 'liked', 'recent-searches', 'rooms'].includes(id) && activeTab === id;
 
   return (
     <aside
