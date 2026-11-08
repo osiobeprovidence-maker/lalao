@@ -456,7 +456,7 @@ const LalaoAppContent: React.FC = () => {
             ref={mainRef}
             className="relative flex-1 overflow-y-auto bg-theme-base pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0 lg:min-h-0"
           >
-            <div className="mx-auto w-full max-w-[600px] min-h-full">
+            <div className={`mx-auto w-full min-h-full ${activeTab === 'discover' ? 'max-w-[600px] lg:max-w-none' : 'max-w-[600px]'}`}>
               {isMangaProfile ? (
                 <div key="manga-publisher-profile" className="animate-in fade-in duration-200 min-h-full w-full bg-[#111111]">
                   <MangaPublisherProfilePage />

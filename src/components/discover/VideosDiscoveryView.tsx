@@ -222,7 +222,7 @@ export const VideosDiscoveryView: React.FC = () => {
 
   if (isLoadingInitial) {
     return (
-      <div className="bg-[#0D0D0D] px-4 py-12 text-white flex flex-col items-center justify-center space-y-3">
+      <div className="flex min-h-[220px] w-full flex-col items-center justify-center space-y-3 px-4 py-12 text-white">
         <div className="w-8 h-8 border-2 border-[#5E43F3] border-t-transparent rounded-full animate-spin" />
         <p className="text-xs text-white/65 font-medium">Loading videos...</p>
       </div>
@@ -232,19 +232,11 @@ export const VideosDiscoveryView: React.FC = () => {
   return (
     <section
       id="videos-discovery-section"
-      className="relative left-1/2 w-full -translate-x-1/2 bg-[#0D0D0D] px-4 pb-12 pt-4 text-white animate-in fade-in duration-200 lg:w-[min(920px,calc(100vw_-_520px))]"
+      className="w-full px-4 pb-12 pt-4 text-white animate-in fade-in duration-200"
     >
-      <div className="mb-5 flex items-end justify-between gap-3 sm:items-center">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <VideoIcon className="h-5 w-5 shrink-0 text-[#5E43F3]" />
-            <h1 className="truncate text-xl font-black tracking-tight sm:text-2xl">Discover Videos</h1>
-          </div>
-          <p className="mt-1 pl-7 text-xs text-white/65">
-            {accumulatedPosts.length} {accumulatedPosts.length === 1 ? 'video' : 'videos'} loaded
-          </p>
-        </div>
-        <label className="flex shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-[#141414] px-3 py-2 text-xs text-white/65 focus-within:border-[#5E43F3]">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h1 className="min-w-0 truncate text-xl font-black tracking-tight sm:text-2xl">Videos</h1>
+        <label className="flex shrink-0 items-center gap-2 rounded-lg border border-white/10 bg-[#141414] px-3 py-2 text-xs text-white/65 focus-within:border-[#5E43F3]">
           <span className="sr-only">Sort videos</span>
           <select
             aria-label="Sort videos"
@@ -270,7 +262,7 @@ export const VideosDiscoveryView: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div id="videos-discovery-grid" className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+        <div id="videos-discovery-grid" className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,_10rem),_1fr))] gap-3 sm:gap-4">
           {sortedPosts.map((post) => {
             const creatorName = getPublicIdentityLabel(post.author);
             return (
@@ -279,7 +271,7 @@ export const VideosDiscoveryView: React.FC = () => {
                 type="button"
                 onClick={() => setActiveVideoFeedPostId(post.id)}
                 aria-label={`Play video by ${creatorName}`}
-                className="group relative aspect-[9/15] min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#141414] text-left shadow-lg shadow-black/20 transition-all hover:-translate-y-0.5 hover:border-[#5E43F3]/70 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5E43F3]"
+                className="group relative aspect-[9/15] min-w-0 overflow-hidden rounded-xl border border-white/10 bg-[#141414] text-left shadow-sm shadow-black/20 transition-all hover:-translate-y-0.5 hover:border-[#5E43F3]/70 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5E43F3]"
               >
                 <VideoPreview post={post} />
                 <span className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col justify-end p-2.5 sm:p-3">
