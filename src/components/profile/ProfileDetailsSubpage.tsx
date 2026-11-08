@@ -11,8 +11,7 @@ import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { uploadAvatarToCloudinary, uploadImageToCloudinary } from '../../lib/cloudinary';
-import { invokeSupabaseFunction, isSupabaseDataBackendEnabled } from '../../lib/supabase';
+import { uploadImageToCloudinary } from '../../lib/cloudinary';
 
 interface ProfileDetailsSubpageProps {
   onBack: () => void;
@@ -103,35 +102,18 @@ export const ProfileDetailsSubpage: React.FC<ProfileDetailsSubpageProps> = ({
     if (e) e.preventDefault();
     setIsSaving(true);
     try {
-      let finalAvatarUrl: string | undefined;
-      let finalAvatarCloudinaryPublicId: string | undefined;
+      let finalAvatarUrl = avatar;
       let finalStorageId: any = undefined;
 
       if (avatarFile) {
         try {
-          if (isSupabaseDataBackendEnabled()) {
-            const signature = await invokeSupabaseFunction<{
-              signature: string;
-              timestamp: number;
-              apiKey: string;
-              cloudName: string;
-              publicId: string;
-            }>('app-user', { operation: 'createAvatarUploadSignature' });
-            const uploaded = await uploadAvatarToCloudinary(avatarFile, signature);
-            finalAvatarUrl = uploaded.secureUrl;
-            finalAvatarCloudinaryPublicId = uploaded.publicId;
-          } else {
-            if (typeof generateCloudinarySignature !== 'function') {
-              throw new Error('generateCloudinarySignature is not a function');
-            }
-            const sig = await generateCloudinarySignature('avatars');
-            finalAvatarUrl = await uploadImageToCloudinary(avatarFile, sig);
+          if (typeof generateCloudinarySignature !== 'function') {
+            throw new Error('generateCloudinarySignature is not a function');
           }
+          const sig = await generateCloudinarySignature('avatars');
+          finalAvatarUrl = await uploadImageToCloudinary(avatarFile, sig);
         } catch (uploadErr) {
           console.warn('Cloudinary upload fallback triggered:', uploadErr);
-          if (isSupabaseDataBackendEnabled()) {
-            throw new Error('Profile photo upload failed. Please try again.');
-          }
           if (typeof generateConvexUploadUrl !== 'function') {
             throw new Error('generateConvexUploadUrl is not a function');
           }
@@ -150,37 +132,19 @@ export const ProfileDetailsSubpage: React.FC<ProfileDetailsSubpageProps> = ({
 
       const cleanUsername = username.replace(/^@+/, '').trim();
 
-      const avatarFields = avatarFile
-        ? finalStorageId
-          ? { avatarStorageId: finalStorageId }
-          : {
-              avatarUrl: finalAvatarUrl,
-              ...(finalAvatarCloudinaryPublicId
-                ? { avatarCloudinaryPublicId: finalAvatarCloudinaryPublicId }
-                : {}),
-            }
-        : {};
-      const updateResult = await updateUserProfile({
+      await updateUserProfile({
         name: name.trim() || undefined,
         username: cleanUsername || undefined,
         bio: bio.trim(),
         locationName: userLocation.trim(),
-        ...avatarFields,
+        avatarUrl: finalAvatarUrl,
+        avatarStorageId: finalStorageId,
         publicIdentityType,
         dateOfBirth: dateOfBirth ? dateOfBirth : undefined,
         birthDateVisibility,
       } as any);
 
-      const avatarCleanupPending = Boolean(
-        isSupabaseDataBackendEnabled() &&
-        updateResult &&
-        typeof updateResult === 'object' &&
-        'avatarCleanupPending' in updateResult &&
-        updateResult.avatarCleanupPending === true
-      );
-      triggerShareToast(avatarCleanupPending
-        ? 'Profile saved. Previous photo cleanup is queued for retry.'
-        : 'Profile details saved successfully!');
+      triggerShareToast('Profile details saved successfully!');
       if (onSaved) onSaved();
     } catch (err: any) {
       triggerShareToast(err.message || 'Failed to save profile details');

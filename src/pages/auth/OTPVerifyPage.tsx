@@ -2,14 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { ArrowLeft, Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { AppIcon } from '../../components/common/AppIcon';
+import { useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { useOptionalConvexAction } from '../../context/OptionalConvexClientContext';
 
 const OTP_LENGTH = 6;
 
 export const OTPVerifyPage: React.FC = () => {
   const navigate = useNavigate();
-  const sendResendOtp = useOptionalConvexAction(api.emails.sendOtpEmail);
+  const sendResendOtp = useAction(api.emails.sendOtpEmail);
   const { state } = useLocation();
   const email = (state as any)?.email || 'your email';
 
@@ -56,10 +56,6 @@ export const OTPVerifyPage: React.FC = () => {
   };
 
   const handleVerify = async () => {
-    if (!sendResendOtp) {
-      setError('Email-code verification is unavailable while the Convex authentication service is disconnected.');
-      return;
-    }
     const code = otp.join('');
     if (code.length < OTP_LENGTH) { setError('Please enter all 6 digits.'); return; }
     setIsLoading(true);
@@ -76,10 +72,6 @@ export const OTPVerifyPage: React.FC = () => {
 
   const handleResend = async () => {
     if (resendCooldown > 0) return;
-    if (!sendResendOtp) {
-      setError('Email-code delivery is unavailable while the Convex email service is disconnected.');
-      return;
-    }
     setResendCooldown(59);
     setOtp(Array(OTP_LENGTH).fill(''));
     inputRefs.current[0]?.focus();
@@ -197,13 +189,13 @@ export const OTPVerifyPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleResend}
-                disabled={resendCooldown > 0 || !sendResendOtp}
+                disabled={resendCooldown > 0}
                 className={`font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
                   resendCooldown > 0 ? 'text-theme-tertiary' : 'text-[#5E43F3] hover:text-[#4E34E0]'
                 }`}
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                {!sendResendOtp ? 'Email verification unavailable' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
+                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
               </button>
             </div>
           </>

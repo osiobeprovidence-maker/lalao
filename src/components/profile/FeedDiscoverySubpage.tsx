@@ -1,9 +1,8 @@
 import React from 'react';
 import { ArrowLeft, Check, SlidersHorizontal, ChevronRight } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
-import { useQuery } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { useUserBackendMutation } from '../../hooks/useUserBackendMutation';
 
 interface FeedDiscoverySubpageProps {
   onBack: () => void;
@@ -22,7 +21,7 @@ export const FeedDiscoverySubpage: React.FC<FeedDiscoverySubpageProps> = ({
   onOpenManageTopics,
 }) => {
   const { currentUser, setCurrentUser, triggerShareToast } = useLalao();
-  const updateInterestsMutation = useUserBackendMutation(api.users.updateInterests, 'updateInterests');
+  const updateInterestsMutation = useMutation(api.users.updateInterests);
 
   const selectedFeeds = currentUser?.interests || [];
 

@@ -26,7 +26,6 @@ import {
   Zap,
   BookOpen,
   Award,
-  MessagesSquare,
 } from 'lucide-react';
 
 import { AdminDashboard } from './AdminDashboard';
@@ -50,7 +49,6 @@ import { AdminLocationRules } from './AdminLocationRules';
 import { AdminMangaCreatorApplications } from './AdminMangaCreatorApplications';
 import { AdminBetaTesters } from './AdminBetaTesters';
 import { AdminRewards } from './AdminRewards';
-import { AdminChatRooms } from './AdminChatRooms';
 import { useAuth } from '../../context/AuthContext';
 import { useLalao } from '../../context/LalaoContext';
 import { useQuery, useMutation } from 'convex/react';
@@ -107,7 +105,6 @@ export const AdminApp: React.FC = () => {
         { path: '/admin/creator-applications', label: 'Creator Applications', icon: BookOpen },
         { path: '/admin/reports', label: 'Reports', icon: FileText },
         { path: '/admin/communities', label: 'Communities', icon: Users },
-        { path: '/admin/chat-rooms', label: 'Chat Rooms', icon: MessagesSquare },
         { path: '/admin/community-suggestions', label: 'Community Suggestions', icon: Users },
         { path: '/admin/moderation', label: 'Moderation', icon: ShieldAlert },
         { path: '/admin/notifications', label: 'Notifications', icon: BellRing },
@@ -159,16 +156,13 @@ export const AdminApp: React.FC = () => {
 
       <div className="flex-1 overflow-y-auto py-6 px-4 no-scrollbar">
         <div className="space-y-8">
-          {navGroups.map((group) => {
-            const visibleItems = group.items.filter((item) => item.path !== '/admin/chat-rooms' || role === 'admin' || role === 'super_admin');
-            if (visibleItems.length === 0) return null;
-            return (
+          {navGroups.map((group) => (
             <div key={group.title}>
               <h3 className="text-xs font-semibold text-theme-tertiary uppercase tracking-wider mb-3 px-2">
                 {group.title}
               </h3>
               <div className="space-y-1">
-                {visibleItems.map((item) => {
+                {group.items.map((item) => {
                   const isActive = item.exact
                     ? location.pathname === item.path
                     : location.pathname.startsWith(item.path);
@@ -191,7 +185,7 @@ export const AdminApp: React.FC = () => {
                 })}
               </div>
             </div>
-          );})}
+          ))}
         </div>
       </div>
 
@@ -259,7 +253,6 @@ export const AdminApp: React.FC = () => {
                 <Route path="/monetization" element={<AdminComingSoon title="Creator Monetization" />} />
                 <Route path="/reports" element={<AdminReports />} />
                 <Route path="/communities" element={<AdminCommunities />} />
-                <Route path="/chat-rooms" element={role === 'admin' || role === 'super_admin' ? <AdminChatRooms /> : <Navigate to="/admin" replace />} />
                 <Route path="/community-suggestions" element={<AdminCommunitySuggestions />} />
                 <Route path="/recommendations" element={<AdminRecommendations />} />
                 <Route path="/creator-applications" element={<AdminMangaCreatorApplications />} />

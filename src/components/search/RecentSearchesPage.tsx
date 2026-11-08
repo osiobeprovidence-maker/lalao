@@ -11,11 +11,12 @@ import {
   AlertTriangle,
   Flame,
 } from 'lucide-react';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { VerificationBadge } from '../common/VerificationBadge';
-import { useRecentSearches } from '../../hooks/useRecentSearches';
 
 function formatTimeAgo(timestamp: number): string {
   if (!timestamp) return 'Recently';
@@ -49,7 +50,10 @@ export const RecentSearchesPage: React.FC = () => {
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
 
-  const { data: recentSearches, removeSearch, clearAllSearches } = useRecentSearches(50);
+  // Fetch recent searches from Convex
+  const recentSearches = useQuery(api.search.getRecentSearches, { limit: 50 });
+  const removeSearch = useMutation(api.search.removeRecentSearch);
+  const clearAllSearches = useMutation(api.search.clearAllRecentSearches);
 
   const filteredSearches = useMemo(() => {
     if (!recentSearches) return [];

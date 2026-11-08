@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 import { AppIcon } from '../../components/common/AppIcon';
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
-import { useAuth } from '../../context/AuthContext';
 import { initiatePlaysoleLogin } from '../../lib/playsoleAuth';
-import { ensureCurrentUserRecord, getConvexDeploymentUrl } from '../../lib/supabase';
 
 const POST_LOGIN_REDIRECT_KEY = 'lalao_post_login_redirect';
 
@@ -19,8 +19,7 @@ export const LoginPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const redirectTo = safeRedirect(searchParams.get('redirect'));
   const signupPath = redirectTo !== '/app' ? `/signup?redirect=${encodeURIComponent(redirectTo)}` : '/signup';
-  const canUsePlaysole = getConvexDeploymentUrl() !== null;
-  const { selectFirebaseIdentity } = useAuth();
+  const createUserRecord = useMutation(api.users.createUserRecord);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -36,19 +35,18 @@ export const LoginPage: React.FC = () => {
     setError('');
     setIsLoading(true);
     try {
-      await selectFirebaseIdentity();
       const userCredential = await signInWithEmailAndPassword(auth, identifier.trim(), password);
       const readyUser = userCredential.user ?? auth.currentUser;
       if (!readyUser) {
         throw new Error('Authentication is still loading. Please try again.');
       }
       await readyUser.getIdToken(true);
-
+      
       // Retry loop to ensure Convex receives the auth token
       let attempts = 0;
       while (attempts < 15) {
         try {
-          await ensureCurrentUserRecord({
+          await createUserRecord({ 
             email: readyUser.email ?? undefined,
             name: readyUser.displayName ?? undefined,
             avatarUrl: readyUser.photoURL ?? undefined,
@@ -79,9 +77,9 @@ export const LoginPage: React.FC = () => {
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-b from-[#1148eb] via-[#0f45eb] to-[#0c2bd7] flex-col justify-between p-10 xl:p-14">
         {/* 3D Community Hero Artwork Layer */}
         <div className="absolute top-0 inset-x-0 pointer-events-none select-none z-10 flex flex-col items-center">
-          <img
-            src="/login-hero-artwork-fade.webp"
-            alt="Lalao 3D Community"
+          <img 
+            src="/login-hero-artwork-fade.webp" 
+            alt="Lalao 3D Community" 
             className="w-full max-w-[660px] h-auto object-contain"
           />
         </div>
@@ -231,11 +229,9 @@ export const LoginPage: React.FC = () => {
 
           {/* Social auth options */}
           <div className="space-y-2.5">
-            <button
+            <button 
               type="button"
-              disabled={!canUsePlaysole}
               onClick={() => {
-                if (!canUsePlaysole) return;
                 try {
                   if (redirectTo !== '/app') {
                     sessionStorage.setItem(POST_LOGIN_REDIRECT_KEY, redirectTo);
@@ -247,32 +243,31 @@ export const LoginPage: React.FC = () => {
                 }
                 initiatePlaysoleLogin();
               }}
-              className="w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border border-black/10 dark:border-white/15 bg-black text-white hover:bg-neutral-900 text-sm font-semibold transition-all cursor-pointer active:scale-[0.98] shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border border-black/10 dark:border-white/15 bg-black text-white hover:bg-neutral-900 text-sm font-semibold transition-all cursor-pointer active:scale-[0.98] shadow-sm"
             >
-              <img
-                src="https://one.playsole.xyz/brand/playsole-logo.png"
-                alt="Playsole"
-                className="w-4 h-4 object-contain"
+              <img 
+                src="https://one.playsole.xyz/brand/playsole-logo.png" 
+                alt="Playsole" 
+                className="w-4 h-4 object-contain" 
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).src = 'https://one.playsole.xyz/brand/playsole-logo.png';
-                }}
+                }} 
               />
-              <span>{canUsePlaysole ? 'Sign in with Playsole' : 'Playsole sign-in unavailable'}</span>
+              <span>Sign in with Playsole</span>
             </button>
 
-            <button
+            <button 
               type="button"
               onClick={async () => {
                 try {
-                  await selectFirebaseIdentity();
                   const provider = new GoogleAuthProvider();
                   const credential = await signInWithPopup(auth, provider);
                   await credential.user.getIdToken(true);
-
+                  
                   let attempts = 0;
                   while (attempts < 15) {
                     try {
-                      await ensureCurrentUserRecord({
+                      await createUserRecord({ 
                         email: credential.user.email ?? undefined,
                         name: credential.user.displayName ?? undefined,
                         avatarUrl: credential.user.photoURL ?? undefined,

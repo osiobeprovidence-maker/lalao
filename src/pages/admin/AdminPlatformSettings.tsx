@@ -19,8 +19,8 @@ export const AdminPlatformSettings: React.FC = () => {
   const creatorSettingsData = useQuery((api as any).platformSettings.getCreatorSettings);
   const updateCreatorSettings = useMutation((api as any).platformSettings.updateCreatorSettings);
 
-  const generateConvexUploadUrl = useMutation(api.admin.generateAdminUploadUrl);
-  const resolveStorageUrl = useMutation(api.admin.resolveAdminStorageUrl);
+  const generateConvexUploadUrl = useMutation(api.social.generateUploadUrl);
+  const resolveStorageUrl = useMutation(api.social.resolveStorageUrl);
 
   const [creatorForm, setCreatorForm] = useState({
     tier3Price: 800,

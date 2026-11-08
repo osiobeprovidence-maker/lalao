@@ -37,8 +37,7 @@ export const uploadFileToStorage = async (file: File, folder: string) => {
 // VAPID key for FCM Web Push — get this from:
 // Firebase Console → Project Settings → Cloud Messaging → Web Push certificates → Key pair
 // Store in VITE_FIREBASE_VAPID_KEY in your .env.local
-const viteEnv = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
-const VAPID_KEY = viteEnv?.VITE_FIREBASE_VAPID_KEY;
+const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY as string | undefined;
 
 let _messaging: Messaging | null = null;
 

@@ -309,28 +309,15 @@ export function useWeb3Wallet(): UseWeb3WalletReturn {
 
     autoConnectAttemptedRef.current = true;
 
-    // Give EIP-6963 wallets time to announce. If the saved provider is no
-    // longer installed, drop the stale preference without showing a connect
-    // error or repeatedly attempting to restore it on future renders.
+    // Small delay to allow extensions and EIP-6963 announcements to settle
     const timer = setTimeout(() => {
-      if (!mountedRef.current || state.status !== 'disconnected') return;
-
-      const currentList = refreshProviders();
-      const savedProvider = currentList.find((entry) => entry.id === savedProviderId);
-      if (!savedProvider) {
-        try {
-          localStorage.removeItem(STORAGE_LAST_CONNECTED_KEY);
-        } catch {
-          // Ignore localStorage errors
-        }
-        return;
+      if (mountedRef.current && state.status === 'disconnected') {
+        void connect(savedProviderId ?? undefined, true);
       }
-
-      void connect(savedProvider, true);
-    }, 1000);
+    }, 300);
 
     return () => clearTimeout(timer);
-  }, [connect, refreshProviders, state.status]);
+  }, [connect, state.status]);
 
   // ── Disconnect ─────────────────────────────────────────────────────
   const disconnect = useCallback(() => {

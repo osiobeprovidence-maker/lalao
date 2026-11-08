@@ -17,7 +17,6 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
-import { useUserByUsernameQuery } from '../../hooks/useUserByUsernameQuery';
 
 type ArtworkTheme = 'reborn' | 'contract' | 'demon' | 'post';
 
@@ -257,7 +256,7 @@ export const MangaPublisherProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const { username } = useParams();
   const { triggerShareToast } = useLalao();
-  const { data: publisher, error: publisherError } = useUserByUsernameQuery(username);
+  const publisher = useQuery(api.users.getUserByUsername, username ? { username } : 'skip');
   const publisherLikes = useQuery(api.users.getUserTotalLikes, publisher?._id ? { userId: publisher._id } : 'skip');
   const [activeTab, setProfileTab] = useState<'posts' | 'manga'>('manga');
   const [isFollowing, setIsFollowing] = useState(false);
@@ -299,19 +298,8 @@ export const MangaPublisherProfilePage: React.FC = () => {
     triggerShareToast('Publisher messages are not available in this preview yet');
   };
 
-  if (publisher === undefined && !publisherError) {
+  if (publisher === undefined) {
     return <div className="min-h-screen animate-pulse bg-[#111111]" />;
-  }
-
-  if (publisherError) {
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center bg-[#111111] px-6 text-center text-white">
-        <BookOpen className="h-9 w-9 text-violet-300" />
-        <h1 className="mt-4 text-lg font-bold">Profile unavailable</h1>
-        <p className="mt-2 max-w-sm text-sm text-white/50">Could not load this publisher profile. Please try again.</p>
-        <button onClick={goBack} className="mt-5 rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white">Go back</button>
-      </div>
-    );
   }
 
   if (!canShowPublisherProfile) {
@@ -527,3 +515,4 @@ export const MangaPublisherProfilePage: React.FC = () => {
     </div>
   );
 };
+

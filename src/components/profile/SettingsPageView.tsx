@@ -20,9 +20,7 @@ import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../common/Avatar';
 import { VerificationBadge } from '../common/VerificationBadge';
-import { useQuery } from 'convex/react';
-import { useCurrentUserQuery } from '../../hooks/useCurrentUserQuery';
-import { useUserBackendMutation } from '../../hooks/useUserBackendMutation';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useTheme } from '../../context/ThemeContext';
 import { usePWA } from '../../hooks/usePWA';
@@ -69,7 +67,7 @@ export const SettingsPageView: React.FC = () => {
   const { theme } = useTheme();
   const { isInstalled, setIsInstallModalOpen } = usePWA();
   const { logout } = useAuth();
-  const { data: authAccount } = useCurrentUserQuery();
+  const authAccount = useQuery(api.users.getCurrentUser, {});
   const signInLabel = (authAccount as any)?.lastSignInProvider === 'playsole' || (currentUser as any)?.provider === 'playsole'
     ? 'Playsole One'
     : 'Google / Firebase';
@@ -100,7 +98,7 @@ export const SettingsPageView: React.FC = () => {
   };
 
   // Notification preferences state synced with backend
-  const updateNotificationPrefs = useUserBackendMutation(api.users.updateNotificationPrefs, 'updateNotificationPrefs');
+  const updateNotificationPrefs = useMutation(api.users.updateNotificationPrefs);
   const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>({
     messages: true,
     cycles: true,
@@ -126,11 +124,9 @@ export const SettingsPageView: React.FC = () => {
         await updateNotificationPrefs({ prefs: next as any });
       } catch (err) {
         console.error('[Settings] Failed to save notification prefs:', err);
-        setNotifPrefs((current) => current[key] === value ? { ...current, [key]: !value } : current);
-        triggerShareToast('Failed to update notification preferences');
       }
     },
-    [notifPrefs, updateNotificationPrefs, triggerShareToast]
+    [notifPrefs, updateNotificationPrefs]
   );
 
   // Topics and feeds preview metadata

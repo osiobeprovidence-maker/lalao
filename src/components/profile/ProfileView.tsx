@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   MapPin,
   Calendar,
@@ -28,8 +28,6 @@ import { getPublicIdentityLabel } from '../common/UserIdentity';
 import { PostItem } from '../feed/PostItem';
 import { User } from '../../types';
 import { SuggestCommunityModal } from './SuggestCommunityModal';
-import { useSocialBackendQuery } from '../../hooks/useSocialBackendQuery';
-import { isSupabaseProfileReadsBackendEnabled } from '../../lib/supabase';
 
 type ProfileTab = 'posts' | 'replies' | 'media' | 'reposts';
 type ConnectionTab = 'followers' | 'following' | 'suggested';
@@ -107,27 +105,12 @@ export const ProfileView: React.FC = () => {
 
   const [isSuggestOpen, setIsSuggestOpen] = useState(false);
 
-  // Connection reads use Supabase only under the staged backend flag.
-  const { data: myFollowersQuery, error: followersError } = useSocialBackendQuery<any[]>(
-    api.social.getMyFollowers,
-    'getMyFollowers',
-    {},
-    0,
-    isSupabaseProfileReadsBackendEnabled(),
-  );
+  // Real connection data from Convex
+  const myFollowersQuery = useQuery(api.social.getMyFollowers);
   const myFollowers = myFollowersQuery ?? [];
-  const { data: myFollowing, error: followingError } = useSocialBackendQuery<{
-    people: any[];
-    pages: any[];
-    peopleCt: number;
-    pagesCt: number;
-  }>(api.social.getMyFollowing, 'getMyFollowing', {}, 0, isSupabaseProfileReadsBackendEnabled());
+  const myFollowing = useQuery(api.social.getMyFollowing);
   const followingData = myFollowing ?? { people: [], pages: [], peopleCt: 0, pagesCt: 0 };
   const totalFollowingCount = followingData.peopleCt + followingData.pagesCt;
-
-  useEffect(() => {
-    if (followersError || followingError) triggerShareToast('Could not load your connections');
-  }, [followersError, followingError, triggerShareToast]);
 
   // Real recommendations for suggested tab
   const communityRecsQuery = useQuery(api.social.getCommunityRecommendations, { limit: 25 });

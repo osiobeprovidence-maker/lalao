@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Loader2, CheckCircle2, Mail } from 'lucide-react';
 import { AppIcon } from '../../components/common/AppIcon';
+import { useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { sendPasswordResetEmail as firebaseSendPasswordReset } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
-import { useOptionalConvexAction } from '../../context/OptionalConvexClientContext';
 
 export const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate();
-  const sendResendResetEmail = useOptionalConvexAction(api.emails.sendPasswordResetEmail);
+  const sendResendResetEmail = useAction(api.emails.sendPasswordResetEmail);
   const [identifier, setIdentifier] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -33,9 +33,10 @@ export const ForgotPasswordPage: React.FC = () => {
         }
 
         // Send branded password reset email via Resend
-        if (sendResendResetEmail) {
-          await sendResendResetEmail({ to: cleanId, resetLink });
-        }
+        await sendResendResetEmail({
+          to: cleanId,
+          resetLink,
+        });
       } else {
         await new Promise((r) => setTimeout(r, 1000));
       }

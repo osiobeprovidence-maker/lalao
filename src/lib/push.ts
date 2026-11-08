@@ -3,7 +3,7 @@ const DEFAULT_VAPID_PUBLIC_KEY =
   "BAjkYX23KqM0DcnuFYUnH5SFGywAi7LAJSQ6sdf9VwFXy1jKmH2nf91iSA1V-Y2icFnfgkWUIyxK3A9nuDutDSQ";
 
 const VAPID_KEY =
-  ((import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.VITE_VAPID_PUBLIC_KEY) ||
+  (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) ||
   DEFAULT_VAPID_PUBLIC_KEY;
 
 /**

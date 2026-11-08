@@ -1,21 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useMutation, useQuery, useAction } from 'convex/react';
-import { useCurrentUserQuery } from '../hooks/useCurrentUserQuery';
-import { useUserBackendMutation } from '../hooks/useUserBackendMutation';
-import { useSocialBackendMutation } from '../hooks/useSocialBackendMutation';
-import { useSocialBackendQuery } from '../hooks/useSocialBackendQuery';
 import { api } from '../../convex/_generated/api';
 import { getOrRequestWebPushSubscription } from '../lib/push';
 import { setOneSignalUser, requestOneSignalPushPermission } from '../lib/onesignal';
 import { useAuth } from './AuthContext';
-import {
-  invokeSupabaseFunction,
-  isSupabaseConfigured,
-  isSupabaseDataBackendEnabled,
-  isSupabaseHomeFeedBackendEnabled,
-  isSupabaseNotificationsBackendEnabled,
-  isSupabaseSocialInteractionsBackendEnabled,
-} from '../lib/supabase';
 import {
   User,
   Post,
@@ -247,7 +235,6 @@ interface LalaoContextType {
   editMessage: (messageId: string, newText: string) => void;
   deleteMessage: (messageId: string) => void;
   markConversationRead: (conversationId: string) => void;
-  startPageConversation: (pageId: string) => void;
   markNotificationsAsRead: () => void;
 
   // Modal / Navigation Overlay States
@@ -491,66 +478,18 @@ export const LalaoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 // Determine authentication status early to safely query user data
 const { isAuthenticated } = useAuth();
 // Guard the current user query to avoid errors when not logged in
-const { data: currentUserQuery } = useCurrentUserQuery();
-const featureFlags = useQuery(
-  api.platformSettings.getFeatureFlags,
-  isSupabaseConfigured() ? 'skip' : {},
-) || { communityEnabled: false, ralliesEnabled: true, cyclesEnabled: true, roomyEnabled: true };
-const { data: pushEnabledQuery } = useSocialBackendQuery<boolean>(
-  api.push.hasActivePushToken,
-  'hasActivePushToken',
-  currentUserQuery ? {} : 'skip',
-  0,
-  isSupabaseNotificationsBackendEnabled(),
-);
-const upsertWebPushSubscription = useSocialBackendMutation(
-  api.push.upsertWebPushSubscription,
-  'upsertWebPushSubscription',
-  'app-social',
-  isSupabaseNotificationsBackendEnabled(),
-);
-const toggleLikePostMutation = useSocialBackendMutation(
-  api.social.toggleLikePost,
-  'toggleLikePost',
-  'app-social',
-  isSupabaseSocialInteractionsBackendEnabled(),
-);
-  const toggleFollowUserMutation = useUserBackendMutation(
-    api.social.toggleFollowUser,
-    'toggleFollowUser',
-    'app-social',
-  );
+const currentUserQuery = useQuery(api.users.getCurrentUser, {}, isAuthenticated ? {} : "skip");
+const featureFlags = useQuery(api.platformSettings.getFeatureFlags) || { communityEnabled: false, ralliesEnabled: true, cyclesEnabled: true, roomyEnabled: true };
+const pushEnabledQuery = useQuery(api.push.hasActivePushToken, currentUserQuery ? {} : "skip");
+const upsertWebPushSubscription = useMutation(api.push.upsertWebPushSubscription);
+const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
+  const toggleFollowUserMutation = useMutation(api.social.toggleFollowUser);
   const toggleFollowPageMutation = useMutation(api.pages.toggleFollowPage);
-  const toggleRepostPostMutation = useSocialBackendMutation(
-    api.social.toggleRepost,
-    'toggleRepost',
-    'app-social',
-    isSupabaseSocialInteractionsBackendEnabled(),
-  );
-  const deletePostMutation = useSocialBackendMutation(
-    api.social.deletePost,
-    'deletePost',
-    'app-social',
-    isSupabaseSocialInteractionsBackendEnabled(),
-  );
-  const createPostMutation = useSocialBackendMutation(
-    api.social.createPost,
-    'createPost',
-    'app-social',
-    isSupabaseSocialInteractionsBackendEnabled(),
-  );
-  const addCommentToPostMutation = useSocialBackendMutation(
-    api.social.addCommentToPost,
-    'addCommentToPost',
-    'app-social',
-    isSupabaseSocialInteractionsBackendEnabled(),
-  );
-  const toggleLikeCommentMutation = useSocialBackendMutation(
-    api.social.toggleLikeComment,
-    'toggleLikeComment',
-    'app-social',
-    isSupabaseSocialInteractionsBackendEnabled(),
-  );
+  const toggleRepostPostMutation = useMutation(api.social.toggleRepost);
+  const deletePostMutation = useMutation(api.social.deletePost);
+  const createPostMutation = useMutation(api.social.createPost);
+  const addCommentToPostMutation = useMutation(api.social.addCommentToPost);
+  const toggleLikeCommentMutation = useMutation(api.social.toggleLikeComment);
   const saveDraftMutation = useMutation(api.social.saveDraft);
   const deleteDraftMutation = useMutation(api.social.deleteDraft);
   
@@ -567,7 +506,20 @@ const toggleLikePostMutation = useSocialBackendMutation(
   };
 
   // ---- Profile Update ----
-  const updateUserProfile = useUserBackendMutation(api.users.updateUserProfile, 'updateUserProfile');
+  const updateUserProfileMutation = useMutation(api.users.updateUserProfile);
+  const updateUserProfile = async (args: {
+    name?: string;
+    username?: string;
+    bio?: string;
+    locationName?: string;
+    avatarUrl?: string;
+    avatarStorageId?: any;
+    publicIdentityType?: "display_name" | "username";
+    dateOfBirth?: string;
+    birthDateVisibility?: "public" | "age_only" | "private";
+  }) => {
+    return await updateUserProfileMutation(args);
+  };
 
   // ---- Cloudinary Signature ----
   const generateCloudinarySignatureAction = useAction(api.cloudinary.generateSignature);
@@ -595,68 +547,15 @@ const toggleLikePostMutation = useSocialBackendMutation(
   const removeFromCartMutation = useMutation(api.ecommerce.removeFromCart);
   const clearCartMutation = useMutation(api.ecommerce.clearCart);
 
-  const messageContactsQuery = useSocialBackendQuery<User[]>(
-    api.social.getMessageContacts,
-    'getMessageContacts',
-    {},
-    0,
-    isSupabaseSocialInteractionsBackendEnabled(),
-  );
-  const sendMessageMutation = useSocialBackendMutation(
-    api.social.sendMessage,
-    'sendMessage',
-    'app-social',
-    isSupabaseSocialInteractionsBackendEnabled(),
-  );
-  const editMessageMutation = useSocialBackendMutation(
-    api.social.editMessage,
-    'editMessage',
-    'app-social',
-    isSupabaseSocialInteractionsBackendEnabled(),
-  );
-  const deleteMessageMutation = useSocialBackendMutation(
-    api.social.deleteMessage,
-    'deleteMessage',
-    'app-social',
-    isSupabaseSocialInteractionsBackendEnabled(),
-  );
-  const markConversationReadMutation = useSocialBackendMutation(
-    api.social.markConversationRead,
-    'markConversationRead',
-    'app-social',
-    isSupabaseSocialInteractionsBackendEnabled(),
-  );
-  const getOrCreateConversationMutation = useSocialBackendMutation(
-    api.social.getOrCreateConversation,
-    'getOrCreateConversation',
-    'app-social',
-    isSupabaseSocialInteractionsBackendEnabled(),
-  );
-  const startPageConversationMutation = useSocialBackendMutation(
-    api.social.startPageConversation,
-    'startPageConversation',
-    'app-social',
-    isSupabaseSocialInteractionsBackendEnabled(),
-  );
-  const markAllNotificationsReadMutation = useSocialBackendMutation(
-    api.social.markAllNotificationsRead,
-    'markAllNotificationsRead',
-    'app-social',
-    isSupabaseNotificationsBackendEnabled(),
-  );
-  const markNotificationReadMutation = useSocialBackendMutation(
-    api.social.markNotificationRead,
-    'markNotificationRead',
-    'app-social',
-    isSupabaseNotificationsBackendEnabled(),
-  );
-  const { data: backendNotifications } = useSocialBackendQuery<NotificationItem[]>(
-    api.social.listNotifications,
-    'listNotifications',
-    {},
-    30_000,
-    isSupabaseNotificationsBackendEnabled(),
-  );
+  const messageContactsQuery = useQuery(api.social.getMessageContacts);
+  const sendMessageMutation = useMutation(api.social.sendMessage);
+  const editMessageMutation = useMutation(api.social.editMessage);
+  const deleteMessageMutation = useMutation(api.social.deleteMessage);
+  const markConversationReadMutation = useMutation(api.social.markConversationRead);
+  const getOrCreateConversationMutation = useMutation(api.social.getOrCreateConversation);
+  const markAllNotificationsReadMutation = useMutation(api.social.markAllNotificationsRead);
+  const markNotificationReadMutation = useMutation(api.social.markNotificationRead);
+  const backendNotifications = useQuery(api.social.listNotifications) as unknown as NotificationItem[] | undefined;
   const [pushEnabled, setPushEnabled] = useState<boolean>(false);
 
   useEffect(() => {
@@ -752,7 +651,7 @@ const toggleLikePostMutation = useSocialBackendMutation(
         console.warn('[LalaoContext] Failed to associate OneSignal user:', err);
       });
 
-      // Re-associate the active Web Push subscription with the current account.
+      // Automatically sync native Web Push subscription to Convex if permission is already granted
       if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
         getOrRequestWebPushSubscription().then((sub) => {
           if (sub) {
@@ -832,22 +731,13 @@ const toggleLikePostMutation = useSocialBackendMutation(
     }
   });
 
-  const useSupabaseFeed = isSupabaseHomeFeedBackendEnabled()
-    && isAuthenticated
-    && (feedTab === 'for_you' || feedTab === 'nearby');
-  const feedPostsQuery = useSocialBackendQuery<Post[]>(
-    api.social.listFeedPosts,
-    'listFeedPosts',
-    {
+  const feedPostsQuery = useQuery(api.social.listFeedPosts, {
     feedType: feedTab,
     latitude: location.latitude,
     longitude: location.longitude,
     radiusKm: location.radiusKm,
     locationName: location.name,
-    },
-    0,
-    useSupabaseFeed,
-  );
+  });
 
   const activeCyclesQuery = useQuery(api.cycles.listActiveCycles, {
     locationName: location.name,
@@ -865,6 +755,7 @@ const toggleLikePostMutation = useSocialBackendMutation(
   });
 
   const [posts, setPosts] = useState<Post[]>(EMPTY_POSTS);
+
   const rallies = (activeRalliesQuery as unknown as Rally[]) || EMPTY_RALLIES;
 
   const [pages, setPages] = useState<Page[]>(EMPTY_PAGES);
@@ -910,13 +801,7 @@ const toggleLikePostMutation = useSocialBackendMutation(
     }
   }, [activeCyclesQuery]);
 
-  const backendConversations = useSocialBackendQuery<any[]>(
-    api.social.listConversations,
-    'listConversations',
-    {},
-    0,
-    isSupabaseSocialInteractionsBackendEnabled(),
-  );
+  const backendConversations = useQuery(api.social.listConversations);
   const [conversations, setConversations] = useState<Conversation[]>(EMPTY_CONVERSATIONS);
 
   const prevUnreadMessagesCount = React.useRef<number | null>(null);
@@ -950,11 +835,11 @@ const toggleLikePostMutation = useSocialBackendMutation(
   };
 
   useEffect(() => {
-    if (backendConversations?.data) {
-      setConversations(backendConversations.data);
+    if (backendConversations) {
+      setConversations(backendConversations as any);
 
       // Total unread messages across all conversations
-      const totalUnread = (backendConversations.data as any[]).reduce(
+      const totalUnread = (backendConversations as any[]).reduce(
         (sum, conv) => sum + (conv.unreadCount || 0),
         0
       );
@@ -970,7 +855,7 @@ const toggleLikePostMutation = useSocialBackendMutation(
 
         if (desktopAllowed) {
           // Process all newly arrived messages across active conversations
-          for (const conv of backendConversations.data as any[]) {
+          for (const conv of backendConversations as any[]) {
             if (conv.unreadCount > 0 && conv.id !== activeChatId) {
               const unreadMsgs = (conv.messages || []).filter(
                 (m: any) => !m.isMine && !seenConversationMessageIds.current.has(m.id)
@@ -1035,10 +920,10 @@ const toggleLikePostMutation = useSocialBackendMutation(
   const [messageContacts, setMessageContacts] = useState<User[]>([]);
 
   useEffect(() => {
-    if (messageContactsQuery.data !== undefined) {
-      setMessageContacts(messageContactsQuery.data);
+    if (messageContactsQuery !== undefined) {
+      setMessageContacts(messageContactsQuery as User[]);
     }
-  }, [messageContactsQuery.data]);
+  }, [messageContactsQuery]);
 
   const [notifications, setNotifications] = useState<NotificationItem[]>(EMPTY_NOTIFICATIONS);
 
@@ -1046,7 +931,7 @@ const toggleLikePostMutation = useSocialBackendMutation(
   const initialLoadDone = React.useRef(false);
 
   useEffect(() => {
-    if (backendNotifications !== undefined) {
+    if (backendNotifications) {
       // Social notifications feed strictly excludes chat messages
       const socialNotifications = backendNotifications.filter((n) => n.type !== 'message');
       setNotifications(socialNotifications);
@@ -1119,20 +1004,14 @@ const toggleLikePostMutation = useSocialBackendMutation(
       }
 
       initialLoadDone.current = true;
-    } else {
-      seenNotificationIds.current.clear();
-      initialLoadDone.current = false;
-      setNotifications(EMPTY_NOTIFICATIONS);
     }
   }, [backendNotifications, currentUser?.id]);
 
   useEffect(() => {
-    if (feedPostsQuery.data !== undefined) setPosts(feedPostsQuery.data);
-  }, [feedPostsQuery.data]);
-
-  useEffect(() => {
-    if (feedPostsQuery.error) console.warn('Home Feed request failed:', feedPostsQuery.error);
-  }, [feedPostsQuery.error]);
+    if (feedPostsQuery) {
+      setPosts(feedPostsQuery as Post[]);
+    }
+  }, [feedPostsQuery]);
 
   const deletePost = async (postId: string) => {
     if (!currentUser) return;
@@ -2943,10 +2822,6 @@ const toggleLikePostMutation = useSocialBackendMutation(
     }
   };
 
-  const startPageConversation = (pageId: string) => {
-    startPageConversationMutation({ pageId: pageId as any }).catch(console.error);
-  };
-
   const markNotificationsAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
@@ -3019,7 +2894,7 @@ const toggleLikePostMutation = useSocialBackendMutation(
         setNearbySort,
         detectGpsLocation,
         isDetectingGps,
-        isFeedLoading: feedPostsQuery.data === undefined && feedPostsQuery.error === null,
+        isFeedLoading: feedPostsQuery === undefined,
         posts,
         rallies,
         pages,
@@ -3079,7 +2954,6 @@ const toggleLikePostMutation = useSocialBackendMutation(
         editMessage,
         deleteMessage,
         markConversationRead,
-        startPageConversation,
         markNotificationsAsRead,
         markAllNotificationsRead,
         markNotificationRead,

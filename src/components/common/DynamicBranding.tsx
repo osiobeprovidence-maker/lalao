@@ -1,13 +1,9 @@
 import React, { useEffect } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { isSupabaseConfigured } from '../../lib/supabase';
 
 export const DynamicBranding: React.FC = () => {
-  const settings = useQuery(
-    api.platformSettings.getBrandingSettings,
-    isSupabaseConfigured() ? 'skip' : {},
-  );
+  const settings = useQuery(api.platformSettings.getBrandingSettings);
 
   useEffect(() => {
     if (!settings) return;
@@ -15,8 +11,6 @@ export const DynamicBranding: React.FC = () => {
     // 1. Update Browser Title
     if (settings.browserTitle) {
       document.title = settings.browserTitle;
-    } else {
-      document.title = 'Lalao';
     }
 
     // 2. Update Favicons
@@ -51,9 +45,6 @@ export const DynamicBranding: React.FC = () => {
         document.head.appendChild(metaTheme);
       }
       metaTheme.setAttribute('content', settings.primaryColor);
-    } else {
-      const metaTheme = document.querySelector("meta[name='theme-color']");
-      metaTheme?.setAttribute('content', '#5E43F3');
     }
 
     // 4. Update PWA Manifest (only when custom branding is set)

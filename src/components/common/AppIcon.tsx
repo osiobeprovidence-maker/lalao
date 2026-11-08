@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { LalaoMascot } from '../mascot/LalaoMascot';
-import { useOptionalConvexClient } from '../../context/OptionalConvexClientContext';
 
 interface AppIconProps {
   className?: string;
@@ -14,26 +14,11 @@ export const AppIcon: React.FC<AppIconProps> = ({
   fallbackClassName = "",
   alt = "Lalao App Icon"
 }) => {
-  const convexClient = useOptionalConvexClient();
-  const [settings, setSettings] = useState<any>(undefined);
+  const settings = useQuery(api.platformSettings.getBrandingSettings);
   const preferredSrc = settings?.appIconUrl || '/app-icon.png';
   
   const [currentSrc, setCurrentSrc] = useState<string>(preferredSrc);
   const [hasError, setHasError] = useState(false);
-
-  useEffect(() => {
-    if (!convexClient) {
-      setSettings(undefined);
-      return;
-    }
-    let active = true;
-    void convexClient.query(api.platformSettings.getBrandingSettings, {}).then((value) => {
-      if (active) setSettings(value);
-    }).catch(() => {
-      if (active) setSettings(undefined);
-    });
-    return () => { active = false; };
-  }, [convexClient]);
 
   useEffect(() => {
     if (settings?.appIconUrl) {

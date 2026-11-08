@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Loader2, Phone, CheckCircle2 } from 'lucide-react';
-import { useUserBackendMutation } from '../../hooks/useUserBackendMutation';
+import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
 interface ChangePhoneModalProps {
@@ -10,7 +10,7 @@ interface ChangePhoneModalProps {
 }
 
 export const ChangePhoneModal: React.FC<ChangePhoneModalProps> = ({ currentPhone, onClose, onSuccess }) => {
-  const updateUserPhone = useUserBackendMutation(api.users.updateUserPhone, 'updateUserPhone');
+  const updateUserPhone = useMutation(api.users.updateUserPhone);
   
   const [step, setStep] = useState<'input' | 'success'>('input');
   const [phone, setPhone] = useState('');

@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { OnboardingLayout } from './OnboardingLayout';
+import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { useUserBackendMutation } from '../../hooks/useUserBackendMutation';
 
 export const NameSetupPage: React.FC = () => {
   const navigate = useNavigate();
-  const updateName = useUserBackendMutation(api.users.updateName, 'updateName');
+  const updateName = useMutation(api.users.updateName);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [displayName, setDisplayName] = useState('');

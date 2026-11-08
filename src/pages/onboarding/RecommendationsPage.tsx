@@ -6,17 +6,12 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Avatar } from '../../components/common/Avatar';
 import { useLalao } from '../../context/LalaoContext';
-import { useUserBackendMutation } from '../../hooks/useUserBackendMutation';
 export const RecommendationsPage: React.FC = () => {
   const navigate = useNavigate();
-  const toggleFollowUser = useUserBackendMutation(
-    api.social.toggleFollowUser,
-    'toggleFollowUser',
-    'app-social',
-  );
+  const toggleFollowUser = useMutation(api.social.toggleFollowUser);
   const toggleFollowPage = useMutation(api.pages.toggleFollowPage);
   const recommendations = useQuery(api.recommendations.getOnboardingRecommendations, { limit: 15 });
-  const completeOnboarding = useUserBackendMutation(api.users.completeOnboardingStep, 'completeOnboardingStep');
+  const completeOnboarding = useMutation(api.users.completeOnboardingStep);
   const dismissRec = useMutation(api.recommendations.dismissRecommendation);
   
   const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
