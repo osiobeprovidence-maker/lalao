@@ -262,7 +262,7 @@ export const VideosDiscoveryView: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div id="videos-discovery-grid" className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,_10rem),_1fr))] gap-3 sm:gap-4">
+        <div id="videos-discovery-grid" className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,_10rem),_1fr))] gap-3 sm:gap-4 xl:grid-cols-4">
           {sortedPosts.map((post) => {
             const creatorName = getPublicIdentityLabel(post.author);
             return (

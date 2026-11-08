@@ -667,7 +667,7 @@ export const DiscoverView: React.FC = () => {
                       <h2 className="text-sm font-bold text-theme-primary tracking-tight">Videos</h2>
                       <span className="text-xs text-theme-tertiary">({searchResults.content.length})</span>
                     </div>
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,_10rem),_1fr))] gap-3">
+                    <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,_10rem),_1fr))] gap-3 xl:grid-cols-4">
                       {searchResults.content.map((post: any) => {
                         const thumbnailUrl = post.muxPlaybackId
                           ? `https://image.mux.com/${post.muxPlaybackId}/thumbnail.jpg?time=0`
