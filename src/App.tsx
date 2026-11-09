@@ -442,7 +442,7 @@ const LalaoAppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-theme-base text-theme-primary flex justify-center selection:bg-[#5E43F3]/20 selection:text-[#5E43F3]">
-      <div className="w-full max-w-[1480px] min-h-screen lg:grid lg:grid-cols-[220px_minmax(0,1fr)_260px] bg-theme-base">
+      <div className="w-full max-w-[1480px] min-h-screen lg:grid lg:grid-cols-[220px_minmax(0,1fr)_260px] xl:grid-cols-[240px_minmax(0,1fr)_260px] bg-theme-base">
         <DesktopSidebar />
 
         <div className="relative min-w-0 flex min-h-screen flex-col bg-theme-base lg:min-h-screen">
@@ -456,7 +456,7 @@ const LalaoAppContent: React.FC = () => {
             ref={mainRef}
             className="relative flex-1 overflow-y-auto bg-theme-base pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0 lg:min-h-0"
           >
-            <div className={`mx-auto w-full min-h-full ${activeTab === 'discover' ? 'max-w-[600px] lg:max-w-none' : 'max-w-[600px]'}`}>
+            <div className={`mx-auto min-h-full w-full ${activeTab === 'discover' ? 'max-w-[1120px]' : 'max-w-[600px]'}`}>
               {isMangaProfile ? (
                 <div key="manga-publisher-profile" className="animate-in fade-in duration-200 min-h-full w-full bg-[#111111]">
                   <MangaPublisherProfilePage />

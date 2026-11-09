@@ -238,28 +238,28 @@ export const CreatorRankingsView: React.FC<CreatorRankingsViewProps> = ({
               <div
                 key={item.user.id}
                 onClick={() => setActiveUserProfile(item.user)}
-                className={`p-3.5 rounded-2xl bg-theme-surface border transition-all cursor-pointer hover:bg-theme-surface-hover/80 flex items-center justify-between gap-3 shadow-xs ${
+                className={`grid min-w-0 grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-x-2.5 gap-y-2.5 rounded-2xl border bg-theme-surface p-3 shadow-xs transition-all cursor-pointer hover:bg-theme-surface-hover/80 sm:gap-x-3 sm:p-3.5 xl:flex xl:justify-between xl:gap-3 ${
                   isTop3
                     ? 'border-[#5E43F3]/20 dark:border-[#5E43F3]/30'
                     : 'border-theme-divider-light'
                 }`}
               >
                 {/* Left: Rank & Creator Info */}
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="contents xl:flex xl:min-w-0 xl:flex-1 xl:items-center xl:gap-3">
                   {/* Rank Badge */}
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 shadow-xs ${rankBadgeStyles}`}>
+                  <div className={`col-start-1 row-start-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl font-black text-xs shadow-xs ${rankBadgeStyles}`}>
                     #{item.rank}
                   </div>
 
                   {/* Avatar */}
-                  <div className="relative shrink-0">
-                    <Avatar src={item.user.avatar} alt={getPublicIdentityLabel(item.user)} size="md" />
+                  <div className="relative col-start-2 row-start-1 shrink-0">
+                    <Avatar src={item.user.avatar} alt={getPublicIdentityLabel(item.user)} size="sm" className="sm:!h-10 sm:!w-10" />
                   </div>
 
                   {/* Name, Badge, Category, Metric */}
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-black text-sm text-theme-primary truncate hover:underline">
+                  <div className="col-start-3 row-start-1 min-w-0">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <span className="min-w-0 truncate font-black text-sm text-theme-primary hover:underline">
                         {getPublicIdentityLabel(item.user)}
                       </span>
                       <VerificationBadge
@@ -268,12 +268,12 @@ export const CreatorRankingsView: React.FC<CreatorRankingsViewProps> = ({
                       />
                     </div>
 
-                    <div className="flex items-center gap-2 text-xs text-theme-tertiary mt-0.5 flex-wrap">
-                      <span className="text-[11px] text-[#5E43F3] dark:text-[#7B66F5] font-bold">
+                    <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-theme-tertiary xl:gap-2">
+                      <span className="truncate text-[10px] font-bold text-[#5E43F3] dark:text-[#7B66F5] sm:text-[11px]">
                         {item.user.creatorCategory || 'Creator'}
                       </span>
-                      <span>·</span>
-                      <span className="text-[11px] text-theme-secondary font-medium">
+                      <span className="hidden xl:inline">·</span>
+                      <span className="hidden text-[11px] font-medium text-theme-secondary xl:inline">
                         {item.user.followersCount?.toLocaleString()} followers
                       </span>
                     </div>
@@ -281,53 +281,58 @@ export const CreatorRankingsView: React.FC<CreatorRankingsViewProps> = ({
                 </div>
 
                 {/* Right: Metric & Movement Indicator */}
-                <div className="flex items-center gap-3 shrink-0">
-                  <div className="text-right">
-                    <span className="text-xs font-black text-theme-primary block">
-                      {item.metricValue}
-                    </span>
-                    <span className="text-[10px] text-theme-tertiary block font-medium">
-                      {item.metricLabel}
-                    </span>
-                  </div>
+                <div className="col-span-4 row-start-2 flex min-w-0 items-center justify-between gap-3 xl:col-span-1 xl:row-auto xl:shrink-0 xl:justify-start">
+                  <span className="min-w-0 truncate text-[11px] font-medium text-theme-secondary xl:hidden">
+                    {item.user.followersCount?.toLocaleString()} followers
+                  </span>
+                  <div className="ml-auto flex shrink-0 items-center gap-2.5 sm:gap-3 xl:ml-0">
+                    <div className="min-w-0 text-right">
+                      <span className="block text-xs font-black text-theme-primary">
+                        {item.metricValue}
+                      </span>
+                      <span className="block max-w-[6.5rem] truncate text-[10px] font-medium text-theme-tertiary">
+                        {item.metricLabel}
+                      </span>
+                    </div>
 
-                  {/* Movement Tag */}
-                  <div className="w-12 text-right">
-                    {item.movement > 0 ? (
-                      <span className="inline-flex items-center gap-0.5 text-xs font-black text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-md">
-                        <ArrowUp className="w-3 h-3 stroke-[3]" />
-                        {item.movement}
-                      </span>
-                    ) : item.movement < 0 ? (
-                      <span className="inline-flex items-center gap-0.5 text-xs font-black text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded-md">
-                        <ArrowDown className="w-3 h-3 stroke-[3]" />
-                        {Math.abs(item.movement)}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-0.5 text-xs font-bold text-theme-tertiary bg-theme-surface-hover px-1.5 py-0.5 rounded-md">
-                        <Minus className="w-3 h-3" />
-                      </span>
-                    )}
+                    {/* Movement Tag */}
+                    <div className="w-8 shrink-0 text-right sm:w-12">
+                      {item.movement > 0 ? (
+                        <span className="inline-flex items-center gap-0.5 text-xs font-black text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-md">
+                          <ArrowUp className="w-3 h-3 stroke-[3]" />
+                          {item.movement}
+                        </span>
+                      ) : item.movement < 0 ? (
+                        <span className="inline-flex items-center gap-0.5 text-xs font-black text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded-md">
+                          <ArrowDown className="w-3 h-3 stroke-[3]" />
+                          {Math.abs(item.movement)}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-0.5 text-xs font-bold text-theme-tertiary bg-theme-surface-hover px-1.5 py-0.5 rounded-md">
+                          <Minus className="w-3 h-3" />
+                        </span>
+                      )}
+                    </div>
                   </div>
-
-                  {/* Follow button */}
-                  {currentUser?.id !== item.user.id && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFollowUser(item.user.id);
-                      }}
-                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shrink-0 ${
-                        item.user.isFollowing
-                          ? 'border border-theme-divider-strong text-theme-secondary hover:bg-theme-surface-hover'
-                          : 'bg-theme-inverse text-theme-text-inverse hover:opacity-90'
-                      }`}
-                    >
-                      {item.user.isFollowing ? 'Following' : 'Follow'}
-                    </button>
-                  )}
                 </div>
+
+                {/* Follow button */}
+                {currentUser?.id !== item.user.id && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFollowUser(item.user.id);
+                    }}
+                    className={`col-start-4 row-start-1 shrink-0 rounded-full px-2 py-1 text-[10px] font-bold transition-all cursor-pointer sm:px-2.5 sm:text-xs xl:order-3 xl:ml-auto xl:px-3 xl:py-1.5 ${
+                      item.user.isFollowing
+                        ? 'border border-theme-divider-strong text-theme-secondary hover:bg-theme-surface-hover'
+                        : 'bg-theme-inverse text-theme-text-inverse hover:opacity-90'
+                    }`}
+                  >
+                    {item.user.isFollowing ? 'Following' : 'Follow'}
+                  </button>
+                )}
               </div>
             );
           })
