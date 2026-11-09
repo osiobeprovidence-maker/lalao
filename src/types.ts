@@ -670,6 +670,10 @@ export interface Cycle {
 export interface DirectMessage {
   id: string;
   senderId: string;
+  senderName?: string;
+  senderUsername?: string;
+  senderIsVerified?: boolean;
+  senderVerificationTier?: VerificationTier;
   text: string;
   timestamp: string;
   createdAt?: number;
@@ -680,6 +684,7 @@ export interface DirectMessage {
   isReply?: boolean;
   replyToMessageId?: string;
   replyToMessageText?: string;
+  replyToSenderUsername?: string;
   isEdited?: boolean;
   type?: 'text' | 'image' | 'video' | 'call';
   callId?: string;

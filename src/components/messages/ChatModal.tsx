@@ -18,6 +18,7 @@ import {
   Video,
   PhoneMissed,
   PhoneOff,
+  Users,
 } from 'lucide-react';
 import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
@@ -28,6 +29,7 @@ import { VerificationBadge } from '../common/VerificationBadge';
 import { getPublicIdentityLabel } from '../common/UserIdentity';
 import { DirectMessage } from '../../types';
 import { compressImage } from '../../lib/imageCompression';
+import { ChatroomMembersModal, type ChatroomMember } from './ChatroomMembersModal';
 
 // ─── Receipt Indicator ──────────────────────────────────────────────────────
 
@@ -435,6 +437,8 @@ export const ChatModal: React.FC = () => {
   const [replyingTo, setReplyingTo] = useState<{ id: string; text: string } | null>(null);
   const [editingMsg, setEditingMsg] = useState<{ id: string; text: string } | null>(null);
   const [activeContextMenu, setActiveContextMenu] = useState<string | null>(null);
+  const [isRoomOptionsOpen, setIsRoomOptionsOpen] = useState(false);
+  const [roomMembersView, setRoomMembersView] = useState<'all' | 'online' | null>(null);
 
   // Media upload state
   const [mediaFile, setMediaFile] = useState<File | null>(null);
@@ -445,6 +449,7 @@ export const ChatModal: React.FC = () => {
   const [activeViewOnceMedia, setActiveViewOnceMedia] = useState<{ id: string, url: string, type: 'image' | 'video' | 'voice', duration?: number } | null>(null);
   const generateUploadUrl = useMutation(api.social.generateUploadUrl);
   const markViewOnceOpenedMutation = useMutation(api.social.markViewOnceOpened);
+  const setChatroomPresence = useMutation(api.groups.setChatroomPresence);
 
   // Voice recording state machine
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
@@ -474,6 +479,33 @@ export const ChatModal: React.FC = () => {
   const prevMessagesRef = useRef<DirectMessage[]>([]);
 
   const conv = conversations.find((c) => c.id === activeChatId);
+  const roomChat = (conv as any)?.groupChat;
+  const roomId = roomChat?.isChatroom ? String(roomChat._id ?? roomChat.id ?? (conv as any)?.groupChatId ?? '') : '';
+
+  useEffect(() => {
+    if (!roomId || !currentUser?.id) return;
+    const connectionId = `${currentUser.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const updatePresence = (isOnline: boolean) => {
+      void setChatroomPresence({ groupId: roomId, connectionId, isOnline }).catch((reason) => {
+        console.warn('[ChatModal] Could not update room presence:', reason);
+      });
+    };
+    const syncVisibility = () => {
+      updatePresence(document.visibilityState === 'visible');
+    };
+
+    syncVisibility();
+    const heartbeat = window.setInterval(() => {
+      if (document.visibilityState === 'visible') updatePresence(true);
+    }, 25_000);
+    document.addEventListener('visibilitychange', syncVisibility);
+
+    return () => {
+      window.clearInterval(heartbeat);
+      document.removeEventListener('visibilitychange', syncVisibility);
+      updatePresence(false);
+    };
+  }, [roomId, currentUser?.id, setChatroomPresence]);
 
   useEffect(() => {
     if (activeChatId) markConversationRead(activeChatId);
@@ -506,6 +538,10 @@ export const ChatModal: React.FC = () => {
   }, [conv?.messages]);
 
   if (!activeChatId || !conv) return null;
+  const isRoomChat = Boolean(roomChat?.isChatroom);
+  const roomImage = roomChat?.avatarUrl || roomChat?.coverImage || conv.participant.avatar;
+  const roomMemberCount = Number(roomChat?.memberCount ?? conv.participant.followersCount ?? 0);
+  const roomOnlineMemberCount = Number(roomChat?.onlineMemberCount ?? 0);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -813,6 +849,7 @@ export const ChatModal: React.FC = () => {
   };
 
   const handleViewCommunity = () => {
+    if (roomChat?.isChatroom) return;
     const targetGroupId =
       (conv as any).groupChat?._id ||
       (conv as any).groupChatId ||
@@ -960,12 +997,24 @@ export const ChatModal: React.FC = () => {
                 <ArrowLeft className="w-5 h-5 stroke-[2.2]" />
               </button>
 
-              <button
-                type="button"
-                onClick={handleViewCommunity}
-                className="flex min-w-0 items-center gap-2.5 text-left cursor-pointer"
-                title="View profile"
-              >
+              {isRoomChat ? (
+                <div className="flex min-w-0 items-center gap-2.5 text-left">
+                  <Avatar src={roomImage || undefined} alt={roomChat.name || 'Room'} size="sm" className="h-9 w-9 shrink-0 rounded-xl" />
+                  <div className="min-w-0">
+                    <span className="block truncate text-sm font-bold text-theme-primary">{roomChat.name || conv.participant.name}</span>
+                    <span className="block truncate text-[11px] text-theme-tertiary">
+                      {roomMemberCount} {roomMemberCount === 1 ? 'member' : 'members'} · {roomOnlineMemberCount} online
+                    </span>
+                    <span className="block truncate text-[10px] font-semibold text-[#5E43F3]">Public Chatroom</span>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleViewCommunity}
+                  className="flex min-w-0 items-center gap-2.5 text-left cursor-pointer"
+                  title="View profile"
+                >
                 <div className="shrink-0">
                   <Avatar src={conv.participant.avatar || undefined} alt={getPublicIdentityLabel(conv.participant)} size="sm" className="w-9 h-9" />
                 </div>
@@ -980,7 +1029,8 @@ export const ChatModal: React.FC = () => {
                     </span>
                   )}
                 </div>
-              </button>
+                </button>
+              )}
             </div>
 
             <div className="flex items-center gap-1 shrink-0">
@@ -1018,13 +1068,38 @@ export const ChatModal: React.FC = () => {
                   </button>
                 </>
               )}
-              <button
-                type="button"
-                className="rounded-full p-2 text-theme-secondary hover:bg-theme-surface-hover hover:text-theme-primary transition-colors cursor-pointer"
-                title="More actions"
-              >
-                <MoreHorizontal className="w-4 h-4" />
-              </button>
+              {isRoomChat ? (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsRoomOptionsOpen((open) => !open)}
+                    aria-label="Room options"
+                    aria-haspopup="menu"
+                    aria-expanded={isRoomOptionsOpen}
+                    className="rounded-full p-2 text-theme-secondary hover:bg-theme-surface-hover hover:text-theme-primary transition-colors cursor-pointer"
+                  >
+                    <MoreHorizontal className="w-4 h-4" />
+                  </button>
+                  {isRoomOptionsOpen && (
+                    <div role="menu" className="absolute right-0 top-full z-30 mt-1 min-w-48 overflow-hidden rounded-xl border border-theme-divider bg-theme-surface py-1 shadow-xl">
+                      <button type="button" role="menuitem" onClick={() => { setRoomMembersView('all'); setIsRoomOptionsOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-theme-primary hover:bg-theme-surface-hover">
+                        <Users size={15} /> View members
+                      </button>
+                      <button type="button" role="menuitem" onClick={() => { setRoomMembersView('online'); setIsRoomOptionsOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-theme-primary hover:bg-theme-surface-hover">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500" /> View online members
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="rounded-full p-2 text-theme-secondary hover:bg-theme-surface-hover hover:text-theme-primary transition-colors cursor-pointer"
+                  title="More actions"
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
         </header>
@@ -1064,25 +1139,35 @@ export const ChatModal: React.FC = () => {
                 
                 <div
                   id={`chat-msg-${msg.id}`}
-                  className="flex flex-col animate-in zoom-in-95 duration-150 relative"
+                  className={`flex flex-col animate-in zoom-in-95 duration-150 relative ${isRoomChat && msg.isMine ? 'items-end' : 'items-start'}`}
                 >
                   {!isGrouped && (
-                    <div className="flex items-center gap-1.5 text-theme-tertiary select-none mb-1">
-                      <span className="text-xs font-bold tracking-wide">{msg.isMine ? 'Me' : conv.participant.name}</span>
+                    <div className={`flex min-w-0 max-w-full items-center gap-1.5 text-theme-tertiary select-none mb-1 ${isRoomChat && msg.isMine ? 'justify-end' : ''}`}>
+                      <span className="max-w-[55vw] truncate text-xs font-bold tracking-wide sm:max-w-xs">
+                        {isRoomChat ? `@${msg.senderUsername || msg.senderName || 'room member'}` : msg.isMine ? 'Me' : conv.participant.name}
+                      </span>
+                      {isRoomChat && msg.senderIsVerified && (
+                        <VerificationBadge
+                          user={{ isVerified: true, verificationTier: msg.senderVerificationTier }}
+                          size="xs"
+                        />
+                      )}
                       <span className="text-[10px] opacity-70 ml-1">{timeString}</span>
                       {msg.isMine && <MessageReceiptIndicator status={msg.status || 'read'} theme="light-bg" className="ml-0.5" />}
                     </div>
                 )}
 
                 <div
-                  className={`flex justify-start relative group border-l border-t ${msg.isMine ? 'border-neutral-800' : 'border-[#5E43F3]/40'} pl-3 pt-2 pb-1 mt-0.5`}
+                  className={`flex ${isRoomChat && msg.isMine ? 'justify-end' : 'justify-start'} relative group border-l border-t ${msg.isMine ? 'border-neutral-800' : 'border-[#5E43F3]/40'} pl-3 pt-2 pb-1 mt-0.5`}
                   onClick={() => setActiveContextMenu(activeContextMenu === msg.id ? null : msg.id)}
                 >
-                  <div className="flex flex-col max-w-[90%] cursor-pointer">
+                  <div className="flex min-w-0 max-w-[90%] flex-col cursor-pointer">
                     {msg.replyToMessageText && (
                       <div className={`flex flex-col gap-0.5 mb-2 opacity-80 border-l border-t ${msg.isMine ? 'border-neutral-800' : 'border-[#5E43F3]/40'} pl-2 pt-1`}>
-                        <span className="text-[10px] text-theme-tertiary font-medium">Replying to:</span>
-                        <span className="text-[11px] text-theme-tertiary truncate max-w-[200px] italic">{msg.replyToMessageText}</span>
+                        <span className="text-[10px] text-theme-tertiary font-medium">
+                          {msg.replyToSenderUsername ? `Replying to @${msg.replyToSenderUsername}` : 'Replying to message'}
+                        </span>
+                        <span className="max-w-[min(70vw,24rem)] truncate text-[11px] italic text-theme-tertiary">{msg.replyToMessageText}</span>
                       </div>
                     )}
 
@@ -1497,6 +1582,27 @@ export const ChatModal: React.FC = () => {
           <div className="mx-auto mt-2.5 h-1 w-24 rounded-full bg-black/[0.06] dark:bg-white/[0.06]" />
         </div>
       </div>
+      {roomMembersView && isRoomChat && roomId && (
+        <ChatroomMembersModal
+          groupId={roomId}
+          onlineOnly={roomMembersView === 'online'}
+          currentUserId={currentUser?.id}
+          onClose={() => setRoomMembersView(null)}
+          onOpenProfile={(member: ChatroomMember) => {
+            setRoomMembersView(null);
+            setActiveUserProfile({
+              id: member.id.toString(),
+              name: member.name,
+              username: member.username,
+              avatar: member.avatar,
+              isVerified: member.isVerified,
+              verificationTier: member.verificationTier,
+              isFollowing: member.isFollowing,
+              relationship: member.relationship,
+            });
+          }}
+        />
+      )}
     </div>
   );
 };

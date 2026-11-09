@@ -1,8 +1,14 @@
 import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { Id } from "./_generated/dataModel";
-import { getAuthedUser, resolveUserVerification } from "./social";
+import {
+  getAuthedUser,
+  getRelationshipSets,
+  resolveRelationship,
+  resolveUserVerification,
+} from "./social";
 import { canAccessGroupChat } from "./groupAccess";
+import { requireAdmin } from "./admin";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    HELPERS
@@ -468,7 +474,23 @@ export const listDiscoverableGroups = query({
         category: g.category ?? "General",
         visibility: g.visibility ?? "private_discoverable",
         communityEnabled: g.communityEnabled ?? false,
-        memberCount: g.memberIds.length,
+        memberCount: new Set(g.memberIds.map((id: any) => id.toString())).size,
+        onlineMemberCount: g.isChatroom
+          ? await (async () => {
+              const memberIds = new Set(g.memberIds.map((id: any) => id.toString()));
+              const presence = await ctx.db
+                .query("groupPresence")
+                .withIndex("by_group", (q: any) => q.eq("groupId", g._id))
+                .collect();
+              const activeUsers = new Set(
+                presence
+                  .filter((entry: any) => Date.now() - entry.lastActiveAt <= 90_000)
+                  .map((entry: any) => entry.userId.toString())
+                  .filter((userId: string) => memberIds.has(userId)),
+              );
+              return activeUsers.size;
+            })()
+          : 0,
         isMember,
         isChatroom: g.isChatroom ?? false,
         chatroomStatus: g.chatroomStatus ?? "active",
@@ -513,9 +535,42 @@ export const getChatroomConversation = query({
     return {
       id: conversation._id,
       groupChatId: group._id,
+      room: {
+        id: group._id,
+        name: group.name,
+        username: group.username ?? `group-${group._id}`,
+        avatarUrl: group.avatarUrl || group.coverImage || "",
+        coverImage: group.coverImage || group.avatarUrl || "",
+        memberCount: new Set(group.memberIds.map((id: any) => id.toString())).size,
+        onlineMemberCount: await (async () => {
+          const memberIds = new Set(group.memberIds.map((id: any) => id.toString()));
+          const presence = await ctx.db
+            .query("groupPresence")
+            .withIndex("by_group", (q: any) => q.eq("groupId", group._id))
+            .collect();
+          return new Set(
+            presence
+              .filter((entry: any) => Date.now() - entry.lastActiveAt <= 90_000)
+              .map((entry: any) => entry.userId.toString())
+              .filter((userId: string) => memberIds.has(userId)),
+          ).size;
+        })(),
+      },
       messages: await Promise.all(messages.map(async (message: any) => ({
         id: message._id,
         senderId: message.senderId,
+        sender: await (async () => {
+          const senderId = ctx.db.normalizeId("users", String(message.senderId));
+          const sender = senderId ? await ctx.db.get(senderId) : null;
+          if (!sender) return null;
+          return {
+            id: sender._id,
+            name: sender.name ?? "User",
+            username: sender.username ?? "user",
+            avatar: sender.avatarUrl ?? "",
+            ...resolveUserVerification(sender),
+          };
+        })(),
         text: message.text,
         createdAt: message.createdAt,
         isMine: message.senderId === currentUser._id,
@@ -526,6 +581,113 @@ export const getChatroomConversation = query({
         fileName: message.fileName,
       }))),
     };
+  },
+});
+
+export const setChatroomPresence = mutation({
+  args: {
+    groupId: v.string(),
+    connectionId: v.string(),
+    isOnline: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new ConvexError("Sign in to use chatroom presence");
+
+    const resolved = await resolveGroupContext(ctx, args.groupId, currentUser);
+    if (!resolved?.group.isChatroom) throw new ConvexError("Chatroom not found");
+    const group = resolved.group;
+    if (!resolved.isMember) {
+      throw new ConvexError("Join this chatroom to update your presence");
+    }
+
+    const existing = await ctx.db
+      .query("groupPresence")
+      .withIndex("by_group_connection", (q: any) =>
+        q.eq("groupId", group._id).eq("connectionId", args.connectionId),
+      )
+      .first();
+
+    if (!args.isOnline) {
+      if (existing?.userId === currentUser._id) {
+        await ctx.db.delete(existing._id);
+      }
+      return { isOnline: false };
+    }
+
+    const now = Date.now();
+    if (existing) {
+      if (existing.userId !== currentUser._id) {
+        throw new ConvexError("Presence connection does not belong to this user");
+      }
+      await ctx.db.patch(existing._id, { lastActiveAt: now });
+    } else {
+      await ctx.db.insert("groupPresence", {
+        groupId: group._id,
+        userId: currentUser._id,
+        connectionId: args.connectionId,
+        lastActiveAt: now,
+      });
+    }
+
+    return { isOnline: true };
+  },
+});
+
+export const listChatroomMembers = query({
+  args: {
+    groupId: v.string(),
+    onlineOnly: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) return null;
+
+    const resolved = await resolveGroupContext(ctx, args.groupId, currentUser);
+    if (!resolved?.group.isChatroom || !resolved.isMember) return null;
+    const group = resolved.group;
+
+    const cutoff = Date.now() - 90_000;
+    const [presence, relationships] = await Promise.all([
+      ctx.db
+        .query("groupPresence")
+        .withIndex("by_group", (q: any) => q.eq("groupId", group._id))
+        .collect(),
+      getRelationshipSets(ctx, currentUser),
+    ]);
+    const onlineIds = new Set<string>(
+      presence
+        .filter((entry: any) => entry.lastActiveAt >= cutoff)
+        .map((entry: any) => entry.userId.toString()),
+    );
+    const members = await Promise.all(
+      [...new Set<string>(group.memberIds.map((id: any) => id.toString()))].map(async (userId) => {
+        const normalizedUserId = ctx.db.normalizeId("users", userId);
+        const user = normalizedUserId ? await ctx.db.get(normalizedUserId) : null;
+        if (!user) return null;
+        const isOnline = onlineIds.has(user._id.toString());
+        if (args.onlineOnly && !isOnline) return null;
+
+        let avatar = user.avatarUrl ?? "";
+        if (!avatar && user.avatarStorageId) {
+          avatar = (await ctx.storage.getUrl(user.avatarStorageId)) ?? "";
+        }
+
+        return {
+          id: user._id,
+          name: user.name ?? "User",
+          username: user.username ?? "user",
+          avatar,
+          isOnline,
+          isVerified: resolveUserVerification(user).isVerified,
+          verificationTier: resolveUserVerification(user).verificationTier,
+          isFollowing: relationships.followingIds.has(user._id),
+          relationship: resolveRelationship(user._id, relationships),
+        };
+      }),
+    );
+
+    return members.filter(Boolean);
   },
 });
 
@@ -923,13 +1085,29 @@ export const requestToJoin = mutation({
     if (resolved.group.isChatroom && resolved.group.chatroomStatus === "inactive") {
       throw new ConvexError("This chatroom is currently inactive");
     }
+    const now = Date.now();
 
     if (resolved.isMember) {
-      throw new ConvexError("You are already a member of this group");
-    }
+      if (!resolved.group.isChatroom) {
+        throw new ConvexError("You are already a member of this group");
+      }
 
+      let conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_group_chat", (q: any) => q.eq("groupChatId", resolved.groupId))
+        .first();
+      if (!conversation) {
+        const conversationId = await ctx.db.insert("conversations", {
+          userA: currentUser._id,
+          groupChatId: resolved.groupId,
+          updatedAt: now,
+        });
+        conversation = await ctx.db.get(conversationId);
+      }
+
+      return { status: "joined", conversationId: conversation?._id ?? null };
+    }
     const visibility = resolved.group.visibility ?? "private_discoverable";
-    const now = Date.now();
 
     // If group is Public, immediately admit the user
     if (visibility === "public" && !(resolved.group.isChatroom && resolved.group.requiresJoinApproval)) {

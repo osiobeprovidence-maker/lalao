@@ -1330,6 +1330,7 @@ export const listConversations = query({
       const isGroupChat = !!conversation.groupChatId;
       const amIUserA = conversation.userA === currentUser._id;
       let groupChat: any = null;
+      let onlineMemberCount = 0;
       let groupMemberIds: readonly string[] = [];
 
       if (isGroupChat && conversation.groupChatId) {
@@ -1337,6 +1338,19 @@ export const listConversations = query({
         groupMemberIds = groupChat?.memberIds.map((id: any) => id.toString()) ?? [];
         if (!groupChat || !canAccessGroupChat(currentUser._id.toString(), groupChat.creatorId.toString(), groupMemberIds)) {
           continue;
+        }
+        if (groupChat.isChatroom) {
+          const memberIds = new Set(groupMemberIds);
+          const presence = await ctx.db
+            .query("groupPresence")
+            .withIndex("by_group", (q: any) => q.eq("groupId", groupChat._id))
+            .collect();
+          onlineMemberCount = new Set(
+            presence
+              .filter((entry: any) => Date.now() - entry.lastActiveAt <= 90_000)
+              .map((entry: any) => entry.userId.toString())
+              .filter((userId: string) => memberIds.has(userId)),
+          ).size;
         }
       }
       
@@ -1369,10 +1383,10 @@ export const listConversations = query({
           id: groupChat._id,
           name: groupChat.name,
           username: `group-${groupChat._id}`,
-          avatar: groupChat.avatarUrl ?? "",
+          avatar: groupChat.avatarUrl || groupChat.coverImage || "",
           userType: "community",
           badge: "COMMUNITY",
-          followersCount: groupChat.memberIds.length,
+          followersCount: new Set(groupChat.memberIds.map((id: any) => id.toString())).size,
           followingCount: 0,
           isFollowing: true,
           relationship: "friends",
@@ -1466,10 +1480,15 @@ export const listConversations = query({
             }
             
             let replyToMessageText = undefined;
+            let replyToSenderUsername = undefined;
             if (msg.replyToMessageId) {
               const repliedMsg = allMessages.find(m => m._id === msg.replyToMessageId);
               if (repliedMsg) {
                 replyToMessageText = repliedMsg.text;
+                if (isGroupChat) {
+                  const repliedSender = await ctx.db.get(repliedMsg.senderId);
+                  replyToSenderUsername = repliedSender?.username ?? undefined;
+                }
               }
             }
 
@@ -1483,9 +1502,15 @@ export const listConversations = query({
               mediaUrl = (await ctx.storage.getUrl(msg.mediaStorageId)) ?? undefined;
             }
 
+            const sender = isGroupChat ? await ctx.db.get(msg.senderId) : null;
+
             return {
               id: msg._id,
               senderId: msg.senderId,
+              senderName: sender?.name ?? undefined,
+              senderUsername: sender?.username ?? undefined,
+              senderIsVerified: sender ? resolveUserVerification(sender).isVerified : undefined,
+              senderVerificationTier: sender ? resolveUserVerification(sender).verificationTier : undefined,
               text: msg.text,
               timestamp: formatRelativeTime(msg.createdAt),
               createdAt: msg.createdAt,
@@ -1493,6 +1518,7 @@ export const listConversations = query({
               status: msg.isRead ? 'read' : 'delivered',
               replyToMessageId: msg.replyToMessageId,
               replyToMessageText,
+              replyToSenderUsername,
               isEdited: msg.isEdited,
               type: msg.type,
               mediaUrl,
@@ -1514,7 +1540,12 @@ export const listConversations = query({
         isGroupChat,
         amIUserA,
         groupChatId: conversation.groupChatId,
-        groupChat,
+        groupChat: groupChat ? {
+          ...groupChat,
+          avatarUrl: groupChat.avatarUrl || groupChat.coverImage || "",
+          memberCount: new Set(groupChat.memberIds.map((id: any) => id.toString())).size,
+          onlineMemberCount,
+        } : null,
         pageId: conversation.pageB,
         participant: {
           id: otherParticipant?._id ?? "",
@@ -3791,4 +3822,3 @@ export const updateDisappearingMessages = mutation({
     });
   },
 });
-

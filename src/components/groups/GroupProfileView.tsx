@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ArrowLeft,
   Users,
@@ -70,12 +70,27 @@ export const GroupProfileView: React.FC = () => {
   const leaveGroupMutation = useMutation(api.groups.leaveGroup);
   const toggleFollowMutation = useMutation(api.groups.toggleFollow);
 
+  useEffect(() => {
+    if (!group?.isChatroom || !group.isMember || !group.conversationId) return;
+    setActiveChatId(group.conversationId);
+    setActiveGroupId(null);
+    setActiveTab('messages');
+  }, [group?.isChatroom, group?.isMember, group?.conversationId]);
+
   if (!activeGroupId) return null;
 
   if (group === undefined) {
     return (
       <div className="fixed inset-0 z-50 bg-theme-base flex items-center justify-center">
         <div className="w-8 h-8 rounded-full border-2 border-[#5E43F3] border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (group.isChatroom && group.isMember && group.conversationId) {
+    return (
+      <div className="fixed inset-0 z-50 bg-theme-base flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-[#5E43F3] border-t-transparent animate-spin" role="status" aria-label="Opening chatroom" />
       </div>
     );
   }
@@ -123,8 +138,16 @@ export const GroupProfileView: React.FC = () => {
         triggerShareToast(group?.isChatroom ? 'You joined the chatroom!' : 'You joined the group!');
         if (res.conversationId) {
           setActiveChatId(res.conversationId);
+          if (group?.isChatroom) {
+            setActiveGroupId(null);
+            setActiveTab('messages');
+          }
         } else if (group?.conversationId) {
           setActiveChatId(group.conversationId);
+          if (group?.isChatroom) {
+            setActiveGroupId(null);
+            setActiveTab('messages');
+          }
         }
       } else {
         triggerShareToast('Join request sent to group admins');

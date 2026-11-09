@@ -13,7 +13,6 @@ import {
   Compass,
   Heart,
   Flame,
-  UserPlus,
   Check,
   Play,
   Plus,
@@ -23,9 +22,6 @@ import {
   ShieldAlert,
   Crown,
   Clock,
-  MessageSquare,
-  Gamepad2,
-  Lightbulb,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { EventsView } from '../events/EventsView';
@@ -71,6 +67,7 @@ export const DiscoverView: React.FC = () => {
     discoverSearchQuery,
     setDiscoverSearchQuery,
     setActiveVideoFeedPostId,
+    triggerShareToast,
   } = useLalao();
 
   const rawUsers = useQuery(api.social.listUsersForExplore);
@@ -126,6 +123,33 @@ export const DiscoverView: React.FC = () => {
   const recordSearch = useMutation(api.search.recordRecentSearch);
   const removeSearch = useMutation(api.search.removeRecentSearch);
   const requestToJoinRoom = useMutation(api.groups.requestToJoin);
+  const [joiningChatroomId, setJoiningChatroomId] = useState<string | null>(null);
+
+  const openChatroom = async (room: any) => {
+    if (!currentUser) {
+      showAuthPrompt('Sign in to join this room');
+      return;
+    }
+
+    setJoiningChatroomId(room.id);
+    try {
+      const result = await requestToJoinRoom({ groupId: room.id });
+      if (result.status !== 'joined') {
+        triggerShareToast('Join request sent to room admins');
+        return;
+      }
+      if (!result.conversationId) {
+        throw new Error('This room does not have a chat conversation yet.');
+      }
+      setActiveGroupId(null);
+      setActiveChatId(result.conversationId);
+      setActiveTab('messages');
+    } catch (reason) {
+      triggerShareToast(reason instanceof Error ? reason.message : 'Could not open this room.');
+    } finally {
+      setJoiningChatroomId(null);
+    }
+  };
 
   const recordSearchAndMirror = useCallback(async (args: any) => {
     await recordSearch(args);
@@ -935,9 +959,6 @@ export const DiscoverView: React.FC = () => {
                 {/* Header & Short Description */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-[#5E43F3]/10 flex items-center justify-center text-[#5E43F3]">
-                      <MessageSquare className="w-4 h-4" />
-                    </div>
                     <div>
                       <h2 className="text-sm sm:text-base font-black text-theme-primary tracking-tight">
                         LaLao Chatrooms
@@ -980,37 +1001,18 @@ export const DiscoverView: React.FC = () => {
                 ) : (
                   <div className="space-y-3">
                     {chatrooms.map((room: any) => {
-                      const getRoomIcon = (iconName?: string) => {
-                        switch (iconName) {
-                          case 'Users':
-                            return <Users className="w-5 h-5 text-[#5E43F3]" />;
-                          case 'UserPlus':
-                            return <UserPlus className="w-5 h-5 text-emerald-400" />;
-                          case 'Gamepad2':
-                            return <Gamepad2 className="w-5 h-5 text-purple-400" />;
-                          case 'Lightbulb':
-                            return <Lightbulb className="w-5 h-5 text-amber-400" />;
-                          case 'MapPin':
-                            return <MapPin className="w-5 h-5 text-rose-400" />;
-                          default:
-                            return <MessageSquare className="w-5 h-5 text-[#5E43F3]" />;
-                        }
-                      };
-
+                      const roomImage = room.coverImage || room.avatarUrl;
                       return (
                         <div
                           key={room.id}
                           id={`chatroom-card-${room.id}`}
-                          onClick={() => {
-                            setActiveGroupId(room.id);
-                          }}
-                          className="group relative overflow-hidden rounded-2xl border border-theme-divider bg-theme-surface hover:border-[#5E43F3]/50 transition-all cursor-pointer shadow-xs hover:shadow-md"
+                          className="group relative overflow-hidden rounded-2xl border border-theme-divider bg-theme-surface shadow-xs"
                         >
                           {/* Banner Cover */}
                           <div className="relative h-24 w-full bg-gradient-to-r from-neutral-900 via-neutral-950 to-neutral-900 overflow-hidden">
-                            {room.coverImage && (
+                            {roomImage && (
                               <img
-                                src={room.coverImage}
+                                src={roomImage}
                                 alt={room.name}
                                 className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-500"
                               />
@@ -1027,9 +1029,7 @@ export const DiscoverView: React.FC = () => {
                           <div className="p-3.5 sm:p-4">
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-11 h-11 rounded-2xl bg-black/40 border border-theme-divider flex items-center justify-center shrink-0 shadow-sm">
-                                  {getRoomIcon(room.roomIcon)}
-                                </div>
+                                {roomImage && <img src={roomImage} alt="" className="h-11 w-11 rounded-2xl border border-theme-divider object-cover shrink-0 shadow-sm" />}
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-2">
                                     <h3 className="font-black text-sm text-theme-primary truncate">
@@ -1049,37 +1049,20 @@ export const DiscoverView: React.FC = () => {
                                 {room.isMember ? (
                                   <button
                                     type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setActiveGroupId(room.id);
-                                    }}
-                                    className="px-3.5 py-1.5 rounded-full text-xs font-bold text-white bg-theme-surface border border-theme-divider hover:bg-theme-surface-hover transition-colors shrink-0 cursor-pointer shadow-xs"
+                                    onClick={() => void openChatroom(room)}
+                                    disabled={joiningChatroomId === room.id}
+                                    className="px-3.5 py-1.5 rounded-full text-xs font-bold text-white bg-theme-surface border border-theme-divider hover:bg-theme-surface-hover transition-colors shrink-0 cursor-pointer shadow-xs disabled:opacity-50"
                                   >
-                                    View Room
+                                    {joiningChatroomId === room.id ? 'Opening…' : 'View Room'}
                                   </button>
                                 ) : (
                                   <button
                                     type="button"
-                                    onClick={async (e) => {
-                                      e.stopPropagation();
-                                      if (!currentUser) {
-                                        showAuthPrompt('Sign in to join this room');
-                                        return;
-                                      }
-                                      try {
-                                        const res = await requestToJoinRoom({ groupId: room.id });
-                                        if (res.conversationId) {
-                                          setActiveChatId(res.conversationId);
-                                        } else {
-                                          setActiveGroupId(room.id);
-                                        }
-                                      } catch (err: any) {
-                                        console.error(err);
-                                      }
-                                    }}
-                                    className="px-3.5 py-1.5 rounded-full text-xs font-bold text-white bg-[#5E43F3] hover:bg-[#4E34E0] transition-colors shrink-0 cursor-pointer shadow-xs"
+                                    onClick={() => void openChatroom(room)}
+                                    disabled={joiningChatroomId === room.id}
+                                    className="px-3.5 py-1.5 rounded-full text-xs font-bold text-white bg-[#5E43F3] hover:bg-[#4E34E0] transition-colors shrink-0 cursor-pointer shadow-xs disabled:opacity-50"
                                   >
-                                    Join Room
+                                    {joiningChatroomId === room.id ? 'Joining…' : 'Join Room'}
                                   </button>
                                 )}
                               </div>
@@ -1100,7 +1083,9 @@ export const DiscoverView: React.FC = () => {
                                 </span>
                               </div>
                               <span>·</span>
-                              <span className="text-emerald-500 font-semibold">Active Room</span>
+                              <span className="text-emerald-500 font-semibold">{room.onlineMemberCount ?? 0} online</span>
+                              <span>·</span>
+                              <span className="text-emerald-500 font-semibold">{room.chatroomStatus === 'inactive' ? 'Inactive' : 'Active Room'}</span>
                             </div>
                           </div>
                         </div>

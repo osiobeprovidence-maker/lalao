@@ -512,6 +512,15 @@ export default defineSchema({
     .index("by_group_user", ["groupId", "userId"])
     .index("by_group_role", ["groupId", "role"]),
 
+  groupPresence: defineTable({
+    groupId: v.id("groupChats"),
+    userId: v.id("users"),
+    connectionId: v.string(),
+    lastActiveAt: v.number(),
+  })
+    .index("by_group", ["groupId"])
+    .index("by_group_connection", ["groupId", "connectionId"]),
+
   groupJoinRequests: defineTable({
     groupId: v.id("groupChats"),
     userId: v.id("users"),
@@ -2157,5 +2166,4 @@ export default defineSchema({
   }).index("by_actor", ["actorId"])
    .index("by_created", ["createdAt"]),
 });
-
 
