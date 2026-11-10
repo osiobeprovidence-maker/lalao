@@ -1116,6 +1116,17 @@ async function qualifyReferralInternal(
     createdAt: Date.now(),
   });
 
+  // Credit LaLao Egg jar for room invite/referral
+  try {
+    await ctx.scheduler.runAfter(0, (internal as any).egg.onReferralQualified, {
+      referrerId: codeRow.userId,
+      referredUserId: params.referredUserId,
+      referralRelationshipId: relationship._id,
+    });
+  } catch (e) {
+    console.warn('[rewards] Failed to dispatch egg referral points:', e);
+  }
+
   return { status: "rewarded" as const, pointsAwarded: referralPoints, pointsBefore, pointsAfter };
 }
 

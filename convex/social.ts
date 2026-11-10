@@ -2628,6 +2628,12 @@ export const toggleFollowUser = mutation({
       category: "follows",
     });
 
+    // Trigger LaLao Egg social connection reward
+    await ctx.scheduler.runAfter(0, (internal as any).egg.onRoomMemberFollowed, {
+      followerId: currentUser._id,
+      targetUserId,
+    });
+
     return { following: true };
   },
 });
@@ -3662,6 +3668,17 @@ export const sendMessage = mutation({
           icon: senderAvatar,
         });
       }
+    }
+
+    // Trigger LaLao Egg rewards if this is a room chat
+    if (conversation.groupChatId) {
+      await ctx.scheduler.runAfter(0, (internal as any).egg.onRoomMessageSent, {
+        messageId,
+        senderId: currentUser._id,
+        groupId: conversation.groupChatId,
+        text: args.text,
+        replyToMessageId: args.replyToMessageId,
+      });
     }
 
     return messageId;

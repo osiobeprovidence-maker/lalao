@@ -2165,5 +2165,112 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_actor", ["actorId"])
    .index("by_created", ["createdAt"]),
+
+  // ---- LALAO EGG ROOM REWARDS & PARTICIPATION SYSTEM ----
+  eggUserAccounts: defineTable({
+    userId: v.id("users"),
+    availablePoints: v.number(),
+    lifetimePoints: v.number(),
+    todayPoints: v.number(),
+    todayDate: v.string(), // YYYY-MM-DD UTC
+    todayQualifyingSeconds: v.number(),
+    todayMessagesCount: v.number(),
+    todayRepliesCount: v.number(),
+    todayConversationsCount: v.number(),
+    todayReferralsCount: v.number(),
+    todayNairaEarned: v.number(),
+    totalNairaRedeemed: v.number(),
+    status: v.union(v.literal("active"), v.literal("flagged"), v.literal("suspended")),
+    flagReason: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"])
+   .index("by_status", ["status"]),
+
+  eggActivitySessions: defineTable({
+    userId: v.id("users"),
+    roomId: v.id("groupChats"),
+    sessionDate: v.string(), // YYYY-MM-DD
+    activeSeconds: v.number(),
+    lastHeartbeatAt: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user_date", ["userId", "sessionDate"])
+   .index("by_user_room_date", ["userId", "roomId", "sessionDate"]),
+
+  eggInteractions: defineTable({
+    userId: v.id("users"),
+    targetUserId: v.id("users"),
+    roomId: v.id("groupChats"),
+    date: v.string(), // YYYY-MM-DD
+    createdAt: v.number(),
+  }).index("by_user_date", ["userId", "date"])
+   .index("by_user_target_date", ["userId", "targetUserId", "date"]),
+
+  eggTransactions: defineTable({
+    userId: v.id("users"),
+    type: v.union(
+      v.literal("earn_chat"),
+      v.literal("earn_reply"),
+      v.literal("earn_conversation"),
+      v.literal("earn_social_connection"),
+      v.literal("earn_referral"),
+      v.literal("earn_time_threshold"),
+      v.literal("redeem_airtime"),
+      v.literal("redeem_data"),
+      v.literal("admin_adjustment"),
+      v.literal("refund")
+    ),
+    points: v.number(),
+    pointsBefore: v.number(),
+    pointsAfter: v.number(),
+    nairaValue: v.number(),
+    description: v.string(),
+    roomId: v.optional(v.id("groupChats")),
+    relatedMessageId: v.optional(v.id("messages")),
+    relatedReferralId: v.optional(v.id("referralRelationships")),
+    relatedRedemptionId: v.optional(v.id("eggRedemptions")),
+    metadata: v.optional(v.any()),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"])
+   .index("by_user_created", ["userId", "createdAt"])
+   .index("by_type", ["type"]),
+
+  eggRedemptions: defineTable({
+    userId: v.id("users"),
+    category: v.union(v.literal("airtime"), v.literal("data")),
+    network: v.string(), // MTN, AIRTEL, GLO, 9MOBILE
+    phoneNumber: v.string(),
+    packagePlan: v.optional(v.string()),
+    amountNaira: v.number(),
+    pointsCost: v.number(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("processing"),
+      v.literal("completed"),
+      v.literal("failed"),
+      v.literal("refunded"),
+      v.literal("rejected")
+    ),
+    rejectionReason: v.optional(v.string()),
+    externalProviderRef: v.optional(v.string()),
+    idempotencyKey: v.string(),
+    auditNote: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"])
+   .index("by_status", ["status"])
+   .index("by_idempotency", ["idempotencyKey"]),
+
+  eggDailyStats: defineTable({
+    date: v.string(), // YYYY-MM-DD
+    totalActiveUsers: v.number(),
+    totalPointsEarned: v.number(),
+    totalNairaValue: v.number(),
+    totalPointsRedeemed: v.number(),
+    totalNairaRedeemed: v.number(),
+    redemptionCount: v.number(),
+    updatedAt: v.number(),
+  }).index("by_date", ["date"]),
 });
 

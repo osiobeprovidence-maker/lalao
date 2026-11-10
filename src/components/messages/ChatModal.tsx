@@ -27,9 +27,12 @@ import { useCall } from '../../context/CallContext';
 import { Avatar } from '../common/Avatar';
 import { VerificationBadge } from '../common/VerificationBadge';
 import { getPublicIdentityLabel } from '../common/UserIdentity';
-import { DirectMessage } from '../../types';
+import { DirectMessage, User } from '../../types';
 import { compressImage } from '../../lib/imageCompression';
 import { ChatroomMembersModal, type ChatroomMember } from './ChatroomMembersModal';
+import { useQuery } from 'convex/react';
+import { RoomEggIndicator } from '../rewards/RoomEggIndicator';
+import { LalaoEggDashboardModal } from '../rewards/LalaoEggDashboardModal';
 
 // ─── Receipt Indicator ──────────────────────────────────────────────────────
 
@@ -439,6 +442,9 @@ export const ChatModal: React.FC = () => {
   const [activeContextMenu, setActiveContextMenu] = useState<string | null>(null);
   const [isRoomOptionsOpen, setIsRoomOptionsOpen] = useState(false);
   const [roomMembersView, setRoomMembersView] = useState<'all' | 'online' | null>(null);
+  const [isEggDashboardOpen, setIsEggDashboardOpen] = useState(false);
+  const eggStatus = useQuery((api as any).egg?.getMyEggStatus);
+  const recordEggHeartbeat = useMutation((api as any).egg?.recordRoomHeartbeat);
 
   // Media upload state
   const [mediaFile, setMediaFile] = useState<File | null>(null);
@@ -496,8 +502,18 @@ export const ChatModal: React.FC = () => {
 
     syncVisibility();
     const heartbeat = window.setInterval(() => {
-      if (document.visibilityState === 'visible') updatePresence(true);
+      if (document.visibilityState === 'visible') {
+        updatePresence(true);
+        if (isRoomChat && roomId) {
+          recordEggHeartbeat({ roomId: roomId as any }).catch(() => {});
+        }
+      }
     }, 25_000);
+
+    // Initial heartbeat on entering room
+    if (isRoomChat && roomId && document.visibilityState === 'visible') {
+      recordEggHeartbeat({ roomId: roomId as any }).catch(() => {});
+    }
     document.addEventListener('visibilitychange', syncVisibility);
 
     return () => {
@@ -864,6 +880,33 @@ export const ChatModal: React.FC = () => {
     setActiveChatId(null);
   };
 
+  const openMessageSenderProfile = (msg: DirectMessage) => {
+    if (!msg.senderId) return;
+
+    const senderData =
+      msg.senderId === currentUser?.id
+        ? currentUser
+        : msg.senderId === conv.participant.id
+          ? conv.participant
+          : null;
+    const username = msg.senderUsername?.trim().replace(/^@+/, '') || senderData?.username || '';
+    const name = msg.senderName?.trim() || senderData?.name || '';
+
+    const senderProfile: User = {
+      ...senderData,
+      id: msg.senderId,
+      name: name || username || 'Member',
+      username: username || name || 'member',
+      avatar: senderData?.avatar || '',
+      userType: senderData?.userType || 'person',
+      isVerified: msg.senderIsVerified ?? senderData?.isVerified,
+      verificationTier: msg.senderVerificationTier ?? senderData?.verificationTier,
+    };
+
+    setActiveUserProfile(senderProfile);
+    setActiveChatId(null);
+  };
+
   // ── Media handling ───────────────────────────────────────────────────────
 
   const handleOpenViewOnce = (msg: DirectMessage) => {
@@ -981,7 +1024,7 @@ export const ChatModal: React.FC = () => {
         </div>
       )}
 
-      <div className="w-full max-w-[960px] min-h-screen bg-theme-base flex flex-col border-x border-black/[0.04] dark:border-white/[0.06]">
+      <div className="w-full min-h-screen bg-theme-base flex flex-col border-x border-black/[0.04] dark:border-white/[0.06]">
 
         {/* Header */}
         <header className="shrink-0 border-b border-black/[0.04] dark:border-white/[0.06] bg-theme-base/95 backdrop-blur-md px-3 sm:px-4 py-2.5">
@@ -1068,6 +1111,15 @@ export const ChatModal: React.FC = () => {
                   </button>
                 </>
               )}
+              {isRoomChat && eggStatus && eggStatus.isEnabled && (
+                <RoomEggIndicator
+                  points={eggStatus.availablePoints}
+                  nairaValue={eggStatus.availableNairaValue}
+                  progressPercent={eggStatus.progressPercent}
+                  eggState={eggStatus.eggState}
+                  onClick={() => setIsEggDashboardOpen(true)}
+                />
+              )}
               {isRoomChat ? (
                 <div className="relative">
                   <button
@@ -1105,7 +1157,7 @@ export const ChatModal: React.FC = () => {
         </header>
 
         {/* Messages */}
-        <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 space-y-4 bg-theme-base min-h-0">
+        <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 space-y-3 bg-theme-base min-h-0">
           {[...conv.messages].sort((a, b) => a.createdAt - b.createdAt).map((msg: DirectMessage, index: number, arr: DirectMessage[]) => {
             const prevMsg = index > 0 ? arr[index - 1] : null;
             
@@ -1121,9 +1173,16 @@ export const ChatModal: React.FC = () => {
               }
             }
             
-            const isGrouped = !showSeparator && prevMsg && prevMsg.senderId === msg.senderId && msg.createdAt && prevMsg.createdAt && (msg.createdAt - prevMsg.createdAt < 5 * 60 * 1000);
-            
             const timeString = msg.createdAt ? formatMessageTime(msg.createdAt) : msg.timestamp;
+            const senderData =
+              msg.senderId === currentUser?.id
+                ? currentUser
+                : msg.senderId === conv.participant.id
+                  ? conv.participant
+                  : null;
+            const senderUsername = msg.senderUsername?.trim().replace(/^@+/, '') || senderData?.username || '';
+            const senderName = msg.senderName?.trim() || senderData?.name || '';
+            const senderLabel = senderUsername ? `@${senderUsername}` : senderName || 'Member';
 
             return (
               <React.Fragment key={msg.id}>
@@ -1139,29 +1198,38 @@ export const ChatModal: React.FC = () => {
                 
                 <div
                   id={`chat-msg-${msg.id}`}
-                  className={`flex flex-col animate-in zoom-in-95 duration-150 relative ${isRoomChat && msg.isMine ? 'items-end' : 'items-start'}`}
+                  className="flex flex-col items-start animate-in zoom-in-95 duration-150 relative"
                 >
-                  {!isGrouped && (
-                    <div className={`flex min-w-0 max-w-full items-center gap-1.5 text-theme-tertiary select-none mb-1 ${isRoomChat && msg.isMine ? 'justify-end' : ''}`}>
-                      <span className="max-w-[55vw] truncate text-xs font-bold tracking-wide sm:max-w-xs">
-                        {isRoomChat ? `@${msg.senderUsername || msg.senderName || 'room member'}` : msg.isMine ? 'Me' : conv.participant.name}
+                  <div className="flex min-w-0 max-w-full items-center gap-1.5 text-theme-tertiary mb-1">
+                    {msg.senderId ? (
+                      <button
+                        type="button"
+                        onClick={() => openMessageSenderProfile(msg)}
+                        className="min-w-0 max-w-[65vw] truncate text-left text-xs font-bold tracking-wide transition-colors hover:text-[#5E43F3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5E43F3] focus-visible:ring-offset-2 focus-visible:ring-offset-theme-base sm:max-w-xs"
+                        aria-label={`View ${senderLabel}'s profile`}
+                      >
+                        {senderLabel}
+                      </button>
+                    ) : (
+                      <span className="min-w-0 max-w-[65vw] truncate text-xs font-bold tracking-wide sm:max-w-xs">
+                        {senderLabel}
                       </span>
-                      {isRoomChat && msg.senderIsVerified && (
-                        <VerificationBadge
-                          user={{ isVerified: true, verificationTier: msg.senderVerificationTier }}
-                          size="xs"
-                        />
-                      )}
-                      <span className="text-[10px] opacity-70 ml-1">{timeString}</span>
-                      {msg.isMine && <MessageReceiptIndicator status={msg.status || 'read'} theme="light-bg" className="ml-0.5" />}
-                    </div>
-                )}
+                    )}
+                    {msg.senderIsVerified && (
+                      <VerificationBadge
+                        user={{ isVerified: true, verificationTier: msg.senderVerificationTier }}
+                        size="xs"
+                      />
+                    )}
+                    <span className="shrink-0 text-[10px] opacity-70">{timeString}</span>
+                    {msg.isMine && <MessageReceiptIndicator status={msg.status || 'read'} theme="light-bg" className="ml-0.5" />}
+                  </div>
 
                 <div
-                  className={`flex ${isRoomChat && msg.isMine ? 'justify-end' : 'justify-start'} relative group border-l border-t ${msg.isMine ? 'border-neutral-800' : 'border-[#5E43F3]/40'} pl-3 pt-2 pb-1 mt-0.5`}
+                  className={`flex justify-start relative group border-l border-t ${msg.isMine ? 'border-neutral-800' : 'border-[#5E43F3]/40'} pl-3 pt-2 pb-1 mt-0.5`}
                   onClick={() => setActiveContextMenu(activeContextMenu === msg.id ? null : msg.id)}
                 >
-                  <div className="flex min-w-0 max-w-[90%] flex-col cursor-pointer">
+                  <div className="flex min-w-0 max-w-[min(90%,48rem)] flex-col cursor-pointer">
                     {msg.replyToMessageText && (
                       <div className={`flex flex-col gap-0.5 mb-2 opacity-80 border-l border-t ${msg.isMine ? 'border-neutral-800' : 'border-[#5E43F3]/40'} pl-2 pt-1`}>
                         <span className="text-[10px] text-theme-tertiary font-medium">
@@ -1582,8 +1650,17 @@ export const ChatModal: React.FC = () => {
           <div className="mx-auto mt-2.5 h-1 w-24 rounded-full bg-black/[0.06] dark:bg-white/[0.06]" />
         </div>
       </div>
+      {isEggDashboardOpen && (
+        <LalaoEggDashboardModal
+          isOpen={isEggDashboardOpen}
+          onClose={() => setIsEggDashboardOpen(false)}
+          roomId={roomId}
+          roomName={roomChat?.name || conv?.participant?.name}
+        />
+      )}
       {roomMembersView && isRoomChat && roomId && (
         <ChatroomMembersModal
+          isOpen={Boolean(roomMembersView)}
           groupId={roomId}
           onlineOnly={roomMembersView === 'online'}
           currentUserId={currentUser?.id}

@@ -8,6 +8,8 @@ import {
   LayoutDashboard, Menu, X as XIcon
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
+import { AdminEggRewardsSection } from './AdminEggRewardsSection';
+import { Egg } from 'lucide-react';
 
 type RewardType = 'gift_card' | 'airtime' | 'data_bundle' | 'voucher' | 'partner_offer' | 'other';
 type RedemptionStatus = 'pending' | 'approved' | 'fulfilled' | 'rejected' | 'cancelled';
@@ -46,7 +48,7 @@ const STATUS_ICONS: Record<string, React.ElementType> = {
   cancelled: XCircle,
 };
 
-type AdminTab = 'overview' | 'catalogue' | 'redemptions' | 'config' | 'referrals';
+type AdminTab = 'overview' | 'catalogue' | 'redemptions' | 'config' | 'referrals' | 'egg';
 
 export const AdminRewards: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
@@ -738,6 +740,7 @@ export const AdminRewards: React.FC = () => {
       case 'redemptions': return <RedemptionsContent />;
       case 'config': return <ConfigContent />;
       case 'referrals': return <ReferralsContent />;
+      case 'egg': return <AdminEggRewardsSection />;
     }
   };
 
@@ -913,6 +916,7 @@ export const AdminRewards: React.FC = () => {
         <TabButton id="redemptions" label="Redemptions" icon={Award} count={redemptions?.filter((r: any) => r.status === 'pending').length} />
         <TabButton id="config" label="Earning Rules" icon={Settings} />
         <TabButton id="referrals" label="Referrals" icon={Users} />
+        <TabButton id="egg" label="LaLao Egg" icon={Egg} />
       </div>
 
       {/* Analytics Overview */}
