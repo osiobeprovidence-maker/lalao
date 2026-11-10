@@ -838,6 +838,10 @@ export const rejectRedemption = mutation({
 // ============================================
 
 export const getUserReferralCode = query({
+
+/**
+ * Existing query to fetch a user's referral code.
+ */
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
