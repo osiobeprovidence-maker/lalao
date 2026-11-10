@@ -80,8 +80,71 @@ export const getMyCampaigns = query({
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .order("desc")
       .collect();
+    return await Promise.all(campaigns.map(async (campaign) => {
+      const payments = await ctx.db.query("adPayments").withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id)).collect();
+      const successfulPayment = payments.find((payment) => payment.status === "successful");
+      return { ...campaign, paymentStatus: successfulPayment ? "successful" : payments.some((payment) => payment.status === "pending") ? "pending" : "unpaid", paymentProvider: successfulPayment?.paymentProvider };
+    }));
+  },
+});
 
-    return campaigns;
+/** Rooms available to the signed-in advertiser for room campaign placement. */
+export const getAdvertisableRooms = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getAuthUser(ctx);
+    const rooms = await ctx.db.query("groupChats").withIndex("by_is_chatroom", (q) => q.eq("isChatroom", true)).collect();
+    return rooms.filter((room) => room.chatroomStatus !== "inactive" && (room.creatorId === user._id || room.memberIds.some((id: any) => id === user._id)))
+      .map((room) => ({ _id: room._id, name: room.name, category: room.category, memberCount: room.memberIds.length }));
+  },
+});
+
+/** Automatic scheduled activation and expiration; also used by the existing cron. */
+export const maintainCampaignLifecycle = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const campaigns = await ctx.db.query("adCampaigns").collect();
+    let activated = 0;
+    let completed = 0;
+    for (const campaign of campaigns) {
+      if (!["active", "scheduled", "approved"].includes(campaign.status)) continue;
+      if (campaign.schedule.endDate <= now) {
+        await ctx.db.patch(campaign._id, { status: "completed", updatedAt: now });
+        completed++;
+        continue;
+      }
+      if (campaign.moderationStatus !== "approved") continue;
+      const successfulPayment = await ctx.db.query("adPayments").withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id)).filter((q) => q.eq(q.field("status"), "successful")).first();
+      if (!successfulPayment) continue;
+      const nextStatus = campaign.schedule.startDate <= now ? "active" : "scheduled";
+      if (campaign.status !== nextStatus) {
+        await ctx.db.patch(campaign._id, { status: nextStatus, updatedAt: now });
+        if (nextStatus === "active") activated++;
+      }
+    }
+    return { activated, completed };
+  },
+});
+
+/** Room timeline placement for room members only. */
+export const getRoomSponsoredPlacement = query({
+  args: { roomId: v.id("groupChats") },
+  handler: async (ctx, { roomId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const user = await getUserByAuthIdentity(ctx, identity);
+    const room = await ctx.db.get(roomId);
+    if (!user || !room?.isChatroom || room.chatroomStatus === "inactive") return null;
+    if (room.creatorId !== user._id && !room.memberIds.some((memberId: any) => memberId === user._id)) return null;
+    const now = Date.now();
+    const candidates = await ctx.db.query("adCampaigns").withIndex("by_room_status", (q) => q.eq("roomId", roomId).eq("status", "active")).collect();
+    const eligible = candidates.filter((campaign) => campaign.moderationStatus === "approved" && campaign.schedule.startDate <= now && campaign.schedule.endDate > now && campaign.budget.spentKobo < campaign.budget.totalBudgetKobo);
+    eligible.sort((a, b) => a.budget.spentKobo / a.budget.totalBudgetKobo - b.budget.spentKobo / b.budget.totalBudgetKobo);
+    const campaign = eligible[0];
+    if (!campaign) return null;
+    const advertiser = await ctx.db.get(campaign.userId);
+    return { campaignId: campaign._id, placement: "room" as const, roomId, format: campaign.format, headline: campaign.creative.headline, description: campaign.creative.description, mediaUrl: campaign.creative.mediaUrl, mediaType: campaign.creative.mediaType, ctaLabel: campaign.creative.ctaLabel, destinationUrl: campaign.creative.destinationUrl, advertiser: { id: advertiser?._id, name: advertiser?.name || "Sponsored Partner", username: advertiser?.username, avatarUrl: advertiser?.avatarUrl, isVerified: true } };
   },
 });
 
@@ -144,6 +207,8 @@ export const createCampaign = mutation({
       v.literal("video_ad")
     ),
     pageId: v.optional(v.id("pages")),
+    placement: v.optional(v.union(v.literal("feed"), v.literal("room"))),
+    roomId: v.optional(v.id("groupChats")),
     promotedPostId: v.optional(v.id("posts")),
     creative: v.object({
       headline: v.string(),
@@ -185,6 +250,18 @@ export const createCampaign = mutation({
   },
   handler: async (ctx, args) => {
     const user = await getAuthUser(ctx);
+    const placement = args.placement ?? "feed";
+
+    if (placement === "room") {
+      if (!args.roomId) throw new Error("Choose a chatroom for this advertisement.");
+      const room = await ctx.db.get(args.roomId);
+      if (!room?.isChatroom || room.chatroomStatus === "inactive") throw new Error("Selected chatroom is unavailable.");
+      const isAdmin = user.role === "admin" || user.role === "super_admin";
+      const isMember = room.creatorId === user._id || room.memberIds.some((id: any) => id === user._id);
+      if (!isAdmin && !isMember) throw new Error("Join this chatroom before creating an advertisement for it.");
+    } else if (args.roomId) {
+      throw new Error("A room can only be selected for room advertisements.");
+    }
 
     // 1. Validate destination URL
     if (!validateDestinationUrl(args.creative.destinationUrl)) {
@@ -199,7 +276,7 @@ export const createCampaign = mutation({
 
     // 3. Validate Schedule
     const now = Date.now();
-    if (args.schedule.endDate <= args.schedule.startDate) {
+    if (args.schedule.endDate <= args.schedule.startDate || args.schedule.endDate - args.schedule.startDate > 90 * 24 * 60 * 60 * 1000) {
       throw new Error("Campaign end date must be after start date.");
     }
     if (args.schedule.endDate <= now) {
@@ -242,7 +319,10 @@ export const createCampaign = mutation({
       status: "pending_payment", // Initial state waiting for funding
       moderationStatus,
       moderationReason: screening.reason,
+      durationMs: args.schedule.endDate - args.schedule.startDate,
       promotedPostId: args.promotedPostId,
+      placement,
+      roomId: placement === "room" ? args.roomId : undefined,
       creative: {
         headline: args.creative.headline.trim(),
         description: args.creative.description?.trim(),
@@ -462,7 +542,9 @@ export const adminReviewCampaign = mutation({
       newModeration = "approved";
       // If paid, transition to active or scheduled
       if (campaign.status === "pending_review" || campaign.status === "draft" || campaign.status === "payment_failed") {
-        if (campaign.schedule.startDate <= now && campaign.schedule.endDate > now) {
+        const payment = await ctx.db.query("adPayments").withIndex("by_campaign", (q) => q.eq("campaignId", args.campaignId)).filter((q) => q.eq(q.field("status"), "successful")).first();
+        if (!payment) throw new Error("Campaign must be paid before it can be approved for delivery.");
+        if (campaign.placement === "room" || (campaign.schedule.startDate <= now && campaign.schedule.endDate > now)) {
           newStatus = "active";
         } else if (campaign.schedule.startDate > now) {
           newStatus = "scheduled";
@@ -480,8 +562,12 @@ export const adminReviewCampaign = mutation({
       if (!args.reason) throw new Error("A suspension reason is required.");
     }
 
+    const schedule = campaign.placement === "room" && args.decision === "approve"
+      ? { startDate: now, endDate: now + (campaign.durationMs || campaign.schedule.endDate - campaign.schedule.startDate) }
+      : campaign.schedule;
     await ctx.db.patch(args.campaignId, {
       status: newStatus,
+      schedule,
       moderationStatus: newModeration,
       moderationReason: args.reason,
       reviewNote: args.note,
@@ -532,6 +618,8 @@ export const getSponsoredPlacement = query({
     latitude: v.optional(v.number()),
     longitude: v.optional(v.number()),
     locationName: v.optional(v.string()),
+    placement: v.optional(v.union(v.literal("feed"), v.literal("room"))),
+    roomId: v.optional(v.id("groupChats")),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -543,7 +631,10 @@ export const getSponsoredPlacement = query({
       .collect();
 
     // Filter strictly by moderation, schedule, and remaining budget
+    const placement = args.placement ?? "feed";
     const eligible = activeCandidates.filter((c) => {
+      if ((c.placement ?? "feed") !== placement) return false;
+      if (placement === "room" && c.roomId !== args.roomId) return false;
       if (c.moderationStatus !== "approved") return false;
       if (c.schedule.startDate > now || c.schedule.endDate <= now) return false;
       if (c.budget.spentKobo >= c.budget.totalBudgetKobo) return false;
@@ -588,6 +679,8 @@ export const getSponsoredPlacement = query({
 
     return {
       campaignId: chosen._id,
+      placement: chosen.placement ?? "feed",
+      roomId: chosen.roomId,
       format: chosen.format,
       headline: chosen.creative.headline,
       description: chosen.creative.description,
@@ -618,9 +711,9 @@ export const recordAdImpression = mutation({
   },
   handler: async (ctx, args) => {
     const campaign = await ctx.db.get(args.campaignId);
-    if (!campaign || campaign.status !== "active") return { recorded: false };
-
     const now = Date.now();
+    if (!campaign || campaign.status !== "active" || campaign.moderationStatus !== "approved" || campaign.schedule.startDate > now || campaign.schedule.endDate <= now || campaign.budget.spentKobo >= campaign.budget.totalBudgetKobo) return { recorded: false };
+
     const dateBucket = new Date(now).toISOString().split("T")[0]; // YYYY-MM-DD
 
     // Check deduplication (1 impression per session per campaign per day)
@@ -688,9 +781,8 @@ export const recordAdClick = mutation({
   },
   handler: async (ctx, args) => {
     const campaign = await ctx.db.get(args.campaignId);
-    if (!campaign) throw new Error("Campaign not found");
-
     const now = Date.now();
+    if (!campaign || campaign.status !== "active" || campaign.moderationStatus !== "approved" || campaign.schedule.startDate > now || campaign.schedule.endDate <= now || campaign.budget.spentKobo >= campaign.budget.totalBudgetKobo) return { recorded: false };
     const dateBucket = new Date(now).toISOString().split("T")[0];
 
     let viewerUserId: any = undefined;
@@ -702,6 +794,8 @@ export const recordAdClick = mutation({
 
     // Pricing model: ₦10.00 per verified click (1,000 kobo)
     const clickCostKobo = 1000;
+    const existingClick = await ctx.db.query("adEvents").withIndex("by_campaign_dedup", (q) => q.eq("campaignId", args.campaignId).eq("eventType", "click").eq("viewerSessionId", args.sessionId).eq("dateBucket", dateBucket)).first();
+    if (existingClick) return { recorded: false, deduplicated: true, destinationUrl: campaign.creative.destinationUrl };
     const newSpent = Math.min(campaign.budget.spentKobo + clickCostKobo, campaign.budget.totalBudgetKobo);
 
     await ctx.db.insert("adEvents", {

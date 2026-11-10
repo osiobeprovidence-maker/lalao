@@ -11,6 +11,8 @@ import { VideoPlayer } from './VideoPlayer';
 interface SponsoredPostCardProps {
   placement: {
     campaignId: any;
+    placement?: 'feed' | 'room';
+    roomId?: string;
     format: 'sponsored_post' | 'promoted_post' | 'image_ad' | 'video_ad';
     headline: string;
     description?: string;

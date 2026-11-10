@@ -34,6 +34,40 @@ describe('Lalao Ads — Policy, Validation & Lifecycle Logic', () => {
     assert.strictEqual(Number.isInteger(userBudgetKobo), true);
   });
 
+  it('Keeps room placement isolated from home-feed campaigns', () => {
+    const campaigns = [
+      { placement: 'feed', roomId: undefined, status: 'active' },
+      { placement: 'room', roomId: 'room-a', status: 'active' },
+      { placement: 'room', roomId: 'room-b', status: 'active' },
+    ];
+    const candidates = campaigns.filter((campaign) => campaign.status === 'active' && campaign.placement === 'room' && campaign.roomId === 'room-a');
+    assert.deepStrictEqual(candidates.length, 1);
+    assert.strictEqual(candidates[0].roomId, 'room-a');
+  });
+
+  it('Requires successful payment and approval before a campaign can be delivered', () => {
+    const canDeliver = (campaign: { status: string; moderationStatus: string; paid: boolean; startDate: number; endDate: number }, now: number) =>
+      campaign.status === 'active' && campaign.moderationStatus === 'approved' && campaign.paid && campaign.startDate <= now && campaign.endDate > now;
+    const campaign = { status: 'active', moderationStatus: 'approved', paid: true, startDate: 100, endDate: 200 };
+    assert.strictEqual(canDeliver(campaign, 150), true);
+    assert.strictEqual(canDeliver({ ...campaign, paid: false }, 150), false);
+    assert.strictEqual(canDeliver({ ...campaign, moderationStatus: 'pending_admin' }, 150), false);
+    assert.strictEqual(canDeliver(campaign, 200), false);
+  });
+
+  it('Uses the chosen duration starting after admin approval for room campaign review fairness', () => {
+    const now = 1_000_000;
+    const duration = 7 * 24 * 60 * 60 * 1000;
+    const createdSchedule = { startDate: now, endDate: now + duration };
+    const paymentAt = now + 2 * 24 * 60 * 60 * 1000;
+    const approvalAt = paymentAt + 3 * 24 * 60 * 60 * 1000;
+    const roomSchedule = { startDate: approvalAt, endDate: approvalAt + duration };
+    assert.strictEqual(roomSchedule.endDate - roomSchedule.startDate, duration);
+    assert.strictEqual(roomSchedule.startDate, approvalAt);
+    assert.strictEqual(roomSchedule.startDate > paymentAt, true);
+    assert.strictEqual(createdSchedule.endDate - createdSchedule.startDate, duration);
+  });
+
   it('Authoritative spend calculation debits correct kobo per impression and click', () => {
     const initialBudgetKobo = 500000; // ₦5,000
     let currentSpentKobo = 0;

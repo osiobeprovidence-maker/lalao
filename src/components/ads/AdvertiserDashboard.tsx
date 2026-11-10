@@ -39,6 +39,7 @@ import { CampaignVideoUploader } from './CampaignVideoUploader';
 export const AdvertiserDashboard: React.FC = () => {
   const { currentUser, location } = useLalao();
   const campaigns = useQuery(api.ads.getMyCampaigns);
+  const advertizableRooms = useQuery(api.ads.getAdvertisableRooms);
   const [activeView, setActiveView] = useState<'list' | 'create' | 'details'>('list');
   const [selectedCampaignId, setSelectedCampaignId] = useState<Id<"adCampaigns"> | null>(null);
 
@@ -158,7 +159,7 @@ export const AdvertiserDashboard: React.FC = () => {
                 </div>
                 <h3 className="font-bold text-base text-theme-primary">No campaigns yet</h3>
                 <p className="text-xs text-theme-tertiary max-w-sm mx-auto">
-                  Launch your first ad campaign in under 2 minutes. Reach local customers in Warri or across Nigeria with Bachs checkout.
+                  Launch your first ad campaign in under 2 minutes. Reach local customers in Warri or across Nigeria with secure hosted checkout.
                 </p>
                 <button
                   onClick={() => setActiveView('create')}
@@ -187,7 +188,8 @@ export const AdvertiserDashboard: React.FC = () => {
 
       {/* Creation Flow */}
       {activeView === 'create' && (
-        <CampaignCreationWizard
+          <CampaignCreationWizard
+          advertizableRooms={advertizableRooms ?? []}
           onSuccess={(id) => {
             setSelectedCampaignId(id);
             setActiveView('details');
@@ -312,9 +314,10 @@ const CampaignRowItem: React.FC<{ campaign: any; onSelect: () => void }> = ({ ca
 /**
  * Multi-Step Campaign Creation Flow
  */
-const CampaignCreationWizard: React.FC<{ onSuccess: (id: any) => void; onCancel: () => void }> = ({
+const CampaignCreationWizard: React.FC<{ onSuccess: (id: any) => void; onCancel: () => void; advertizableRooms: Array<{ _id: Id<"groupChats">; name: string; category?: string; memberCount: number }> }> = ({
   onSuccess,
   onCancel,
+  advertizableRooms,
 }) => {
   const { currentUser, location, posts } = useLalao();
   const createCampaignMutation = useMutation(api.ads.createCampaign);
@@ -330,6 +333,8 @@ const CampaignCreationWizard: React.FC<{ onSuccess: (id: any) => void; onCancel:
   const [format, setFormat] = useState<'sponsored_post' | 'promoted_post' | 'image_ad' | 'video_ad'>('sponsored_post');
   const [objective, setObjective] = useState<'reach' | 'website_visits' | 'engagement' | 'local_discovery'>('local_discovery');
   const [promotedPostId, setPromotedPostId] = useState<string>('');
+  const [placement, setPlacement] = useState<'feed' | 'room'>('feed');
+  const [roomId, setRoomId] = useState<string>('');
 
   // Creative
   const [headline, setHeadline] = useState('');
@@ -385,6 +390,10 @@ const CampaignCreationWizard: React.FC<{ onSuccess: (id: any) => void; onCancel:
       }
       setStep(3);
     } else if (step === 3) {
+      if (placement === 'room' && !roomId) {
+        setError('Choose a room where you are a member.');
+        return;
+      }
       setStep(4);
     }
   };
@@ -403,6 +412,8 @@ const CampaignCreationWizard: React.FC<{ onSuccess: (id: any) => void; onCancel:
         name: name.trim() || `${headline.substring(0, 24)} Ad`,
         objective,
         format,
+        placement,
+        roomId: placement === 'room' ? roomId as Id<"groupChats"> : undefined,
         promotedPostId: format === 'promoted_post' && promotedPostId ? (promotedPostId as any) : undefined,
         creative: {
           headline: headline.trim(),
@@ -682,6 +693,14 @@ const CampaignCreationWizard: React.FC<{ onSuccess: (id: any) => void; onCancel:
       {/* STEP 3: TARGETING */}
       {step === 3 && (
         <div className="space-y-4">
+          <div className="space-y-2">
+            <h2 className="text-base font-bold text-theme-primary">Ad Placement</h2>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setPlacement('feed')} className={`rounded-xl border p-3 text-sm ${placement === 'feed' ? 'border-[#5E43F3] bg-[#5E43F3]/5 font-bold' : 'border-theme-divider'}`}>Home feed</button>
+              <button type="button" onClick={() => setPlacement('room')} disabled={!advertizableRooms.length} className={`rounded-xl border p-3 text-sm disabled:opacity-50 ${placement === 'room' ? 'border-[#5E43F3] bg-[#5E43F3]/5 font-bold' : 'border-theme-divider'}`}>Chatroom timeline</button>
+            </div>
+            {placement === 'room' && <select aria-label="Choose chatroom" value={roomId} onChange={(event) => setRoomId(event.target.value)} className="w-full rounded-xl border border-theme-divider bg-theme-base p-3 text-sm text-theme-primary"><option value="">Choose a room</option>{advertizableRooms.map((room) => <option key={room._id} value={room._id}>{room.name} · {room.memberCount} members</option>)}</select>}
+          </div>
           <h2 className="text-base font-bold text-theme-primary">Audience & Geographic Targeting</h2>
 
           <div className="grid grid-cols-3 gap-2">
@@ -792,7 +811,7 @@ const CampaignCreationWizard: React.FC<{ onSuccess: (id: any) => void; onCancel:
               <strong className="text-theme-primary">~{Math.round((budgetNgn / 10)).toLocaleString()}</strong>
             </div>
             <div className="flex items-center justify-between pt-2 border-t border-theme-divider font-bold text-sm text-theme-primary">
-              <span>Total Payable via Bachs:</span>
+              <span>Total Payable:</span>
               <span className="text-[#5E43F3]">₦{budgetNgn.toLocaleString()}</span>
             </div>
           </div>
@@ -800,7 +819,7 @@ const CampaignCreationWizard: React.FC<{ onSuccess: (id: any) => void; onCancel:
           <div className="p-3 rounded-xl bg-[#5E43F3]/10 border border-[#5E43F3]/20 text-[#5E43F3] text-xs flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 shrink-0" />
             <span>
-              Secure Bachs checkout. Your campaign will undergo automated screening and admin review before going live.
+              Secure hosted checkout. Your campaign will undergo automated screening and admin review before going live.
             </span>
           </div>
         </div>
@@ -850,7 +869,7 @@ const CampaignCreationWizard: React.FC<{ onSuccess: (id: any) => void; onCancel:
 };
 
 /**
- * Campaign Details & Bachs Checkout Action View
+ * Campaign Details & hosted checkout action view
  */
 const CampaignDetailsView: React.FC<{ campaignId: Id<"adCampaigns">; onBack: () => void }> = ({
   campaignId,
@@ -870,7 +889,7 @@ const CampaignDetailsView: React.FC<{ campaignId: Id<"adCampaigns">; onBack: () 
     );
   }
 
-  const handleBachsCheckout = async () => {
+  const handleCheckout = async () => {
     setIsPaying(true);
     setPayError(null);
     try {
@@ -892,7 +911,7 @@ const CampaignDetailsView: React.FC<{ campaignId: Id<"adCampaigns">; onBack: () 
           <div>
             <h2 className="text-lg font-bold text-theme-primary">{campaign.name}</h2>
             <p className="text-xs text-theme-tertiary">
-              Created {new Date(campaign.createdAt).toLocaleDateString()} · Objective: {campaign.objective}
+              Created {new Date(campaign.createdAt).toLocaleDateString()} · Objective: {campaign.objective} · Placement: {campaign.placement === 'room' ? `Chatroom (${campaign.roomId})` : 'Home feed'}
             </p>
           </div>
 
@@ -909,23 +928,25 @@ const CampaignDetailsView: React.FC<{ campaignId: Id<"adCampaigns">; onBack: () 
           </div>
         )}
 
+        {campaign.paymentStatus === 'successful' && <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-300">Payment confirmed{campaign.paymentProvider ? ` via ${campaign.paymentProvider}` : ''}. Approval is required before delivery.</div>}
+
         {/* Payment Required Callout */}
-        {campaign.status === 'pending_payment' && (
+        {campaign.status === 'pending_payment' && campaign.paymentStatus !== 'successful' && (
           <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <h4 className="text-xs font-bold text-amber-700 dark:text-amber-400">
                 Payment Required (₦{(campaign.budget.totalBudgetKobo / 100).toLocaleString()})
               </h4>
               <p className="text-[11px] text-amber-600 dark:text-amber-300">
-                Fund your campaign securely with Bachs. Campaign delivery remains subject to Lalao review.
+                Fund your campaign through secure hosted checkout. Campaign delivery remains subject to Lalao review.
               </p>
             </div>
             <button
-              onClick={handleBachsCheckout}
+              onClick={handleCheckout}
               disabled={isPaying}
               className="px-5 py-2.5 rounded-xl bg-[#5E43F3] hover:bg-[#4E34E0] text-white font-bold text-xs shadow-md shadow-[#5E43F3]/25 transition-all cursor-pointer shrink-0 disabled:opacity-50"
             >
-              {isPaying ? 'Connecting to Bachs...' : 'Pay with Bachs'}
+              {isPaying ? 'Connecting to checkout...' : 'Continue to payment'}
             </button>
           </div>
         )}

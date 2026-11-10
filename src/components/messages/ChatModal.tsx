@@ -33,6 +33,7 @@ import { ChatroomMembersModal, type ChatroomMember } from './ChatroomMembersModa
 import { useQuery } from 'convex/react';
 import { RoomEggIndicator } from '../rewards/RoomEggIndicator';
 import { LalaoEggDashboardModal } from '../rewards/LalaoEggDashboardModal';
+import { SponsoredPostCard } from '../feed/SponsoredPostCard';
 
 // ─── Receipt Indicator ──────────────────────────────────────────────────────
 
@@ -487,6 +488,7 @@ export const ChatModal: React.FC = () => {
   const conv = conversations.find((c) => c.id === activeChatId);
   const roomChat = (conv as any)?.groupChat;
   const roomId = roomChat?.isChatroom ? String(roomChat._id ?? roomChat.id ?? (conv as any)?.groupChatId ?? '') : '';
+  const roomSponsoredPlacement = useQuery(api.ads.getRoomSponsoredPlacement, roomId ? { roomId: roomId as any } : 'skip');
 
   useEffect(() => {
     if (!roomId || !currentUser?.id) return;
@@ -1045,10 +1047,11 @@ export const ChatModal: React.FC = () => {
                   <Avatar src={roomImage || undefined} alt={roomChat.name || 'Room'} size="sm" className="h-9 w-9 shrink-0 rounded-xl" />
                   <div className="min-w-0">
                     <span className="block truncate text-sm font-bold text-theme-primary">{roomChat.name || conv.participant.name}</span>
-                    <span className="block truncate text-[11px] text-theme-tertiary">
-                      {roomMemberCount} {roomMemberCount === 1 ? 'member' : 'members'} · {roomOnlineMemberCount} online
-                    </span>
-                    <span className="block truncate text-[10px] font-semibold text-[#5E43F3]">Public Chatroom</span>
+                    <div className="flex min-w-0 flex-wrap items-center gap-x-1 text-[11px] leading-tight text-theme-tertiary">
+                      <span>{roomMemberCount} {roomMemberCount === 1 ? 'member' : 'members'}</span>
+                      <span aria-hidden="true">·</span>
+                      <span>{roomOnlineMemberCount} online</span>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -1196,6 +1199,7 @@ export const ChatModal: React.FC = () => {
                   </div>
                 )}
                 
+                {isRoomChat && roomSponsoredPlacement && index === Math.floor(arr.length / 2) && <div className="mx-auto w-full max-w-2xl py-2"><SponsoredPostCard placement={roomSponsoredPlacement as any} /></div>}
                 <div
                   id={`chat-msg-${msg.id}`}
                   className="flex flex-col items-start animate-in zoom-in-95 duration-150 relative"
@@ -1226,12 +1230,12 @@ export const ChatModal: React.FC = () => {
                   </div>
 
                 <div
-                  className={`flex justify-start relative group border-l border-t ${msg.isMine ? 'border-neutral-800' : 'border-[#5E43F3]/40'} pl-3 pt-2 pb-1 mt-0.5`}
+                  className={`flex justify-start relative group border-l border-t ${msg.isMine ? 'border-neutral-800' : 'border-[#5E43F3]/40'} pl-3 pt-2 pb-1 mt-0.5 w-fit max-w-[min(70vw,520px)]`}
                   onClick={() => setActiveContextMenu(activeContextMenu === msg.id ? null : msg.id)}
                 >
-                  <div className="flex min-w-0 max-w-[min(90%,48rem)] flex-col cursor-pointer">
+                  <div className="flex min-w-0 max-w-[min(90vw,48rem)] sm:max-w-[75vw] w-fit flex-col items-start cursor-pointer">
                     {msg.replyToMessageText && (
-                      <div className={`flex flex-col gap-0.5 mb-2 opacity-80 border-l border-t ${msg.isMine ? 'border-neutral-800' : 'border-[#5E43F3]/40'} pl-2 pt-1`}>
+                      <div className={`flex flex-col gap-0.5 mb-2 opacity-80 border-l border-t ${msg.isMine ? 'border-neutral-800' : 'border-[#5E43F3]/40'} pl-2 pt-1 w-fit max-w-full`}>
                         <span className="text-[10px] text-theme-tertiary font-medium">
                           {msg.replyToSenderUsername ? `Replying to @${msg.replyToSenderUsername}` : 'Replying to message'}
                         </span>
@@ -1335,16 +1339,16 @@ export const ChatModal: React.FC = () => {
                           </button>
                         )}
                         {msg.text && (
-                          <div className={`px-3 py-2 text-sm leading-relaxed rounded-sm ${msg.isMine ? 'bg-black text-white dark:bg-[#0a0a0a]' : 'bg-[#5E43F3] text-white'}`}>
-                            <p className="break-words">{msg.text}</p>
+                          <div className={`w-fit min-w-0 max-w-full px-3 py-2 text-sm leading-relaxed rounded-sm ${msg.isMine ? 'bg-black text-white dark:bg-[#0a0a0a]' : 'bg-[#5E43F3] text-white'}`}>
+                            <p className="whitespace-pre-wrap break-words [word-break:normal] [overflow-wrap:anywhere]">{msg.text}</p>
                           </div>
                         )}
                       </div>
                     ) : (
-                      <div className={`px-3 py-2 text-sm leading-relaxed rounded-sm ${
+                      <div className={`w-fit min-w-0 max-w-full px-3 py-2 text-sm leading-relaxed rounded-sm ${
                         msg.isMine ? 'bg-black text-white dark:bg-[#0a0a0a]' : 'bg-[#5E43F3] text-white'
                       }`}>
-                        <p className="break-words">{msg.text}</p>
+                        <p className="whitespace-pre-wrap break-words [word-break:normal] [overflow-wrap:anywhere]">{msg.text}</p>
                       </div>
                     )}
 

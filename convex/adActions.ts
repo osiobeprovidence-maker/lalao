@@ -104,6 +104,8 @@ export const settleAdPayment = internalMutation({
         } else if (campaign.schedule.startDate > now) {
           nextStatus = "scheduled";
         }
+      } else if (campaign.moderationStatus === "rejected" || campaign.moderationStatus === "suspended") {
+        nextStatus = campaign.status;
       } else {
         // Pending review
         nextStatus = "pending_review";
@@ -152,6 +154,7 @@ export const initializeCampaignPayment = action({
     if (!campaign) throw new Error("Campaign not found");
     if (campaign.userId !== user._id) throw new Error("Unauthorized");
 
+    if (campaign.status !== "pending_payment" && campaign.status !== "payment_failed") throw new Error("This campaign is not awaiting payment.");
     const amountKobo = campaign.budget.totalBudgetKobo;
     const currency = campaign.budget.currency || "NGN";
     const reference = `LALAO_AD_${campaign._id}_${Date.now()}`;
@@ -203,7 +206,7 @@ export const initializeCampaignPayment = action({
     });
 
     return {
-      authorizationUrl: data.data.authorization_url,
+      authorizationUrl: data.checkout_url,
       checkoutId: data.checkout_id,
       reference,
     };

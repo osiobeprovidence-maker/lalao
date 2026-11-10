@@ -1884,9 +1884,13 @@ export default defineSchema({
     reviewNote: v.optional(v.string()),
     reviewedBy: v.optional(v.id("users")),
     reviewedAt: v.optional(v.number()),
+    durationMs: v.optional(v.number()),
 
     // Format B: Existing post reference
     promotedPostId: v.optional(v.id("posts")),
+    // Room placement is optional so existing feed campaigns remain unchanged.
+    placement: v.optional(v.union(v.literal("feed"), v.literal("room"))),
+    roomId: v.optional(v.id("groupChats")),
 
     // Creative Content (Formats A, C, D and overrides)
     creative: v.object({
@@ -1945,7 +1949,8 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_moderation", ["moderationStatus"])
     .index("by_status_moderation", ["status", "moderationStatus"])
-    .index("by_promoted_post", ["promotedPostId"]),
+    .index("by_promoted_post", ["promotedPostId"])
+    .index("by_room_status", ["roomId", "status"]),
 
   // Campaign Payments (Paystack transactions)
   adPayments: defineTable({

@@ -17,4 +17,11 @@ crons.interval(
   {},
 );
 
+crons.interval(
+  "activate and expire ad campaigns",
+  { minutes: 15 },
+  internal.ads.maintainCampaignLifecycle,
+  {},
+);
+
 export default crons;
