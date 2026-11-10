@@ -2,6 +2,7 @@ import { mutation, query, action, internalMutation, internalQuery } from "./_gen
 import { internal, api } from "./_generated/api";
 import { v, ConvexError } from "convex/values";
 import { getUserByAuthIdentity } from "./lib/authIdentity";
+import { requireAdmin } from "./admin";
 import { Id } from "./_generated/dataModel";
 
 // ============================================
@@ -61,7 +62,18 @@ export async function seedDefaultEggConfig(ctx: any) {
   }
 }
 
-// Ensure egg user account exists and rollover daily counters if UTC day has changed
+// Pure read-only helper: fetches account without any writes.
+// Safe to use inside queries. Returns null if no account exists yet.
+export async function getEggAccount(ctx: any, userId: Id<"users">) {
+  const account = await ctx.db
+    .query("eggUserAccounts")
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .first();
+  return account ?? null;
+}
+
+// Mutation-safe helper: creates account if missing and rolls over daily counters.
+// Use only inside mutations / internalMutations.
 export async function getOrCreateEggAccount(ctx: any, userId: Id<"users">) {
   const today = getUtcTodayDate();
   let account = await ctx.db
@@ -90,7 +102,7 @@ export async function getOrCreateEggAccount(ctx: any, userId: Id<"users">) {
     return (await ctx.db.get(id))!;
   }
 
-  // Check if todayDate is older than current UTC day -> Reset daily counters
+  // Reset daily counters if UTC day has changed
   if (account.todayDate !== today) {
     await ctx.db.patch(account._id, {
       todayDate: today,
@@ -125,8 +137,27 @@ export const getMyEggStatus = query({
     const user = await getUserByAuthIdentity(ctx, identity);
     if (!user) return null;
 
-    const account = await getOrCreateEggAccount(ctx, user._id);
+    // Pure read — if no account exists yet return a sensible default so the
+    // frontend can render the "empty" state without crashing.
+    const rawAccount = await getEggAccount(ctx, user._id);
     const today = getUtcTodayDate();
+
+    // Build a safe account object (handles null for new users)
+    const account = rawAccount ?? {
+      availablePoints: 0,
+      lifetimePoints: 0,
+      todayPoints: 0,
+      todayDate: today,
+      todayQualifyingSeconds: 0,
+      todayMessagesCount: 0,
+      todayRepliesCount: 0,
+      todayConversationsCount: 0,
+      todayReferralsCount: 0,
+      todayNairaEarned: 0,
+      totalNairaRedeemed: 0,
+      status: "active",
+      flagReason: undefined,
+    };
 
     // Read config
     const enabledStr = await getEggConfig(ctx, "egg_enabled");
@@ -239,6 +270,25 @@ export const getMyEggRedemptions = query({
 // ============================================
 // MUTATIONS & PARTICIPATION HANDLERS
 // ============================================
+
+/**
+ * Called by the frontend when the user visits the Egg page.
+ * Creates the account if it does not yet exist and rolls over daily counters.
+ * This is the only place db.insert / db.patch are allowed for account bootstrap.
+ */
+export const ensureEggAccount = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return { created: false };
+
+    const user = await getUserByAuthIdentity(ctx, identity);
+    if (!user) return { created: false };
+
+    await getOrCreateEggAccount(ctx, user._id);
+    return { created: true };
+  },
+});
 
 /**
  * Record user presence heartbeat in a room (called every 60s while room is active)
@@ -631,7 +681,7 @@ export const redeemEggReward = mutation({
     const plan = catalog.find((p) => p.id === args.planId);
     if (!plan) throw new ConvexError("Selected reward package is not available.");
 
-    const account = await getOrCreateEggAccount(ctx, user._id);
+    const account = await getEggAccount(ctx, user._id);
     if (account.status !== "active") {
       throw new ConvexError("Your rewards account is temporarily flagged or restricted. Please contact support.");
     }
@@ -701,13 +751,7 @@ export const redeemEggReward = mutation({
 export const getEggAdminOverview = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new ConvexError("Admin authentication required");
-
-    const user = await getUserByAuthIdentity(ctx, identity);
-    if (!user || (!user.isPlatformAdmin && !user.isAdmin)) {
-      throw new ConvexError("Admin privileges required");
-    }
+    await requireAdmin(ctx);
 
     const [accounts, redemptions, txs] = await Promise.all([
       ctx.db.query("eggUserAccounts").collect(),
@@ -742,13 +786,7 @@ export const updateEggConfigAdmin = mutation({
     value: v.string(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new ConvexError("Admin authentication required");
-
-    const user = await getUserByAuthIdentity(ctx, identity);
-    if (!user || (!user.isPlatformAdmin && !user.isAdmin)) {
-      throw new ConvexError("Admin privileges required");
-    }
+    const user = await requireAdmin(ctx);
 
     const existing = await ctx.db
       .query("rewardConfiguration")
@@ -792,13 +830,7 @@ export const adjustUserEggPointsAdmin = mutation({
     reason: v.string(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new ConvexError("Admin authentication required");
-
-    const user = await getUserByAuthIdentity(ctx, identity);
-    if (!user || (!user.isPlatformAdmin && !user.isAdmin)) {
-      throw new ConvexError("Admin privileges required");
-    }
+    const user = await requireAdmin(ctx);
 
     const account = await getOrCreateEggAccount(ctx, args.userId);
     const pointsBefore = account.availablePoints;

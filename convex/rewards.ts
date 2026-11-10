@@ -875,6 +875,44 @@ export const getUserReferralCode = query({
   },
 });
 
+/**
+ * Alias used by the frontend: getMyReferralCode → same as getUserReferralCode.
+ * Returns the current user's referral code (empty string if none yet created).
+ */
+export const getMyReferralCode = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const user = await getUserByAuthIdentity(ctx, identity);
+    if (!user) return null;
+
+    const referral: any = await ctx.db
+      .query("referralCodes")
+      .withIndex("by_user", (q: any) => q.eq("userId", user._id))
+      .first();
+
+    if (!referral) {
+      return {
+        code: "",
+        isActive: false,
+        totalReferrals: 0,
+        qualifiedReferrals: 0,
+        totalPointsEarned: 0,
+      };
+    }
+
+    return {
+      code: referral.code,
+      isActive: referral.isActive,
+      totalReferrals: referral.totalReferrals,
+      qualifiedReferrals: referral.qualifiedReferrals,
+      totalPointsEarned: referral.totalPointsEarned,
+    };
+  },
+});
+
 function generateReferralCode(): string {
   // Avoid ambiguous characters (0/O, 1/I) so codes can be read aloud.
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

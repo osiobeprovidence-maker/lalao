@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import {
   ArrowLeft,
@@ -64,6 +64,14 @@ export const LalaoEggDashboardModal: React.FC<LalaoEggDashboardModalProps> = ({
   const eggTransactions = useQuery((api as any).egg.getMyEggTransactions, { limit: 25 });
   const eggRedemptions = useQuery((api as any).egg.getMyEggRedemptions, { limit: 15 });
   const redeemEggReward = useMutation((api as any).egg.redeemEggReward);
+  const ensureEggAccount = useMutation((api as any).egg.ensureEggAccount);
+
+  // Create the egg account the first time the user opens this modal
+  useEffect(() => {
+    if (isOpen) {
+      ensureEggAccount({}).catch(() => {/* silently ignore – account already exists */});
+    }
+  }, [isOpen, ensureEggAccount]);
 
   // Referral code query
   const myReferralCode = useQuery(api.rewards.getMyReferralCode);
