@@ -8,7 +8,6 @@ export interface VerificationBadgeProps {
   showTooltip?: boolean;
   className?: string;
   asSpan?: boolean;
-  interactive?: boolean;
 }
 
 const SIZE_MAP = {
@@ -37,50 +36,29 @@ export function normalizeTier(tier?: string | null): VerificationTier {
 }
 
 /**
- * Resolve a user's CURRENT active subscription tier.
- * Robustly inspects verificationTier, subscription object, and boolean verification flags.
+ * Resolve a user's server-confirmed active verification tier.
  */
 export function getActiveSubscriptionTier(user?: Partial<User> | null): VerificationTier {
   if (!user) return 'none';
-  const u = user as any;
 
-  // 1. Check direct candidate tier fields
-  const candidateTier = u.verificationTier || u.tier || u.creatorTier || u.subscription?.tier;
+  const rawTier = normalizeTier(
+    user.verificationTier ?? user.subscription?.tier ?? user.tier ?? user.creatorTier
+  );
+  if (rawTier === 'none') return 'none';
 
-  // Status check: if explicitly inactive, expired, or cancelled, treat as none
-  const rawStatus = u.verificationStatus ?? u.subscription?.status;
-  const status = typeof rawStatus === 'string' ? rawStatus.toLowerCase().trim() : undefined;
-  if (status && (status === 'inactive' || status === 'expired' || status === 'cancelled')) {
+  if (user.isVerified !== true) return 'none';
+
+  const status = user.verificationStatus ?? user.subscription?.status;
+  if (status && status !== 'active') {
     return 'none';
   }
 
-  // Expiration check: if timestamp has passed, return 'none'
-  const rawExp = u.verificationExpiresAt ?? u.subscription?.expiresAt ?? u.subscription?.nextBillingDate;
-  if (rawExp) {
-    const expTime = typeof rawExp === 'string' ? new Date(rawExp).getTime() : Number(rawExp);
-    if (!isNaN(expTime) && expTime > 0 && expTime <= Date.now()) {
-      return 'none';
-    }
+  const expiresAt = user.verificationExpiresAt ?? user.subscription?.nextBillingDate;
+  if (typeof expiresAt === 'number' && expiresAt <= Date.now()) {
+    return 'none';
   }
 
-  // If candidate tier is recognized, return normalized tier
-  if (candidateTier) {
-    const normalized = normalizeTier(candidateTier);
-    if (normalized !== 'none') {
-      return normalized;
-    }
-  }
-
-  // 2. Boolean flag check (isVerified, verified, is_verified, hasActiveSubscription)
-  const isFlagged = Boolean(u.isVerified || u.verified || u.is_verified || u.hasActiveSubscription);
-  if (isFlagged) {
-    if (u.creatorCategory || (typeof u.creatorLevel === 'number' && u.creatorLevel > 0)) {
-      return 'creator';
-    }
-    return 'verified';
-  }
-
-  return 'none';
+  return rawTier;
 }
 
 export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
@@ -89,8 +67,6 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
   size = 'sm',
   showTooltip = true,
   className = '',
-  asSpan = false,
-  interactive = true,
 }) => {
   // Resolve tier: explicit propTier takes precedence if recognized, otherwise derive from user
   const explicitTier = propTier ? normalizeTier(propTier) : 'none';
@@ -138,37 +114,12 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
     </svg>
   );
 
-  if (asSpan || !interactive) {
-    return (
-      <span
-        title={showTooltip ? tooltipText : undefined}
-        className={`inline-flex items-center justify-center shrink-0 align-middle ${box} ${className}`}
-        aria-label={isCreator ? 'Creator Verified' : isPriority ? 'Priority Verified' : 'Verified'}
-      >
-        {svgIcon}
-      </span>
-    );
-  }
-
   return (
     <span
-      role="button"
-      tabIndex={0}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        alert(tooltipText);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          e.stopPropagation();
-          alert(tooltipText);
-        }
-      }}
       title={showTooltip ? tooltipText : undefined}
-      className={`inline-flex items-center justify-center shrink-0 align-middle transition-transform hover:scale-110 cursor-pointer ${box} ${className}`}
-      aria-label={isCreator ? 'Creator Verified' : isPriority ? 'Priority Verified' : 'Verified'}
+      className={`inline-flex items-center justify-center shrink-0 align-middle ${box} ${className}`}
+      role="img"
+      aria-label="Verified account"
     >
       {svgIcon}
     </span>
