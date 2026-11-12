@@ -454,6 +454,7 @@ const LalaoAppContent: React.FC = () => {
 
           <main
             ref={mainRef}
+            id="app-main-scroll-container"
             className="relative flex-1 overflow-y-auto bg-theme-base pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0 lg:min-h-0"
           >
             <div className={`mx-auto min-h-full w-full ${activeTab === 'discover' ? 'max-w-[880px]' : 'max-w-[600px]'}`}>

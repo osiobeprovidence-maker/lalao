@@ -1,5 +1,5 @@
 import { getUserByAuthIdentity } from "./lib/authIdentity";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
@@ -7,6 +7,8 @@ import { canAccessGroupChat } from "./groupAccess";
 import { isPostMatchingTopic, getKeywordsForTopic } from "./topicKeywords";
 import { canViewProfilePost } from "./lib/profilePostVisibility";
 import { requireAuthenticatedUploadIdentity } from "./lib/uploadSecurity";
+import { CHATROOM_MESSAGE_TTL_MS, getChatroomMessageExpiresAt } from "./lib/chatroomMessageExpiry";
+import { paginationOptsValidator } from "convex/server";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    AUTH HELPERS
@@ -22,6 +24,43 @@ export async function getAuthedUser(ctx: any) {
   }
 
   return user;
+}
+
+function isConversationMessageVisible(
+  message: { createdAt: number; expiresAt?: number; isRead?: boolean; readAt?: number; pinnedAt?: number; expiredAt?: number; senderId?: any; _id?: any },
+  user: any,
+  isChatroom: boolean,
+  now: number,
+  mentionedIds?: Set<string>,
+): boolean {
+  if (isChatroom) {
+    // Pinned messages stay visible until unpinned.
+    if (message.pinnedAt) return true;
+    // Tombstoned messages (retention policy) survive only for the sender
+    // and for users explicitly mentioned in the message.
+    if (message.expiredAt !== undefined) {
+      const isSender = message.senderId && message.senderId.toString() === user._id?.toString?.();
+      return isSender || (mentionedIds?.has(message._id?.toString?.() ?? "") ?? false);
+    }
+    return true;
+  }
+
+  const mode = user.disappearingMode;
+  if (!mode || mode === "off") return true;
+  if (mode === "after_read") {
+    return !(message.isRead && message.readAt && now - message.readAt > 60_000);
+  }
+
+  let duration = 0;
+  if (mode === "24_hours") duration = 24 * 60 * 60 * 1000;
+  else if (mode === "7_days") duration = 7 * 24 * 60 * 60 * 1000;
+  else if (mode === "1_month") duration = 30 * 24 * 60 * 60 * 1000;
+  else if (mode === "custom" && user.disappearingCustomValue) {
+    const unit = user.disappearingCustomUnit || "days";
+    const multiplier = unit === "hours" ? 3_600_000 : unit === "days" ? 86_400_000 : unit === "weeks" ? 604_800_000 : 2_592_000_000;
+    duration = user.disappearingCustomValue * multiplier;
+  }
+  return duration <= 0 || now - message.createdAt <= duration;
 }
 
 export async function getRelationshipSets(ctx: any, currentUser: any) {
@@ -99,21 +138,21 @@ function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number)
 /**
  * SINGLE SOURCE OF TRUTH for a user's CURRENT subscription / verification badge.
  * Always derived live from the `users` document - never stored on posts/comments.
- * A badge is shown only if the user has a paid tier, the subscription is not
- * cancelled/expired/inactive, and it has not passed its expiry date.
+ * A badge is shown only for an active verification tier that has not expired.
  */
 export function resolveUserVerification(doc: any): { isVerified: boolean; verificationTier: "none" | "verified" | "priority" | "creator" } {
   if (!doc) return { isVerified: false, verificationTier: "none" };
   const status = doc.verificationStatus;
+  const tier = doc.verificationTier;
+  const validTier = tier === "verified" || tier === "priority" || tier === "creator" || tier === "creator_premium";
   const isVerified = Boolean(
-    doc.verificationTier &&
-    doc.verificationTier !== "none" &&
+    validTier &&
     (!status || status === "active") &&
-    (!doc.verificationExpiresAt || doc.verificationExpiresAt > Date.now())
+    (typeof doc.verificationExpiresAt !== "number" || doc.verificationExpiresAt > Date.now())
   );
   return {
     isVerified,
-    verificationTier: isVerified ? (doc.verificationTier ?? "none") : "none",
+    verificationTier: isVerified ? (tier === "creator_premium" ? "creator" : tier) : "none",
   };
 }
 
@@ -751,13 +790,8 @@ export const listVideoPosts = query({
  * Shared helper to resolve posts created by a specific profile/user.
  * Robustly matches by normalized Convex Id, username, custom id, or authenticated user.
  */
-async function fetchPostsForProfileUser(
-  ctx: any,
-  args: { userId?: string; username?: string }
-) {
+async function resolveProfileUser(ctx: any, args: { userId?: string; username?: string }) {
   const currentUser = await getAuthedUser(ctx);
-
-  // 1. Resolve target user
   let targetUser: any = null;
 
   if (args.userId) {
@@ -797,18 +831,27 @@ async function fetchPostsForProfileUser(
       );
   }
 
+  if (!targetUser && !args.userId && !args.username) targetUser = currentUser;
+  return { currentUser, targetUser };
+}
+
+async function fetchPostsForProfileUser(
+  ctx: any,
+  args: { userId?: string; username?: string; paginationOpts?: { numItems: number; cursor: string | null } }
+) {
+  const { currentUser, targetUser } = await resolveProfileUser(ctx, args);
   if (!targetUser) {
-    targetUser = currentUser;
+    return args.paginationOpts
+      ? { posts: [], isDone: true, continueCursor: "" }
+      : [];
   }
 
-  if (!targetUser) return [];
-
-  // 2. Query posts where author matches targetUser._id
-  const posts = await ctx.db
+  const postsQuery = ctx.db
     .query("posts")
-    .withIndex("by_author", (q: any) => q.eq("authorId", targetUser._id))
-    .order("desc")
-    .collect();
+    .withIndex("by_author_created_at", (q: any) => q.eq("authorId", targetUser._id))
+    .order("desc");
+  const postsPage = args.paginationOpts ? await postsQuery.paginate(args.paginationOpts) : null;
+  const posts = postsPage?.page ?? await postsQuery.collect();
 
   let isFollowing = false;
   if (currentUser && currentUser._id !== targetUser._id) {
@@ -969,7 +1012,9 @@ async function fetchPostsForProfileUser(
     });
   }
 
-  return results;
+  return postsPage
+    ? { posts: results, isDone: postsPage.isDone, continueCursor: postsPage.continueCursor }
+    : results;
 }
 
 /**
@@ -997,6 +1042,140 @@ export const listUserPosts = query({
   },
   handler: async (ctx, args) => {
     return await fetchPostsForProfileUser(ctx, args);
+  },
+});
+
+export const listUserPostsPage = query({
+  args: {
+    userId: v.optional(v.string()),
+    username: v.optional(v.string()),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => await fetchPostsForProfileUser(ctx, args),
+});
+
+export const listUserRepliesPage = query({
+  args: {
+    userId: v.optional(v.string()),
+    username: v.optional(v.string()),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
+    const { currentUser, targetUser } = await resolveProfileUser(ctx, args);
+    if (!targetUser) return { page: [], isDone: true, continueCursor: "" };
+
+    const result = await ctx.db
+      .query("comments")
+      .withIndex("by_author_created_at", (q) => q.eq("authorId", targetUser._id))
+      .order("desc")
+      .paginate(args.paginationOpts);
+    const page = await Promise.all(result.page.map(async (comment) => {
+      if (comment.isDeleted) return null;
+      const post = await ctx.db.get(comment.postId);
+      if (!post || !canViewProfilePost(post, currentUser?._id ?? null)) return null;
+      const postAuthor = await resolveAuthor(
+        ctx,
+        post.authorId ? await ctx.db.get(post.authorId) : null,
+        currentUser?._id ?? null,
+      );
+      const like = currentUser
+        ? await ctx.db.query("likes")
+            .withIndex("by_user_target", (q) =>
+              q.eq("userId", currentUser._id).eq("targetType", "comment").eq("targetId", comment._id),
+            )
+            .unique()
+        : null;
+      return {
+        id: comment._id,
+        post: { id: post._id, text: post.text, author: postAuthor },
+        text: comment.text,
+        createdAt: formatRelativeTime(comment.createdAt),
+        likesCount: comment.likesCount ?? 0,
+        isLiked: Boolean(like),
+      };
+    }));
+
+    return { ...result, page: page.filter((entry) => entry !== null) };
+  },
+});
+
+async function serializeProfileRally(ctx: any, rally: any, currentUser: any) {
+  const creator = await ctx.db.get(rally.creatorId);
+  if (!creator) return null;
+  const participants = await ctx.db
+    .query("rallyParticipants")
+    .withIndex("by_rally", (q: any) => q.eq("rallyId", rally._id))
+    .collect();
+  return {
+    id: rally._id,
+    creator: {
+      id: creator._id,
+      name: creator.name ?? "User",
+      username: creator.username ?? "user",
+      avatar: creator.avatarUrl || creator.avatar || "",
+    },
+    postId: rally.postId,
+    type: rally.type,
+    title: rally.title,
+    description: rally.description,
+    location: rally.location,
+    latitude: rally.latitude,
+    longitude: rally.longitude,
+    eventDate: rally.eventDate,
+    eventTime: rally.eventTime,
+    timeDate: rally.timeDate,
+    category: rally.category,
+    status: rally.status,
+    interestedUsers: [],
+    joinedUsersCount: participants.length,
+    peopleNeeded: rally.peopleNeeded,
+    maxNeeded: rally.maxNeeded,
+    compensationType: rally.compensationType,
+    compensationAmount: rally.compensationAmount,
+    isJoined: Boolean(currentUser && participants.some((participant: any) => participant.userId === currentUser._id)),
+    urgency: rally.urgency,
+    tags: rally.tags,
+  };
+}
+
+export const listUserCreatedRalliesPage = query({
+  args: {
+    userId: v.optional(v.string()),
+    username: v.optional(v.string()),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
+    const { currentUser, targetUser } = await resolveProfileUser(ctx, args);
+    if (!targetUser) return { page: [], isDone: true, continueCursor: "" };
+    const result = await ctx.db
+      .query("rallies")
+      .withIndex("by_creator_created_at", (q) => q.eq("creatorId", targetUser._id))
+      .order("desc")
+      .paginate(args.paginationOpts);
+    const page = await Promise.all(result.page.map((rally) => serializeProfileRally(ctx, rally, currentUser)));
+    return { ...result, page: page.filter((rally) => rally !== null) };
+  },
+});
+
+export const listUserJoinedRalliesPage = query({
+  args: {
+    userId: v.optional(v.string()),
+    username: v.optional(v.string()),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
+    const { currentUser, targetUser } = await resolveProfileUser(ctx, args);
+    if (!targetUser) return { page: [], isDone: true, continueCursor: "" };
+    const result = await ctx.db
+      .query("rallyParticipants")
+      .withIndex("by_user_created_at", (q) => q.eq("userId", targetUser._id))
+      .order("desc")
+      .paginate(args.paginationOpts);
+    const rallies = await Promise.all(result.page.map(async (participant) => {
+      const rally = await ctx.db.get(participant.rallyId);
+      return rally ? serializeProfileRally(ctx, rally, currentUser) : null;
+    }));
+    return { ...result, page: rallies.filter((rally) => rally !== null) };
   },
 });
 
@@ -1306,7 +1485,7 @@ export const listConversations = query({
     const memberGroupChats = await ctx.db.query("groupChats").collect();
     const groupConversations = await Promise.all(
       memberGroupChats
-        .filter((groupChat) => groupChat.memberIds.includes(currentUser._id))
+        .filter((groupChat) => groupChat.creatorId === currentUser._id || groupChat.memberIds.includes(currentUser._id))
         .map(async (groupChat) => {
           const conversation = await ctx.db
             .query("conversations")
@@ -1351,6 +1530,19 @@ export const listConversations = query({
               .map((entry: any) => entry.userId.toString())
               .filter((userId: string) => memberIds.has(userId)),
           ).size;
+        }
+      }
+
+      const mentionedMessageIds = new Set<string>();
+      if (groupChat?.isChatroom) {
+        const mentions = await ctx.db
+          .query("messageMentions")
+          .withIndex("by_conversation", (q: any) => q.eq("conversationId", conversation._id))
+          .collect();
+        for (const mention of mentions) {
+          if (mention.mentionedUserId === currentUser._id) {
+            mentionedMessageIds.add(mention.messageId.toString());
+          }
         }
       }
       
@@ -1400,50 +1592,31 @@ export const listConversations = query({
         }
       }
 
-      const latestMessage = await ctx.db
+      const [recentMessagesRaw, indexedUnreadMessages] = await Promise.all([
+        ctx.db
         .query("messages")
-        .withIndex("by_conversation", (q: any) => q.eq("conversationId", conversation._id))
+        .withIndex("by_conversation_created_at", (q: any) => q.eq("conversationId", conversation._id))
         .order("desc")
-        .first();
-
-      // Calculate unread count
-      let allMessagesRaw = await ctx.db
-        .query("messages")
-        .withIndex("by_conversation", (q: any) => q.eq("conversationId", conversation._id))
-        .collect();
+        .take(50),
+        ctx.db
+          .query("messages")
+          .withIndex("by_conversation_read", (q: any) => q.eq("conversationId", conversation._id).eq("isRead", false))
+          .collect(),
+      ]);
 
       const now = Date.now();
-      
-      const allMessages = allMessagesRaw.filter(msg => {
-        // Apply disappearing message rule based on sender or recipient?
-        // Let's use currentUser's setting or if we want it to be fair, maybe just currentUser for their view.
-        const mode = currentUser.disappearingMode;
-        if (!mode || mode === 'off') return true;
-        
-        if (mode === 'after_read') {
-            // Disappear 1 minute after it was read
-            if (msg.isRead && msg.readAt && now - msg.readAt > 60000) return false;
-            return true;
-        }
-        
-        let expireDuration = 0;
-        if (mode === '24_hours') expireDuration = 24 * 60 * 60 * 1000;
-        else if (mode === '7_days') expireDuration = 7 * 24 * 60 * 60 * 1000;
-        else if (mode === '1_month') expireDuration = 30 * 24 * 60 * 60 * 1000;
-        else if (mode === 'custom' && currentUser.disappearingCustomValue) {
-           const unit = currentUser.disappearingCustomUnit || 'days';
-           const multiplier = unit === 'hours' ? 3600000 : unit === 'days' ? 86400000 : unit === 'weeks' ? 604800000 : 2592000000;
-           expireDuration = currentUser.disappearingCustomValue * multiplier;
-        }
-
-        if (expireDuration > 0 && now - msg.createdAt > expireDuration) {
-           return false;
-        }
-        return true;
-      });
+      const visibleRecentMessages = recentMessagesRaw.filter((msg) =>
+        isConversationMessageVisible(msg, currentUser, Boolean(groupChat?.isChatroom), now, mentionedMessageIds),
+      );
+      const latestMessage = visibleRecentMessages[0] ?? null;
+      const unreadById = new Map<string, (typeof indexedUnreadMessages)[number]>();
+      for (const message of [...indexedUnreadMessages, ...recentMessagesRaw.filter((msg) => !msg.isRead)]) {
+        unreadById.set(message._id, message);
+      }
 
       let unreadCount = 0;
-      for (const msg of allMessages) {
+      for (const msg of unreadById.values()) {
+        if (!isConversationMessageVisible(msg, currentUser, Boolean(groupChat?.isChatroom), now, mentionedMessageIds)) continue;
         if (!msg.isRead) {
           // If we are looking as a Page Manager, it's unread if the customer sent it
           if (isPageConvo && !amIUserA) {
@@ -1469,8 +1642,8 @@ export const listConversations = query({
       }
 
       const messages = await Promise.all(
-        allMessages
-          .sort((a, b) => a.createdAt - b.createdAt)
+        [...visibleRecentMessages]
+          .reverse()
           .map(async (msg) => {
             let isMine = false;
             if (msg.pageSenderId && conversation.pageB) {
@@ -1482,7 +1655,7 @@ export const listConversations = query({
             let replyToMessageText = undefined;
             let replyToSenderUsername = undefined;
             if (msg.replyToMessageId) {
-              const repliedMsg = allMessages.find(m => m._id === msg.replyToMessageId);
+              const repliedMsg = await ctx.db.get(msg.replyToMessageId);
               if (repliedMsg) {
                 replyToMessageText = repliedMsg.text;
                 if (isGroupChat) {
@@ -1514,8 +1687,11 @@ export const listConversations = query({
               text: msg.text,
               timestamp: formatRelativeTime(msg.createdAt),
               createdAt: msg.createdAt,
+              expiresAt: groupChat?.isChatroom
+                ? getChatroomMessageExpiresAt(msg.createdAt, msg.expiresAt)
+                : undefined,
               isMine,
-              status: msg.isRead ? 'read' : 'delivered',
+              status: msg.isRead ? 'read' : 'sent',
               replyToMessageId: msg.replyToMessageId,
               replyToMessageText,
               replyToSenderUsername,
@@ -1570,6 +1746,150 @@ export const listConversations = query({
     }
 
     return result.sort((a, b) => b.updatedAt - a.updatedAt);
+  },
+});
+
+export const getConversationMessages = query({
+  args: {
+    conversationId: v.id("conversations"),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, { conversationId, paginationOpts }) => {
+    const currentUser = await getAuthedUser(ctx);
+    if (!currentUser) throw new Error("Unauthenticated");
+    const conversation = await ctx.db.get(conversationId);
+    if (!conversation) throw new Error("Conversation not found");
+
+    const isPageConvo = Boolean(conversation.pageB);
+    const isGroupChat = Boolean(conversation.groupChatId);
+    const amIUserA = conversation.userA === currentUser._id;
+    const groupChat = conversation.groupChatId ? await ctx.db.get(conversation.groupChatId) : null;
+    const ownsPage = conversation.pageB
+      ? (await ctx.db.get(conversation.pageB))?.ownerId === currentUser._id
+      : false;
+    const canRead = isGroupChat
+      ? Boolean(groupChat && canAccessGroupChat(
+          currentUser._id.toString(),
+          groupChat.creatorId.toString(),
+          groupChat.memberIds.map((id) => id.toString()),
+        ))
+      : isPageConvo
+        ? amIUserA || ownsPage
+        : amIUserA || conversation.userB === currentUser._id;
+    if (!canRead) throw new Error("Unauthorized to read this conversation");
+
+    const result = await ctx.db
+      .query("messages")
+      .withIndex("by_conversation_created_at", (q) => q.eq("conversationId", conversationId))
+      .order("desc")
+      .paginate(paginationOpts);
+    const now = Date.now();
+    const mentionNames = new Set<string>();
+    if (groupChat?.isChatroom) {
+      const mentions = await ctx.db
+        .query("messageMentions")
+        .withIndex("by_conversation", (q: any) => q.eq("conversationId", conversationId))
+        .collect();
+      for (const mention of mentions) {
+        if (mention.mentionedUserId === currentUser._id) mentionNames.add(mention.messageId.toString());
+      }
+    }
+    const visiblePage = result.page.filter((message) =>
+      isConversationMessageVisible(message, currentUser, Boolean(groupChat?.isChatroom), now, mentionNames),
+    );
+
+    const page = await Promise.all(visiblePage.map(async (message) => {
+      const isMine = message.pageSenderId && conversation.pageB
+        ? !amIUserA
+        : message.senderId === currentUser._id;
+      const repliedMessage = message.replyToMessageId
+        ? await ctx.db.get(message.replyToMessageId)
+        : null;
+      const replySender = isGroupChat && repliedMessage
+        ? await ctx.db.get(repliedMessage.senderId)
+        : null;
+      const sender = isGroupChat ? await ctx.db.get(message.senderId) : null;
+      const [audioUrl, mediaUrl] = await Promise.all([
+        message.audioStorageId ? ctx.storage.getUrl(message.audioStorageId) : undefined,
+        message.mediaStorageId ? ctx.storage.getUrl(message.mediaStorageId) : undefined,
+      ]);
+      return {
+        id: message._id,
+        senderId: message.senderId,
+        senderName: sender?.name ?? undefined,
+        senderUsername: sender?.username ?? undefined,
+        senderIsVerified: sender ? resolveUserVerification(sender).isVerified : undefined,
+        senderVerificationTier: sender ? resolveUserVerification(sender).verificationTier : undefined,
+        text: message.text,
+        timestamp: formatRelativeTime(message.createdAt),
+        createdAt: message.createdAt,
+        expiresAt: groupChat?.isChatroom
+          ? getChatroomMessageExpiresAt(message.createdAt, message.expiresAt)
+          : undefined,
+        isMine,
+        status: message.isRead ? "read" : "sent",
+        replyToMessageId: message.replyToMessageId,
+        replyToMessageText: repliedMessage?.text,
+        replyToSenderUsername: replySender?.username,
+        isEdited: message.isEdited,
+        type: message.type,
+        mediaUrl: mediaUrl ?? undefined,
+        mimeType: message.mimeType,
+        fileName: message.fileName,
+        fileSize: message.fileSize,
+        audioUrl: audioUrl ?? undefined,
+        audioDuration: message.audioDuration,
+        viewOnce: message.viewOnce,
+        viewOnceOpened: message.viewOnceOpened,
+        viewedAt: message.viewedAt,
+      };
+    }));
+
+    return {
+      ...result,
+      page,
+    };
+  },
+});
+
+export const expireChatroomMessage = internalMutation({
+  args: { messageId: v.id("messages") },
+  handler: async (ctx, { messageId }) => {
+    const message = await ctx.db.get(messageId);
+    if (!message || !message.expiresAt || message.expiresAt > Date.now()) return false;
+
+    const conversation = await ctx.db.get(message.conversationId);
+    const groupChat = conversation?.groupChatId ? await ctx.db.get(conversation.groupChatId) : null;
+    if (!groupChat?.isChatroom) return false;
+
+    // Pinned messages are exempt from expiration.
+    if (message.pinnedAt) return false;
+
+    // Mentioned messages are soft-expired (tombstoned) rather than deleted; they remain
+    // visible only to their sender and to the users who were mentioned.
+    const mentions = await ctx.db
+      .query("messageMentions")
+      .withIndex("by_message", (q: any) => q.eq("messageId", message._id))
+      .collect();
+    if (mentions.length > 0) {
+      if (message.expiredAt === undefined) {
+        await ctx.db.patch(message._id, { expiredAt: Date.now() });
+      }
+      return true;
+    }
+
+    // Quiet rooms keep their history: keep the message unless the room has progressed
+    // past it (has newer messages).
+    const newerMessage = await ctx.db
+      .query("messages")
+      .withIndex("by_conversation_created_at", (q: any) =>
+        q.eq("conversationId", message.conversationId).gt("createdAt", message.expiresAt),
+      )
+      .first();
+    if (!newerMessage) return false;
+
+    await ctx.db.delete(messageId);
+    return true;
   },
 });
 
@@ -3532,6 +3852,7 @@ export const sendMessage = mutation({
     audioStorageId: v.optional(v.id("_storage")),
     audioDuration: v.optional(v.number()),
     viewOnce: v.optional(v.boolean()),
+    topicId: v.optional(v.id("roomTopics")),
   },
   handler: async (ctx, args) => {
     const currentUser = await getAuthedUser(ctx);
@@ -3542,8 +3863,10 @@ export const sendMessage = mutation({
 
     // Authorization check
     let authorized = false;
+    let isChatroomConversation = false;
     if (conversation.groupChatId) {
       const groupChat = await ctx.db.get(conversation.groupChatId);
+      isChatroomConversation = groupChat?.isChatroom === true;
       authorized = !!groupChat && canAccessGroupChat(
         currentUser._id.toString(),
         groupChat.creatorId.toString(),
@@ -3580,6 +3903,15 @@ export const sendMessage = mutation({
       throw new Error("Not authorized to send to this conversation");
     }
 
+    const createdAt = Date.now();
+    const expiresAt = isChatroomConversation ? createdAt + CHATROOM_MESSAGE_TTL_MS : undefined;
+    if (args.topicId) {
+      if (!isChatroomConversation || !conversation.groupChatId) throw new Error("Topics are available in Live Rooms only");
+      const topic = await ctx.db.get(args.topicId);
+      if (!topic || topic.groupChatId !== conversation.groupChatId || topic.conversationId !== conversation._id || topic.archivedAt || topic.expiresAt <= createdAt) {
+        throw new Error("That room topic is no longer active");
+      }
+    }
     const messageId = await ctx.db.insert("messages", {
       conversationId: args.conversationId,
       senderId: currentUser._id,
@@ -3596,12 +3928,37 @@ export const sendMessage = mutation({
       audioDuration: args.audioDuration,
       viewOnce: args.viewOnce,
       viewOnceOpened: false,
-      createdAt: Date.now(),
+      topicId: args.topicId,
+      createdAt,
+      ...(expiresAt !== undefined ? { expiresAt } : {}),
     });
+
+    if (expiresAt !== undefined) {
+      await ctx.scheduler.runAt(expiresAt, internal.social.expireChatroomMessage, { messageId });
+    }
     
     await ctx.db.patch(args.conversationId, {
       updatedAt: Date.now(),
     });
+
+    // Group conversations: process @mentions (member notifications + recipient retention).
+    if (conversation.groupChatId) {
+      await ctx.runMutation(internal.liveRooms.processRoomMentions, {
+        messageId,
+        conversationId: args.conversationId,
+        groupChatId: conversation.groupChatId,
+        senderId: currentUser._id,
+        text: args.text,
+      });
+    }
+
+    // Group conversations: evaluate sponsored ad placement opportunities.
+    // Placement cadence is message-count based (combined qualifying messages since
+    // the last persisted placement); on trigger a new placement is persisted,
+    // anchored to the triggering message and rendered in the group timeline.
+    if (conversation.groupChatId) {
+      await ctx.runMutation(internal.ads.evaluateGroupAdPlacement, { conversationId: args.conversationId });
+    }
 
     // Determine all recipients to notify (direct 1:1 or group chat members)
     const recipientsToNotify: Id<"users">[] = [];

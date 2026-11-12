@@ -303,6 +303,7 @@ export default defineSchema({
     nearbyEnabled: v.optional(v.boolean()),
   })
     .index("by_author", ["authorId"])
+    .index("by_author_created_at", ["authorId", "createdAt"])
     .index("by_created", ["createdAt"])
     .index("by_group_ref", ["groupRefId"])
     .index("by_sound", ["soundId"])
@@ -324,7 +325,8 @@ export default defineSchema({
   })
     .index("by_post", ["postId"])
     .index("by_parent", ["parentCommentId"])
-    .index("by_author", ["authorId"]),
+    .index("by_author", ["authorId"])
+    .index("by_author_created_at", ["authorId", "createdAt"]),
 
   likes: defineTable({
     userId: v.id("users"),
@@ -521,6 +523,45 @@ export default defineSchema({
     .index("by_group", ["groupId"])
     .index("by_group_connection", ["groupId", "connectionId"]),
 
+  // ==========================================
+  // LIVE ROOM TOPICS
+  // ==========================================
+
+  roomTopics: defineTable({
+    groupChatId: v.id("groupChats"),
+    conversationId: v.id("conversations"),
+    createdBy: v.id("users"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    // Original duration and running expiry (extendable). Default 24h; each extension adds 24h.
+    expiresAt: v.number(),
+    originalExpiresAt: v.number(),
+    extensionCount: v.number(),
+    pinned: v.boolean(), // Pinned topic stays featured until unpinned/expired; archived at expiry
+    archivedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_group_active", ["groupChatId", "archivedAt", "expiresAt"])
+    .index("by_group_created", ["groupChatId", "createdAt"])
+    .index("by_conversation", ["conversationId"]),
+
+  // ==========================================
+  // MESSAGE MENTIONS (recipient-specific retention)
+  // ==========================================
+
+  messageMentions: defineTable({
+    messageId: v.id("messages"),
+    conversationId: v.id("conversations"),
+    groupChatId: v.optional(v.id("groupChats")),
+    mentionedUserId: v.id("users"),
+    mentionedById: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_message", ["messageId"])
+    .index("by_mentioned", ["mentionedUserId", "createdAt"])
+    .index("by_conversation", ["conversationId"]),
+
   groupJoinRequests: defineTable({
     groupId: v.id("groupChats"),
     userId: v.id("users"),
@@ -598,11 +639,17 @@ export default defineSchema({
     viewOnce: v.optional(v.boolean()),
     viewOnceOpened: v.optional(v.boolean()),
     viewedAt: v.optional(v.number()),
+    expiresAt: v.optional(v.number()),
+    pinnedBy: v.optional(v.id("users")),
+    pinnedAt: v.optional(v.number()),
+    expiredAt: v.optional(v.number()), // Soft-retention tombstone (set by retention sweep; message hidden from ordinary view)
+    topicId: v.optional(v.id("roomTopics")),
     createdAt: v.number(),
   })
     .index("by_conversation", ["conversationId"])
     .index("by_sender", ["senderId"])
-    .index("by_conversation_read", ["conversationId", "isRead"]),
+    .index("by_conversation_read", ["conversationId", "isRead"])
+    .index("by_conversation_created_at", ["conversationId", "createdAt"]),
 
   /**
    * Real-time Voice and Video Calling sessions via Agora RTC.
@@ -668,6 +715,8 @@ export default defineSchema({
       v.literal("ad_rejected"),
       v.literal("ad_paused"),
       v.literal("ad_completed"),
+      v.literal("gift_received"),
+      v.literal("mention"),
     ),
     postId: v.optional(v.id("posts")),
     commentId: v.optional(v.id("comments")),
@@ -680,6 +729,66 @@ export default defineSchema({
     .index("by_recipient", ["recipientId"])
     .index("by_recipient_read", ["recipientId", "isRead"])
     .index("by_post", ["postId"]),
+
+  virtualGifts: defineTable({
+    code: v.string(),
+    name: v.string(),
+    category: v.string(),
+    imageUrl: v.optional(v.string()),
+    animation: v.string(),
+    priceCredits: v.number(),
+    isPremium: v.boolean(),
+    isActive: v.boolean(),
+    createdBy: v.optional(v.id("users")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_code", ["code"]).index("by_active", ["isActive"]),
+
+  giftTransactions: defineTable({
+    requestId: v.string(),
+    senderId: v.id("users"),
+    recipientId: v.id("users"),
+    roomId: v.id("groupChats"),
+    giftId: v.id("virtualGifts"),
+    giftName: v.string(),
+    giftPriceCredits: v.number(),
+    recipientEarningsCredits: v.number(),
+    platformCommissionCredits: v.number(),
+    status: v.union(v.literal("completed"), v.literal("refunded"), v.literal("reversed"), v.literal("disputed")),
+    senderWalletTransactionId: v.id("walletTransactions"),
+    createdAt: v.number(),
+    settledAt: v.number(),
+  })
+    .index("by_request", ["requestId"])
+    .index("by_sender", ["senderId"])
+    .index("by_recipient", ["recipientId"])
+    .index("by_room_created", ["roomId", "createdAt"]),
+
+  giftEarnings: defineTable({
+    giftTransactionId: v.id("giftTransactions"),
+    recipientId: v.id("users"),
+    amountCredits: v.number(),
+    status: v.union(v.literal("pending"), v.literal("available"), v.literal("claimed"), v.literal("held"), v.literal("reversed")),
+    availableAt: v.number(),
+    claimedAt: v.optional(v.number()),
+    walletTransactionId: v.optional(v.id("walletTransactions")),
+    createdAt: v.number(),
+  })
+    .index("by_gift_transaction", ["giftTransactionId"])
+    .index("by_recipient_status", ["recipientId", "status"])
+    .index("by_status_available", ["status", "availableAt"]),
+
+  roomGiftEvents: defineTable({
+    giftTransactionId: v.id("giftTransactions"),
+    roomId: v.id("groupChats"),
+    senderId: v.id("users"),
+    recipientId: v.id("users"),
+    giftName: v.string(),
+    imageUrl: v.optional(v.string()),
+    animation: v.string(),
+    isPremium: v.boolean(),
+    createdAt: v.number(),
+  }).index("by_room_created", ["roomId", "createdAt"]).index("by_transaction", ["giftTransactionId"]),
 
   /**
    * Real user drafts — persisted in Convex so they survive device switches.
@@ -844,6 +953,8 @@ export default defineSchema({
       v.literal("MARKET_PURCHASE"),
       v.literal("MARKET_REFUND"),
       v.literal("gift_sent"),
+      v.literal("gift_received"),
+      v.literal("gift_earnings"),
       v.literal("page_payment")
     ),
     status: v.union(
@@ -1081,6 +1192,45 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_tier", ["tier"])
     .index("by_user_status", ["userId", "status"]),
+
+  creatorFreeTrials: defineTable({
+    userId: v.id("users"),
+    tier: v.literal("creator"),
+    status: v.union(v.literal("active"), v.literal("expired"), v.literal("converted")),
+    startedAt: v.number(),
+    expiresAt: v.number(),
+    previousVerificationTier: v.optional(
+      v.union(v.literal("none"), v.literal("verified"), v.literal("priority"), v.literal("creator")),
+    ),
+    previousVerificationStatus: v.optional(
+      v.union(v.literal("inactive"), v.literal("active"), v.literal("expired"), v.literal("cancelled")),
+    ),
+    previousVerificationExpiresAt: v.optional(v.number()),
+    previousCreatorPriorityWeight: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    expiredAt: v.optional(v.number()),
+    convertedAt: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_status_expiry", ["status", "expiresAt"]),
+
+  creatorTrialEmails: defineTable({
+    trialId: v.id("creatorFreeTrials"),
+    userId: v.id("users"),
+    kind: v.union(v.literal("sevenDays"), v.literal("threeDays"), v.literal("oneDay"), v.literal("expired")),
+    status: v.union(v.literal("pending"), v.literal("sending"), v.literal("sent"), v.literal("failed"), v.literal("skipped")),
+    scheduledAt: v.number(),
+    attempts: v.number(),
+    idempotencyKey: v.string(),
+    resendId: v.optional(v.string()),
+    lastError: v.optional(v.string()),
+    sentAt: v.optional(v.number()),
+    sendingAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index("by_trial_kind", ["trialId", "kind"])
+    .index("by_status_schedule", ["status", "scheduledAt"]),
 
   creatorApplications: defineTable({
     userId: v.id("users"),
@@ -1417,6 +1567,7 @@ export default defineSchema({
     updatedAt: v.optional(v.number()),
   })
     .index("by_creator", ["creatorId"])
+    .index("by_creator_created_at", ["creatorId", "createdAt"])
     .index("by_post", ["postId"])
     .index("by_status", ["status"])
     .index("by_group_ref", ["groupRefId"]),
@@ -1425,7 +1576,7 @@ export default defineSchema({
     userId: v.id("users"),
     rallyId: v.id("rallies"),
     createdAt: v.number(),
-  }).index("by_user", ["userId"]).index("by_rally", ["rallyId"]),
+  }).index("by_user", ["userId"]).index("by_user_created_at", ["userId", "createdAt"]).index("by_rally", ["rallyId"]),
 
   pageEvents: defineTable({
     pageId: v.id("pages"),
@@ -1560,6 +1711,7 @@ export default defineSchema({
     audience: v.optional(v.union(v.literal("community"), v.literal("nearby"), v.literal("friends"))),
     excludedUserIds: v.optional(v.array(v.id("users"))),
     duration: v.optional(v.number()),
+    roomId: v.optional(v.id("groupChats")), // Scoped status visible only to members of this room
     viewsCount: v.number(),
     likesCount: v.number(),
     createdAt: v.number(),
@@ -1942,6 +2094,9 @@ export default defineSchema({
     impressionsCount: v.number(),
     clicksCount: v.number(),
 
+    // Admin-configurable per-day delivery cap (maximum impressions per campaign per day)
+    maxImpressionsPerDay: v.optional(v.number()),
+
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -1951,6 +2106,23 @@ export default defineSchema({
     .index("by_status_moderation", ["status", "moderationStatus"])
     .index("by_promoted_post", ["promotedPostId"])
     .index("by_room_status", ["roomId", "status"]),
+
+  // Persistent sponsored placements inside group conversations.
+  // An ad placement is anchored to the message that triggered it (anchorMessageId)
+  // and remains attached to that position in the group timeline.
+  adPlacements: defineTable({
+    groupChatId: v.id("groupChats"),
+    conversationId: v.id("conversations"),
+    campaignId: v.id("adCampaigns"),
+    anchorMessageId: v.id("messages"),
+    status: v.union(v.literal("delivered"), v.literal("exhausted")),
+    servedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_group_created", ["groupChatId", "createdAt"])
+    .index("by_conversation", ["conversationId"])
+    .index("by_anchor", ["anchorMessageId"])
+    .index("by_campaign", ["campaignId"]),
 
   // Campaign Payments (Paystack transactions)
   adPayments: defineTable({
@@ -1985,7 +2157,7 @@ export default defineSchema({
     processedAt: v.number(),
   }).index("by_event_id", ["eventId"]),
 
-  // Deduplicated Ad Events (Impressions & Clicks for fraud prevention & analytics)
+  // Deduplicated authenticated ad events and analytics.
   adEvents: defineTable({
     campaignId: v.id("adCampaigns"),
     eventType: v.union(v.literal("impression"), v.literal("click")),
@@ -1994,11 +2166,14 @@ export default defineSchema({
     chargeKobo: v.number(), // Amount debited for this event (0 for prepaid impression, or per-cost model)
     timestamp: v.number(),
     dateBucket: v.string(), // YYYY-MM-DD for fast timeseries aggregation
+    timeBucket: v.optional(v.string()), // Delivery period bucket: morning | afternoon | evening | night
     locationName: v.optional(v.string()),
   })
     .index("by_campaign", ["campaignId"])
     .index("by_campaign_date", ["campaignId", "dateBucket"])
-    .index("by_campaign_dedup", ["campaignId", "eventType", "viewerSessionId", "dateBucket"]),
+    .index("by_viewer_timestamp", ["viewerUserId", "timestamp"])
+    .index("by_campaign_dedup", ["campaignId", "eventType", "viewerSessionId", "dateBucket"])
+    .index("by_campaign_user_dedup", ["campaignId", "eventType", "viewerUserId", "dateBucket"]),
 
   // Moderation Audit Trail
   adModerationLogs: defineTable({
@@ -2278,4 +2453,3 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_date", ["date"]),
 });
-

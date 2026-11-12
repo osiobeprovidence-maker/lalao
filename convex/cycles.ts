@@ -4,6 +4,19 @@ import { internal } from "./_generated/api";
 import { getAuthedUser, getRelationshipSets } from "./social";
 import { resolveUserVerification } from "./social";
 import { requireAuthenticatedUploadIdentity } from "./lib/uploadSecurity";
+import { canAccessGroupChat } from "./groupAccess";
+
+async function assertRoomStatusAccess(ctx: any, user: any, story: any) {
+  if (!story?.roomId) return;
+  const room = await ctx.db.get(story.roomId);
+  if (!room?.isChatroom || !canAccessGroupChat(
+    user._id.toString(),
+    room.creatorId.toString(),
+    room.memberIds.map((id: any) => id.toString()),
+  )) {
+    throw new Error("You do not have access to this room status");
+  }
+}
 
 export const generateUploadUrl = mutation({
   args: {},
@@ -100,10 +113,13 @@ export const listActiveCycles = query({
     const now = Date.now();
 
     // Query unexpired stories
-    const activeStories = await ctx.db
+    const activeStories = (await ctx.db
       .query("cycleStories")
       .withIndex("by_expires", (q) => q.gt("expiresAt", now))
-      .collect();
+      .collect())
+      // Room statuses have their own membership-checked Live Room surface.
+      // Never include them in the global social Cycle feed.
+      .filter((story) => !story.roomId);
 
     // Group stories by author
     const authorMap = new Map<string, typeof activeStories>();
@@ -219,6 +235,10 @@ export const viewStory = mutation({
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) return;
 
+    const story = await ctx.db.get(args.storyId);
+    if (!story) return;
+    await assertRoomStatusAccess(ctx, currentUser, story);
+
     const existing = await ctx.db
       .query("cycleStoryInteractions")
       .withIndex("by_story_user_type", (q) =>
@@ -234,12 +254,9 @@ export const viewStory = mutation({
         createdAt: Date.now(),
       });
 
-      const story = await ctx.db.get(args.storyId);
-      if (story) {
-        await ctx.db.patch(args.storyId, {
-          viewsCount: (story.viewsCount || 0) + 1,
-        });
-      }
+      await ctx.db.patch(args.storyId, {
+        viewsCount: (story.viewsCount || 0) + 1,
+      });
     }
   },
 });
@@ -261,6 +278,7 @@ export const toggleLikeStory = mutation({
 
     const story = await ctx.db.get(args.storyId);
     if (!story) return;
+    await assertRoomStatusAccess(ctx, currentUser, story);
 
     if (existing) {
       await ctx.db.delete(existing._id);
@@ -292,6 +310,10 @@ export const replyToStory = mutation({
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 
+    const story = await ctx.db.get(args.storyId);
+    if (!story) throw new Error("Story not found");
+    await assertRoomStatusAccess(ctx, currentUser, story);
+
     await ctx.db.insert("cycleStoryInteractions", {
       storyId: args.storyId,
       userId: currentUser._id,
@@ -300,8 +322,7 @@ export const replyToStory = mutation({
       createdAt: Date.now(),
     });
 
-    const story = await ctx.db.get(args.storyId);
-    if (story && story.authorId !== currentUser._id) {
+    if (story.authorId !== currentUser._id) {
       // Send DM to the author
       const recipientId = story.authorId;
       // Look for conversation or create message

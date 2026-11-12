@@ -18,9 +18,30 @@ crons.interval(
 );
 
 crons.interval(
+  "expire creator trials and deliver trial reminders",
+  { minutes: 15 },
+  internal.creators.maintainCreatorTrials,
+  {},
+);
+
+crons.interval(
   "activate and expire ad campaigns",
   { minutes: 15 },
   internal.ads.maintainCampaignLifecycle,
+  {},
+);
+
+crons.interval(
+  "release settled room gift earnings",
+  { minutes: 15 },
+  internal.gifts.releaseEligibleGiftEarnings,
+  {},
+);
+
+crons.interval(
+  "archive expired live room topics",
+  { minutes: 30 },
+  internal.liveRooms.archiveExpiredTopics,
   {},
 );
 

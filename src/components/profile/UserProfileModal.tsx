@@ -69,7 +69,8 @@ export const UserProfileModal: React.FC = () => {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [lightboxMedia, setLightboxMedia] = useState<{ url: string; alt?: string } | null>(null);
   const [isMuted, setIsMuted] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const profileScrollRef = useRef<HTMLDivElement>(null);
+  const isProfileOpen = Boolean(activeUserProfile);
 
   // Only query relationship if the ID looks like a real Convex ID (no hyphens, usually ~32 chars)
   const isValidConvexId = activeUserProfile?.id && !activeUserProfile.id.includes('-');
@@ -83,10 +84,45 @@ export const UserProfileModal: React.FC = () => {
   const isFollowing = liveRelationship?.isFollowing ?? activeUserProfile?.isFollowing ?? false;
 
   useEffect(() => {
-    if (activeUserProfile) {
-      containerRef.current?.scrollTo({ top: 0, behavior: 'instant' });
-      window.scrollTo({ top: 0, behavior: 'instant' });
-    }
+    if (!isProfileOpen) return;
+
+    const appScroller = document.getElementById('app-main-scroll-container');
+    const root = document.documentElement;
+    const body = document.body;
+    const previousScrollY = window.scrollY;
+    const previousAppOverflowY = appScroller?.style.overflowY;
+    const previousRootOverflow = root.style.overflow;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyPosition = body.style.position;
+    const previousBodyTop = body.style.top;
+    const previousBodyLeft = body.style.left;
+    const previousBodyRight = body.style.right;
+    const previousBodyWidth = body.style.width;
+
+    if (appScroller) appScroller.style.overflowY = 'hidden';
+    root.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    body.style.position = 'fixed';
+    body.style.top = `-${previousScrollY}px`;
+    body.style.left = '0';
+    body.style.right = '0';
+    body.style.width = '100%';
+
+    return () => {
+      if (appScroller) appScroller.style.overflowY = previousAppOverflowY || '';
+      root.style.overflow = previousRootOverflow;
+      body.style.overflow = previousBodyOverflow;
+      body.style.position = previousBodyPosition;
+      body.style.top = previousBodyTop;
+      body.style.left = previousBodyLeft;
+      body.style.right = previousBodyRight;
+      body.style.width = previousBodyWidth;
+      window.scrollTo({ top: previousScrollY, behavior: 'instant' });
+    };
+  }, [isProfileOpen]);
+
+  useEffect(() => {
+    profileScrollRef.current?.scrollTo({ top: 0, behavior: 'instant' });
   }, [activeUserProfile?.id]);
 
   const isOwnProfile = activeUserProfile?.id === currentUser.id;
@@ -308,16 +344,18 @@ export const UserProfileModal: React.FC = () => {
   return (
     <div
       id="user-profile-overlay"
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex justify-end animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 w-screen bg-black/50 backdrop-blur-xs flex justify-end overscroll-none animate-in fade-in duration-200"
       onClick={() => setActiveUserProfile(null)}
     >
       <div
-        ref={containerRef}
         id="user-profile-screen"
-        className="bg-theme-surface w-full sm:max-w-md md:max-w-lg h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 relative z-10 overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-label="User profile"
+        className="bg-theme-surface w-full min-w-0 sm:max-w-md md:max-w-lg h-full max-h-[100dvh] min-h-0 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 relative z-10 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="w-full flex-1 flex flex-col bg-theme-surface">
+        <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-theme-surface">
         {/* Sticky Top Header Bar */}
         <header className="sticky top-0 z-30 bg-theme-surface/95 backdrop-blur-md border-b border-theme-divider-light px-4 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
@@ -424,7 +462,12 @@ export const UserProfileModal: React.FC = () => {
         )}
 
         {/* Scrollable Profile Body */}
-        <div className="flex-1 overflow-y-auto no-scrollbar">
+        <div
+          ref={profileScrollRef}
+          tabIndex={0}
+          aria-label="User profile content"
+          className="flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain [touch-action:pan-y] [-webkit-overflow-scrolling:touch] no-scrollbar"
+        >
           <div className="p-4 space-y-3 border-b border-theme-divider-light">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0 space-y-2">
