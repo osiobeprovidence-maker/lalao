@@ -487,6 +487,11 @@ const LalaoAppContent: React.FC = () => {
                 <DiscoverView />
               </div>
             )}
+            {activeTab === 'rooms' && (
+              <div key="tab-rooms" className="animate-in fade-in duration-200 w-full bg-transparent pb-24">
+                <LiveRoomsView />
+              </div>
+            )}
             {activeTab === 'recent-searches' && isAuthenticated && (
               <div key="tab-recent-searches" className="animate-in fade-in duration-200 w-full bg-transparent">
                 <RecentSearchesPage />
@@ -610,7 +615,7 @@ const LalaoAppContent: React.FC = () => {
           </main>
 
           <div className="lg:hidden">
-            <BottomNav />
+            {activeChatId ? null : <BottomNav />}
           </div>
         </div>
 
