@@ -138,7 +138,7 @@ const VideoPreview: React.FC<{ post: VideoDiscoveryPost }> = ({ post }) => {
   const hasStaticThumbnail = thumbnailIndex < thumbnailCandidates.length;
 
   return (
-    <div ref={containerRef} className="absolute inset-0 overflow-hidden bg-black">
+    <div ref={containerRef} className="absolute inset-0 overflow-hidden bg-theme-surface">
       {generatedThumbnail ? (
         <img src={generatedThumbnail} alt="Video preview frame" className="absolute inset-0 h-full w-full object-cover" />
       ) : hasStaticThumbnail ? (
@@ -151,7 +151,7 @@ const VideoPreview: React.FC<{ post: VideoDiscoveryPost }> = ({ post }) => {
           onError={handlePosterError}
         />
       ) : (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#191527] via-[#111111] to-black text-white/60">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-theme-surface via-theme-surface-hover to-theme-base text-theme-tertiary">
           <VideoIcon className="h-9 w-9 text-[#5E43F3]/75" />
           <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">Preview unavailable</span>
         </div>
@@ -222,9 +222,9 @@ export const VideosDiscoveryView: React.FC = () => {
 
   if (isLoadingInitial) {
     return (
-      <div className="flex min-h-[220px] w-full flex-col items-center justify-center space-y-3 px-4 py-12 text-white">
+      <div className="flex min-h-[220px] w-full flex-col items-center justify-center space-y-3 px-4 py-12 text-theme-primary">
         <div className="w-8 h-8 border-2 border-[#5E43F3] border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs text-white/65 font-medium">Loading videos...</p>
+        <p className="text-xs text-theme-secondary font-medium">Loading videos...</p>
       </div>
     );
   }
@@ -232,32 +232,32 @@ export const VideosDiscoveryView: React.FC = () => {
   return (
     <section
       id="videos-discovery-section"
-      className="w-full px-4 pb-12 pt-4 text-white animate-in fade-in duration-200"
+      className="w-full px-4 pb-12 pt-4 text-theme-primary animate-in fade-in duration-200"
     >
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h1 className="min-w-0 truncate text-xl font-black tracking-tight sm:text-2xl">Videos</h1>
-        <label className="flex shrink-0 items-center gap-2 rounded-lg border border-white/10 bg-[#141414] px-3 py-2 text-xs text-white/65 focus-within:border-[#5E43F3]">
+        <h1 className="min-w-0 truncate text-xl font-black tracking-tight text-theme-primary sm:text-2xl">Videos</h1>
+        <label className="flex shrink-0 items-center gap-2 rounded-lg border border-theme-divider/80 bg-theme-surface px-3 py-2 text-xs text-theme-secondary focus-within:border-[#5E43F3]">
           <span className="sr-only">Sort videos</span>
           <select
             aria-label="Sort videos"
             value={sortMode}
             onChange={(event) => setSortMode(event.target.value as SortMode)}
-            className="max-w-[116px] cursor-pointer appearance-none bg-transparent font-semibold text-white outline-none"
+            className="max-w-[116px] cursor-pointer appearance-none bg-transparent font-semibold text-theme-primary outline-none"
           >
-            <option value="for-you" className="bg-[#141414]">For You</option>
-            <option value="newest" className="bg-[#141414]">Newest</option>
-            <option value="most-liked" className="bg-[#141414]">Most liked</option>
+            <option value="for-you" className="bg-theme-surface text-theme-primary">For You</option>
+            <option value="newest" className="bg-theme-surface text-theme-primary">Newest</option>
+            <option value="most-liked" className="bg-theme-surface text-theme-primary">Most liked</option>
           </select>
         </label>
       </div>
 
       {sortedPosts.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-[#141414] px-4 py-16 text-center">
+        <div className="rounded-2xl border border-theme-divider bg-theme-surface px-4 py-16 text-center">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#5E43F3]/15 text-[#8B79FF]">
             <VideoIcon className="h-7 w-7" />
           </div>
-          <h2 className="text-sm font-bold text-white">No videos discovered yet</h2>
-          <p className="mx-auto mt-2 max-w-[280px] text-xs leading-relaxed text-white/65">
+          <h2 className="text-sm font-bold text-theme-primary">No videos discovered yet</h2>
+          <p className="mx-auto mt-2 max-w-[280px] text-xs leading-relaxed text-theme-secondary">
             Be the first to share a video or clip with the Lalao community.
           </p>
         </div>
@@ -271,7 +271,7 @@ export const VideosDiscoveryView: React.FC = () => {
                 type="button"
                 onClick={() => setActiveVideoFeedPostId(post.id)}
                 aria-label={`Play video by ${creatorName}`}
-                className="group relative aspect-[9/15] min-w-0 overflow-hidden rounded-xl border border-white/10 bg-[#141414] text-left shadow-sm shadow-black/20 transition-all hover:-translate-y-0.5 hover:border-[#5E43F3]/70 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5E43F3]"
+                className="group relative aspect-[9/15] min-w-0 overflow-hidden rounded-xl border border-theme-divider bg-theme-surface text-left shadow-sm shadow-black/20 transition-all hover:-translate-y-0.5 hover:border-[#5E43F3]/70 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5E43F3]"
               >
                 <VideoPreview post={post} />
                 <span className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col justify-end p-2.5 sm:p-3">
