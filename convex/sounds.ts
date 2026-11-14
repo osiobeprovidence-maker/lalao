@@ -1,7 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
-import { getAuthedUser } from "./social";
+import { getAuthedUser, resolveUserVerification } from "./social";
 import { requireAuthenticatedUploadIdentity } from "./lib/uploadSecurity";
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -18,7 +18,7 @@ async function enrichSoundWithCreator(ctx: any, sound: any, currentUserId?: Id<"
         name: user.name || "LaLao Creator",
         username: user.username || "creator",
         avatar: user.avatarUrl || "",
-        isVerified: user.isVerified || false,
+        ...resolveUserVerification(user),
       };
     }
   }

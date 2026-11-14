@@ -5,6 +5,16 @@ import { internal } from "./_generated/api";
 const DEFAULT_SANDBOX_URL = "https://sandbox-api.bachs.io";
 const DEFAULT_LIVE_URL = "https://api.bachs.io";
 
+type ExpectedPaymentOwner = {
+  userId: string;
+  email: string;
+  currency: string;
+  amount?: number | undefined;
+  checkoutId?: string | undefined;
+  status?: string | undefined;
+  expiresAt?: number | undefined;
+} | null;
+
 export const getProcessedWebhookEvent = internalQuery({
   args: { eventId: v.string() },
   handler: async (ctx, args) => ctx.db.query("bachsWebhookEvents").withIndex("by_event_id", (q) => q.eq("eventId", args.eventId)).first(),
@@ -21,7 +31,7 @@ export const recordProcessedWebhookEvent = internalMutation({
 
 export const getExpectedPaymentOwner = internalQuery({
   args: { reference: v.string() },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<ExpectedPaymentOwner> => {
     if (args.reference.startsWith("LALAO_AD_")) {
       const payment = await ctx.db.query("adPayments").withIndex("by_reference", (q) => q.eq("reference", args.reference)).first();
       if (!payment) return null;

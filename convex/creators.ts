@@ -1,9 +1,16 @@
-import { getUserByAuthIdentity } from "./lib/authIdentity";
+import { getUserByAuthIdentity, normalizeAuthEmail } from "./lib/authIdentity";
 import { requireAdmin } from "./admin";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
+import type { Doc } from "./_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { resolveUserVerification } from "./social";
+import {
+  CREATOR_TRIAL_DURATION_MS,
+  getCreatorTrialEmailSchedule,
+  isValidTrialEmail,
+} from "./lib/creatorTrial";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    CREATOR ECOSYSTEM & SUBSCRIPTION TIERS CONFIGURATION
@@ -76,6 +83,18 @@ async function getAuthedUser(ctx: any) {
   return await getUserByAuthIdentity(ctx, identity);
 }
 
+async function hasVerifiedEmail(ctx: QueryCtx | MutationCtx, user: Doc<"users">): Promise<boolean> {
+  const normalizedEmail = normalizeAuthEmail(user.email);
+  if (!normalizedEmail) return false;
+  const identities = await ctx.db
+    .query("authIdentities")
+    .withIndex("by_user", (q) => q.eq("userId", user._id))
+    .collect();
+  return identities.some(
+    (identity) => identity.emailVerified && identity.emailNormalized === normalizedEmail,
+  );
+}
+
 /* ─────────────────────────────────────────────────────────────────────────────
    QUERIES
    ───────────────────────────────────────────────────────────────────────────── */
@@ -141,28 +160,43 @@ export const getMyCreatorSubscription = query({
     const user = await getAuthedUser(ctx);
     if (!user) return null;
 
+    const now = Date.now();
     const activeTier = getActiveVerificationTier(user);
-    const isVerifiedNow = activeTier !== "none";
-
-    const activeSub = await ctx.db
+    const activeSubscription = await ctx.db
       .query("creatorSubscriptions")
       .withIndex("by_user_status", (q) => q.eq("userId", user._id).eq("status", "active"))
       .first();
+    const trialRecords = await ctx.db
+      .query("creatorFreeTrials")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+    const activeTrial = trialRecords.find(
+      (trial) => trial.status === "active" && trial.expiresAt > now,
+    ) ?? null;
+    const isVerifiedNow = activeTrial !== null || activeTier !== "none";
+
+    const activeTierNow = activeTrial ? "creator" : activeTier;
 
     return {
       isVerified: isVerifiedNow,
-      tier: activeTier,
-      expiresAt: user.verificationExpiresAt ?? activeSub?.expiresAt ?? null,
+      tier: activeTierNow,
+      expiresAt: activeTrial?.expiresAt ?? user.verificationExpiresAt ?? activeSubscription?.expiresAt ?? null,
       status: isVerifiedNow ? "active" : "inactive",
-      cancelAtPeriodEnd: activeSub?.cancelAtPeriodEnd ?? false,
-      subscription: activeSub ? {
-        id: activeSub._id,
-        price: activeSub.price,
-        currency: activeSub.currency,
-        paymentMethod: activeSub.paymentMethod,
-        startedAt: activeSub.startedAt,
-        expiresAt: activeSub.expiresAt,
-        cancelAtPeriodEnd: activeSub.cancelAtPeriodEnd,
+      isTrial: Boolean(activeTrial),
+      trial: activeTrial ? {
+        startedAt: activeTrial.startedAt,
+        expiresAt: activeTrial.expiresAt,
+      } : null,
+      trialAvailable: trialRecords.length === 0 && !activeSubscription && activeTier === "none",
+      cancelAtPeriodEnd: activeSubscription?.cancelAtPeriodEnd ?? false,
+      subscription: activeSubscription ? {
+        id: activeSubscription._id,
+        price: activeSubscription.price,
+        currency: activeSubscription.currency,
+        paymentMethod: activeSubscription.paymentMethod,
+        startedAt: activeSubscription.startedAt,
+        expiresAt: activeSubscription.expiresAt,
+        cancelAtPeriodEnd: activeSubscription.cancelAtPeriodEnd,
       } : null,
     };
   },
@@ -663,6 +697,9 @@ export const getCreatorRankings = query({
           isFollowing: currentUser ? myFollowingSet.has(item.user._id) : false,
           isVerified: item.verificationTier !== "none",
           verificationTier: item.verificationTier,
+          ...(typeof item.user.verificationExpiresAt === "number" && item.user.verificationExpiresAt > 0
+            ? { verificationExpiresAt: item.user.verificationExpiresAt }
+            : {}),
           creatorCategory: item.creatorCategory,
           creatorLevel: item.user.creatorLevel ?? 1,
         },
@@ -729,6 +766,232 @@ export const getCreatorPublicProfile = query({
    MUTATIONS
    ───────────────────────────────────────────────────────────────────────────── */
 
+export const startCreatorFreeTrial = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getAuthedUser(ctx);
+    if (!user) throw new Error("Unauthenticated");
+
+    const now = Date.now();
+    const existingTrial = await ctx.db
+      .query("creatorFreeTrials")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .first();
+    if (existingTrial) throw new Error("The Creator Premium trial can only be claimed once.");
+
+    const activeSubscription = await ctx.db
+      .query("creatorSubscriptions")
+      .withIndex("by_user_status", (q) => q.eq("userId", user._id).eq("status", "active"))
+      .first();
+    if (activeSubscription || getActiveVerificationTier(user) !== "none") {
+      throw new Error("An active verification plan is required to be absent before claiming this trial.");
+    }
+
+    const expiresAt = now + CREATOR_TRIAL_DURATION_MS;
+    const trialId = await ctx.db.insert("creatorFreeTrials", {
+      userId: user._id,
+      tier: "creator",
+      status: "active",
+      startedAt: now,
+      expiresAt,
+      previousVerificationTier: user.verificationTier,
+      previousVerificationStatus: user.verificationStatus,
+      previousVerificationExpiresAt: user.verificationExpiresAt,
+      previousCreatorPriorityWeight: user.creatorPriorityWeight,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await ctx.db.patch(user._id, {
+      verificationTier: "creator",
+      verificationStatus: "active",
+      verificationExpiresAt: expiresAt,
+      creatorPriorityWeight: CREATOR_TIER_CONFIG.creator.priorityWeight,
+      updatedAt: now,
+    });
+
+    for (const reminder of getCreatorTrialEmailSchedule(expiresAt)) {
+      await ctx.db.insert("creatorTrialEmails", {
+        trialId,
+        userId: user._id,
+        kind: reminder.kind,
+        status: "pending",
+        scheduledAt: reminder.scheduledAt,
+        attempts: 0,
+        idempotencyKey: `creator-trial-${trialId}-${reminder.kind}`,
+        updatedAt: now,
+      });
+    }
+
+    await ctx.db.insert("notifications", {
+      recipientId: user._id,
+      actorId: user._id,
+      type: "system_alert",
+      targetExcerpt: "Your 14-day Creator Premium trial is active. It will not auto-renew or charge you.",
+      isRead: false,
+      createdAt: now,
+    });
+
+    return { trialId, startedAt: now, expiresAt };
+  },
+});
+
+export const maintainCreatorTrials = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const expiredTrials = await ctx.db
+      .query("creatorFreeTrials")
+      .withIndex("by_status_expiry", (q) => q.eq("status", "active").lte("expiresAt", now))
+      .take(100);
+    let expired = 0;
+
+    for (const trial of expiredTrials) {
+      const user = await ctx.db.get(trial.userId);
+      if (user && user.verificationTier === "creator" && user.verificationExpiresAt === trial.expiresAt) {
+        await ctx.db.patch(user._id, {
+          verificationTier: trial.previousVerificationTier,
+          verificationStatus: trial.previousVerificationStatus,
+          verificationExpiresAt: trial.previousVerificationExpiresAt,
+          creatorPriorityWeight: trial.previousCreatorPriorityWeight,
+          updatedAt: now,
+        });
+      }
+
+      await ctx.db.patch(trial._id, {
+        status: "expired",
+        expiredAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert("notifications", {
+        recipientId: trial.userId,
+        actorId: trial.userId,
+        type: "system_alert",
+        targetExcerpt: "Your Creator Premium trial has ended. Access will not renew or charge automatically.",
+        isRead: false,
+        createdAt: now,
+      });
+      expired += 1;
+    }
+
+    const staleSending = await ctx.db
+      .query("creatorTrialEmails")
+      .withIndex("by_status_schedule", (q) => q.eq("status", "sending"))
+      .take(100);
+    for (const email of staleSending) {
+      if (email.sendingAt && now - email.sendingAt >= 10 * 60 * 1000) {
+        await ctx.db.patch(email._id, { status: "pending", scheduledAt: now, sendingAt: undefined, updatedAt: now });
+      }
+    }
+
+    const pending = await ctx.db
+      .query("creatorTrialEmails")
+      .withIndex("by_status_schedule", (q) => q.eq("status", "pending").lte("scheduledAt", now))
+      .take(100);
+    const failed = await ctx.db
+      .query("creatorTrialEmails")
+      .withIndex("by_status_schedule", (q) => q.eq("status", "failed").lte("scheduledAt", now))
+      .take(100);
+    const dueEmails = [...pending, ...failed].filter((email) => email.attempts < 5);
+    let scheduled = 0;
+
+    for (const email of dueEmails) {
+      const user = await ctx.db.get(email.userId);
+      const trial = await ctx.db.get(email.trialId);
+      if (!user || !trial || trial.status === "converted") {
+        await ctx.db.patch(email._id, { status: "skipped", sendingAt: undefined, updatedAt: now });
+        continue;
+      }
+      const emailVerified = await hasVerifiedEmail(ctx, user);
+      if (!isValidTrialEmail(user.email, emailVerified)) {
+        await ctx.db.patch(email._id, { status: "skipped", sendingAt: undefined, updatedAt: now });
+        continue;
+      }
+      if (email.kind !== "expired" && trial.status !== "active") {
+        await ctx.db.patch(email._id, { status: "skipped", sendingAt: undefined, updatedAt: now });
+        continue;
+      }
+
+      await ctx.db.patch(email._id, {
+        status: "sending",
+        attempts: email.attempts + 1,
+        sendingAt: now,
+        updatedAt: now,
+      });
+      await ctx.scheduler.runAfter(0, internal.emails.sendCreatorTrialReminder, { emailId: email._id });
+      scheduled += 1;
+    }
+
+    return { expired, scheduled };
+  },
+});
+
+export const getCreatorTrialEmailForDelivery = internalQuery({
+  args: { emailId: v.id("creatorTrialEmails") },
+  handler: async (ctx, { emailId }) => {
+    const email = await ctx.db.get(emailId);
+    if (!email || email.status !== "sending") return null;
+    const trial = await ctx.db.get(email.trialId);
+    const user = await ctx.db.get(email.userId);
+    if (!trial || !user || trial.status === "converted") return null;
+    const emailVerified = await hasVerifiedEmail(ctx, user);
+    return {
+      emailId,
+      kind: email.kind,
+      idempotencyKey: email.idempotencyKey,
+      trialStatus: trial.status,
+      email: user.email,
+      emailVerified,
+      name: user.name || "Creator",
+    };
+  },
+});
+
+export const markCreatorTrialEmailSent = internalMutation({
+  args: { emailId: v.id("creatorTrialEmails"), resendId: v.optional(v.string()) },
+  handler: async (ctx, { emailId, resendId }) => {
+    const email = await ctx.db.get(emailId);
+    if (!email || email.status !== "sending") return false;
+    await ctx.db.patch(emailId, {
+      status: "sent",
+      resendId,
+      sentAt: Date.now(),
+      sendingAt: undefined,
+      lastError: undefined,
+      updatedAt: Date.now(),
+    });
+    return true;
+  },
+});
+
+export const skipCreatorTrialEmail = internalMutation({
+  args: { emailId: v.id("creatorTrialEmails") },
+  handler: async (ctx, { emailId }) => {
+    const email = await ctx.db.get(emailId);
+    if (!email || email.status !== "sending") return false;
+    await ctx.db.patch(emailId, { status: "skipped", sendingAt: undefined, updatedAt: Date.now() });
+    return true;
+  },
+});
+
+export const markCreatorTrialEmailFailed = internalMutation({
+  args: { emailId: v.id("creatorTrialEmails"), error: v.string() },
+  handler: async (ctx, { emailId, error }) => {
+    const email = await ctx.db.get(emailId);
+    if (!email || email.status !== "sending") return false;
+    const now = Date.now();
+    const retryDelays = [60_000, 5 * 60_000, 30 * 60_000, 2 * 60 * 60_000, 6 * 60 * 60_000];
+    await ctx.db.patch(emailId, {
+      status: "failed",
+      scheduledAt: now + retryDelays[Math.min(email.attempts - 1, retryDelays.length - 1)],
+      sendingAt: undefined,
+      lastError: error.slice(0, 1000),
+      updatedAt: now,
+    });
+    return true;
+  },
+});
+
 /** Start an unactivated creator-tier purchase. Access is granted only by verified Bachs settlement. */
 export const beginBachsTierPurchase = mutation({
   args: {
@@ -793,6 +1056,21 @@ export const settleBachsTierPayment = internalMutation({
       status: "active", bachsCheckoutId: args.checkoutId,
       startedAt: now, expiresAt: now + durationMs, billingStatus: "renewal_due_manually", updatedAt: now,
     });
+    const userTrials = await ctx.db.query("creatorFreeTrials")
+      .withIndex("by_user", (q) => q.eq("userId", purchase.userId))
+      .collect();
+    for (const trial of userTrials) {
+      if (trial.status !== "active") continue;
+      await ctx.db.patch(trial._id, { status: "converted", convertedAt: now, updatedAt: now });
+      for (const kind of ["sevenDays", "threeDays", "oneDay", "expired"] as const) {
+        const email = await ctx.db.query("creatorTrialEmails")
+          .withIndex("by_trial_kind", (q) => q.eq("trialId", trial._id).eq("kind", kind))
+          .first();
+        if (email && email.status !== "sent") {
+          await ctx.db.patch(email._id, { status: "skipped", sendingAt: undefined, updatedAt: now });
+        }
+      }
+    }
     const tierInfo = CREATOR_TIER_CONFIG[purchase.tier];
     const updates: any = {
       verificationTier: purchase.tier, verificationStatus: "active", verificationExpiresAt: now + durationMs,

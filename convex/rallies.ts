@@ -123,7 +123,6 @@ export const listActiveRallies = query({
               followersCount: u.followersCount || 0,
               followingCount: u.followingCount || 0,
               isFollowing: false,
-              isVerified: false,
             } : null;
           })
         );
@@ -149,7 +148,6 @@ export const listActiveRallies = query({
             followersCount: creator.followersCount || 0,
             followingCount: creator.followingCount || 0,
             isFollowing: false,
-            isVerified: false,
           } : null,
           postId: rally.postId,
           type: rally.type,

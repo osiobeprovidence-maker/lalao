@@ -356,7 +356,7 @@ export const getRoomMentionMembers = query({
         name,
         username,
         avatarUrl: member.avatarUrl ?? "",
-        isVerified: resolveUserVerification(member).isVerified,
+        ...resolveUserVerification(member),
       });
     }
     members.sort((a, b) => a.name.localeCompare(b.name));
@@ -549,7 +549,7 @@ export const listRoomStatuses = query({
         name: author?.name ?? "Member",
         username: author?.username ?? "member",
         avatarUrl: author?.avatarUrl ?? "",
-        isVerified: author ? resolveUserVerification(author).isVerified : false,
+        ...resolveUserVerification(author),
         stories: authorStories.map((story: any) => ({
           id: story._id,
           _id: story._id,

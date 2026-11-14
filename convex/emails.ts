@@ -1,8 +1,10 @@
 "use node";
 
-import { action } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { Resend } from "resend";
+import { isValidTrialEmail } from "./lib/creatorTrial";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    LALAO EMAIL TEMPLATE BUILDERS
@@ -130,6 +132,78 @@ function getResendClient() {
 function getSenderEmail() {
   return process.env.RESEND_FROM_EMAIL || "Lalao <onboarding@resend.dev>";
 }
+
+export const sendCreatorTrialReminder = internalAction({
+  args: { emailId: v.id("creatorTrialEmails") },
+  handler: async (ctx, { emailId }) => {
+    const delivery = await ctx.runQuery(internal.creators.getCreatorTrialEmailForDelivery, { emailId });
+    if (!delivery) return { skipped: true };
+    if (!isValidTrialEmail(delivery.email, delivery.emailVerified)) {
+      await ctx.runMutation(internal.creators.skipCreatorTrialEmail, { emailId });
+      return { skipped: true };
+    }
+
+    const resend = getResendClient();
+    if (!resend) {
+      const error = "RESEND_API_KEY is not configured in the Convex environment.";
+      await ctx.runMutation(internal.creators.markCreatorTrialEmailFailed, { emailId, error });
+      throw new Error(error);
+    }
+
+    const copy = {
+      sevenDays: {
+        subject: "7 days left in your Creator Premium trial",
+        message: "You have 7 days remaining in your 14-day Creator Premium trial.",
+      },
+      threeDays: {
+        subject: "3 days left in your Creator Premium trial",
+        message: "You have 3 days remaining in your Creator Premium trial.",
+      },
+      oneDay: {
+        subject: "Your Creator Premium trial ends tomorrow",
+        message: "Your Creator Premium trial ends in 1 day.",
+      },
+      expired: {
+        subject: "Your Creator Premium trial has ended",
+        message: "Your Creator Premium trial has ended. Your access will not renew or charge automatically.",
+      },
+    }[delivery.kind];
+    const escapedName = delivery.name.replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    })[char] || char);
+    const html = getBaseEmailLayout(
+      copy.subject,
+      `<h2 style="margin-top:0">Hi ${escapedName},</h2><p>${copy.message}</p><p>Your trial does not auto-renew. You will not be charged unless you choose a paid plan.</p><p style="text-align:center"><a class="cta-button" href="https://www.lalao.website/app">Open Creator Premium</a></p>`,
+    );
+
+    try {
+      const response = await resend.emails.send(
+        {
+          from: getSenderEmail(),
+          to: delivery.email,
+          subject: copy.subject,
+          html,
+          text: `Hi ${delivery.name},\n\n${copy.message}\n\nYour trial does not auto-renew. You will not be charged unless you choose a paid plan.\n\nhttps://www.lalao.website/app`,
+        },
+        { idempotencyKey: delivery.idempotencyKey },
+      );
+      if (response.error) throw new Error(response.error.message);
+      await ctx.runMutation(internal.creators.markCreatorTrialEmailSent, {
+        emailId,
+        resendId: response.data?.id,
+      });
+      return { sent: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Resend delivery failed.";
+      await ctx.runMutation(internal.creators.markCreatorTrialEmailFailed, { emailId, error: message });
+      throw new Error(`Creator trial email delivery failed: ${message}`);
+    }
+  },
+});
 
 /** Send a Firebase-managed verification link through Resend (Firebase owns the token). */
 export const sendVerificationLink = action({

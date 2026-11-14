@@ -1,7 +1,7 @@
 import { mutation, query, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
-import { getAuthedUser } from "./social";
+import { getAuthedUser, resolveUserVerification } from "./social";
 
 export function formatCallDuration(seconds?: number): string {
   if (!seconds || seconds <= 0) return "0 sec";
@@ -621,7 +621,7 @@ export const getActiveCall = query({
             name: caller.name,
             username: caller.username,
             avatar: caller.avatarUrl || caller.avatar,
-            verified: (caller as any).verified,
+            ...resolveUserVerification(caller),
           }
         : null,
       recipient: recipient
@@ -630,7 +630,7 @@ export const getActiveCall = query({
             name: recipient.name,
             username: recipient.username,
             avatar: recipient.avatarUrl || recipient.avatar,
-            verified: (recipient as any).verified,
+            ...resolveUserVerification(recipient),
           }
         : null,
       otherUser: otherUser
@@ -639,7 +639,7 @@ export const getActiveCall = query({
             name: otherUser.name,
             username: otherUser.username,
             avatar: otherUser.avatarUrl || otherUser.avatar,
-            verified: (otherUser as any).verified,
+            ...resolveUserVerification(otherUser),
           }
         : null,
     };
@@ -675,6 +675,7 @@ export const getCallById = query({
             name: caller.name,
             username: caller.username,
             avatar: caller.avatarUrl || caller.avatar,
+            ...resolveUserVerification(caller),
           }
         : null,
       recipient: recipient
@@ -683,6 +684,7 @@ export const getCallById = query({
             name: recipient.name,
             username: recipient.username,
             avatar: recipient.avatarUrl || recipient.avatar,
+            ...resolveUserVerification(recipient),
           }
         : null,
     };
@@ -744,6 +746,7 @@ export const getCallHistory = query({
                 name: otherUser.name,
                 username: otherUser.username,
                 avatar: otherUser.avatarUrl || otherUser.avatar,
+                ...resolveUserVerification(otherUser),
               }
             : null,
         };

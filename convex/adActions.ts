@@ -1,6 +1,7 @@
 import { action, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { deriveCampaignLifecycleStatus } from "./ads";
 
 /**
  * Internal mutation to create a pending ad payment record
@@ -95,21 +96,7 @@ export const settleAdPayment = internalMutation({
     // Update Campaign state
     const campaign = await ctx.db.get(payment.campaignId);
     if (campaign) {
-      let nextStatus = campaign.status;
-
-      // If already approved by admin, move to active or scheduled
-      if (campaign.moderationStatus === "approved") {
-        if (campaign.schedule.startDate <= now && campaign.schedule.endDate > now) {
-          nextStatus = "active";
-        } else if (campaign.schedule.startDate > now) {
-          nextStatus = "scheduled";
-        }
-      } else if (campaign.moderationStatus === "rejected" || campaign.moderationStatus === "suspended") {
-        nextStatus = campaign.status;
-      } else {
-        // Pending review
-        nextStatus = "pending_review";
-      }
+      const nextStatus = deriveCampaignLifecycleStatus(campaign, now, true);
 
       await ctx.db.patch(campaign._id, {
         status: nextStatus,

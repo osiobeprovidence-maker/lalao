@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { getAuthedUser } from "./social";
+import { getAuthedUser, resolveUserVerification } from "./social";
 
 /**
  * Available Plum Virtual Gifts with LaLao Credit (LC) pricing
@@ -37,7 +37,12 @@ export const getPlumEligibility = query({
         isAgeConfirmed: !!profile?.isAgeConfirmed,
         ageConfirmedAt: profile?.ageConfirmedAt,
         hasProfile: !!profile && profile.profileVisibility !== "deactivated",
-        profile: profile || null,
+        profile: profile
+          ? {
+              ...profile,
+              ...resolveUserVerification(user),
+            }
+          : null,
       };
     } catch {
       return { isAuthenticated: false, isAgeConfirmed: false, hasProfile: false, profile: null };
@@ -347,7 +352,8 @@ export const listPlumMembers = query({
     const viewerLat = myProfile?.latitude ?? currentUser?.latitude;
     const viewerLng = myProfile?.longitude ?? currentUser?.longitude;
 
-    return filtered.slice(0, limit).map((p) => {
+    return Promise.all(filtered.slice(0, limit).map(async (p) => {
+      const user = await ctx.db.get(p.userId);
       let approxLat: number | undefined = undefined;
       let approxLng: number | undefined = undefined;
       let distanceKm: number | undefined = undefined;
@@ -397,8 +403,9 @@ export const listPlumMembers = query({
         approxLng,
         distanceKm,
         isFavorited: userFavoriteSet.has(p.userId),
+        ...resolveUserVerification(user),
       };
-    });
+    }));
   },
 });
 
@@ -415,6 +422,7 @@ export const getPlumMemberDetails = query({
       .query("plumProfiles")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .first();
+    const user = await ctx.db.get(args.userId);
 
     if (!profile || profile.profileVisibility === "deactivated") {
       return null;
@@ -491,6 +499,7 @@ export const getPlumMemberDetails = query({
       isFavorited,
       hasExpressedInterest,
       isSelf,
+      ...resolveUserVerification(user),
     };
   },
 });

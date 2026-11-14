@@ -140,19 +140,31 @@ function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number)
  * Always derived live from the `users` document - never stored on posts/comments.
  * A badge is shown only for an active verification tier that has not expired.
  */
-export function resolveUserVerification(doc: any): { isVerified: boolean; verificationTier: "none" | "verified" | "priority" | "creator" } {
+export function resolveUserVerification(
+  doc: any,
+  now: number = Date.now(),
+): {
+  isVerified: boolean;
+  verificationTier: "none" | "verified" | "priority" | "creator";
+  verificationExpiresAt?: number;
+} {
   if (!doc) return { isVerified: false, verificationTier: "none" };
   const status = doc.verificationStatus;
-  const tier = doc.verificationTier;
-  const validTier = tier === "verified" || tier === "priority" || tier === "creator" || tier === "creator_premium";
+  const rawTier = doc.verificationTier;
+  const tier = rawTier === "creator_premium" ? "creator" : rawTier;
+  const validTier = tier === "verified" || tier === "priority" || tier === "creator";
+  const expiresAt = doc.verificationExpiresAt;
   const isVerified = Boolean(
     validTier &&
     (!status || status === "active") &&
-    (typeof doc.verificationExpiresAt !== "number" || doc.verificationExpiresAt > Date.now())
+    (typeof expiresAt !== "number" || expiresAt === 0 || expiresAt > now)
   );
   return {
     isVerified,
     verificationTier: isVerified ? (tier === "creator_premium" ? "creator" : tier) : "none",
+    ...(isVerified && typeof expiresAt === "number" && expiresAt > 0
+      ? { verificationExpiresAt: expiresAt }
+      : {}),
   };
 }
 
@@ -575,7 +587,6 @@ export const listFeedPosts = query({
             followersCount: pageDoc.followersCount || 0,
             followingCount: 0,
             isFollowing: false,
-            isVerified: true,
             location: pageDoc.location,
           };
         } else {
@@ -715,7 +726,6 @@ export const listVideoPosts = query({
             followersCount: pageDoc.followersCount || 0,
             followingCount: 0,
             isFollowing: false,
-            isVerified: true,
             location: pageDoc.location,
           };
         } else {
@@ -1684,6 +1694,7 @@ export const listConversations = query({
               senderUsername: sender?.username ?? undefined,
               senderIsVerified: sender ? resolveUserVerification(sender).isVerified : undefined,
               senderVerificationTier: sender ? resolveUserVerification(sender).verificationTier : undefined,
+              senderVerificationExpiresAt: sender ? resolveUserVerification(sender).verificationExpiresAt : undefined,
               text: msg.text,
               timestamp: formatRelativeTime(msg.createdAt),
               createdAt: msg.createdAt,
@@ -1820,6 +1831,7 @@ export const getConversationMessages = query({
         senderUsername: sender?.username ?? undefined,
         senderIsVerified: sender ? resolveUserVerification(sender).isVerified : undefined,
         senderVerificationTier: sender ? resolveUserVerification(sender).verificationTier : undefined,
+        senderVerificationExpiresAt: sender ? resolveUserVerification(sender).verificationExpiresAt : undefined,
         text: message.text,
         timestamp: formatRelativeTime(message.createdAt),
         createdAt: message.createdAt,

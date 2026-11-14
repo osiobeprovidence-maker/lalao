@@ -7,7 +7,8 @@ import {
   resolveRelationship,
   resolveUserVerification,
 } from "./social";
-import { canAccessGroupChat } from "./groupAccess";
+import { getChatroomMessageExpiresAt } from "./lib/chatroomMessageExpiry";
+import { canAccessGroupChat, isAvailableChatroom } from "./groupAccess";
 import { requireAdmin } from "./admin";
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -421,14 +422,20 @@ export const listDiscoverableGroups = query({
     } catch {
       currentUser = null;
     }
-    const groups = await ctx.db.query("groupChats").collect();
+    const groups = args.isChatroom
+      ? await ctx.db.query("groupChats").withIndex("by_is_chatroom", (q) => q.eq("isChatroom", true)).collect()
+      : await ctx.db.query("groupChats").collect();
 
     const filtered = groups.filter((g) => {
       // Filter by isChatroom if specified
       if (args.isChatroom !== undefined) {
         const matchesRoom = !!g.isChatroom === !!args.isChatroom;
         if (!matchesRoom) return false;
-        if (args.isChatroom && g.chatroomStatus === "inactive") return false;
+        if (args.isChatroom && !isAvailableChatroom(
+          g.chatroomStatus,
+          g.visibility,
+          !!currentUser && (g.creatorId === currentUser._id || g.memberIds.includes(currentUser._id)),
+        )) return false;
       }
 
       const visibility = g.visibility ?? "private_discoverable";
@@ -458,11 +465,16 @@ export const listDiscoverableGroups = query({
     });
 
     return Promise.all(filtered.map(async (g) => {
-      const isMember = currentUser ? g.memberIds.includes(currentUser._id) : false;
-      const conversation = await ctx.db
-        .query("conversations")
-        .withIndex("by_group_chat", (q: any) => q.eq("groupChatId", g._id))
-        .first();
+      const isMember = currentUser
+        ? g.creatorId === currentUser._id || g.memberIds.includes(currentUser._id)
+        : false;
+      const [conversation, host] = await Promise.all([
+        ctx.db
+          .query("conversations")
+          .withIndex("by_group_chat", (q: any) => q.eq("groupChatId", g._id))
+          .first(),
+        ctx.db.get(g.creatorId),
+      ]);
 
       return {
         id: g._id,
@@ -473,6 +485,16 @@ export const listDiscoverableGroups = query({
         coverImage: g.coverImage ?? "",
         category: g.category ?? "General",
         visibility: g.visibility ?? "private_discoverable",
+        hostName: host?.name ?? host?.username ?? "Room host",
+        hostUsername: host?.username,
+        host: host
+          ? {
+              id: host._id,
+              name: host.name ?? host.username ?? "Room host",
+              username: host.username,
+              ...resolveUserVerification(host),
+            }
+          : null,
         communityEnabled: g.communityEnabled ?? false,
         memberCount: new Set(g.memberIds.map((id: any) => id.toString())).size,
         onlineMemberCount: g.isChatroom
@@ -512,7 +534,7 @@ export const getChatroomConversation = query({
 
     const groupId = ctx.db.normalizeId("groupChats", args.groupId);
     const group = groupId ? await ctx.db.get(groupId) : null;
-    if (!group?.isChatroom) return null;
+    if (!group?.isChatroom || group.chatroomStatus === "inactive") return null;
 
     // Match the existing send/read authorization, so history is available only
     // to the same authenticated room members who can use its conversation.
@@ -527,10 +549,27 @@ export const getChatroomConversation = query({
       .first();
     if (!conversation) return null;
 
-    const messages = await ctx.db.query("messages")
+    const mentionedMessageIds = new Set<string>();
+    const messageMentions = await ctx.db
+      .query("messageMentions")
+      .withIndex("by_conversation", (q: any) => q.eq("conversationId", conversation._id))
+      .collect();
+    for (const mention of messageMentions) {
+      if (mention.mentionedUserId === currentUser._id) mentionedMessageIds.add(mention.messageId.toString());
+    }
+    const messages = (await ctx.db.query("messages")
       .withIndex("by_conversation", (q: any) => q.eq("conversationId", conversation._id))
       .order("asc")
-      .collect();
+      .collect())
+      .filter((message: any) => {
+        // Pinned messages stay visible until unpinned.
+        if (message.pinnedAt) return true;
+        // Tombstoned messages survive only for the sender and for users mentioned in them.
+        if (message.expiredAt !== undefined) {
+          return message.senderId === currentUser._id || mentionedMessageIds.has(message._id.toString());
+        }
+        return true;
+      });
 
     return {
       id: conversation._id,
@@ -573,10 +612,16 @@ export const getChatroomConversation = query({
         })(),
         text: message.text,
         createdAt: message.createdAt,
+        expiresAt: getChatroomMessageExpiresAt(message.createdAt, message.expiresAt),
+        pinnedAt: message.pinnedAt,
+        pinnedBy: message.pinnedBy,
+        isExpired: message.expiredAt !== undefined,
         isMine: message.senderId === currentUser._id,
         isEdited: message.isEdited,
         type: message.type ?? "text",
         mediaUrl: message.mediaStorageId ? await ctx.storage.getUrl(message.mediaStorageId) : undefined,
+        audioUrl: message.audioStorageId ? await ctx.storage.getUrl(message.audioStorageId) : undefined,
+        audioDuration: message.audioDuration,
         mimeType: message.mimeType,
         fileName: message.fileName,
       }))),
@@ -679,8 +724,7 @@ export const listChatroomMembers = query({
           username: user.username ?? "user",
           avatar,
           isOnline,
-          isVerified: resolveUserVerification(user).isVerified,
-          verificationTier: resolveUserVerification(user).verificationTier,
+          ...resolveUserVerification(user),
           isFollowing: relationships.followingIds.has(user._id),
           relationship: resolveRelationship(user._id, relationships),
         };
@@ -1528,7 +1572,6 @@ export const toggleFollow = mutation({
 export const listChatroomsForAdmin = query({
   args: {},
   handler: async (ctx) => {
-    const { requireAdmin } = await import("./admin");
     await requireAdmin(ctx, ["super_admin", "admin"]);
     const groups = await ctx.db.query("groupChats").collect();
     const rooms = groups.filter((group) => group.isChatroom === true);
@@ -1549,7 +1592,6 @@ export const listChatroomsForAdmin = query({
 export const generateChatroomBannerUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
-    const { requireAdmin } = await import("./admin");
     await requireAdmin(ctx, ["super_admin", "admin"]);
     return await ctx.storage.generateUploadUrl();
   },
@@ -1558,7 +1600,6 @@ export const generateChatroomBannerUploadUrl = mutation({
 export const resolveChatroomBannerStorageUrl = mutation({
   args: { storageId: v.id("_storage") },
   handler: async (ctx, args) => {
-    const { requireAdmin } = await import("./admin");
     await requireAdmin(ctx, ["super_admin", "admin"]);
     return await ctx.storage.getUrl(args.storageId);
   },
@@ -1567,7 +1608,6 @@ export const resolveChatroomBannerStorageUrl = mutation({
 export const ensureDefaultChatroomForAdmin = mutation({
   args: {},
   handler: async (ctx) => {
-    const { requireAdmin } = await import("./admin");
     const admin = await requireAdmin(ctx, ["super_admin", "admin"]);
     const username = "room-lalao-general";
     const existing = await ctx.db.query("groupChats").withIndex("by_username", (q: any) => q.eq("username", username)).first();
@@ -1601,7 +1641,6 @@ export const createChatroomForAdmin = mutation({
     requiresJoinApproval: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { requireAdmin } = await import("./admin");
     const admin = await requireAdmin(ctx, ["super_admin", "admin"]);
     const name = args.name.trim();
     if (!name || !args.description.trim() || !args.coverImage.trim()) throw new ConvexError("Name, description, and banner are required");
@@ -1633,7 +1672,6 @@ export const updateChatroomForAdmin = mutation({
     roomIcon: v.optional(v.string()), welcomeMessage: v.optional(v.string()), requiresJoinApproval: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { requireAdmin } = await import("./admin");
     await requireAdmin(ctx, ["super_admin", "admin"]);
     const groupId = ctx.db.normalizeId("groupChats", args.groupId);
     const room = groupId ? await ctx.db.get(groupId) : null;
@@ -1653,9 +1691,8 @@ export const updateChatroomForAdmin = mutation({
 });
 
 export const setChatroomMemberRoleForAdmin = mutation({
-  args: { groupId: v.string(), userId: v.string(), role: v.union(v.literal("admin"), v.literal("moderator"), v.literal("member")) },
+  args: { groupId: v.string(), userId: v.string(), role: v.union(v.literal("admin"), v.literal("moderator"), v.literal("member"))   },
   handler: async (ctx, args) => {
-    const { requireAdmin } = await import("./admin");
     await requireAdmin(ctx, ["super_admin", "admin"]);
     const groupId = ctx.db.normalizeId("groupChats", args.groupId);
     const userId = ctx.db.normalizeId("users", args.userId);
@@ -1671,7 +1708,6 @@ export const setChatroomMemberRoleForAdmin = mutation({
 export const getChatroomMembersForAdmin = query({
   args: { groupId: v.string() },
   handler: async (ctx, args) => {
-    const { requireAdmin } = await import("./admin");
     await requireAdmin(ctx, ["super_admin", "admin"]);
     const groupId = ctx.db.normalizeId("groupChats", args.groupId);
     const room = groupId ? await ctx.db.get(groupId) : null;
@@ -1682,7 +1718,14 @@ export const getChatroomMembersForAdmin = query({
       const user = await ctx.db.get(ctx.db.normalizeId("users", memberId.toString())!);
       if (!user) return null;
       const membership: any = memberMap.get(memberId.toString());
-      return { id: user._id, name: user.name ?? "User", username: user.username ?? "user", avatar: user.avatarUrl ?? "", role: user._id === room.creatorId ? "owner" : membership?.role ?? "member" };
+      return {
+        id: user._id,
+        name: user.name ?? "User",
+        username: user.username ?? "user",
+        avatar: user.avatarUrl ?? "",
+        ...resolveUserVerification(user),
+        role: user._id === room.creatorId ? "owner" : membership?.role ?? "member",
+      };
     })).then((result: any[]) => result.filter(Boolean));
   },
 });
@@ -1690,12 +1733,11 @@ export const getChatroomMembersForAdmin = query({
 export const removeChatroomMemberForAdmin = mutation({
   args: { groupId: v.string(), userId: v.string() },
   handler: async (ctx, args) => {
-    const { requireAdmin } = await import("./admin");
     await requireAdmin(ctx, ["super_admin", "admin"]);
     const groupId = ctx.db.normalizeId("groupChats", args.groupId);
     const userId = ctx.db.normalizeId("users", args.userId);
     const room = groupId ? await ctx.db.get(groupId) : null;
-    if (!room?.isChatroom || !userId || room.creatorId === userId) throw new ConvexError("Room member cannot be removed");
+    if (!groupId || !room?.isChatroom || !userId || room.creatorId === userId) throw new ConvexError("Room member cannot be removed");
     const membership = await ctx.db.query("groupMembers").withIndex("by_group_user", (q: any) => q.eq("groupId", groupId).eq("userId", userId)).first();
     if (membership) await ctx.db.delete(membership._id);
     await ctx.db.patch(groupId, { memberIds: room.memberIds.filter((id: any) => id.toString() !== userId.toString()), updatedAt: Date.now() });
@@ -1707,7 +1749,6 @@ export const removeChatroomMemberForAdmin = mutation({
 export const archiveChatroomForAdmin = mutation({
   args: { groupId: v.string() },
   handler: async (ctx, args) => {
-    const { requireAdmin } = await import("./admin");
     await requireAdmin(ctx, ["super_admin", "admin"]);
     const groupId = ctx.db.normalizeId("groupChats", args.groupId);
     const room = groupId ? await ctx.db.get(groupId) : null;

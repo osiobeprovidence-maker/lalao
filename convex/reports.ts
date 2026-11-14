@@ -2,6 +2,7 @@ import { getUserByAuthIdentity } from "./lib/authIdentity";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAdmin } from "./admin";
+import { resolveUserVerification } from "./social";
 
 export const createReport = mutation({
   args: {
@@ -91,6 +92,7 @@ export const getReportDetails = query({
           authorName: (author as any)?.name || (author as any)?.username,
           authorUsername: (author as any)?.username,
           authorAvatar: (author as any)?.avatarUrl,
+          ...resolveUserVerification(author),
         };
       }
     } else if (report.targetType === "user") {

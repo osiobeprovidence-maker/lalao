@@ -311,3 +311,79 @@ export const updateCreatorSettings = mutation({
   },
 });
 
+// ==========================================
+// GROUP AD PLACEMENT SETTINGS (ADMIN)
+// ==========================================
+
+export const getAdPlacementSettings = query({
+  args: {},
+  handler: async (ctx) => {
+    const record = await ctx.db.query("platformSettings").withIndex("by_key", (q: any) => q.eq("key", "adPlacement")).first();
+    let settings: { messagesBetweenAds?: number; minAdvertisementCooldownMs?: number } = {};
+    if (record?.value) {
+      try {
+        settings = JSON.parse(record.value);
+      } catch (e) {
+        settings = {};
+      }
+    }
+    return {
+      messagesBetweenAds: Math.max(1, Math.floor(Number(settings.messagesBetweenAds) || 20)),
+      minAdvertisementCooldownMs: Math.max(0, Math.floor(Number(settings.minAdvertisementCooldownMs) || 0)),
+    };
+  },
+});
+
+export const updateAdPlacementSettings = mutation({
+  args: {
+    messagesBetweenAds: v.optional(v.number()),
+    minAdvertisementCooldownMs: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const record = await ctx.db.query("platformSettings").withIndex("by_key", (q) => q.eq("key", "adPlacement")).first();
+
+    let currentSettings: { messagesBetweenAds?: number; minAdvertisementCooldownMs?: number } = {};
+    if (record?.value) {
+      try {
+        currentSettings = JSON.parse(record.value);
+      } catch (e) {
+        currentSettings = {};
+      }
+    }
+
+    const newSettings = {
+      messagesBetweenAds: args.messagesBetweenAds !== undefined ? Math.max(1, Math.floor(args.messagesBetweenAds)) : Math.max(1, Math.floor(Number(currentSettings.messagesBetweenAds) || 20)),
+      minAdvertisementCooldownMs: args.minAdvertisementCooldownMs !== undefined ? Math.max(0, Math.floor(args.minAdvertisementCooldownMs)) : Math.max(0, Math.floor(Number(currentSettings.minAdvertisementCooldownMs) || 0)),
+    };
+    const newValue = JSON.stringify(newSettings);
+
+    const identity = await ctx.auth.getUserIdentity();
+    let actorId = undefined;
+    if (identity) {
+      const user = await getUserByAuthIdentity(ctx, identity);
+      actorId = user?._id;
+    }
+
+    if (record) {
+      await ctx.db.patch(record._id, { value: newValue, updatedAt: Date.now(), updatedBy: actorId });
+    } else {
+      await ctx.db.insert("platformSettings", { key: "adPlacement", value: newValue, updatedAt: Date.now(), updatedBy: actorId });
+    }
+
+    if (actorId) {
+      await ctx.db.insert("auditLog", {
+        actorId,
+        action: "updated_ad_placement_settings",
+        target: "platformSettings:adPlacement",
+        before: record ? record.value : "{}",
+        after: newValue,
+        createdAt: Date.now(),
+      });
+    }
+
+    return newSettings;
+  },
+});
+

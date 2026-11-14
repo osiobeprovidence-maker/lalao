@@ -3,6 +3,7 @@ import { mutation, query, internalMutation, internalQuery } from "./_generated/s
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { requireAdmin } from "./admin";
+import { resolveUserVerification } from "./social";
 
 /**
  * Helper to authenticate user from context
@@ -15,6 +16,63 @@ async function getAuthUser(ctx: any) {
 
   if (!user) throw new Error("User not found");
   return user;
+}
+
+export type AdCampaignLifecycleStatus =
+  | "draft"
+  | "pending_payment"
+  | "pending_review"
+  | "approved"
+  | "scheduled"
+  | "active"
+  | "paused"
+  | "rejected"
+  | "completed"
+  | "cancelled"
+  | "payment_failed";
+
+export function deriveCampaignLifecycleStatus(
+  campaign: {
+    status?: string;
+    moderationStatus?: string;
+    schedule?: { startDate: number; endDate: number };
+  },
+  now: number = Date.now(),
+  hasSuccessfulPayment: boolean = false
+): AdCampaignLifecycleStatus {
+  const status = campaign?.status || "draft";
+  const moderationStatus = campaign?.moderationStatus || "unreviewed";
+
+  if (status === "cancelled" || status === "completed" || status === "rejected") {
+    return status;
+  }
+
+  if (status === "paused") {
+    return "paused";
+  }
+
+  if (moderationStatus === "rejected") {
+    return "rejected";
+  }
+
+  if (moderationStatus === "suspended") {
+    return "paused";
+  }
+
+  if (!hasSuccessfulPayment) {
+    if (moderationStatus === "approved") return "pending_payment";
+    if (status === "pending_review") return "pending_review";
+    return "pending_payment";
+  }
+
+  if (moderationStatus !== "approved") {
+    return "pending_review";
+  }
+
+  const schedule = campaign?.schedule ?? { startDate: 0, endDate: 0 };
+  if (schedule.endDate <= now) return "completed";
+  if (schedule.startDate <= now) return "active";
+  return "scheduled";
 }
 
 /**
@@ -32,6 +90,10 @@ export function validateDestinationUrl(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+export function isWithinDailyImpressionLimit(impressionsToday: number, dailyLimit?: number): boolean {
+  return dailyLimit === undefined || impressionsToday < dailyLimit;
 }
 
 /**
@@ -107,22 +169,25 @@ export const maintainCampaignLifecycle = internalMutation({
     const campaigns = await ctx.db.query("adCampaigns").collect();
     let activated = 0;
     let completed = 0;
+
     for (const campaign of campaigns) {
-      if (!["active", "scheduled", "approved"].includes(campaign.status)) continue;
-      if (campaign.schedule.endDate <= now) {
-        await ctx.db.patch(campaign._id, { status: "completed", updatedAt: now });
-        completed++;
-        continue;
-      }
-      if (campaign.moderationStatus !== "approved") continue;
-      const successfulPayment = await ctx.db.query("adPayments").withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id)).filter((q) => q.eq(q.field("status"), "successful")).first();
-      if (!successfulPayment) continue;
-      const nextStatus = campaign.schedule.startDate <= now ? "active" : "scheduled";
+      if (["cancelled", "completed", "rejected"].includes(campaign.status)) continue;
+      if (campaign.status === "paused") continue;
+
+      const successfulPayment = await ctx.db
+        .query("adPayments")
+        .withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id))
+        .filter((q) => q.eq(q.field("status"), "successful"))
+        .first();
+
+      const nextStatus = deriveCampaignLifecycleStatus(campaign, now, !!successfulPayment);
       if (campaign.status !== nextStatus) {
         await ctx.db.patch(campaign._id, { status: nextStatus, updatedAt: now });
         if (nextStatus === "active") activated++;
+        if (nextStatus === "completed") completed++;
       }
     }
+
     return { activated, completed };
   },
 });
@@ -139,14 +204,235 @@ export const getRoomSponsoredPlacement = query({
     if (room.creatorId !== user._id && !room.memberIds.some((memberId: any) => memberId === user._id)) return null;
     const now = Date.now();
     const candidates = await ctx.db.query("adCampaigns").withIndex("by_room_status", (q) => q.eq("roomId", roomId).eq("status", "active")).collect();
-    const eligible = candidates.filter((campaign) => campaign.moderationStatus === "approved" && campaign.schedule.startDate <= now && campaign.schedule.endDate > now && campaign.budget.spentKobo < campaign.budget.totalBudgetKobo);
+    const paidCandidates = await Promise.all(
+      candidates.map(async (campaign) => {
+        const successfulPayment = await ctx.db
+          .query("adPayments")
+          .withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id))
+          .filter((q) => q.eq(q.field("status"), "successful"))
+          .first();
+        return { ...campaign, paid: !!successfulPayment };
+      })
+    );
+    const eligible = paidCandidates.filter((campaign) => campaign.moderationStatus === "approved" && campaign.paid && campaign.schedule.startDate <= now && campaign.schedule.endDate > now && campaign.budget.spentKobo < campaign.budget.totalBudgetKobo);
     eligible.sort((a, b) => a.budget.spentKobo / a.budget.totalBudgetKobo - b.budget.spentKobo / b.budget.totalBudgetKobo);
     const campaign = eligible[0];
     if (!campaign) return null;
     const advertiser = await ctx.db.get(campaign.userId);
-    return { campaignId: campaign._id, placement: "room" as const, roomId, format: campaign.format, headline: campaign.creative.headline, description: campaign.creative.description, mediaUrl: campaign.creative.mediaUrl, mediaType: campaign.creative.mediaType, ctaLabel: campaign.creative.ctaLabel, destinationUrl: campaign.creative.destinationUrl, advertiser: { id: advertiser?._id, name: advertiser?.name || "Sponsored Partner", username: advertiser?.username, avatarUrl: advertiser?.avatarUrl, isVerified: true } };
+    return { campaignId: campaign._id, placement: "room" as const, roomId, format: campaign.format, headline: campaign.creative.headline, description: campaign.creative.description, mediaUrl: campaign.creative.mediaUrl, mediaType: campaign.creative.mediaType, ctaLabel: campaign.creative.ctaLabel, destinationUrl: campaign.creative.destinationUrl, impressionsCount: campaign.impressionsCount || 0, advertiser: { id: advertiser?._id, name: advertiser?.name || "Sponsored Partner", username: advertiser?.username, avatarUrl: advertiser?.avatarUrl, ...resolveUserVerification(advertiser) } };
   },
 });
+
+// ==========================================
+// GROUP CHAT AD PLACEMENT & ROTATION ENGINE
+// ==========================================
+
+/**
+ * Read the admin-configurable group ad cadence from platform settings.
+ * Key: "adPlacement" -> { messagesBetweenAds?: number, minAdvertisementCooldownMs?: number }
+ */
+export async function getGroupAdPlacementSettings(ctx: any): Promise<{ messagesBetweenAds: number; minAdvertisementCooldownMs: number }> {
+  const record = await ctx.db.query("platformSettings").withIndex("by_key", (q: any) => q.eq("key", "adPlacement")).first();
+  let settings: { messagesBetweenAds?: number; minAdvertisementCooldownMs?: number } = {};
+  if (record?.value) {
+    try {
+      settings = JSON.parse(record.value);
+    } catch {
+      settings = {};
+    }
+  }
+  const messagesBetweenAds = Math.max(1, Math.floor(Number(settings.messagesBetweenAds) || 20));
+  const minAdvertisementCooldownMs = Math.max(0, Math.floor(Number(settings.minAdvertisementCooldownMs) || 0));
+  return { messagesBetweenAds, minAdvertisementCooldownMs };
+}
+
+/**
+ * Pure decision: does a group conversation warrant a new sponsored placement
+ * opportunity? A placement triggers after `cadence` qualifying combined messages
+ * since the last placement, minus the admin-configured minimum cooldown.
+ */
+export function shouldTriggerGroupAdPlacement(params: {
+  messagesSinceLastPlacement: number;
+  cadence: number;
+  cooldownUntil?: number;
+  now?: number;
+}): boolean {
+  const { messagesSinceLastPlacement, cadence, cooldownUntil, now = Date.now() } = params;
+  if (messagesSinceLastPlacement < cadence) return false;
+  if (cooldownUntil && now < cooldownUntil) return false;
+  return true;
+}
+
+/**
+ * Pure rotation: pick the next eligible room campaign for a group conversation.
+ * Considers delivery eligibility (status, moderation, schedule, budget, caps) and
+ * avoids repeating an advertiser that was served too recently.
+ */
+export function selectEligibleGroupCampaign(params: {
+  campaigns: any[];
+  now?: number;
+  minAdvertisementCooldownMs?: number;
+  recentAdvertiserLastServedAt?: Map<string, number>;
+}): any | null {
+  const { campaigns, now = Date.now(), minAdvertisementCooldownMs = 0, recentAdvertiserLastServedAt } = params;
+  const eligible = campaigns.filter((campaign) => {
+    if (campaign.placement !== "room") return false;
+    if (campaign.status !== "active") return false;
+    if (campaign.moderationStatus !== "approved") return false;
+    if (campaign.paymentStatus && campaign.paymentStatus !== "successful") return false;
+    if (campaign.paid === false) return false;
+    if (campaign.schedule.startDate > now || campaign.schedule.endDate <= now) return false;
+    if (!campaign.budget || campaign.budget.spentKobo >= campaign.budget.totalBudgetKobo) return false;
+    const lastServedAt = recentAdvertiserLastServedAt?.get(String(campaign.userId));
+    if (lastServedAt && now - lastServedAt < minAdvertisementCooldownMs) return false;
+    if (typeof campaign.maxImpressionsPerDay === "number" && (campaign.impressionsCount || 0) >= campaign.maxImpressionsPerDay) return false;
+    return true;
+  });
+  eligible.sort((a, b) => a.budget.spentKobo / Math.max(1, a.budget.totalBudgetKobo) - b.budget.spentKobo / Math.max(1, b.budget.totalBudgetKobo));
+  return eligible[0] ?? null;
+}
+
+/**
+ * Count qualifying group messages since a timestamp (user content only; excludes
+ * automated/page-originated sends and call records).
+ */
+export function isQualifyingGroupMessage(m: any, groupChat: any, since: number): boolean {
+  const contentTypes = ["text", "image", "video"];
+  const typeOk = !m.type || contentTypes.includes(m.type);
+  const isGroupMember = !!groupChat && (groupChat.creatorId === m.senderId || (groupChat.memberIds || []).some((id: any) => id === m.senderId));
+  const notAutomated = !m.pageSenderId;
+  return typeOk && isGroupMember && notAutomated && m.createdAt > since;
+}
+
+export function countQualifyingGroupMessages(messages: any[], since: number, groupChat: any): number {
+  const qualifying = messages.filter((m) => isQualifyingGroupMessage(m, groupChat, since));
+  return qualifying.length;
+}
+
+/**
+ * Evaluate a group conversation for a sponsored ad placement opportunity and,
+ * when triggered, persist a new placement anchored to the triggering message.
+ * Called from the group message send path (and available for cron-style sweeps).
+ */
+export const evaluateGroupAdPlacement = internalMutation({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, { conversationId }) => {
+    const conversation = await ctx.db.get(conversationId);
+    if (!conversation?.groupChatId) {
+      return { triggered: false, reason: "private_conversation" as const, messagesSinceLastPlacement: 0 };
+    }
+    const groupChat = await ctx.db.get(conversation.groupChatId);
+    if (!groupChat || !groupChat.isChatroom || groupChat.chatroomStatus === "inactive") {
+      return { triggered: false, reason: "inactive_room" as const, messagesSinceLastPlacement: 0 };
+    }
+
+    const settings = await getGroupAdPlacementSettings(ctx);
+    const lastPlacement = await ctx.db.query("adPlacements").withIndex("by_conversation", (q) => q.eq("conversationId", conversationId)).order("desc").first();
+    const since = lastPlacement?.servedAt ?? conversation.updatedAt ?? Date.now();
+    const messages = await ctx.db.query("messages").withIndex("by_conversation", (q) => q.eq("conversationId", conversationId)).collect();
+    const messagesSinceLastPlacement = countQualifyingGroupMessages(messages, since, groupChat);
+    const triggered = shouldTriggerGroupAdPlacement({
+      messagesSinceLastPlacement,
+      cadence: settings.messagesBetweenAds,
+      cooldownUntil: lastPlacement?.servedAt ? lastPlacement.servedAt + settings.minAdvertisementCooldownMs : undefined,
+    });
+
+    if (!triggered) {
+      return { triggered: false, messagesSinceLastPlacement, cadence: settings.messagesBetweenAds };
+    }
+
+    const candidates = await ctx.db.query("adCampaigns").withIndex("by_room_status", (q) => q.eq("roomId", groupChat._id).eq("status", "active")).collect();
+    const recentAdvertiserLastServedAt = new Map<string, number>();
+    for (const campaign of candidates) {
+      const lastCampaignPlacement = await ctx.db.query("adPlacements").withIndex("by_campaign", (q: any) => q.eq("campaignId", campaign._id)).order("desc").first();
+      if (lastCampaignPlacement?.servedAt) {
+        recentAdvertiserLastServedAt.set(String(campaign.userId), lastCampaignPlacement.servedAt);
+      }
+    }
+    const chosen = selectEligibleGroupCampaign({ campaigns: candidates, now: Date.now(), minAdvertisementCooldownMs: settings.minAdvertisementCooldownMs, recentAdvertiserLastServedAt });
+    if (!chosen) {
+      return { triggered: true, served: false, messagesSinceLastPlacement, cadence: settings.messagesBetweenAds, campaignId: null };
+    }
+
+    const qualifyingMessages = messages.filter((m) => isQualifyingGroupMessage(m, groupChat, since)).sort((a, b) => a.createdAt - b.createdAt);
+    const anchorMessage = qualifyingMessages[qualifyingMessages.length - 1];
+    if (!anchorMessage) {
+      return { triggered: true, served: false, messagesSinceLastPlacement, cadence: settings.messagesBetweenAds, campaignId: null };
+    }
+
+    const placementId = await ctx.db.insert("adPlacements", {
+      groupChatId: groupChat._id,
+      conversationId,
+      campaignId: chosen._id,
+      anchorMessageId: anchorMessage._id,
+      status: "delivered",
+      servedAt: Date.now(),
+      createdAt: Date.now(),
+    });
+    return { triggered: true, served: true, placementId, campaignId: chosen._id, anchorMessageId: anchorMessage._id, messagesSinceLastPlacement };
+  },
+});
+
+/**
+ * Fetch the current sponsored placement for a group conversation (and whether a
+ * new placement opportunity has come due). Private one-to-one conversations have
+ * no group placement surface and resolve to null.
+ */
+export const getGroupAdPlacement = query({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, { conversationId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    const user = identity ? await getUserByAuthIdentity(ctx, identity) : null;
+    const conversation = await ctx.db.get(conversationId);
+    if (!conversation?.groupChatId) {
+      return { placement: null, opportunity: false, messagesSinceLastPlacement: 0, cadence: 20 };
+    }
+    const groupChat = await ctx.db.get(conversation.groupChatId);
+    const isMember = !!user && !!groupChat && (groupChat.creatorId === user._id || (groupChat.memberIds || []).some((memberId: any) => memberId === user._id));
+    if (!groupChat || !groupChat.isChatroom || groupChat.chatroomStatus === "inactive" || !isMember) {
+      return { placement: null, opportunity: false, messagesSinceLastPlacement: 0, cadence: 20 };
+    }
+
+    const settings = await getGroupAdPlacementSettings(ctx);
+    const lastPlacement = await ctx.db.query("adPlacements").withIndex("by_conversation", (q) => q.eq("conversationId", conversationId)).order("desc").first();
+    const since = lastPlacement?.servedAt ?? conversation.updatedAt ?? Date.now();
+    const messages = await ctx.db.query("messages").withIndex("by_conversation", (q) => q.eq("conversationId", conversationId)).collect();
+    const messagesSinceLastPlacement = countQualifyingGroupMessages(messages, since, groupChat);
+    const opportunity = shouldTriggerGroupAdPlacement({
+      messagesSinceLastPlacement,
+      cadence: settings.messagesBetweenAds,
+      cooldownUntil: lastPlacement?.servedAt ? lastPlacement.servedAt + settings.minAdvertisementCooldownMs : undefined,
+    });
+
+    if (!lastPlacement || lastPlacement.status !== "delivered") {
+      return { placement: null, opportunity, messagesSinceLastPlacement, cadence: settings.messagesBetweenAds };
+    }
+    const campaign = await ctx.db.get(lastPlacement.campaignId);
+    if (!campaign || campaign.status !== "active" || campaign.moderationStatus !== "approved") {
+      return { placement: null, opportunity, messagesSinceLastPlacement, cadence: settings.messagesBetweenAds };
+    }
+    const advertiser = await ctx.db.get(campaign.userId);
+    const placement = {
+      campaignId: campaign._id,
+      placement: "room" as const,
+      roomId: groupChat._id,
+      conversationId,
+      anchorMessageId: lastPlacement.anchorMessageId,
+      format: campaign.format,
+      headline: campaign.creative.headline,
+      description: campaign.creative.description,
+      mediaUrl: campaign.creative.mediaUrl,
+      mediaType: campaign.creative.mediaType,
+      ctaLabel: campaign.creative.ctaLabel,
+      destinationUrl: campaign.creative.destinationUrl,
+      impressionsCount: campaign.impressionsCount || 0,
+      advertiser: { id: advertiser?._id, name: advertiser?.name || "Sponsored Partner", username: advertiser?.username, avatarUrl: advertiser?.avatarUrl, ...resolveUserVerification(advertiser) },
+    };
+    return { placement, opportunity, messagesSinceLastPlacement, cadence: settings.messagesBetweenAds };
+  },
+});
+
+
 
 /**
  * Get single campaign by ID (must be owner or admin)
@@ -535,22 +821,26 @@ export const adminReviewCampaign = mutation({
     if (!campaign) throw new Error("Campaign not found");
 
     const now = Date.now();
-    let newStatus = campaign.status;
+    let newStatus: AdCampaignLifecycleStatus = campaign.status;
     let newModeration: "approved" | "rejected" | "suspended" = "approved";
 
     if (args.decision === "approve") {
       newModeration = "approved";
-      // If paid, transition to active or scheduled
-      if (campaign.status === "pending_review" || campaign.status === "draft" || campaign.status === "payment_failed") {
-        const payment = await ctx.db.query("adPayments").withIndex("by_campaign", (q) => q.eq("campaignId", args.campaignId)).filter((q) => q.eq(q.field("status"), "successful")).first();
-        if (!payment) throw new Error("Campaign must be paid before it can be approved for delivery.");
-        if (campaign.placement === "room" || (campaign.schedule.startDate <= now && campaign.schedule.endDate > now)) {
-          newStatus = "active";
-        } else if (campaign.schedule.startDate > now) {
-          newStatus = "scheduled";
-        } else {
-          newStatus = "approved";
-        }
+      const successfulPayment = await ctx.db
+        .query("adPayments")
+        .withIndex("by_campaign", (q) => q.eq("campaignId", args.campaignId))
+        .filter((q) => q.eq(q.field("status"), "successful"))
+        .first();
+
+      if (successfulPayment) {
+        newStatus = deriveCampaignLifecycleStatus({
+          ...campaign,
+          moderationStatus: "approved",
+        }, now, true);
+      } else if (campaign.status === "paused") {
+        newStatus = "paused";
+      } else {
+        newStatus = "pending_payment";
       }
     } else if (args.decision === "reject") {
       newModeration = "rejected";
@@ -630,12 +920,24 @@ export const getSponsoredPlacement = query({
       .withIndex("by_status", (q) => q.eq("status", "active"))
       .collect();
 
-    // Filter strictly by moderation, schedule, and remaining budget
+    const paidCandidates = await Promise.all(
+      activeCandidates.map(async (campaign) => {
+        const successfulPayment = await ctx.db
+          .query("adPayments")
+          .withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id))
+          .filter((q) => q.eq(q.field("status"), "successful"))
+          .first();
+        return { ...campaign, paid: !!successfulPayment };
+      })
+    );
+
+    // Filter strictly by moderation, payment, schedule, and remaining budget
     const placement = args.placement ?? "feed";
-    const eligible = activeCandidates.filter((c) => {
+    const eligible = paidCandidates.filter((c) => {
       if ((c.placement ?? "feed") !== placement) return false;
       if (placement === "room" && c.roomId !== args.roomId) return false;
       if (c.moderationStatus !== "approved") return false;
+      if (!c.paid) return false;
       if (c.schedule.startDate > now || c.schedule.endDate <= now) return false;
       if (c.budget.spentKobo >= c.budget.totalBudgetKobo) return false;
 
@@ -679,6 +981,7 @@ export const getSponsoredPlacement = query({
 
     return {
       campaignId: chosen._id,
+      impressionsCount: chosen.impressionsCount || 0,
       placement: chosen.placement ?? "feed",
       roomId: chosen.roomId,
       format: chosen.format,
@@ -693,7 +996,7 @@ export const getSponsoredPlacement = query({
         name: advertiser?.name || "Sponsored Partner",
         username: advertiser?.username,
         avatarUrl: advertiser?.avatarUrl,
-        isVerified: true,
+        ...resolveUserVerification(advertiser),
       },
       originalPost,
     };
@@ -706,24 +1009,32 @@ export const getSponsoredPlacement = query({
 export const recordAdImpression = mutation({
   args: {
     campaignId: v.id("adCampaigns"),
-    sessionId: v.string(), // Fingerprint / session
     locationName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const viewer = await getAuthUser(ctx);
     const campaign = await ctx.db.get(args.campaignId);
     const now = Date.now();
     if (!campaign || campaign.status !== "active" || campaign.moderationStatus !== "approved" || campaign.schedule.startDate > now || campaign.schedule.endDate <= now || campaign.budget.spentKobo >= campaign.budget.totalBudgetKobo) return { recorded: false };
 
     const dateBucket = new Date(now).toISOString().split("T")[0]; // YYYY-MM-DD
 
-    // Check deduplication (1 impression per session per campaign per day)
+    const dailyEvents = await ctx.db
+      .query("adEvents")
+      .withIndex("by_campaign_date", (q) => q.eq("campaignId", args.campaignId).eq("dateBucket", dateBucket))
+      .collect();
+    const impressionsToday = dailyEvents.filter((event) => event.eventType === "impression").length;
+    if (!isWithinDailyImpressionLimit(impressionsToday, campaign.maxImpressionsPerDay)) {
+      return { recorded: false, dailyLimitReached: true };
+    }
+
     const existing = await ctx.db
       .query("adEvents")
-      .withIndex("by_campaign_dedup", (q) =>
+      .withIndex("by_campaign_user_dedup", (q) =>
         q
           .eq("campaignId", args.campaignId)
           .eq("eventType", "impression")
-          .eq("viewerSessionId", args.sessionId)
+          .eq("viewerUserId", viewer._id)
           .eq("dateBucket", dateBucket)
       )
       .first();
@@ -732,26 +1043,27 @@ export const recordAdImpression = mutation({
       return { recorded: false, deduplicated: true };
     }
 
-    let viewerUserId: any = undefined;
-    const identity = await ctx.auth.getUserIdentity();
-    if (identity) {
-      const user = await getUserByAuthIdentity(ctx, identity);
-      if (user) viewerUserId = user._id;
-    }
-
     // Pricing model: ₦2.00 per impression (200 kobo CPM = ₦2,000 / 1000)
     const impressionCostKobo = 200;
     const newSpent = Math.min(campaign.budget.spentKobo + impressionCostKobo, campaign.budget.totalBudgetKobo);
 
     // Record Event
+    const timeBucket = (() => {
+      const hour = new Date(now).getUTCHours();
+      if (hour >= 5 && hour < 12) return "morning";
+      if (hour >= 12 && hour < 17) return "afternoon";
+      if (hour >= 17 && hour < 21) return "evening";
+      return "night";
+    })();
     await ctx.db.insert("adEvents", {
       campaignId: args.campaignId,
       eventType: "impression",
-      viewerUserId,
-      viewerSessionId: args.sessionId,
+      viewerUserId: viewer._id,
+      viewerSessionId: viewer._id.toString(),
       chargeKobo: impressionCostKobo,
       timestamp: now,
       dateBucket,
+      timeBucket,
       locationName: args.locationName,
     });
 
@@ -777,32 +1089,25 @@ export const recordAdImpression = mutation({
 export const recordAdClick = mutation({
   args: {
     campaignId: v.id("adCampaigns"),
-    sessionId: v.string(),
   },
   handler: async (ctx, args) => {
+    const viewer = await getAuthUser(ctx);
     const campaign = await ctx.db.get(args.campaignId);
     const now = Date.now();
     if (!campaign || campaign.status !== "active" || campaign.moderationStatus !== "approved" || campaign.schedule.startDate > now || campaign.schedule.endDate <= now || campaign.budget.spentKobo >= campaign.budget.totalBudgetKobo) return { recorded: false };
     const dateBucket = new Date(now).toISOString().split("T")[0];
 
-    let viewerUserId: any = undefined;
-    const identity = await ctx.auth.getUserIdentity();
-    if (identity) {
-      const user = await getUserByAuthIdentity(ctx, identity);
-      if (user) viewerUserId = user._id;
-    }
-
     // Pricing model: ₦10.00 per verified click (1,000 kobo)
     const clickCostKobo = 1000;
-    const existingClick = await ctx.db.query("adEvents").withIndex("by_campaign_dedup", (q) => q.eq("campaignId", args.campaignId).eq("eventType", "click").eq("viewerSessionId", args.sessionId).eq("dateBucket", dateBucket)).first();
+    const existingClick = await ctx.db.query("adEvents").withIndex("by_campaign_user_dedup", (q) => q.eq("campaignId", args.campaignId).eq("eventType", "click").eq("viewerUserId", viewer._id).eq("dateBucket", dateBucket)).first();
     if (existingClick) return { recorded: false, deduplicated: true, destinationUrl: campaign.creative.destinationUrl };
     const newSpent = Math.min(campaign.budget.spentKobo + clickCostKobo, campaign.budget.totalBudgetKobo);
 
     await ctx.db.insert("adEvents", {
       campaignId: args.campaignId,
       eventType: "click",
-      viewerUserId,
-      viewerSessionId: args.sessionId,
+      viewerUserId: viewer._id,
+      viewerSessionId: viewer._id.toString(),
       chargeKobo: clickCostKobo,
       timestamp: now,
       dateBucket,

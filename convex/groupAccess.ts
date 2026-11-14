@@ -6,6 +6,15 @@ export function canAccessGroupChat(
   return userId === creatorId || memberIds.includes(userId);
 }
 
+export function isAvailableChatroom(
+  status: "active" | "inactive" | undefined,
+  visibility: "public" | "private_discoverable" | "private_hidden" | undefined,
+  isMember: boolean,
+): boolean {
+  if (status === "inactive") return false;
+  return (visibility ?? "private_discoverable") === "public" || isMember;
+}
+
 export function canDiscoverGroupCycle(
   userInterests: readonly string[],
   groupInterests: readonly string[],

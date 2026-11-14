@@ -415,6 +415,9 @@ export const getRecentSearches = query({
             // Deleted or invalid ID fallback
           }
         }
+        if (item.type === "person") {
+          return { ...item, isVerified: false, verificationTier: "none" };
+        }
         return item;
       })
     );
@@ -487,8 +490,8 @@ export const recordRecentSearch = mutation({
         title: args.title ?? existing.title,
         subtitle: args.subtitle ?? existing.subtitle,
         avatarUrl: args.avatarUrl ?? existing.avatarUrl,
-        isVerified: args.isVerified ?? existing.isVerified,
-        verificationTier: args.verificationTier ?? existing.verificationTier,
+        isVerified: args.type === "person" ? false : args.isVerified ?? existing.isVerified,
+        verificationTier: args.type === "person" ? "none" : args.verificationTier ?? existing.verificationTier,
       };
       await ctx.db.patch(existing._id, updates);
       const updatedSearch = await ctx.db.get(existing._id);
@@ -505,8 +508,8 @@ export const recordRecentSearch = mutation({
       title: args.title,
       subtitle: args.subtitle,
       avatarUrl: args.avatarUrl,
-      isVerified: args.isVerified,
-      verificationTier: args.verificationTier,
+      isVerified: args.type === "person" ? false : args.isVerified,
+      verificationTier: args.type === "person" ? "none" : args.verificationTier,
       timestamp: now,
     };
     const id = await ctx.db.insert("recentSearches", newSearch);
@@ -579,4 +582,3 @@ export const clearAllRecentSearches = mutation({
     return { count: records.length };
   },
 });
-
