@@ -3,8 +3,8 @@
 import { action, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
-import { Resend } from "resend";
 import { isValidTrialEmail } from "./lib/creatorTrial";
+import { getResendClient, getSenderEmail } from "./lib/resend";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    LALAO EMAIL TEMPLATE BUILDERS
@@ -121,17 +121,7 @@ const getBaseEmailLayout = (title: string, contentHtml: string): string => `
    RESEND CLIENT INITIALIZER HELPER
    ───────────────────────────────────────────────────────────────────────────── */
 
-function getResendClient() {
-  const apiKey = process.env.RESEND_API_KEY || process.env.AUTH_RESEND_KEY;
-  if (!apiKey) {
-    return null;
-  }
-  return new Resend(apiKey);
-}
 
-function getSenderEmail() {
-  return process.env.RESEND_FROM_EMAIL || "Lalao <onboarding@resend.dev>";
-}
 
 export const sendCreatorTrialReminder = internalAction({
   args: { emailId: v.id("creatorTrialEmails") },
@@ -150,7 +140,7 @@ export const sendCreatorTrialReminder = internalAction({
       throw new Error(error);
     }
 
-    const copy = {
+    const copyMap = {
       sevenDays: {
         subject: "7 days left in your Creator Premium trial",
         message: "You have 7 days remaining in your 14-day Creator Premium trial.",
@@ -167,14 +157,16 @@ export const sendCreatorTrialReminder = internalAction({
         subject: "Your Creator Premium trial has ended",
         message: "Your Creator Premium trial has ended. Your access will not renew or charge automatically.",
       },
-    }[delivery.kind];
-    const escapedName = delivery.name.replace(/[&<>"']/g, (char) => ({
+    } as const;
+    const copy = (copyMap as Record<string, { subject: string; message: string }>)[delivery.kind as string]
+      ?? copyMap.expired;
+    const escapedName = delivery.name.replace(/[&<>"']/g, (char: string) => ({
       "&": "&amp;",
       "<": "&lt;",
       ">": "&gt;",
       '"': "&quot;",
       "'": "&#39;",
-    })[char] || char);
+    } as Record<string, string>)[char] || char);
     const html = getBaseEmailLayout(
       copy.subject,
       `<h2 style="margin-top:0">Hi ${escapedName},</h2><p>${copy.message}</p><p>Your trial does not auto-renew. You will not be charged unless you choose a paid plan.</p><p style="text-align:center"><a class="cta-button" href="https://www.lalao.website/app">Open Creator Premium</a></p>`,
@@ -227,66 +219,113 @@ export const sendVerificationLink = action({
    ───────────────────────────────────────────────────────────────────────────── */
 
 /**
- * Send 6-digit OTP verification email
+ * Internal OTP system for email verification. The OTP is generated server-side
+ * (crypto-random), hashed (SHA-256) before storage, and never returned to the
+ * client. Client-callable exports: `sendOtpEmail`, `verifyOtp`.
  */
 export const sendOtpEmail = action({
-  args: {
-    to: v.string(),
-    otp: v.string(),
-    purpose: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
+  args: {},
+  handler: async (ctx) => {
+    // 1–2. Authenticate and resolve the account (done inside the mutation).
+    // 3. Fail closed before issuing a code when the mailer is not configured.
     const resend = getResendClient();
-    const purposeText = args.purpose || "sign in or verify your account";
+    if (!resend) {
+      throw new Error("Email delivery is not configured. Please try again later.");
+    }
+    const from = getSenderEmail(); // throws if RESEND_FROM_EMAIL missing — fail closed
 
+    // 4–5. Check rate limits/cooldown, then issue the code.
+    const result = await ctx.runMutation(internal.emailVerification.prepareEmailOtp, {});
+
+    // 6. Send.
     const bodyHtml = `
       <h2 style="font-size: 22px; font-weight: 800; color: #1a202c; margin-top: 0;">Verification Code</h2>
       <p style="font-size: 15px; color: #4a5568; line-height: 1.5;">
-        Use the following one-time code to ${purposeText} on Lalao:
+        Use the following one-time code to verify your Lalao account email:
+      </p>
+      <div style="text-align: center;">
+        <div class="code-badge">${result.code}</div>
+      </div>
+      <p style="font-size: 13px; color: #718096; line-height: 1.5; margin-bottom: 0;">
+        🔒 <strong>Security tip:</strong> This code is valid for <strong>10 minutes</strong>. Never share this code with anyone. Lalao staff will never ask for your verification code.
+      </p>
+    `;
+
+    const html = getBaseEmailLayout("Lalao Verification Code", bodyHtml);
+    // 7. Delivery failure: leave the previously issued code invalidated and ask the user to retry.
+    const response = await resend.emails.send({
+      from,
+      to: result.to,
+      subject: "Your Lalao verification code",
+      html,
+    });
+
+    if (response.error) {
+      console.error("[Resend] Failed to send verification email.");
+      throw new Error("We could not send the verification email. Please try again later.");
+    }
+    return { sent: true };
+  },
+});
+
+/** Verify a 6-digit code. Returns only success/failure; never leaks the code or hash. */
+export const verifyOtp = action({
+  args: { otp: v.string() },
+  handler: async (ctx, { otp }): Promise<any> => {
+    return ctx.runMutation(internal.emailVerification.verifyEmailOtp, { otp });
+  },
+});
+
+/**
+ * Transactional helper for 6-digit code emails. Server-to-server only;
+ * never exposed to clients. Used for the wallet PIN reset flow.
+ */
+export const sendCodeEmail = internalAction({
+  args: {
+    to: v.string(),
+    otp: v.string(),
+    purpose: v.string(),
+    name: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const resend = getResendClient();
+    if (!resend) {
+      throw new Error("Email delivery is not configured. Please try again later.");
+    }
+    const from = getSenderEmail();
+    const safePurpose = String(args.purpose).replace(/[&<>"']/g, (char: string) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" } as Record<string, string>)[char] || char,
+    );
+    const html = getBaseEmailLayout(
+      "Lalao Verification Code",
+      `
+      <h2 style="font-size: 22px; font-weight: 800; color: #1a202c; margin-top: 0;">Verification Code</h2>
+      <p style="font-size: 15px; color: #4a5568; line-height: 1.5;">
+        Use the following one-time code to ${safePurpose} on Lalao:
       </p>
       <div style="text-align: center;">
         <div class="code-badge">${args.otp}</div>
       </div>
       <p style="font-size: 13px; color: #718096; line-height: 1.5; margin-bottom: 0;">
-        ⚠️ <strong>Security tip:</strong> This code is valid for <strong>10 minutes</strong>. Never share this code with anyone. Lalao staff will never ask for your verification code.
+        🔒 <strong>Security tip:</strong> This code is valid for <strong>10 minutes</strong>. Never share this code with anyone. Lalao staff will never ask for your verification code.
       </p>
-    `;
-
-    const html = getBaseEmailLayout("Lalao Verification Code", bodyHtml);
-
-    if (!resend) {
-      console.warn(`[Resend] RESEND_API_KEY is not configured in Convex environment variables. [MOCK OTP: ${args.otp}] to ${args.to}`);
-      return {
-        success: false,
-        mock: true,
-        message: "RESEND_API_KEY is not configured in Convex dashboard environment variables.",
-      };
+      `,
+    );
+    const response = await resend.emails.send({
+      from,
+      to: args.to,
+      subject: "Your Lalao verification code",
+      html,
+    });
+    if (response.error) {
+      console.error("[Resend] Failed to send verification code email.");
+      throw new Error("We could not send the verification code. Please try again later.");
     }
-
-    try {
-      const response = await resend.emails.send({
-        from: getSenderEmail(),
-        to: args.to,
-        subject: `Your Lalao verification code: ${args.otp}`,
-        html,
-      });
-
-      if (response.error) {
-        console.error("[Resend] Failed to send OTP:", response.error);
-        return { success: false, error: response.error.message };
-      }
-
-      return { success: true, id: response.data?.id };
-    } catch (err: any) {
-      console.error("[Resend] Unexpected exception sending OTP:", err);
-      return { success: false, error: err.message || "Failed to send email" };
-    }
+    return { sent: true };
   },
 });
 
-/**
- * Send password reset email
- */
+/** Send password reset email */
 export const sendPasswordResetEmail = action({
   args: {
     to: v.string(),

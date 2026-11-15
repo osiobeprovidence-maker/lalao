@@ -6,7 +6,7 @@ import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
-import { initiatePlaysoleLogin } from '../../lib/playsoleAuth';
+import { initiatePlaysoleLogin, PLAYSOLE_ENABLED } from '../../lib/playsoleAuth';
 
 const POST_LOGIN_REDIRECT_KEY = 'lalao_post_login_redirect';
 
@@ -35,6 +35,11 @@ export const LoginPage: React.FC = () => {
     setError('');
     setIsLoading(true);
     try {
+      if (!auth) {
+        setError('Authentication is not configured in this environment.');
+        setIsLoading(false);
+        return;
+      }
       const userCredential = await signInWithEmailAndPassword(auth, identifier.trim(), password);
       const readyUser = userCredential.user ?? auth.currentUser;
       if (!readyUser) {
@@ -229,7 +234,8 @@ export const LoginPage: React.FC = () => {
 
           {/* Social auth options */}
           <div className="space-y-2.5">
-            <button 
+            {PLAYSOLE_ENABLED && (
+            <button
               type="button"
               onClick={() => {
                 try {
@@ -255,11 +261,16 @@ export const LoginPage: React.FC = () => {
               />
               <span>Sign in with Playsole</span>
             </button>
+            )}
 
             <button 
               type="button"
               onClick={async () => {
                 try {
+                  if (!auth) {
+                    setError('Authentication is not configured in this environment.');
+                    return;
+                  }
                   const provider = new GoogleAuthProvider();
                   const credential = await signInWithPopup(auth, provider);
                   await credential.user.getIdToken(true);

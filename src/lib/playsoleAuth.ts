@@ -2,15 +2,27 @@
  * Playsole One OAuth 2.0 / OIDC Authentication Client
  * Conforms to RFC 7636 (PKCE), RFC 7009 (Token Revocation), and OIDC 1.0.
  * Specification: https://one.playsole.xyz/developers
+ *
+ * Configuration (fail-closed):
+ *   - `VITE_PLAYSOLE_ISSUER` + `VITE_PLAYSOLE_CLIENT_ID` must both be set for
+ *     Playsole to be enabled in this environment.
+ *   - Missing configuration -> PLAYSOLE_ENABLED = false (button hidden,
+ *     no network calls against any issuer).
+ *   - There is intentionally NO implicit production fallback.
  */
 
+const playsoleIssuer = import.meta.env.VITE_PLAYSOLE_ISSUER as string | undefined;
+const playsoleClientId = import.meta.env.VITE_PLAYSOLE_CLIENT_ID as string | undefined;
+
+export const PLAYSOLE_ENABLED = Boolean(playsoleIssuer && playsoleClientId);
+
 export const PLAYSOLE_CONFIG = {
-  issuer: 'https://one.playsole.xyz',
-  authorizeEndpoint: 'https://one.playsole.xyz/authorize',
-  tokenEndpoint: 'https://one.playsole.xyz/token',
-  userinfoEndpoint: 'https://one.playsole.xyz/userinfo',
-  revokeEndpoint: 'https://one.playsole.xyz/revoke',
-  clientId: ((import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.VITE_PLAYSOLE_CLIENT_ID) || 'lalao',
+  issuer: playsoleIssuer ?? '',
+  authorizeEndpoint: playsoleIssuer ? `${playsoleIssuer}/authorize` : '',
+  tokenEndpoint: playsoleIssuer ? `${playsoleIssuer}/token` : '',
+  userinfoEndpoint: playsoleIssuer ? `${playsoleIssuer}/userinfo` : '',
+  revokeEndpoint: playsoleIssuer ? `${playsoleIssuer}/revoke` : '',
+  clientId: playsoleClientId ?? '',
   scopes: 'openid profile email',
   storageKey: 'lalao_playsole_session',
   linkChallengeKey: 'lalao_playsole_link_challenge',
@@ -175,6 +187,7 @@ export function getPlaysoleRedirectUri(): string {
  * Redirects the user to Playsole's authorization screen with PKCE.
  */
 export async function initiatePlaysoleLogin(options?: { prompt?: 'select_account' | 'consent' | 'login'; loginHint?: string; linkChallenge?: string }): Promise<void> {
+  if (!PLAYSOLE_ENABLED) throw new Error('Playsole sign-in is not configured in this environment.');
   const verifier = generateCodeVerifier();
   const challenge = await generateCodeChallenge(verifier);
   const state = generateState();
@@ -251,6 +264,9 @@ export async function handlePlaysoleCallback(
   exchangeFn?: (args: { code: string; codeVerifier: string; redirectUri: string; nonce: string; intent: 'login' | 'link' }) => Promise<{ tokens: PlaysoleTokenResponse; userProfile?: PlaysoleUserProfile; loginStatus?: 'ready' | 'link_required' | 'email_verification_required' }>,
   options?: { persist?: boolean; intent?: 'login' | 'link' },
 ): Promise<PlaysoleSession> {
+  if (!PLAYSOLE_ENABLED) {
+    throw new Error('Playsole sign-in is not configured in this environment.');
+  }
   const expectedState = sessionStorage.getItem(PLAYSOLE_CONFIG.authStateKey);
   const expectedNonce = sessionStorage.getItem(PLAYSOLE_CONFIG.oidcNonceKey);
   const verifier = sessionStorage.getItem(PLAYSOLE_CONFIG.pkceVerifierKey);
@@ -387,6 +403,7 @@ export function savePlaysoleSession(session: PlaysoleSession): void {
  * Retrieve saved Playsole session from localStorage
  */
 export function getPlaysoleSession(): PlaysoleSession | null {
+  if (!PLAYSOLE_ENABLED) return null;
   try {
     const stored = sessionStorage.getItem(PLAYSOLE_CONFIG.storageKey)
       || localStorage.getItem(PLAYSOLE_CONFIG.storageKey);
@@ -533,6 +550,10 @@ export function clearPlaysoleSession(): void {
  * Revoke Playsole tokens (RFC 7009) and clear local session
  */
 export async function logoutPlaysole(): Promise<void> {
+  if (!PLAYSOLE_ENABLED) {
+    clearPlaysoleSession();
+    return;
+  }
   const session = getPlaysoleSession();
   if (session?.refreshToken) {
     try {

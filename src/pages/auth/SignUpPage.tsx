@@ -2,16 +2,17 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, MapPin, Users, Calendar, Chrome, Loader2 } from 'lucide-react';
 import { AppIcon } from '../../components/common/AppIcon';
-import { useMutation } from 'convex/react';
+import { useAction, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
-import { initiatePlaysoleLogin } from '../../lib/playsoleAuth';
+import { initiatePlaysoleLogin, PLAYSOLE_ENABLED } from '../../lib/playsoleAuth';
 
 export const SignUpPage: React.FC = () => {
   const navigate = useNavigate();
   const createUserRecord = useMutation(api.users.createUserRecord);
-  
+  const sendVerificationOtp = useAction(api.emails.sendOtpEmail);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -26,6 +27,11 @@ export const SignUpPage: React.FC = () => {
     setError('');
     setIsLoading(true);
     try {
+      if (!auth) {
+        setError('Authentication is not configured in this environment.');
+        setIsLoading(false);
+        return;
+      }
       const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
       const readyUser = userCredential.user ?? auth.currentUser;
       if (!readyUser) {
@@ -53,7 +59,14 @@ export const SignUpPage: React.FC = () => {
       }
       if (attempts >= 15) throw new Error('Server authentication timeout.');
 
-      navigate('/onboarding/phone');
+      try {
+        // Creates and emails a fresh verification code; the page below lets the user verify.
+        await sendVerificationOtp();
+      } catch (otpErr: any) {
+        // Never block signup on email delivery; the user can request a fresh code from /verify.
+        console.warn('Signup: failed to send verification email:', otpErr?.message ?? otpErr);
+      }
+      navigate('/verify', { state: { email: readyUser.email ?? undefined } });
     } catch (err: any) {
       if (err?.code === 'auth/email-already-in-use' || String(err?.message || '').includes('already use this email')) {
         setError('An account with this email already exists. Sign in using Google, Playsole One, or the sign-in method you used before.');
@@ -174,6 +187,7 @@ export const SignUpPage: React.FC = () => {
             </div>
 
             <div className="space-y-3">
+              {PLAYSOLE_ENABLED && (
               <button
                 type="button"
                 onClick={() => initiatePlaysoleLogin()}
@@ -189,11 +203,16 @@ export const SignUpPage: React.FC = () => {
                 />
                 <span>Sign in with Playsole</span>
               </button>
+              )}
 
               <button
                 type="button"
                 onClick={async () => {
                   try {
+                    if (!auth) {
+                      setError('Authentication is not configured in this environment.');
+                      return;
+                    }
                     const provider = new GoogleAuthProvider();
                     const credential = await signInWithPopup(auth, provider);
                     await credential.user.getIdToken(true);

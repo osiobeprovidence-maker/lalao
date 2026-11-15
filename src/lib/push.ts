@@ -1,10 +1,8 @@
-// Canonical Lalao VAPID public key (paired with VAPID_PRIVATE_KEY in Convex backend)
-const DEFAULT_VAPID_PUBLIC_KEY =
-  "BAjkYX23KqM0DcnuFYUnH5SFGywAi7LAJSQ6sdf9VwFXy1jKmH2nf91iSA1V-Y2icFnfgkWUIyxK3A9nuDutDSQ";
-
 const VAPID_KEY =
   (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) ||
-  DEFAULT_VAPID_PUBLIC_KEY;
+  undefined;
+
+export const WEB_PUSH_ENABLED = Boolean(VAPID_KEY);
 
 /**
  * Converts a base64 string to a Uint8Array.
@@ -29,9 +27,14 @@ function urlBase64ToUint8Array(base64String: string) {
  * Request notification permission, register the native Web Push service worker,
  * and return the Web Push Subscription.
  *
- * Returns null if permission is denied or the browser doesn't support push.
+ * Returns null if permission is denied, the browser doesn't support push,
+ * or VAPID is not configured for this environment.
  */
 export async function getOrRequestWebPushSubscription(): Promise<PushSubscription | null> {
+  if (!WEB_PUSH_ENABLED) {
+    console.info("[push] VITE_VAPID_PUBLIC_KEY not set; web push disabled in this environment.");
+    return null;
+  }
   if (!("Notification" in window) || !("serviceWorker" in navigator)) {
     console.warn("[push] Push notifications not supported in this browser.");
     return null;

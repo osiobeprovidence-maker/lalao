@@ -24,6 +24,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   isPlaysoleAuth: boolean;
+  authError: string | null;
   fetchAccessToken: (args: { forceRefreshToken: boolean }) => Promise<string | null>;
   logout: () => Promise<void>;
 }
@@ -33,6 +34,7 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   isAuthenticated: false,
   isPlaysoleAuth: false,
+  authError: null,
   fetchAccessToken: async () => null,
   logout: async () => {},
 });
@@ -57,8 +59,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // Listen to Firebase Auth state
+  // Listen to Firebase Auth state (only when Firebase is configured for this environment)
   useEffect(() => {
+    if (!auth) {
+      setIsLoading(false);
+      return undefined;
+    }
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setFirebaseUser(currentUser);
       setIsLoading(false);
@@ -93,9 +99,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // 2. Fallback to Firebase user if active
-    if (firebaseUser ?? auth.currentUser) {
+    if (firebaseUser ?? auth?.currentUser) {
       try {
-        const u = firebaseUser ?? auth.currentUser;
+        const u = firebaseUser ?? auth?.currentUser;
         return await u!.getIdToken(forceRefreshToken);
       } catch (error) {
         console.warn('Error fetching Firebase token:', error);
@@ -126,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      if (firebaseUser) {
+      if (firebaseUser && auth) {
         await signOut(auth);
       }
     } catch (e) {
@@ -153,6 +159,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading,
     isAuthenticated: !!unifiedUser,
     isPlaysoleAuth: isPlaysole,
+    authError: null,
     fetchAccessToken,
     logout,
   }), [unifiedUser, isLoading, isPlaysole, fetchAccessToken, logout]);

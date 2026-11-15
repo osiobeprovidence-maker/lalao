@@ -1,4 +1,5 @@
 import { getUserByAuthIdentity, getUserByTokenIdentifier } from "./lib/authIdentity";
+import { generateOtpCode, hashOtpCode, timingSafeHexEqual } from "./lib/emailOtpSecurity";
 import { mutation, query, action, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { internal, api } from "./_generated/api";
@@ -188,27 +189,27 @@ export const requestPinResetOtp = action({
       throw new Error("No verified email address associated with your account.");
     }
 
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate 6-digit CSPRNG OTP
+    const otp = generateOtpCode();
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
     await ctx.runMutation(internal.wallet.storePinResetOtp, {
       userId: user._id,
-      otp,
+      otp: await hashOtpCode(otp),
       expiresAt,
     });
 
-    // Send via Resend
-    const res: any = await ctx.runAction(api.emails.sendOtpEmail, {
+    // Send via Resend (server-to-server action only)
+    await ctx.runAction(internal.emails.sendCodeEmail, {
       to: email,
       otp,
       purpose: "reset your transaction security PIN",
+      name: user.name,
     });
 
     return {
       success: true,
       email: email.replace(/(.{2})(.*)(?=@)/, (_gp: string, a: string, b: string) => a + "*".repeat(b.length)),
-      mock: res?.mock,
     };
   },
 });
@@ -241,7 +242,9 @@ export const resetWalletPinWithOtp = mutation({
       throw new Error("Verification code has expired. Please request a new code.");
     }
 
-    if (wallet.pinResetOtp.trim() !== args.otp.trim()) {
+    const storedHash = wallet.pinResetOtp ?? "";
+    const candidateHash = await hashOtpCode(args.otp);
+    if (!timingSafeHexEqual(candidateHash, storedHash)) {
       throw new Error("Invalid verification code. Please check your email and try again.");
     }
 

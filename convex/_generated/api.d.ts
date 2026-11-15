@@ -27,6 +27,7 @@ import type * as cycles from "../cycles.js";
 import type * as debug from "../debug.js";
 import type * as ecommerce from "../ecommerce.js";
 import type * as egg from "../egg.js";
+import type * as emailVerification from "../emailVerification.js";
 import type * as emails from "../emails.js";
 import type * as gifts from "../gifts.js";
 import type * as groupAccess from "../groupAccess.js";
@@ -100,6 +101,7 @@ declare const fullApi: ApiFromModules<{
   debug: typeof debug;
   ecommerce: typeof ecommerce;
   egg: typeof egg;
+  emailVerification: typeof emailVerification;
   emails: typeof emails;
   gifts: typeof gifts;
   groupAccess: typeof groupAccess;

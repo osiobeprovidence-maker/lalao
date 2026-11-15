@@ -144,6 +144,9 @@ export default defineSchema({
 
     // Administrative test/demo account marker
     is_test_account: v.optional(v.boolean()),
+
+    // Email verification — set only after a server-side OTP check succeeds.
+    emailVerifiedAt: v.optional(v.number()),
   })
     .index("by_token", ["tokenIdentifier"])
     .index("by_email", ["email"])
@@ -196,6 +199,19 @@ export default defineSchema({
     key: v.string(),
     sentAt: v.number(),
   }).index("by_key", ["key"]),
+
+  // Short-lived email verification codes (6-digit) with server-side attempt limits.
+  emailVerificationOtps: defineTable({
+    userId: v.id("users"),
+    email: v.string(),
+    codeHash: v.string(),
+    attempts: v.number(),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+    consumedAt: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_created", ["userId", "createdAt"]),
 
   authIdentityBackfillConflicts: defineTable({
     userId: v.id("users"),

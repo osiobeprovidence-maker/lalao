@@ -14,7 +14,7 @@ import {
   signOut,
   updateCurrentUser,
 } from 'firebase/auth';
-import { initiatePlaysoleLogin } from '../../lib/playsoleAuth';
+import { initiatePlaysoleLogin, PLAYSOLE_ENABLED } from '../../lib/playsoleAuth';
 
 interface SecurityAuthSubpageProps {
   onBack: () => void;
@@ -35,7 +35,7 @@ export const SecurityAuthSubpage: React.FC<SecurityAuthSubpageProps> = ({ onBack
   const beginAuthLink = useMutation(api.playsole.beginAuthLink);
 
   const currentPhone = currentUser.phone || currentUser.phoneNumber;
-  const firebaseProviders = auth.currentUser?.providerData.map((provider) => provider.providerId) || [];
+  const firebaseProviders = auth?.currentUser?.providerData.map((provider) => provider.providerId) || [];
   const hasFirebaseMapping = linkedMethods.some((method) => method.provider === 'firebase');
   const hasPlaysoleMapping = linkedMethods.some((method) => method.provider === 'playsole');
   const hasGoogle = hasFirebaseMapping && (firebaseProviders.includes('google.com') || linkedMethods.some((method) => method.provider === 'firebase' && method.methods?.includes('google.com')));
@@ -59,6 +59,10 @@ export const SecurityAuthSubpage: React.FC<SecurityAuthSubpageProps> = ({ onBack
   };
 
   const linkPlaysole = async () => {
+    if (!PLAYSOLE_ENABLED) {
+      setLinkError('Playsole sign-in is not configured in this environment.');
+      return;
+    }
     if (!window.confirm('Link Playsole One to this Lalao account? You will authenticate with Playsole next.')) return;
     setIsLinking(true);
     setLinkError('');
@@ -75,6 +79,11 @@ export const SecurityAuthSubpage: React.FC<SecurityAuthSubpageProps> = ({ onBack
     if (!window.confirm('Link Google to this Lalao account? You will authenticate with Google next.')) return;
     setIsLinking(true);
     setLinkError('');
+    if (!auth) {
+      setLinkError('Authentication is not configured in this environment.');
+      setIsLinking(false);
+      return;
+    }
     const originalFirebaseUser = auth.currentUser;
     try {
       const challenge = await beginAuthLink({ targetProvider: 'firebase' });
@@ -97,6 +106,11 @@ export const SecurityAuthSubpage: React.FC<SecurityAuthSubpageProps> = ({ onBack
     if (!window.confirm('Link this email/password sign-in to the current Lalao account?')) return;
     setIsLinking(true);
     setLinkError('');
+    if (!auth) {
+      setLinkError('Authentication is not configured in this environment.');
+      setIsLinking(false);
+      return;
+    }
     const originalFirebaseUser = auth.currentUser;
     try {
       const challenge = await beginAuthLink({ targetProvider: 'firebase' });
@@ -163,7 +177,7 @@ export const SecurityAuthSubpage: React.FC<SecurityAuthSubpageProps> = ({ onBack
                   {hasPlaysoleMapping ? 'Linked to this Lalao account' : linkedMethodsLoading ? 'Checking linked methods…' : 'Not linked'}
                 </div>
               </div>
-              {!linkedMethodsLoading && !hasPlaysoleMapping && (
+              {!linkedMethodsLoading && !hasPlaysoleMapping && PLAYSOLE_ENABLED && (
                 <button type="button" onClick={linkPlaysole} disabled={isLinking} className="px-3 py-2 rounded-xl bg-[#5E43F3]/10 text-[#5E43F3] text-xs font-bold disabled:opacity-50">
                   {isLinking ? 'Opening…' : 'Link Playsole'}
                 </button>

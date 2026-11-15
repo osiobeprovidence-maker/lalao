@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { ArrowLeft, Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { AppIcon } from '../../components/common/AppIcon';
@@ -6,18 +6,21 @@ import { useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
 const OTP_LENGTH = 6;
+const RESEND_COOLDOWN_SECONDS = 60;
 
 export const OTPVerifyPage: React.FC = () => {
   const navigate = useNavigate();
-  const sendResendOtp = useAction(api.emails.sendOtpEmail);
+  const sendVerificationOtp = useAction(api.emails.sendOtpEmail);
+  const verifyOtp = useAction(api.emails.verifyOtp);
   const { state } = useLocation();
-  const email = (state as any)?.email || 'your email';
+  const email = (state as any)?.email ?? '';
 
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [isLoading, setIsLoading] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(59);
+  const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN_SECONDS);
   const [error, setError] = useState('');
   const [verified, setVerified] = useState(false);
+  const [sending, setSending] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Countdown timer for resend
@@ -57,42 +60,67 @@ export const OTPVerifyPage: React.FC = () => {
 
   const handleVerify = async () => {
     const code = otp.join('');
-    if (code.length < OTP_LENGTH) { setError('Please enter all 6 digits.'); return; }
-    setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setIsLoading(false);
-    // Simulate correct OTP
-    if (code === '000000') {
-      setError('Incorrect code. Please try again.');
+    if (code.length !== OTP_LENGTH) {
+      setError('Please enter all 6 digits.');
       return;
     }
-    setVerified(true);
-    setTimeout(() => navigate('/app'), 1500);
+    setIsLoading(true);
+    setError('');
+    try {
+      const result = await verifyOtp({ otp: code });
+      if (result.verified) {
+        setVerified(true);
+        setTimeout(() => navigate('/onboarding/phone'), 1200);
+        return;
+      }
+      switch (result.reason) {
+        case 'expired':
+          setError('That code has expired. Please request a new one.');
+          break;
+        case 'attempts_exceeded':
+          setError('Too many attempts. Please request a new code.');
+          break;
+        default:
+          setError('Incorrect code. Please check and try again.');
+      }
+      setOtp(Array(OTP_LENGTH).fill(''));
+      inputRefs.current[0]?.focus();
+    } catch (err: any) {
+      setError(err?.message || 'Could not verify the code. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleResend = async () => {
-    if (resendCooldown > 0) return;
-    setResendCooldown(59);
+    if (resendCooldown > 0 || sending) return;
+    setSending(true);
+    setError('');
     setOtp(Array(OTP_LENGTH).fill(''));
     inputRefs.current[0]?.focus();
 
-    if (email && email.includes('@')) {
-      const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-      try {
-        await sendResendOtp({
-          to: email,
-          otp: generatedOtp,
-          purpose: 'verify your account',
-        });
-      } catch (err) {
-        console.error('[Auth] Failed to dispatch OTP email:', err);
+    try {
+      await sendVerificationOtp({});
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+    } catch (err: any) {
+      const message = String(err?.message ?? err ?? '');
+      if (message.includes('Please wait before requesting another code')) {
+        setResendCooldown(RESEND_COOLDOWN_SECONDS);
       }
+      setError(message.includes('Too many codes')
+        ? 'Too many codes requested. Please try again later.'
+        : message.includes('Please wait')
+          ? 'Please wait a moment before requesting another code.'
+          : 'Could not send the verification code. Please try again.');
+    } finally {
+      setSending(false);
     }
   };
 
-  const maskedEmail = email.includes('@')
-    ? email.replace(/(.{2})(.+)(@.+)/, (_, a: string, b: string, c: string) => a + '*'.repeat(b.length) + c)
-    : email;
+  const maskedEmail = useMemo(() => {
+    if (!email || !email.includes('@')) return 'your email address';
+    return email.replace(/(.{2})(.+)(@.+)/, (_, a: string, b: string, c: string) => a + '*'.repeat(b.length) + c);
+  }, [email]);
 
   return (
     <div className="min-h-screen bg-theme-surface flex flex-col items-center justify-center px-6 py-12">
@@ -128,7 +156,7 @@ export const OTPVerifyPage: React.FC = () => {
           </h1>
           <p className="text-theme-tertiary text-sm leading-relaxed">
             {verified
-              ? 'Setting up your Lalao profile...'
+              ? 'Your email is verified. Setting up your Lalao profile…'
               : (
                 <>
                   We sent a 6-digit code to{' '}
@@ -149,6 +177,7 @@ export const OTPVerifyPage: React.FC = () => {
                   id={`otp-input-${i}`}
                   type="text"
                   inputMode="numeric"
+                  autoComplete="one-time-code"
                   maxLength={1}
                   value={digit}
                   onChange={(e) => handleChange(i, e.target.value)}
@@ -157,8 +186,8 @@ export const OTPVerifyPage: React.FC = () => {
                     error
                       ? 'border-red-400 bg-red-50 text-red-700'
                       : digit
-                      ? 'border-[#5E43F3] bg-indigo-50/50 text-[#5E43F3]'
-                      : 'border-theme-divider bg-theme-base text-theme-primary focus:border-[#5E43F3] focus:ring-2 focus:ring-[#5E43F3]/20'
+                        ? 'border-[#5E43F3] bg-indigo-50/50 text-[#5E43F3]'
+                        : 'border-theme-divider bg-theme-base text-theme-primary focus:border-[#5E43F3] focus:ring-2 focus:ring-[#5E43F3]/20'
                   }`}
                 />
               ))}
@@ -166,14 +195,14 @@ export const OTPVerifyPage: React.FC = () => {
 
             {/* Error */}
             {error && (
-              <p className="text-sm font-semibold text-red-600 -mt-4">{error}</p>
+              <p role="alert" className="text-sm font-semibold text-red-600 -mt-4">{error}</p>
             )}
 
             {/* Verify Button */}
             <button
               type="button"
               onClick={handleVerify}
-              disabled={isLoading || otp.join('').length < OTP_LENGTH}
+              disabled={isLoading || otp.join('').length !== OTP_LENGTH}
               className="w-full py-3.5 rounded-xl bg-[#5E43F3] hover:bg-[#4E34E0] text-white font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-[#5E43F3]/25 disabled:opacity-50 cursor-pointer"
             >
               {isLoading ? (
@@ -189,13 +218,13 @@ export const OTPVerifyPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleResend}
-                disabled={resendCooldown > 0}
+                disabled={resendCooldown > 0 || sending}
                 className={`font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                  resendCooldown > 0 ? 'text-theme-tertiary' : 'text-[#5E43F3] hover:text-[#4E34E0]'
+                  resendCooldown > 0 || sending ? 'text-theme-tertiary' : 'text-[#5E43F3] hover:text-[#4E34E0]'
                 }`}
               >
-                <RefreshCw className="w-3.5 h-3.5" />
-                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
+                <RefreshCw className={`w-3.5 h-3.5 ${sending ? 'animate-spin' : ''}`} />
+                {sending ? 'Sending…' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
               </button>
             </div>
           </>

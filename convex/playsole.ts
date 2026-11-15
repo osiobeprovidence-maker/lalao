@@ -256,10 +256,10 @@ export const backfillAuthIdentities = internalMutation({
  * deployment environment, never in the browser bundle.
  */
 function playsoleClientCredentials(): { clientId: string; clientSecret: string } {
-  const clientId = process.env.PLAYSOLE_CLIENT_ID || process.env.VITE_PLAYSOLE_CLIENT_ID || "lalao";
+  const clientId = process.env.PLAYSOLE_CLIENT_ID || process.env.VITE_PLAYSOLE_CLIENT_ID;
   const clientSecret = process.env.PLAYSOLE_CLIENT_SECRET;
-  if (!clientSecret) {
-    console.error("[playsole] PLAYSOLE_CLIENT_SECRET is not configured on this Convex deployment.");
+  if (!clientId || !clientSecret) {
+    console.error("[playsole] Playsole credentials are not configured on this Convex deployment (PLAYSOLE_CLIENT_ID / PLAYSOLE_CLIENT_SECRET).");
     throw new Error("Playsole sign-in is not configured on this deployment. Please contact Lalao support.");
   }
   return { clientId, clientSecret };

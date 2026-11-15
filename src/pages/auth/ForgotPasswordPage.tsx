@@ -27,7 +27,9 @@ export const ForgotPasswordPage: React.FC = () => {
       if (cleanId.includes('@')) {
         // Trigger Firebase auth reset if registered
         try {
-          await firebaseSendPasswordReset(auth, cleanId);
+          if (auth) {
+            await firebaseSendPasswordReset(auth, cleanId);
+          }
         } catch (fbErr) {
           console.warn('[Auth] Firebase password reset notice:', fbErr);
         }

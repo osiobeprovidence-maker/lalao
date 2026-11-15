@@ -50,9 +50,9 @@ export const dispatchPush = internalAction({
 
     // 1. OneSignal REST API dispatch (preferred when ONESIGNAL_REST_API_KEY is configured)
     const oneSignalApiKey = process.env.ONESIGNAL_REST_API_KEY;
-    const oneSignalAppId = process.env.ONESIGNAL_APP_ID || "0da46499-22a0-4035-8dfa-49f4395367da";
+    const oneSignalAppId = process.env.ONESIGNAL_APP_ID;
 
-    if (oneSignalApiKey) {
+    if (oneSignalApiKey && oneSignalAppId) {
       try {
         const baseUrl = process.env.APP_URL || process.env.VITE_APP_URL || "https://www.lalao.website";
         const defaultAppIcon = `${baseUrl}/icon-192.png`;

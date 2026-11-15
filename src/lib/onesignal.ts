@@ -12,9 +12,8 @@
  * - Safe deep link notification click navigation
  */
 
-export const ONESIGNAL_APP_ID =
-  (import.meta.env.VITE_ONESIGNAL_APP_ID as string | undefined) ||
-  "0da46499-22a0-4035-8dfa-49f4395367da";
+export const ONESIGNAL_ENABLED = Boolean(import.meta.env.VITE_ONESIGNAL_APP_ID);
+export const ONESIGNAL_APP_ID = import.meta.env.VITE_ONESIGNAL_APP_ID as string | undefined;
 
 declare global {
   interface Window {
@@ -59,6 +58,10 @@ function loadOneSignalScript(): Promise<void> {
 export async function initOneSignal(options?: {
   onNotificationClick?: (url: string) => void;
 }): Promise<any> {
+  if (!ONESIGNAL_ENABLED) {
+    console.info("[OneSignal] VITE_ONESIGNAL_APP_ID not set; push disabled in this environment.");
+    return null;
+  }
   if (typeof window === "undefined") return null;
 
   if (window.__onesignal_init_promise__) {
@@ -75,7 +78,7 @@ export async function initOneSignal(options?: {
           try {
             if (!window.__onesignal_initialized__) {
               await OneSignal.init({
-                appId: ONESIGNAL_APP_ID,
+                appId: ONESIGNAL_APP_ID!,
                 allowLocalhostAsSecureOrigin: import.meta.env.DEV,
                 serviceWorkerPath: "OneSignalSDKWorker.js",
               });
@@ -130,7 +133,7 @@ let lastBoundUserId: string | null = null;
  * Automatically ensures push subscription is opted in if browser permission is already granted.
  */
 export async function setOneSignalUser(userId: string): Promise<void> {
-  if (typeof window === "undefined" || !userId) return;
+  if (typeof window === "undefined" || !userId || !ONESIGNAL_ENABLED) return;
 
   lastBoundUserId = userId;
   await initOneSignal();
@@ -180,7 +183,7 @@ export async function setOneSignalUser(userId: string): Promise<void> {
  * Clears the user identity association on sign-out without deleting device subscriptions.
  */
 export async function clearOneSignalUser(): Promise<void> {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || !ONESIGNAL_ENABLED) return;
 
   await initOneSignal();
 
@@ -202,6 +205,7 @@ export async function clearOneSignalUser(): Promise<void> {
  * Separate from initialization.
  */
 export async function requestOneSignalPushPermission(): Promise<boolean> {
+  if (!ONESIGNAL_ENABLED) return false;
   if (typeof window === "undefined" || !("Notification" in window)) {
     return false;
   }
@@ -238,7 +242,7 @@ export async function getOneSignalSubscriptionState(): Promise<{
   pushToken?: string;
   permission: NotificationPermission | "unsupported";
 }> {
-  if (typeof window === "undefined" || !("Notification" in window)) {
+  if (!ONESIGNAL_ENABLED || typeof window === "undefined" || !("Notification" in window)) {
     return { isOptedIn: false, permission: "unsupported" };
   }
 

@@ -1,47 +1,45 @@
-import { initializeApp } from "firebase/app";
-import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { getMessaging, getToken, onMessage, Messaging } from "firebase/messaging";
+import { initializeApp, type FirebaseApp } from "firebase/app";
+import { getAuth, setPersistence, browserLocalPersistence, type Auth } from "firebase/auth";
+import { getStorage, ref, uploadBytes, getDownloadURL, type FirebaseStorage } from "firebase/storage";
+import { getMessaging, getToken, onMessage, type Messaging } from "firebase/messaging";
+import { buildFirebaseConfig } from "./firebaseConfig";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBv_Cf6i4RvL2pikdVhGb8cHUDKYpjjSRA",
-  authDomain: "uselalaoapp.firebaseapp.com",
-  projectId: "uselalaoapp",
-  storageBucket: "uselalaoapp.appspot.com",
-  messagingSenderId: "853680775586",
-  appId: "1:853680775586:web:1d3beaf2dd0c8dec35d2fb"
-};
+const configured = buildFirebaseConfig();
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// True only when Firebase is explicitly configured (production flag or preview credentials).
+export const FIREBASE_ENABLED = configured !== null;
 
-// Initialize Firebase Auth
-export const auth = getAuth(app);
-setPersistence(auth, browserLocalPersistence).catch(console.error);
+// Initialize Firebase only when explicitly configured. When unconfigured, the
+// exported handles are null-like so consumers must check FIREBASE_ENABLED and
+// must not attempt network calls against production infrastructure.
+const app: FirebaseApp | null = configured ? initializeApp(configured) : null;
 
-// Initialize Firebase Storage using the canonical default bucket for this project.
-// The legacy .firebasestorage.app alias can trigger upload CORS failures for some projects.
-export const storage = getStorage(app, "gs://uselalaoapp.appspot.com");
+export const auth: Auth | null = app ? getAuth(app) : null;
+
+export function isFirebaseReady(): boolean {
+  return app !== null;
+}
+
+if (app && auth) {
+  setPersistence(auth, browserLocalPersistence).catch(console.error);
+}
+
+export const storage: FirebaseStorage | null = app ? getStorage(app, configured!.storageBucket) : null;
 
 export const uploadFileToStorage = async (file: File, folder: string) => {
+  if (!app || !storage) throw new Error("Firebase storage is not configured in this environment.");
   const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9_.-]/g, "_")}`;
   const storageRef = ref(storage, `${folder}/${safeName}`);
   await uploadBytes(storageRef, file);
   return getDownloadURL(storageRef);
 };
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   FIREBASE CLOUD MESSAGING
-   ───────────────────────────────────────────────────────────────────────────── */
-
-// VAPID key for FCM Web Push — get this from:
-// Firebase Console → Project Settings → Cloud Messaging → Web Push certificates → Key pair
-// Store in VITE_FIREBASE_VAPID_KEY in your .env.local
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY as string | undefined;
 
 let _messaging: Messaging | null = null;
 
 function getFirebaseMessaging(): Messaging | null {
+  if (!app) return null;
   if (_messaging) return _messaging;
   try {
     _messaging = getMessaging(app);
@@ -61,6 +59,14 @@ export { onMessage, getFirebaseMessaging };
  * Returns null if permission is denied or the browser doesn't support push.
  */
 export async function getOrRequestFcmToken(): Promise<string | null> {
+  if (!app) {
+    console.info("[fcm] Firebase not configured; push disabled in this environment.");
+    return null;
+  }
+  if (!VAPID_KEY) {
+    console.info("[fcm] VITE_FIREBASE_VAPID_KEY not set; FCM push disabled in this environment.");
+    return null;
+  }
   if (!("Notification" in window) || !("serviceWorker" in navigator)) {
     console.warn("[fcm] Push notifications not supported in this browser.");
     return null;
@@ -93,4 +99,3 @@ export async function getOrRequestFcmToken(): Promise<string | null> {
     return null;
   }
 }
-
