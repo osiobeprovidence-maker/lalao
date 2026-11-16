@@ -170,6 +170,7 @@ const LalaoAppContent: React.FC = () => {
     setActiveSoundId,
     isCreateSoundOpen,
     setIsCreateSoundOpen,
+    activeChatId,
     setActiveChatId,
   } = useLalao();
   const mainRef = useRef<HTMLElement>(null);
