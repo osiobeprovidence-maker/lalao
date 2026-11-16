@@ -119,19 +119,20 @@ export const MyTicketsModal: React.FC = () => {
                 </div>
                 <h3 className="text-sm font-bold text-theme-primary">No active tickets found</h3>
                 <p className="text-xs text-theme-tertiary max-w-xs mx-auto mt-1">
-                  You do not have any upcoming event passes. Explore events by Honor of Kings to
-                  attend live gaming nights and tournaments.
+                  You do not have any upcoming event passes yet.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMyTicketsOpen(false);
-                    openHonorOfKingsPage();
-                  }}
-                  className="mt-4 px-4 py-2 rounded-xl bg-[#5E43F3] text-white text-xs font-bold"
-                >
-                  Explore Events
-                </button>
+                {import.meta.env.DEV && import.meta.env.VITE_DEMO_ESPORTS === 'true' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMyTicketsOpen(false);
+                      openHonorOfKingsPage();
+                    }}
+                    className="mt-4 px-4 py-2 rounded-xl bg-[#5E43F3] text-white text-xs font-bold"
+                  >
+                    Explore Events
+                  </button>
+                )}
               </div>
             ) : (
               activeTickets.map((t) => (
