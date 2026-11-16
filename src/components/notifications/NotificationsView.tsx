@@ -11,9 +11,7 @@ import {
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { NotificationItem } from '../../types';
-import { SEED_NOTIFICATIONS } from '../../data/seedData';
-import { VerificationBadge } from '../common/VerificationBadge';
-import { getPublicIdentityLabel } from '../common/UserIdentity';
+import { UserIdentity } from '../common/UserIdentity';
 import { PaymentHistoryTab } from './PaymentHistoryTab';
 import { PushNotificationSettings } from './PushNotificationSettings';
 
@@ -35,7 +33,7 @@ export const NotificationsView: React.FC = () => {
   const now = Date.now();
   const oneDayMs = 24 * 60 * 60 * 1000;
 
-  const rawNotifications = (notifications && notifications.length > 0) ? notifications : SEED_NOTIFICATIONS;
+  const rawNotifications = notifications ?? [];
   // Social feed is strictly for social and system events (likes, comments, follows, mentions, alerts).
   const safeNotifications = rawNotifications.filter((n) => n.type !== 'message');
   const todayNotifs = safeNotifications.filter((n) => {
@@ -181,7 +179,9 @@ export const NotificationsView: React.FC = () => {
 
                         <div className="min-w-0 flex-1">
                           <p className="text-xs leading-snug">
-                            <span className="font-bold text-theme-primary">{notif.actor ? getPublicIdentityLabel(notif.actor) : 'Lalao'} <VerificationBadge user={notif.actor} size="xs" className="ml-0.5" asSpan /></span>{' '}
+                            {notif.actor
+                              ? <UserIdentity user={notif.actor} className="font-bold text-theme-primary" badgeSize="xs" />
+                              : <span className="font-bold text-theme-primary">Lalao</span>}{' '}
                             <span className="text-theme-secondary">{notif.text}</span>
                           </p>
                           {notif.targetExcerpt && (
@@ -235,7 +235,9 @@ export const NotificationsView: React.FC = () => {
 
                         <div className="min-w-0 flex-1">
                           <p className="text-xs leading-snug">
-                            <span className="font-bold text-theme-primary">{notif.actor ? getPublicIdentityLabel(notif.actor) : 'Lalao'} <VerificationBadge user={notif.actor} size="xs" className="ml-0.5" asSpan /></span>{' '}
+                            {notif.actor
+                              ? <UserIdentity user={notif.actor} className="font-bold text-theme-primary" badgeSize="xs" />
+                              : <span className="font-bold text-theme-primary">Lalao</span>}{' '}
                             <span className="text-theme-secondary">{notif.text}</span>
                           </p>
                           {notif.targetExcerpt && (
