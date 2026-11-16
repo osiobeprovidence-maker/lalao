@@ -1,10 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   ArrowLeft,
-  X,
   Heart,
   Check,
-  Infinity,
   MessageCircle,
   UserPlus,
   Zap,
@@ -14,8 +12,7 @@ import {
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from './Avatar';
 import { NotificationItem } from '../../types';
-import { SEED_NOTIFICATIONS } from '../../data/seedData';
-import { VerificationBadge } from './VerificationBadge';
+import { UserIdentity } from './UserIdentity';
 import { PaymentHistoryTab } from '../notifications/PaymentHistoryTab';
 
 interface SuggestedAccount {
@@ -51,7 +48,6 @@ export const NotificationsModal: React.FC = () => {
 
   const [suggestions, setSuggestions] = useState<SuggestedAccount[]>([]);
   const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
-  const [isFeaturedDismissed, setIsFeaturedDismissed] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'suggested' | 'activity' | 'payments'>('all');
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -125,7 +121,7 @@ export const NotificationsModal: React.FC = () => {
     }
   };
 
-  const rawNotifications = (notifications && notifications.length > 0) ? notifications : SEED_NOTIFICATIONS;
+  const rawNotifications = notifications ?? [];
   // Social notification modal is strictly for social and system events (likes, comments, follows, mentions, alerts).
   const safeNotifications = rawNotifications.filter((n) => n.type !== 'message');
 
@@ -241,44 +237,6 @@ export const NotificationsModal: React.FC = () => {
             </div>
           )}
 
-          {/* SECTION 1: FEATURED (from inspo screenshot) */}
-          {activeFilter !== 'payments' && (activeFilter === 'all' || activeFilter === 'suggested') && !isFeaturedDismissed && (
-            <div className="pb-2">
-              <div className="px-4 pt-4 pb-2">
-                <h2 className="text-lg font-bold text-theme-primary tracking-tight">
-                  Featured
-                </h2>
-              </div>
-
-              <div className="px-4 py-2 hover:bg-theme-base transition-colors flex items-start gap-3.5 group">
-                {/* Accounts Center / Meta-style Infinity Loop Icon */}
-                <div className="w-12 h-12 rounded-full bg-theme-surface-hover flex items-center justify-center text-theme-primary shrink-0 border border-theme-divider/60 shadow-2xs">
-                  <Infinity className="w-6 h-6 stroke-[2.2]" />
-                </div>
-
-                <div className="flex-1 min-w-0 pr-1">
-                  <p className="text-xs text-theme-primary leading-relaxed font-normal">
-                    We updated your settings after 1 account was added to the same Accounts Center.
-                  </p>
-                  <span className="text-[11px] text-theme-tertiary font-medium mt-1 block">
-                    2h
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setIsFeaturedDismissed(true)}
-                  className="text-theme-tertiary hover:text-theme-secondary p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                  title="Dismiss"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
-
-
           {/* SECTION 3: RECENT NOTIFICATIONS / ACTIVITY */}
           {activeFilter !== 'payments' && (activeFilter === 'all' || activeFilter === 'activity') && (
             <div className="py-2">
@@ -317,9 +275,9 @@ export const NotificationsModal: React.FC = () => {
 
                         <div className="flex-1 min-w-0">
                           <p className="text-xs leading-snug">
-                            <span className="text-theme-primary font-bold">
-                              {notif.actor?.name || 'Lalao'} <VerificationBadge user={notif.actor} size="xs" className="ml-0.5" />
-                            </span>{' '}
+                            {notif.actor
+                              ? <UserIdentity user={notif.actor} className="text-theme-primary font-bold" badgeSize="xs" />
+                              : <span className="text-theme-primary font-bold">Lalao</span>}{' '}
                             <span className="text-theme-secondary">{notif.text}</span>
                           </p>
 
@@ -431,9 +389,9 @@ export const NotificationsModal: React.FC = () => {
 
                         <div className="flex-1 min-w-0">
                           <p className="text-xs leading-snug">
-                            <span className="text-theme-primary font-bold">
-                              {notif.actor?.name || 'Lalao'} <VerificationBadge user={notif.actor} size="xs" className="ml-0.5" />
-                            </span>{' '}
+                            {notif.actor
+                              ? <UserIdentity user={notif.actor} className="text-theme-primary font-bold" badgeSize="xs" />
+                              : <span className="text-theme-primary font-bold">Lalao</span>}{' '}
                             <span className="text-theme-secondary">{notif.text}</span>
                           </p>
 

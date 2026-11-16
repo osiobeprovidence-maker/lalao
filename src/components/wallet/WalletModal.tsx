@@ -207,17 +207,9 @@ export const WalletModal: React.FC = () => {
   const [fundingStatusMessage, setFundingStatusMessage] = useState('');
   const [activePaymentRef, setActivePaymentRef] = useState<string>('');
 
-  // Withdrawal Mock State
-  const [withdrawalAccounts, setWithdrawalAccounts] = useState<WithdrawalAccount[]>([
-    {
-      id: 'mock1',
-      accountName: 'John Doe',
-      bankName: 'First Bank',
-      accountNumber: '0123456789',
-      status: 'verified',
-      isDefault: true
-    }
-  ]);
+  // Withdrawal accounts: genuine, user-entered accounts only.
+  // Never seed or display fictional bank accounts.
+  const [withdrawalAccounts, setWithdrawalAccounts] = useState<WithdrawalAccount[]>([]);
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
   const [isRefreshingAccounts, setIsRefreshingAccounts] = useState(false);
   const [accountForm, setAccountForm] = useState({ name: '', bank: '', number: '' });
