@@ -311,7 +311,6 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                     handleAuthorClick();
                   }}
                   className="font-bold text-[14.5px] text-theme-primary hover:underline cursor-pointer truncate tracking-tight"
-                  prefixUsername
                 />
                 {author.badge && <Badge type={author.badge} />}
 
