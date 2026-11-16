@@ -1,5 +1,6 @@
 export const PLAYSOLE_ISSUER = "https://one.playsole.xyz";
 export const FIREBASE_ISSUER = "https://securetoken.google.com/uselalaoapp";
+export const FIREBASE_PREVIEW_ISSUER = "https://securetoken.google.com/uselalaoapp-preview";
 
 export type AuthProvider = "firebase" | "playsole";
 export type PlaysoleLoginDecision = "ready" | "link_required" | "email_verification_required" | "create";
@@ -7,6 +8,10 @@ export type PlaysoleLoginDecision = "ready" | "link_required" | "email_verificat
 export function providerForIssuer(issuer: string): AuthProvider | null {
   if (issuer === PLAYSOLE_ISSUER) return "playsole";
   if (issuer === FIREBASE_ISSUER) return "firebase";
+  // Preview deployments trust the dedicated preview Firebase project; treat it
+  // as the same provider. Production never receives preview tokens because
+  // production auth.config.ts does not trust the preview issuer.
+  if (issuer === FIREBASE_PREVIEW_ISSUER) return "firebase";
   return null;
 }
 
