@@ -56,7 +56,6 @@ import { PostItem } from '../feed/PostItem';
 import { OrgEvent, ShopProduct } from '../../types';
 import { ProductDetailScreen } from '../shop/ProductDetailScreen';
 import { EventCard } from '../events/EventCard';
-import { HOK_MEDIA_GALLERY, HOK_ORGANIZATION_PAGE } from '../../data/honorOfKingsData';
 import { isPageTicketingEligible } from '../../utils/pageCapabilities';
 import { EditPageModal } from './EditPageModal';
 import { PageMonetizationModal } from './PageMonetizationModal';
@@ -132,6 +131,18 @@ export const PageDetailModal: React.FC = () => {
   const [aboutDescriptionDraft, setAboutDescriptionDraft] = useState('');
   const [isSavingAbout, setIsSavingAbout] = useState(false);
 
+  // Development-only demo virtual page (Honor of Kings). Disabled in
+  // production and in default dev builds; opt-in via VITE_DEMO_ESPORTS=true.
+  const [hokDemo, setHokDemo] = useState<{ page: any; media: any[] } | null>(null);
+  useEffect(() => {
+    if (!(import.meta.env.DEV && import.meta.env.VITE_DEMO_ESPORTS === 'true')) return;
+    let mounted = true;
+    import('../../data/honorOfKingsData').then((m) => {
+      if (mounted) setHokDemo({ page: m.HOK_ORGANIZATION_PAGE, media: m.HOK_MEDIA_GALLERY });
+    });
+    return () => { mounted = false; };
+  }, []);
+
   const isVirtualPage = activePageId === 'page_honorofkings';
   
   const currentPage = pages ? (pages.find(p => p.id === activePageId || p.username === activePageId) || null) : undefined;
@@ -196,8 +207,7 @@ export const PageDetailModal: React.FC = () => {
     );
   }
 
-  const page =
-    activePageId === 'page_honorofkings' ? HOK_ORGANIZATION_PAGE : currentPage;
+  const page = isVirtualPage && hokDemo ? hokDemo.page : currentPage;
     
   if (!page) {
     return (
@@ -1459,12 +1469,12 @@ export const PageDetailModal: React.FC = () => {
                       Official Highlights & Gallery
                     </h4>
                     <span className="text-[11px] font-semibold text-[#5E43F3]">
-                      {HOK_MEDIA_GALLERY.length} Media
+                      {(hokDemo?.media.length ?? 0)} Media
                     </span>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                    {HOK_MEDIA_GALLERY.map((item) => (
+                    {(hokDemo?.media ?? []).map((item) => (
                       <div
                         key={item.id}
                         className="group relative aspect-4/3 rounded-xl overflow-hidden bg-theme-inverse shadow-sm border border-theme-divider-light"

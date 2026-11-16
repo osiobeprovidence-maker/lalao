@@ -37,7 +37,6 @@ import {
   SubscriptionStatus,
 } from '../types';
 
-import { HOK_EVENTS, HOK_SEED_TICKETS, HOK_ORGANIZATION_PAGE } from '../data/honorOfKingsData';
 import {
   calculateDistanceMeters,
   getCoordinatesForLocation,
@@ -433,11 +432,12 @@ const normalizeConvexUser = (user: Record<string, any> | null | undefined): User
 
   const rawTier = user.verificationTier || user.tier || user.creatorTier;
   const status = user.verificationStatus;
-  const isExp = user.verificationExpiresAt && user.verificationExpiresAt <= Date.now();
+  const expiresAt = user.verificationExpiresAt;
+  const hasActiveTier = rawTier && rawTier !== 'none';
   const isVerified = Boolean(
-    user.isVerified ||
-    user.verified ||
-    (rawTier && rawTier !== 'none' && (!status || status === 'active') && !isExp)
+    hasActiveTier &&
+    (!status || status === 'active') &&
+    (typeof expiresAt !== 'number' || expiresAt === 0 || expiresAt > Date.now())
   );
 
   return {
@@ -1192,11 +1192,11 @@ const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
       return {
         status: 'active',
         tier,
-        startDate,
+        startDate: backendSubscription.trial?.startedAt || startDate,
         nextBillingDate,
-        price: backendSubscription.subscription?.price || defaultPrice,
+        price: backendSubscription.isTrial ? 0 : backendSubscription.subscription?.price || defaultPrice,
         currency: backendSubscription.subscription?.currency || 'NGN',
-        paymentMethod: backendSubscription.subscription?.paymentMethod || 'bachs',
+        paymentMethod: backendSubscription.isTrial ? 'trial' : backendSubscription.subscription?.paymentMethod || 'bachs',
         cancelAtPeriodEnd: backendSubscription.cancelAtPeriodEnd ?? false,
       };
     }
@@ -1244,19 +1244,6 @@ const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
 
   // Effective current user enriched with active subscription status
   const effectiveCurrentUser = useMemo<User>(() => {
-    const isSubActive = subscription.status === 'active' && subscription.tier !== 'none';
-    const subTier = (subscription.tier === 'creator_premium' ? 'creator' : subscription.tier) as VerificationTier;
-
-    if (isSubActive) {
-      return {
-        ...currentUser,
-        isVerified: true,
-        verificationTier: subTier,
-        verificationStatus: 'active',
-        verificationExpiresAt: subscription.nextBillingDate || currentUser.verificationExpiresAt,
-        subscription,
-      };
-    }
     return {
       ...currentUser,
       subscription,
@@ -1648,13 +1635,18 @@ const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
   const [purchasingEvent, setPurchasingEvent] = useState<OrgEvent | null>(null);
 
   const openHonorOfKingsPage = () => {
-    setPages((prev) => {
-      if (!prev.some((p) => p.id === 'page_honorofkings')) {
-        return [HOK_ORGANIZATION_PAGE, ...prev];
-      }
-      return prev;
+    // Development-only demo virtual page (Honor of Kings). Disabled in
+    // production and in default dev builds; opt-in via VITE_DEMO_ESPORTS=true.
+    if (!(import.meta.env.DEV && import.meta.env.VITE_DEMO_ESPORTS === 'true')) return;
+    void import('../data/honorOfKingsData').then(({ HOK_ORGANIZATION_PAGE }) => {
+      setPages((prev) => {
+        if (!prev.some((p) => p.id === 'page_honorofkings')) {
+          return [HOK_ORGANIZATION_PAGE, ...prev];
+        }
+        return prev;
+      });
+      setActivePageId('page_honorofkings');
     });
-    setActivePageId('page_honorofkings');
   };
 
   // Helper to quickly adjust radius
@@ -2302,7 +2294,6 @@ const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
         badge: targetPage.badge,
         followersCount: targetPage.followersCount || 0,
         followingCount: 0,
-        isVerified: true,
         location: targetPage.location,
       },
       text: postData.text,
@@ -2535,6 +2526,10 @@ const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
       senderId: currentUser.id,
       senderName: currentUser.name,
       senderAvatar: currentUser.avatar,
+      senderIsVerified: currentUser.isVerified,
+      senderVerificationTier: currentUser.verificationTier,
+      senderVerificationStatus: currentUser.verificationStatus,
+      senderVerificationExpiresAt: currentUser.verificationExpiresAt,
       text: text.trim(),
       timestamp: 'Just now',
       isMine: true,

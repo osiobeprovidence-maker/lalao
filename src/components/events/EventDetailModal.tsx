@@ -124,26 +124,41 @@ export const EventDetailModal: React.FC = () => {
               {event.title}
             </h1>
 
-            {/* Host Organization link */}
-            <button
-              type="button"
-              onClick={() => {
-                setIsEventDetailOpen(false);
-                openHonorOfKingsPage();
-              }}
-              className="mt-2 flex items-center gap-2 text-xs text-theme-tertiary hover:text-white group cursor-pointer"
-            >
-              <Avatar
-                src={event.organizationAvatar}
-                alt={event.organizationName}
-                size="xs"
-                className="ring-1 ring-white/40"
-              />
-              <span className="font-semibold group-hover:underline">
-                Hosted by {event.organizationName}
-              </span>
-              <Badge type={event.organizationBadge} size="sm" />
-            </button>
+            {/* Host Organization link — only navigable in the dev-only esports demo */}
+            {import.meta.env.DEV && import.meta.env.VITE_DEMO_ESPORTS === 'true' && event.id?.startsWith('event_hok_') ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEventDetailOpen(false);
+                  openHonorOfKingsPage();
+                }}
+                className="mt-2 flex items-center gap-2 text-xs text-theme-tertiary hover:text-white group cursor-pointer"
+              >
+                <Avatar
+                  src={event.organizationAvatar}
+                  alt={event.organizationName}
+                  size="xs"
+                  className="ring-1 ring-white/40"
+                />
+                <span className="font-semibold group-hover:underline">
+                  Hosted by {event.organizationName}
+                </span>
+                <Badge type={event.organizationBadge} size="sm" />
+              </button>
+            ) : (
+              <div className="mt-2 flex items-center gap-2 text-xs text-theme-tertiary">
+                <Avatar
+                  src={event.organizationAvatar}
+                  alt={event.organizationName}
+                  size="xs"
+                  className="ring-1 ring-white/40"
+                />
+                <span className="font-semibold">
+                  Hosted by {event.organizationName}
+                </span>
+                <Badge type={event.organizationBadge} size="sm" />
+              </div>
+            )}
           </div>
         </div>
 

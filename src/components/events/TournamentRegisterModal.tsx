@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
+import { UserIdentity } from '../common/UserIdentity';
 import { PlayerTeam } from '../../types';
 
 interface TeammateSlot {
@@ -68,20 +69,22 @@ export const TournamentRegisterModal: React.FC = () => {
     payWithWallet,
     setIsWalletModalOpen,
     addTicket,
+    suggestedUsers,
   } = useLalao();
 
   // Wizard Steps: 'roster' (Step 1: Team & 5 players) -> 'checkout' (Step 2: Wallet / Payment) -> 'confirmed' (Step 3: Ticket / Seed)
   const [currentStep, setCurrentStep] = useState<'roster' | 'checkout' | 'confirmed'>('roster');
 
-  const [teamName, setTeamName] = useState('Delta Strikers');
-  const [teamTag, setTeamTag] = useState('DST');
+  const [teamName, setTeamName] = useState('');
+  const [teamTag, setTeamTag] = useState('');
   const [selectedLogo, setSelectedLogo] = useState(PRESET_LOGOS[0].url);
   const [isCustomLogo, setIsCustomLogo] = useState(false);
   const [savedTeamId, setSavedTeamId] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Initial roster has 4 players, 5th required
+  // Initial roster starts with the team captain only; teammates are added
+  // from genuine suggested connections, never from fabricated data.
   const [roster, setRoster] = useState<TeammateSlot[]>([
     {
       id: currentUser.id,
@@ -90,27 +93,6 @@ export const TournamentRegisterModal: React.FC = () => {
       avatar: currentUser.avatar,
       role: 'Mid Lane (Mage)',
       isCaptain: true,
-    },
-    {
-      id: 'user_alex',
-      name: 'Alexandre Okafor',
-      username: 'alexokafor',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80',
-      role: 'Jungler (Assassin)',
-    },
-    {
-      id: 'tunde_demo',
-      name: 'Tunde Balogun',
-      username: 'tundebalogun',
-      avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80',
-      role: 'Clash Lane (Fighter)',
-    },
-    {
-      id: 'amaka_demo',
-      name: 'Amaka Nwosu',
-      username: 'amakanwosu',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
-      role: 'Farm Lane (Marksman)',
     },
   ]);
 
@@ -128,29 +110,16 @@ export const TournamentRegisterModal: React.FC = () => {
   const entryFee = isPaidEvent ? (event.entryFee || event.price || 2500) : 0;
   const hasEnoughWalletBalance = wallet.balance >= entryFee;
 
-  const availableFriends = [
-    {
-      id: 'david_demo',
-      name: 'David Morgan',
-      username: 'davidmorgan',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
-      preferredRole: 'Roamer (Support / Tank)',
-    },
-    {
-      id: 'fatima_demo',
-      name: 'Fatima Bello',
-      username: 'fatimabello',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80',
-      preferredRole: 'Roamer (Control)',
-    },
-    {
-      id: 'user_emeka',
-      name: 'Emeka Nwosu',
-      username: 'emekagamer',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
-      preferredRole: 'Sub Flex',
-    },
-  ];
+  const availableFriends = (suggestedUsers ?? [])
+    .filter((u: any) => u._id !== currentUser.id && u._id !== currentUser._id && u.id !== currentUser.id)
+    .slice(0, 24)
+    .map((u: any) => ({
+      id: String(u._id ?? u.id),
+      name: u.name ?? 'Player',
+      username: u.username ?? '',
+      avatar: u.avatar ?? u.avatarUrl ?? '',
+      preferredRole: '',
+    }));
 
   const handleAddTeammate = (friend: typeof availableFriends[0]) => {
     if (roster.length < 5) {
@@ -471,7 +440,7 @@ export const TournamentRegisterModal: React.FC = () => {
                       value={teamName}
                       onChange={(e) => setTeamName(e.target.value)}
                       className="w-full px-3.5 py-2.5 bg-theme-base border border-theme-divider rounded-xl text-xs font-bold text-theme-primary focus:outline-none focus:border-[#5E43F3]"
-                      placeholder="e.g. Delta Strikers"
+                      placeholder="e.g. Team Lagos"
                       required
                     />
                   </div>
@@ -690,7 +659,7 @@ export const TournamentRegisterModal: React.FC = () => {
                               <div className="flex items-center gap-3">
                                 <Avatar src={friend.avatar} alt={friend.name} size="sm" />
                                 <div>
-                                  <p className="text-xs font-bold text-theme-primary">{friend.name}</p>
+                                  <UserIdentity user={friend} className="text-xs font-bold text-theme-primary" badgeSize="xs" />
                                   <p className="text-[10px] text-theme-tertiary">
                                     @{friend.username} · {friend.preferredRole}
                                   </p>
