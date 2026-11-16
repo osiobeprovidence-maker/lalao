@@ -18,14 +18,16 @@ export const EventFeedCard: React.FC<{ event: ExternalEvent; showLocation?: bool
     ? calculateDistanceMeters(location.latitude, location.longitude, event.latitude, event.longitude)
     : 0;
 
-  // Mock a post so it looks exactly like My Events posted this
-  const mockPost: Post = {
+  // Render the distributed event as a post by the real organizer —
+  // never a fictional partner identity, never fabricated engagement numbers.
+  const orgName = event.organizerName?.trim() || 'Event Partner';
+  const post: Post = {
     id: `event-post-${event.id}`,
     author: {
-      id: 'my-events-partner',
-      name: 'My Events',
-      username: 'my_events',
-      avatar: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400',
+      id: `event-partner-${event.sourceId}`,
+      name: orgName,
+      username: orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'event-partner',
+      avatar: '',
       userType: 'organization',
       badge: 'ORG',
     },
@@ -34,15 +36,15 @@ export const EventFeedCard: React.FC<{ event: ExternalEvent; showLocation?: bool
     mediaType: 'image',
     location: `${event.city}`,
     distanceMeters: distanceMeters,
-    createdAt: '2h',
-    likesCount: Math.floor(Math.random() * 50) + 10,
-    commentsCount: Math.floor(Math.random() * 20),
-    repostsCount: Math.floor(Math.random() * 5),
+    createdAt: event.importedAt,
+    likesCount: 0,
+    commentsCount: 0,
+    repostsCount: 0,
     isLiked: false,
     isReposted: false,
     comments: [],
     audience: 'everyone',
   };
 
-  return <PostItem post={mockPost} externalEvent={event} showLocation={showLocation} />;
+  return <PostItem post={post} externalEvent={event} showLocation={showLocation} />;
 };

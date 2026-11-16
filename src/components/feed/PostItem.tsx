@@ -23,7 +23,6 @@ import {
 import { Post, Rally, User } from '../../types';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
-import { VerificationBadge } from '../common/VerificationBadge';
 import { UserIdentity, getPublicIdentityLabel } from '../common/UserIdentity';
 import { useLalao } from '../../context/LalaoContext';
 import { formatDistance, getProximityCategory } from '../../utils/locationUtils';
@@ -124,8 +123,23 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
   const formattedDistance = hasValidDistance ? formatDistance(distanceMeters, locationPrivacy?.approximateDistance) : '';
   const proximity = hasValidDistance ? getProximityCategory(distanceMeters) : { label: '', color: '', dotColor: '' };
 
+  const relativeTimeFrom = (iso?: string): string => {
+    if (!iso) return 'Recently';
+    const diffMs = Date.now() - new Date(iso).getTime();
+    if (Number.isNaN(diffMs)) return 'Recently';
+    const min = Math.floor(diffMs / 60000);
+    if (min < 1) return 'Just now';
+    if (min < 60) return `${min}m ago`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `${hr}h ago`;
+    const day = Math.floor(hr / 24);
+    if (day === 1) return 'Yesterday';
+    if (day < 30) return `${day}d ago`;
+    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  };
+
   // Timestamp
-  const timeText = post ? post.createdAt : (linkedRally ? linkedRally.timeDate : (externalEvent ? '2h' : 'Just now'));
+  const timeText = post ? post.createdAt : (linkedRally ? linkedRally.timeDate : (externalEvent ? relativeTimeFrom(externalEvent.importedAt) : 'Just now'));
 
   // Author click handler
   const matchedPage = pages.find((p) => p.username === author.username);
@@ -249,17 +263,14 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
               <>
                 {/* First line: Display Name + Badges + Optional Follow button */}
                 <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-                  <span
+                  <UserIdentity
+                    user={author}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleAuthorClick();
                     }}
                     className="font-bold text-[14.5px] text-theme-primary hover:underline cursor-pointer truncate tracking-tight"
-                  >
-                    {(author.name || '').trim() || (author.username || '').replace(/^@+/, '') || 'User'}
-                  </span>
-
-                  <VerificationBadge user={author} size="xs" />
+                  />
                   {author.badge && <Badge type={author.badge} />}
 
                   {/* Inline Follow Button */}
@@ -293,17 +304,15 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
             ) : author.publicIdentityType === 'username' ? (
               /* Username only */
               <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-                <span
+                <UserIdentity
+                  user={author}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleAuthorClick();
                   }}
                   className="font-bold text-[14.5px] text-theme-primary hover:underline cursor-pointer truncate tracking-tight"
-                >
-                  @{ (author.username || '').replace(/^@+/, '') || (author.name || '').trim() || 'user' }
-                </span>
-
-                <VerificationBadge user={author} size="xs" />
+                  prefixUsername
+                />
                 {author.badge && <Badge type={author.badge} />}
 
                 {/* Inline Follow Button */}
@@ -323,17 +332,14 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
             ) : (
               /* Display Name only (Default) */
               <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-                <span
+                <UserIdentity
+                  user={author}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleAuthorClick();
                   }}
                   className="font-bold text-[14.5px] text-theme-primary hover:underline cursor-pointer truncate tracking-tight"
-                >
-                  {(author.name || '').trim() || (author.username || '').replace(/^@+/, '') || 'User'}
-                </span>
-
-                <VerificationBadge user={author} size="xs" />
+                />
                 {author.badge && <Badge type={author.badge} />}
 
                 {/* Inline Follow Button */}
@@ -918,4 +924,3 @@ const InlineComments = ({ postId, postAuthorId }: { postId: string, postAuthorId
     </div>
   );
 };
-
