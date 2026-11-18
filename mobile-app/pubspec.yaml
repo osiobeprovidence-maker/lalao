@@ -1,0 +1,28 @@
+name: lalao_mobile
+description: "Lalao Mobile Application (Android & iOS)"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  video_player: ^2.10.1
+  image_picker: ^1.2.1
+  http: ^1.5.0
+  shared_preferences: ^2.5.3
+  flutter_lucide:
+    path: packages/flutter_lucide
+  share_plus:
+    path: packages/share_plus
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

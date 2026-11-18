@@ -1,0 +1,8 @@
+name: share_plus
+description: Share helper for Lalao Flutter mobile app
+version: 1.0.0
+environment:
+  sdk: ^3.10.0
+dependencies:
+  flutter:
+    sdk: flutter
