@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lalao-shell-v3';
+const CACHE_NAME = 'lalao-shell-v4';
 const STATIC_ASSETS = [
   '/index.html',
   '/manifest.json',
@@ -42,7 +42,10 @@ self.addEventListener('fetch', (event) => {
   const isPrivateRequest = url.hostname.includes('convex.cloud') ||
     url.hostname.includes('firebase') ||
     url.hostname.includes('google') ||
-    url.pathname.startsWith('/api/');
+    url.hostname.includes('paystack') ||
+    url.hostname.includes('supabase') ||
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/auth');
 
   if (!isSameOrigin || isPrivateRequest || request.method !== 'GET') return;
   if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') return;

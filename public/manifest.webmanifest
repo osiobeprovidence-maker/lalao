@@ -6,6 +6,7 @@
   "start_url": "/app",
   "scope": "/",
   "display": "standalone",
+  "prefer_related_applications": false,
   "display_override": ["window-controls-overlay", "standalone"],
   "background_color": "#0B0F19",
   "theme_color": "#5E43F3",

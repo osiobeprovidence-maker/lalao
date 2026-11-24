@@ -172,6 +172,12 @@ export const PWAProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     };
 
+    // Hydrate any beforeinstallprompt event captured before React mounted
+    const earlyPrompt = (window as any).__lalaoDeferredInstallPrompt as BeforeInstallPromptEvent | null;
+    if (earlyPrompt) {
+      setDeferredPrompt(earlyPrompt);
+    }
+
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
     window.addEventListener('resize', updateStandaloneState);
@@ -206,8 +212,10 @@ export const PWAProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     try {
       await deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
+      // BeforeInstallPromptEvent can only be prompted once per browser spec
+      setDeferredPrompt(null);
+      (window as any).__lalaoDeferredInstallPrompt = null;
       if (outcome === 'accepted') {
-        setDeferredPrompt(null);
         setIsInstalled(true);
         setIsInstallModalOpen(false);
         return true;

@@ -1,11 +1,12 @@
 {
   "id": "/app",
-  "name": "Lalao",
-  "short_name": "Lalao",
+  "name": "LALAO",
+  "short_name": "LALAO",
   "description": "Install LALAO for quick access to your communities, messages, and discoveries.",
   "start_url": "/app",
   "scope": "/",
   "display": "standalone",
+  "prefer_related_applications": false,
   "display_override": ["window-controls-overlay", "standalone"],
   "launch_handler": {
     "client_mode": "focus-existing"
