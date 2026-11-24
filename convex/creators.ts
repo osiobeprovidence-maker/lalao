@@ -269,12 +269,16 @@ export const getCreatorHubData = query({
 
     const followerGrowth7d = recentFollowers.filter((f) => f.createdAt >= sevenDaysAgo).length;
 
-    // 5. Estimated views & engagement
-    const estimatedTotalViews = (userPosts.length * 45) + (totalLikesReceived * 12) + (totalCommentsReceived * 18);
-    const estimatedRecentViews = (userPosts.filter(p => p.createdAt >= sevenDaysAgo).length * 45) + (recentLikes7d * 12) + (recentComments7d * 18);
+    // 5. Actual tracked views & engagement (never fabricate views from likes/comments)
+    const actualTotalViews = userPosts.reduce((sum, p) => sum + ((p as any).viewsCount ?? 0), 0);
+    const actualRecentViews = userPosts
+      .filter((p) => p.createdAt >= sevenDaysAgo)
+      .reduce((sum, p) => sum + ((p as any).viewsCount ?? 0), 0);
+    const estimatedTotalViews = actualTotalViews;
+    const estimatedRecentViews = actualRecentViews;
 
-    const engagementRate = estimatedTotalViews > 0
-      ? (((totalLikesReceived + totalCommentsReceived) / estimatedTotalViews) * 100).toFixed(1) + "%"
+    const engagementRate = actualTotalViews > 0
+      ? (((totalLikesReceived + totalCommentsReceived) / actualTotalViews) * 100).toFixed(1) + "%"
       : "0.0%";
 
     // 6. Creator Progression & XP
@@ -347,7 +351,7 @@ export const getCreatorHubData = query({
       
       const likesCount = p.likesCount || 0;
       const commentsCount = postComments.length;
-      const viewsCount = likesCount * 12 + commentsCount * 18 + 45;
+      const viewsCount = (p as any).viewsCount ?? 0;
       const score = likesCount * 2 + commentsCount * 3 + viewsCount;
 
       return {
@@ -366,11 +370,79 @@ export const getCreatorHubData = query({
     postsWithMetrics.sort((a, b) => b.score - a.score);
     const topPosts = postsWithMetrics.slice(0, 5);
 
-    // 9. Wallet & Payout info
-    const wallet = await ctx.db
-      .query("userWallets")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .first();
+    // 9. Wallet, Gift Earnings & Transaction Ledger reconciliation
+    const [wallet, pendingGiftRows, availableGiftRows, claimedGiftRows, walletTxRows] = await Promise.all([
+      ctx.db
+        .query("userWallets")
+        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .first(),
+      ctx.db
+        .query("giftEarnings")
+        .withIndex("by_recipient_status", (q: any) => q.eq("recipientId", user._id).eq("status", "pending"))
+        .collect(),
+      ctx.db
+        .query("giftEarnings")
+        .withIndex("by_recipient_status", (q: any) => q.eq("recipientId", user._id).eq("status", "available"))
+        .collect(),
+      ctx.db
+        .query("giftEarnings")
+        .withIndex("by_recipient_status", (q: any) => q.eq("recipientId", user._id).eq("status", "claimed"))
+        .collect(),
+      ctx.db
+        .query("walletTransactions")
+        .withIndex("by_user", (q: any) => q.eq("userId", user._id))
+        .order("desc")
+        .take(50),
+    ]);
+
+    const pendingGiftCredits = pendingGiftRows.reduce((sum: number, g: any) => sum + (g.amountCredits ?? 0), 0);
+    const availableGiftCredits = availableGiftRows.reduce((sum: number, g: any) => sum + (g.amountCredits ?? 0), 0);
+    const claimedGiftCredits = claimedGiftRows.reduce((sum: number, g: any) => sum + (g.amountCredits ?? 0), 0);
+
+    const reconciledTotalEarnings = (user.creatorEarnings ?? 0) + availableGiftCredits + claimedGiftCredits;
+    const reconciledPendingEarnings = (user.creatorPendingEarnings ?? 0) + pendingGiftCredits;
+
+    const earningTxTypes = new Set([
+      "tip_received",
+      "gift_earnings",
+      "subscription_revenue",
+      "creator_reward",
+      "withdrawal",
+    ]);
+    const earningsHistory = [
+      ...pendingGiftRows.map((g: any) => ({
+        id: String(g._id),
+        source: "gift",
+        description: "Room gift earning (pending settlement)",
+        amount: g.amountCredits ?? 0,
+        currency: "LC",
+        status: "pending",
+        createdAt: g.createdAt ?? g._creationTime,
+        reference: `GIFT_EARNING_${g._id}`,
+      })),
+      ...availableGiftRows.map((g: any) => ({
+        id: String(g._id),
+        source: "gift",
+        description: "Room gift earning (ready to claim)",
+        amount: g.amountCredits ?? 0,
+        currency: "LC",
+        status: "available",
+        createdAt: g.createdAt ?? g._creationTime,
+        reference: `GIFT_EARNING_${g._id}`,
+      })),
+      ...walletTxRows
+        .filter((tx: any) => earningTxTypes.has(tx.type))
+        .map((tx: any) => ({
+          id: String(tx._id),
+          source: tx.type,
+          description: tx.description || tx.type,
+          amount: tx.amount ?? 0,
+          currency: tx.currency || "NGN",
+          status: tx.status || "completed",
+          createdAt: tx.createdAt ?? tx._creationTime,
+          reference: tx.reference || String(tx._id),
+        })),
+    ].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
 
     return {
       isCreator,
@@ -396,17 +468,19 @@ export const getCreatorHubData = query({
         engagementRate,
         currentRank: null,
         rankMovement: null,
-        totalEarnings: monetizationEligible ? user.creatorEarnings ?? 0 : 0,
-        pendingEarnings: monetizationEligible ? user.creatorPendingEarnings ?? 0 : 0,
+        totalEarnings: monetizationEligible ? reconciledTotalEarnings : 0,
+        pendingEarnings: monetizationEligible ? reconciledPendingEarnings : 0,
       },
 
       monetization: {
         status: monetizationEligible ? "active" : "inactive",
-        totalEarnings: monetizationEligible ? user.creatorEarnings ?? 0 : 0,
-        pendingEarnings: monetizationEligible ? user.creatorPendingEarnings ?? 0 : 0,
+        totalEarnings: monetizationEligible ? reconciledTotalEarnings : 0,
+        pendingEarnings: monetizationEligible ? reconciledPendingEarnings : 0,
+        availableGiftEarnings: monetizationEligible ? availableGiftCredits : 0,
         availableWalletBalance: monetizationEligible ? wallet?.balance ?? 0 : 0,
         accountNumber: wallet?.accountNumber ?? "Not set",
         bankName: wallet?.bankName ?? "LaLao Payout",
+        earningsHistory: monetizationEligible ? earningsHistory : [],
         features: [
           { id: "tips", title: "Viewer Tips & Direct Gifts", active: monetizationEligible, desc: "Fans can tip your posts directly with wallet funds." },
           { id: "rankings", title: "Creator Leaderboard Rewards", active: monetizationEligible, desc: "Compete in Explore Rankings for weekly rewards." },
