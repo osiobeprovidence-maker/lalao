@@ -73,8 +73,8 @@ export const UserProfileModal: React.FC = () => {
   const profileScrollRef = useRef<HTMLDivElement>(null);
   const appScrollPositionRef = useRef<{ top: number; windowTop: number } | null>(null);
   const isProfileOpen = Boolean(activeUserProfile);
-  const giftQuota = useQuery((api as any).creators?.getMyCreatorGiftQuota, isProfileOpen ? {} : "skip");
-  const giftCreatorPremiumMonth = useMutation((api as any).creators?.giftCreatorPremiumMonth);
+  const giftQuota = useQuery(api.creators.getMyCreatorGiftQuota, isProfileOpen ? {} : "skip");
+  const giftCreatorPremiumMonth = useMutation(api.creators.giftCreatorPremiumMonth);
 
   // Only query relationship if the ID looks like a real Convex ID (no hyphens, usually ~32 chars)
   const isValidConvexId = activeUserProfile?.id && !activeUserProfile.id.includes('-');
