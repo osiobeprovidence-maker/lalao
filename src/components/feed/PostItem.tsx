@@ -101,7 +101,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
   const associatedPost = post || (directRally ? posts.find((p) => p.rallyRefId === directRally.id) : null);
 
   // Determine effective author
-  const author: User = post ? post.author : (linkedRally ? linkedRally.creator : {
+  const rawAuthor: User = post ? post.author : (linkedRally ? linkedRally.creator : {
     id: 'unknown',
     name: 'Anonymous',
     username: 'anonymous',
@@ -111,7 +111,19 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
     followingCount: 0,
   });
 
-  const isAuthor = currentUser?.id === author.id;
+  const isAuthor = currentUser?.id === rawAuthor.id;
+  const author: User = isAuthor
+    ? {
+        ...rawAuthor,
+        isVerified: currentUser.isVerified || rawAuthor.isVerified,
+        verificationTier:
+          currentUser.verificationTier && currentUser.verificationTier !== 'none'
+            ? currentUser.verificationTier
+            : rawAuthor.verificationTier,
+        verificationStatus: currentUser.verificationStatus ?? rawAuthor.verificationStatus,
+        subscription: currentUser.subscription ?? rawAuthor.subscription,
+      }
+    : rawAuthor;
 
   // Distance from post metadata or rally
   const distanceMeters = post?.distanceMeters;
@@ -311,6 +323,7 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
                     handleAuthorClick();
                   }}
                   className="font-bold text-[14.5px] text-theme-primary hover:underline cursor-pointer truncate tracking-tight"
+                  prefixUsername
                 />
                 {author.badge && <Badge type={author.badge} />}
 
