@@ -854,7 +854,7 @@ async function fetchPostsForProfileUser(
   const { currentUser, targetUser } = await resolveProfileUser(ctx, args);
   if (!targetUser) {
     return args.paginationOpts
-      ? { posts: [], isDone: true, continueCursor: "" }
+      ? { page: [], isDone: true, continueCursor: "" }
       : [];
   }
 
@@ -1025,7 +1025,7 @@ async function fetchPostsForProfileUser(
   }
 
   return postsPage
-    ? { posts: results, isDone: postsPage.isDone, continueCursor: postsPage.continueCursor }
+    ? { page: results, isDone: postsPage.isDone, continueCursor: postsPage.continueCursor }
     : results;
 }
 
