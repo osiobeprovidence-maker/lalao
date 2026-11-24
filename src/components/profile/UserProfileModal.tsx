@@ -26,14 +26,14 @@ import {
   UserPlus,
   TrendingUp,
   Calendar,
+  Gift,
 } from 'lucide-react';
 import { useLalao } from '../../context/LalaoContext';
-import { useQuery } from 'convex/react';
+import { useMutation, usePaginatedQuery, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
-import { VerificationBadge } from '../common/VerificationBadge';
-import { getPublicIdentityLabel } from '../common/UserIdentity';
+import { UserIdentity } from '../common/UserIdentity';
 import { PostItem } from '../feed/PostItem';
 import { Post, Rally } from '../../types';
 
@@ -69,7 +69,11 @@ export const UserProfileModal: React.FC = () => {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [lightboxMedia, setLightboxMedia] = useState<{ url: string; alt?: string } | null>(null);
   const [isMuted, setIsMuted] = useState(false);
+  const [isGiftingPremium, setIsGiftingPremium] = useState(false);
+  const giftQuota = useQuery((api as any).creators?.getMyCreatorGiftQuota, isProfileOpen ? {} : "skip");
+  const giftCreatorPremiumMonth = useMutation((api as any).creators?.giftCreatorPremiumMonth);
   const profileScrollRef = useRef<HTMLDivElement>(null);
+  const appScrollPositionRef = useRef<{ top: number; windowTop: number } | null>(null);
   const isProfileOpen = Boolean(activeUserProfile);
 
   // Only query relationship if the ID looks like a real Convex ID (no hyphens, usually ~32 chars)
@@ -90,6 +94,7 @@ export const UserProfileModal: React.FC = () => {
     const root = document.documentElement;
     const body = document.body;
     const previousScrollY = window.scrollY;
+    const previousAppScrollTop = appScroller?.scrollTop ?? 0;
     const previousAppOverflowY = appScroller?.style.overflowY;
     const previousRootOverflow = root.style.overflow;
     const previousBodyOverflow = body.style.overflow;
@@ -100,6 +105,7 @@ export const UserProfileModal: React.FC = () => {
     const previousBodyWidth = body.style.width;
 
     if (appScroller) appScroller.style.overflowY = 'hidden';
+    appScrollPositionRef.current = { top: previousAppScrollTop, windowTop: previousScrollY };
     root.style.overflow = 'hidden';
     body.style.overflow = 'hidden';
     body.style.position = 'fixed';
@@ -117,7 +123,12 @@ export const UserProfileModal: React.FC = () => {
       body.style.left = previousBodyLeft;
       body.style.right = previousBodyRight;
       body.style.width = previousBodyWidth;
-      window.scrollTo({ top: previousScrollY, behavior: 'instant' });
+      if (appScroller) {
+        appScroller.scrollTo({ top: appScrollPositionRef.current?.top ?? previousAppScrollTop, behavior: 'instant' });
+      } else {
+        window.scrollTo({ top: appScrollPositionRef.current?.windowTop ?? previousScrollY, behavior: 'instant' });
+      }
+      appScrollPositionRef.current = null;
     };
   }, [isProfileOpen]);
 
@@ -136,7 +147,15 @@ export const UserProfileModal: React.FC = () => {
   const effectiveProfile = useMemo(() => {
     if (!activeUserProfile) return null;
     if (isOwnProfile) return currentUser;
-    if (!liveUser) return activeUserProfile;
+    if (!liveUser) {
+      return {
+        ...activeUserProfile,
+        isVerified: false,
+        verificationTier: 'none' as const,
+        verificationStatus: 'inactive' as const,
+        verificationExpiresAt: undefined,
+      };
+    }
     return {
       ...activeUserProfile,
       ...liveUser,
@@ -157,14 +176,21 @@ export const UserProfileModal: React.FC = () => {
   const hasActiveCycle = Boolean(userCycle && userCycle.items && userCycle.items.length > 0);
 
   // User's posts — fetched directly by author id & username, not from the feed window
-  const userPostsQuery = useQuery(
-    api.social.listUserPosts,
-    activeUserProfile && isValidConvexId
+  const profileQueryArgs = useMemo(
+    () => activeUserProfile && isValidConvexId
       ? { userId: activeUserProfile.id, username: activeUserProfile.username }
-      : "skip"
+      : 'skip',
+    [activeUserProfile?.id, activeUserProfile?.username, isValidConvexId],
   );
-  const backendUserPosts = (userPostsQuery as Post[]) ?? [];
-  const isPostsLoading = userPostsQuery === undefined;
+  const userPostsQuery = usePaginatedQuery(
+    api.social.listUserPostsPage,
+    profileQueryArgs,
+    { initialNumItems: 20 },
+  );
+  const backendUserPosts = (userPostsQuery.results as Post[]) ?? [];
+  const isPostsLoading = userPostsQuery.status === 'LoadingFirstPage';
+  const canLoadMorePosts = userPostsQuery.status === 'CanLoadMore';
+  const isLoadingMorePosts = userPostsQuery.status === 'LoadingMore';
 
   // Merge backend posts with any local posts authored by activeUserProfile
   const userPosts: Post[] = useMemo(() => {
@@ -192,12 +218,24 @@ export const UserProfileModal: React.FC = () => {
     return userPosts.filter((p) => Boolean(p.mediaUrl));
   }, [userPosts]);
 
-  // User's replies across posts
-  const userReplies = useMemo(() => {
+  const userRepliesQuery = usePaginatedQuery(
+    api.social.listUserRepliesPage,
+    profileQueryArgs,
+    { initialNumItems: 20 },
+  );
+  const backendUserReplies = userRepliesQuery.results as Array<{
+    id: string;
+    post: Pick<Post, 'id' | 'text' | 'author'>;
+    text: string;
+    createdAt: string;
+    likesCount: number;
+    isLiked?: boolean;
+  }>;
+  const localUserReplies = useMemo(() => {
     if (!activeUserProfile) return [];
     const repliesList: Array<{
       id: string;
-      post: Post;
+      post: Pick<Post, 'id' | 'text' | 'author'>;
       text: string;
       createdAt: string;
       likesCount: number;
@@ -234,8 +272,24 @@ export const UserProfileModal: React.FC = () => {
     return repliesList;
   }, [posts, activeUserProfile]);
 
-  // User's rallies (created or joined)
-  const userRallies = useMemo(() => {
+  const userReplies = useMemo(() => {
+    const replies = new Map<string, (typeof localUserReplies)[number]>();
+    for (const reply of localUserReplies) replies.set(reply.id, reply);
+    for (const reply of backendUserReplies) replies.set(reply.id, reply);
+    return [...replies.values()];
+  }, [backendUserReplies, localUserReplies]);
+
+  const createdRalliesQuery = usePaginatedQuery(
+    api.social.listUserCreatedRalliesPage,
+    profileQueryArgs,
+    { initialNumItems: 20 },
+  );
+  const joinedRalliesQuery = usePaginatedQuery(
+    api.social.listUserJoinedRalliesPage,
+    profileQueryArgs,
+    { initialNumItems: 20 },
+  );
+  const localUserRallies = useMemo(() => {
     if (!activeUserProfile) return [];
     return rallies.filter(
       (r) =>
@@ -244,6 +298,13 @@ export const UserProfileModal: React.FC = () => {
         r.interestedUsers?.some((u) => u.id === activeUserProfile.id || u.username === activeUserProfile.username)
     );
   }, [rallies, activeUserProfile]);
+  const userRallies = useMemo(() => {
+    const byId = new Map<string, Rally>();
+    for (const rally of localUserRallies) byId.set(rally.id, rally);
+    for (const rally of createdRalliesQuery.results as Rally[]) byId.set(rally.id, rally);
+    for (const rally of joinedRalliesQuery.results as Rally[]) byId.set(rally.id, rally);
+    return [...byId.values()];
+  }, [createdRalliesQuery.results, joinedRalliesQuery.results, localUserRallies]);
 
   // Filtered lists if search is active
   const filteredPosts = useMemo(() => {
@@ -474,15 +535,10 @@ export const UserProfileModal: React.FC = () => {
                 {/* 1. Public identity label (Name OR Username) and verification badge */}
                 <div>
                   <h2 className="text-xl font-bold text-theme-primary leading-tight flex items-center gap-2 flex-wrap">
-                    {getPublicIdentityLabel(effectiveProfile || activeUserProfile)}
-                    <VerificationBadge
+                    <UserIdentity
                       user={effectiveProfile || activeUserProfile}
-                      tier={
-                        isOwnProfile && subscription.status === 'active' && subscription.tier !== 'none'
-                          ? subscription.tier
-                          : (effectiveProfile?.verificationTier || activeUserProfile?.verificationTier)
-                      }
-                      size="sm"
+                      className="text-xl font-bold leading-tight"
+                      badgeSize="sm"
                     />
                     {(effectiveProfile?.badge || activeUserProfile.badge) && (
                       <Badge type={(effectiveProfile?.badge || activeUserProfile.badge)!} />
@@ -709,6 +765,59 @@ export const UserProfileModal: React.FC = () => {
                 </>
               )}
             </div>
+
+            {!isOwnProfile && isValidConvexId && giftQuota && (
+              (() => {
+                const alreadyGifted = giftQuota.giftedUserIds?.includes(String(activeUserProfile.id));
+                const alreadyCreator =
+                  activeUserProfile.verificationTier === 'creator' &&
+                  activeUserProfile.verificationStatus === 'active';
+                if (alreadyCreator && !alreadyGifted) return null;
+                const remaining = Number(giftQuota.remainingGifts ?? 0);
+                const maxGifts = Number(giftQuota.maxGifts ?? 3);
+                return (
+                  <button
+                    id="btn-gift-creator-premium"
+                    type="button"
+                    disabled={alreadyGifted || remaining <= 0 || isGiftingPremium}
+                    onClick={async () => {
+                      if (isGiftingPremium) return;
+                      setIsGiftingPremium(true);
+                      try {
+                        const res = await giftCreatorPremiumMonth({
+                          recipientUserId: activeUserProfile.id as any,
+                        });
+                        triggerShareToast(
+                          `Gifted 1 free month of Creator Premium! (${res?.remainingGifts ?? Math.max(0, remaining - 1)}/${maxGifts} left)`
+                        );
+                      } catch (err: any) {
+                        triggerShareToast(err?.message || 'Could not send Creator Premium gift');
+                      } finally {
+                        setIsGiftingPremium(false);
+                      }
+                    }}
+                    className={`w-full py-2 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                      alreadyGifted
+                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 cursor-default'
+                        : remaining > 0
+                          ? 'border-[#5E43F3]/35 bg-[#5E43F3]/10 text-[#5E43F3] hover:bg-[#5E43F3] hover:text-white cursor-pointer'
+                          : 'border-theme-divider bg-theme-surface text-theme-tertiary cursor-not-allowed'
+                    }`}
+                  >
+                    <Gift className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      {alreadyGifted
+                        ? '1 Month Creator Premium Gifted ✓'
+                        : isGiftingPremium
+                          ? 'Sending free gift...'
+                          : remaining > 0
+                            ? `Gift 1 Month Creator Premium · Free (${remaining}/${maxGifts} left)`
+                            : `All ${maxGifts} Free Creator Premium Gifts Used`}
+                    </span>
+                  </button>
+                );
+              })()
+            )}
           </div>
 
           {/* Navigation Tabs (Posts, Replies, Media, Rallies & Cycles) */}
@@ -782,13 +891,27 @@ export const UserProfileModal: React.FC = () => {
                     </p>
                   </div>
                 )}
+                {canLoadMorePosts && (
+                  <button
+                    type="button"
+                    onClick={() => userPostsQuery.loadMore(20)}
+                    className="w-full border-t border-theme-divider-light py-3 text-xs font-bold text-[#5E43F3]"
+                  >
+                    Load older posts
+                  </button>
+                )}
+                {isLoadingMorePosts && <p className="py-3 text-center text-xs text-theme-tertiary">Loading posts…</p>}
               </div>
             )}
 
             {/* 2. REPLIES TAB */}
             {activeTab === 'replies' && (
               <div>
-                {filteredReplies.length > 0 ? (
+                {userRepliesQuery.status === 'LoadingFirstPage' ? (
+                  <div className="flex justify-center p-10">
+                    <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-[#5E43F3]" />
+                  </div>
+                ) : filteredReplies.length > 0 ? (
                   <div className="divide-y divide-neutral-100">
                     {filteredReplies.map((reply) => (
                       <div
@@ -854,6 +977,16 @@ export const UserProfileModal: React.FC = () => {
                     </p>
                   </div>
                 )}
+                {userRepliesQuery.status === 'CanLoadMore' && (
+                  <button
+                    type="button"
+                    onClick={() => userRepliesQuery.loadMore(20)}
+                    className="w-full border-t border-theme-divider-light py-3 text-xs font-bold text-[#5E43F3]"
+                  >
+                    Load more replies
+                  </button>
+                )}
+                {userRepliesQuery.status === 'LoadingMore' && <p className="py-3 text-center text-xs text-theme-tertiary">Loading replies…</p>}
               </div>
             )}
 
@@ -900,6 +1033,16 @@ export const UserProfileModal: React.FC = () => {
                     </p>
                   </div>
                 )}
+                {canLoadMorePosts && (
+                  <button
+                    type="button"
+                    onClick={() => userPostsQuery.loadMore(20)}
+                    className="w-full border-t border-theme-divider-light py-3 text-xs font-bold text-[#5E43F3]"
+                  >
+                    Load more media
+                  </button>
+                )}
+                {isLoadingMorePosts && <p className="py-3 text-center text-xs text-theme-tertiary">Loading media…</p>}
               </div>
             )}
 
@@ -1012,6 +1155,21 @@ export const UserProfileModal: React.FC = () => {
                         Local meetups, sports rallies, and causes will be listed here.
                       </p>
                     </div>
+                  )}
+                  {(createdRalliesQuery.status === 'CanLoadMore' || joinedRalliesQuery.status === 'CanLoadMore') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (createdRalliesQuery.status === 'CanLoadMore') createdRalliesQuery.loadMore(20);
+                        if (joinedRalliesQuery.status === 'CanLoadMore') joinedRalliesQuery.loadMore(20);
+                      }}
+                      className="w-full rounded-xl border border-theme-divider-light py-2.5 text-xs font-bold text-[#5E43F3]"
+                    >
+                      Load more rallies
+                    </button>
+                  )}
+                  {(createdRalliesQuery.status === 'LoadingMore' || joinedRalliesQuery.status === 'LoadingMore') && (
+                    <p className="py-2 text-center text-xs text-theme-tertiary">Loading rallies…</p>
                   )}
                 </div>
               </div>

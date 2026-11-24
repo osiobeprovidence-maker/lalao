@@ -11,6 +11,7 @@ import {
   getCreatorTrialEmailSchedule,
   isValidTrialEmail,
 } from "./lib/creatorTrial";
+import { requireMaintenanceOff } from "./internal/maintenance";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    CREATOR ECOSYSTEM & SUBSCRIPTION TIERS CONFIGURATION
@@ -769,6 +770,7 @@ export const getCreatorPublicProfile = query({
 export const startCreatorFreeTrial = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireMaintenanceOff(ctx);
     const user = await getAuthedUser(ctx);
     if (!user) throw new Error("Unauthenticated");
 
@@ -833,6 +835,134 @@ export const startCreatorFreeTrial = mutation({
     });
 
     return { trialId, startedAt: now, expiresAt };
+  },
+});
+
+const MAX_CREATOR_PREMIUM_GIFTS = 3;
+const CREATOR_GIFT_DURATION_DAYS = 30;
+const CREATOR_GIFT_DURATION_MS = CREATOR_GIFT_DURATION_DAYS * 24 * 60 * 60 * 1000;
+
+export const getMyCreatorGiftQuota = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getAuthedUser(ctx);
+    if (!user) {
+      return {
+        maxGifts: MAX_CREATOR_PREMIUM_GIFTS,
+        usedGifts: 0,
+        remainingGifts: 0,
+        giftedUserIds: [] as string[],
+      };
+    }
+    const gifts = await ctx.db
+      .query("creatorPremiumGifts")
+      .withIndex("by_gifter", (q) => q.eq("gifterId", user._id))
+      .collect();
+    const usedGifts = gifts.length;
+    return {
+      maxGifts: MAX_CREATOR_PREMIUM_GIFTS,
+      usedGifts,
+      remainingGifts: Math.max(0, MAX_CREATOR_PREMIUM_GIFTS - usedGifts),
+      giftedUserIds: gifts.map((g) => String(g.recipientId)),
+    };
+  },
+});
+
+export const giftCreatorPremiumMonth = mutation({
+  args: {
+    recipientUserId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
+    const gifter = await getAuthedUser(ctx);
+    if (!gifter) throw new Error("Unauthenticated");
+
+    if (gifter._id === args.recipientUserId) {
+      throw new Error("You cannot gift Creator Premium to yourself.");
+    }
+
+    const existingGifts = await ctx.db
+      .query("creatorPremiumGifts")
+      .withIndex("by_gifter", (q) => q.eq("gifterId", gifter._id))
+      .collect();
+
+    if (existingGifts.length >= MAX_CREATOR_PREMIUM_GIFTS) {
+      throw new Error(`You have used all ${MAX_CREATOR_PREMIUM_GIFTS} free Creator Premium gifts.`);
+    }
+
+    if (existingGifts.some((g) => g.recipientId === args.recipientUserId)) {
+      throw new Error("You have already gifted Creator Premium to this user.");
+    }
+
+    const recipient = await ctx.db.get(args.recipientUserId);
+    if (!recipient) {
+      throw new Error("Recipient user not found.");
+    }
+
+    const now = Date.now();
+    const activeRecipientSub = await ctx.db
+      .query("creatorSubscriptions")
+      .withIndex("by_user_status", (q) => q.eq("userId", recipient._id).eq("status", "active"))
+      .first();
+    const recipientAlreadyCreator =
+      (activeRecipientSub && activeRecipientSub.tier === "creator" && activeRecipientSub.expiresAt > now) ||
+      (recipient.verificationTier === "creator" &&
+        recipient.verificationStatus === "active" &&
+        (!recipient.verificationExpiresAt || recipient.verificationExpiresAt > now));
+
+    if (recipientAlreadyCreator) {
+      throw new Error("This user already has an active Creator Premium subscription.");
+    }
+
+    const expiresAt = now + CREATOR_GIFT_DURATION_MS;
+
+    const subscriptionId = await ctx.db.insert("creatorSubscriptions", {
+      userId: recipient._id,
+      tier: "creator",
+      status: "active",
+      price: 0,
+      currency: "NGN",
+      paymentMethod: "gift",
+      cancelAtPeriodEnd: true,
+      startedAt: now,
+      expiresAt,
+      createdAt: now,
+    });
+
+    await ctx.db.patch(recipient._id, {
+      isVerified: true,
+      verificationTier: "creator",
+      verificationStatus: "active",
+      verificationStartedAt: now,
+      verificationExpiresAt: expiresAt,
+      creatorPriorityWeight: CREATOR_TIER_CONFIG.creator.priorityWeight,
+      updatedAt: now,
+    });
+
+    await ctx.db.insert("creatorPremiumGifts", {
+      gifterId: gifter._id,
+      recipientId: recipient._id,
+      subscriptionId,
+      durationDays: CREATOR_GIFT_DURATION_DAYS,
+      createdAt: now,
+    });
+
+    const gifterName = gifter.name || gifter.username || "Someone";
+    await ctx.db.insert("notifications", {
+      recipientId: recipient._id,
+      actorId: gifter._id,
+      type: "system_alert",
+      targetExcerpt: `${gifterName} gifted you 1 free month of Creator Premium! After 30 days, you can subscribe to keep it.`,
+      isRead: false,
+      createdAt: now,
+    });
+
+    return {
+      success: true,
+      subscriptionId,
+      expiresAt,
+      remainingGifts: Math.max(0, MAX_CREATOR_PREMIUM_GIFTS - (existingGifts.length + 1)),
+    };
   },
 });
 
@@ -998,6 +1128,7 @@ export const beginBachsTierPurchase = mutation({
     tier: v.union(v.literal("verified"), v.literal("priority"), v.literal("creator")),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const user = await getAuthedUser(ctx);
     if (!user) throw new Error("Unauthenticated");
     const tierInfo = CREATOR_TIER_CONFIG[args.tier];
@@ -1093,6 +1224,7 @@ export const settleBachsTierPayment = internalMutation({
 export const attachBachsTierCheckout = mutation({
   args: { reference: v.string(), checkoutId: v.string(), checkoutUrl: v.string() },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const user = await getAuthedUser(ctx);
     if (!user) throw new Error("Unauthenticated");
     const purchase = await ctx.db.query("creatorSubscriptions")
@@ -1159,6 +1291,7 @@ export const maintainCreatorSubscriptions = internalMutation({
 export const cancelSubscription = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireMaintenanceOff(ctx);
     const user = await getAuthedUser(ctx);
     if (!user) throw new Error("Unauthenticated");
 
@@ -1198,6 +1331,7 @@ export const cancelSubscription = mutation({
 export const updateCreatorCategory = mutation({
   args: { category: v.string() },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const user = await getAuthedUser(ctx);
     if (!user) throw new Error("Unauthenticated");
 
@@ -1251,6 +1385,7 @@ export const applyForProfessionalCreator = mutation({
     about: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const user = await getAuthedUser(ctx);
     if (!user) throw new Error("Sign in before applying to become a Manga Creator.");
     if (user.creatorType === args.creatorType) throw new Error("This professional creator profile is already approved.");
@@ -1332,6 +1467,7 @@ export const reviewProfessionalCreatorApplication = mutation({
     reviewNote: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const admin = await requireAdmin(ctx);
     if (!admin) throw new Error("Unauthorized: administrator account required.");
     const application = await ctx.db.get(args.applicationId);
@@ -1391,6 +1527,7 @@ export const sendCreatorTip = mutation({
     message: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const sender = await getAuthedUser(ctx);
     if (!sender) throw new Error("Unauthenticated");
     if (sender._id === args.creatorId) throw new Error("You cannot tip yourself");

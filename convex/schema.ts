@@ -1179,6 +1179,16 @@ export default defineSchema({
     .index("by_subscription", ["subscriptionId"])
     .index("by_user", ["performedByUserId"]),
 
+  creatorPremiumGifts: defineTable({
+    gifterId: v.id("users"),
+    recipientId: v.id("users"),
+    subscriptionId: v.id("creatorSubscriptions"),
+    durationDays: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_gifter", ["gifterId"])
+    .index("by_recipient", ["recipientId"]),
+
   creatorSubscriptions: defineTable({
     userId: v.id("users"),
     tier: v.union(v.literal("verified"), v.literal("priority"), v.literal("creator")),
@@ -1273,6 +1283,12 @@ export default defineSchema({
     value: v.string(),     // JSON-serialised value
     updatedAt: v.number(),
     updatedBy: v.optional(v.id("users")),
+  }).index("by_key", ["key"]),
+
+  maintenanceState: defineTable({
+    key: v.string(),       // singleton key: "maintenance"
+    value: v.string(),     // "true" / "false" (JSON-serialised boolean)
+    updatedAt: v.number(),
   }).index("by_key", ["key"]),
 
   auditLog: defineTable({
