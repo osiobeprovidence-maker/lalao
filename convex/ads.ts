@@ -910,6 +910,7 @@ export const getSponsoredPlacement = query({
     locationName: v.optional(v.string()),
     placement: v.optional(v.union(v.literal("feed"), v.literal("room"))),
     roomId: v.optional(v.id("groupChats")),
+    lastAdvertiserId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -963,14 +964,23 @@ export const getSponsoredPlacement = query({
 
     if (eligible.length === 0) return null;
 
-    // Pick candidate with lowest delivery ratio to ensure fair pacing
-    eligible.sort((a, b) => {
-      const ratioA = a.budget.spentKobo / a.budget.totalBudgetKobo;
-      const ratioB = b.budget.spentKobo / b.budget.totalBudgetKobo;
-      return ratioA - ratioB;
+    // Server-controlled fair rotation:
+    // 1. Avoid repeating the same advertiser back-to-back when other eligible advertisers exist.
+    const nonRepeating = args.lastAdvertiserId
+      ? eligible.filter((c) => String(c.userId) !== args.lastAdvertiserId)
+      : eligible;
+    const pool = nonRepeating.length > 0 ? nonRepeating : eligible;
+
+    // 2. Sort by lowest delivery ratio (fair budget pacing), with deterministic 5-minute slot rotation among peers.
+    pool.sort((a, b) => {
+      const ratioA = a.budget.spentKobo / Math.max(1, a.budget.totalBudgetKobo);
+      const ratioB = b.budget.spentKobo / Math.max(1, b.budget.totalBudgetKobo);
+      if (Math.abs(ratioA - ratioB) > 0.05) return ratioA - ratioB;
+      return a.createdAt - b.createdAt;
     });
 
-    const chosen = eligible[0];
+    const rotationSlot = Math.floor(now / (5 * 60 * 1000));
+    const chosen = pool[rotationSlot % pool.length];
     const advertiser = await ctx.db.get(chosen.userId);
 
     // If promoted organic post, fetch original post

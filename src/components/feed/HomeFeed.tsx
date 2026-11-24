@@ -22,6 +22,7 @@ import { EventFeedCard } from '../events/EventFeedCard';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { SponsoredPostCard } from './SponsoredPostCard';
+import { FeedBillboardCard } from './FeedBillboardCard';
 
 
 export const HomeFeed: React.FC = () => {
@@ -548,11 +549,17 @@ const FeedSkeleton: React.FC = () => {
               {filteredPosts.map((post, index) => (
                 <React.Fragment key={post.id}>
                   <PostItem post={post} showLocation={feedTab === 'nearby'} />
-                  {/* Inject verified sponsored ad card after 2nd post */}
-                  {index === 2 && sponsoredPlacement && (
-                    <div className="pt-4 pb-2 px-2 sm:px-0">
-                      <SponsoredPostCard placement={sponsoredPlacement} />
-                    </div>
+                  {/* Inject verified sponsored ad card or empty For You billboard slot */}
+                  {((index === 2) || (filteredPosts.length <= 2 && index === filteredPosts.length - 1)) && (
+                    sponsoredPlacement ? (
+                      <div className="pt-4 pb-2 px-2 sm:px-0">
+                        <SponsoredPostCard placement={sponsoredPlacement} />
+                      </div>
+                    ) : feedTab === 'for_you' && sponsoredPlacement === null ? (
+                      <div className="pt-4 pb-2 px-2 sm:px-0">
+                        <FeedBillboardCard onAdvertise={() => setActiveTab('ads')} />
+                      </div>
+                    ) : null
                   )}
                   {/* Inject an event card every 4 posts if there are active events */
                   index === 1 && activeEvents.length > 0 && feedTab === 'for_you' && (
