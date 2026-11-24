@@ -927,13 +927,12 @@ export const giftCreatorPremiumMonth = mutation({
       startedAt: now,
       expiresAt,
       createdAt: now,
+      updatedAt: now,
     });
 
     await ctx.db.patch(recipient._id, {
-      isVerified: true,
       verificationTier: "creator",
       verificationStatus: "active",
-      verificationStartedAt: now,
       verificationExpiresAt: expiresAt,
       creatorPriorityWeight: CREATOR_TIER_CONFIG.creator.priorityWeight,
       updatedAt: now,
