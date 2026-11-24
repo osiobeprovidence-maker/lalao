@@ -18,21 +18,23 @@ export const RoomEggIndicator: React.FC<RoomEggIndicatorProps> = ({
 }) => {
   const isReady = eggState === 'reward_ready';
 
+  const clampedProgress = Math.min(100, Math.max(0, Math.round(progressPercent)));
+
   return (
     <button
       type="button"
       onClick={onClick}
       id="btn-room-egg-indicator"
-      className={`relative flex h-7 max-w-[92px] sm:max-w-[108px] shrink-0 items-center gap-1.5 px-2 py-0.5 rounded-full border transition-all cursor-pointer select-none active:scale-95 group ${
+      className={`relative flex h-9 w-auto max-w-[152px] sm:max-w-[196px] shrink-0 items-center gap-2 overflow-hidden rounded-full border px-2.5 py-1 transition-all cursor-pointer select-none active:scale-95 group ${
         isReady
           ? 'bg-[#5E43F3]/15 border-[#5E43F3]/50 shadow-sm shadow-[#5E43F3]/20 hover:border-[#5E43F3]'
           : 'bg-theme-surface border-theme-divider hover:border-[#5E43F3]/50 hover:bg-theme-surface-hover'
       }`}
-      title="View LaLao Egg Rewards"
+      title={`LaLao Egg Rewards — ${points.toLocaleString()} pts (₦${nairaValue.toLocaleString()}) · ${clampedProgress}% daily progress`}
       aria-label="LaLao Egg Rewards"
     >
       {/* Compact Egg Jar */}
-      <div className="shrink-0">
+      <div className="flex shrink-0 items-center justify-center">
         <EggJarVisual
           progressPercent={progressPercent}
           points={points}
@@ -42,39 +44,39 @@ export const RoomEggIndicator: React.FC<RoomEggIndicatorProps> = ({
         />
       </div>
 
-      {/* Points & Progress Pill */}
-      <div className="flex min-w-0 flex-col pr-0.5 text-left">
-        <div className="flex min-w-0 items-center gap-0.5 leading-none">
-          <span className="truncate text-[9px] font-bold text-theme-primary tracking-tight">
+      {/* Points, Reward Value & Daily Progress */}
+      <div className="flex min-w-0 flex-col justify-center gap-1 text-left">
+        <div className="flex min-w-0 items-baseline gap-1.5 whitespace-nowrap leading-none">
+          <span className="truncate text-[11px] font-bold tabular-nums text-theme-primary tracking-tight">
             {points.toLocaleString()}
           </span>
-          <span className="shrink-0 text-[8px] font-medium text-[#5E43F3] font-mono">
-            ₦{nairaValue}
+          <span className="shrink-0 text-[10px] font-semibold tabular-nums text-[#5E43F3]">
+            ₦{nairaValue.toLocaleString()}
           </span>
         </div>
-        <div className="flex items-center gap-0.5 mt-0.5">
-          {/* Mini progress bar */}
-          <div className="w-7 h-1 rounded-full bg-theme-divider-strong overflow-hidden shrink-0">
+
+        <div className="flex items-center gap-1.5 leading-none">
+          <div className="h-1.5 w-11 sm:w-14 shrink-0 overflow-hidden rounded-full bg-theme-divider-strong">
             <div
-              className={`h-full transition-all duration-500 ${
+              className={`h-full rounded-full transition-all duration-500 ${
                 isReady
                   ? 'bg-[#5E43F3]'
                   : 'bg-gradient-to-r from-[#5E43F3] to-[#818CF8]'
               }`}
-              style={{ width: `${Math.min(100, Math.max(5, progressPercent))}%` }}
+              style={{ width: `${clampedProgress > 0 ? Math.max(6, clampedProgress) : 0}%` }}
             />
           </div>
-          <span className="text-[8px] text-theme-tertiary font-medium">
-            {progressPercent}%
+          <span className="shrink-0 text-[10px] font-semibold tabular-nums text-theme-tertiary">
+            {clampedProgress}%
           </span>
         </div>
       </div>
 
       {/* Ready Badge Ping */}
       {isReady && (
-        <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+        <span className="absolute right-1 top-1 flex h-2 w-2">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#5E43F3] opacity-40" />
-          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#5E43F3]" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-[#5E43F3]" />
         </span>
       )}
     </button>
