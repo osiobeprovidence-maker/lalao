@@ -506,7 +506,7 @@ const LalaoAppContent: React.FC = () => {
               </div>
             )}
             {activeTab === 'messages' && (
-              <div key="tab-messages" className="animate-in fade-in duration-200 w-full bg-transparent">
+              <div key="tab-messages" className="animate-in fade-in duration-200 flex min-h-[100dvh] w-full flex-col bg-transparent">
                 <MessagesView />
               </div>
             )}

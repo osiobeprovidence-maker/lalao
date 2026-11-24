@@ -23,7 +23,7 @@ export const RoomEggIndicator: React.FC<RoomEggIndicatorProps> = ({
       type="button"
       onClick={onClick}
       id="btn-room-egg-indicator"
-      className={`relative flex h-8 max-w-[96px] sm:max-w-[112px] shrink-0 items-center gap-1.5 px-2 py-0.5 rounded-full border transition-all cursor-pointer select-none active:scale-95 group ${
+      className={`relative flex h-7 max-w-[92px] sm:max-w-[108px] shrink-0 items-center gap-1.5 px-2 py-0.5 rounded-full border transition-all cursor-pointer select-none active:scale-95 group ${
         isReady
           ? 'bg-[#5E43F3]/15 border-[#5E43F3]/50 shadow-sm shadow-[#5E43F3]/20 hover:border-[#5E43F3]'
           : 'bg-theme-surface border-theme-divider hover:border-[#5E43F3]/50 hover:bg-theme-surface-hover'
@@ -38,7 +38,7 @@ export const RoomEggIndicator: React.FC<RoomEggIndicatorProps> = ({
           points={points}
           nairaValue={nairaValue}
           eggState={eggState}
-          size="sm"
+          size="xs"
         />
       </div>
 
