@@ -313,6 +313,14 @@ export default defineSchema({
     locationState: v.optional(v.string()),
     locationCity: v.optional(v.string()),
     locationNeighborhood: v.optional(v.string()),
+    locationSource: v.optional(
+      v.union(
+        v.literal("gps"),
+        v.literal("selected"),
+        v.literal("none"),
+        v.literal("unknown")
+      )
+    ),
     locationStatus: v.optional(
       v.union(v.literal("verified"), v.literal("approximate"), v.literal("unverified"))
     ),

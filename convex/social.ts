@@ -1979,6 +1979,14 @@ export const createPost = mutation({
     locationState: v.optional(v.string()),
     locationCity: v.optional(v.string()),
     locationNeighborhood: v.optional(v.string()),
+    locationSource: v.optional(
+      v.union(
+        v.literal("gps"),
+        v.literal("selected"),
+        v.literal("none"),
+        v.literal("unknown")
+      )
+    ),
     nearbyEnabled: v.optional(v.boolean()),
     rallyData: v.optional(
       v.object({
@@ -2176,11 +2184,16 @@ export const createPost = mutation({
     const isNearbyAudience = args.audience === "nearby";
     const explicitNearbyEnabled = args.nearbyEnabled !== undefined ? args.nearbyEnabled : isNearbyAudience;
 
+    const trimmedLocation = (args.location || "").trim();
+    const resolvedLocationSource: "gps" | "selected" | "none" | "unknown" =
+      args.locationSource ??
+      (hasCoords ? "gps" : trimmedLocation ? "selected" : "none");
+
     // Check accuracy & recency thresholds for Nearby posts
     let locationStatus: "verified" | "approximate" | "unverified" = "unverified";
     let isNearbyEligible = false;
 
-    if (hasCoords) {
+    if (hasCoords && resolvedLocationSource === "gps") {
       const accuracy = args.locationAccuracy;
       const isAccurate = accuracy === undefined || accuracy <= 100; // 100m threshold
       const isFresh =
@@ -2196,11 +2209,16 @@ export const createPost = mutation({
         isNearbyEligible = false;
       }
     } else if (isNearbyAudience) {
-      // Cannot publish to Nearby without valid device coordinates
+      // Cannot publish to Nearby without valid GPS device coordinates
       throw new Error(
         "Location coordinates are required to publish to Nearby. Please enable location or publish to Everyone."
       );
     }
+
+    const storedLocation =
+      resolvedLocationSource === "none" || resolvedLocationSource === "unknown"
+        ? ""
+        : trimmedLocation;
 
     const postId = await ctx.db.insert("posts", {
       authorId: currentUser._id,
@@ -2208,15 +2226,17 @@ export const createPost = mutation({
       mediaUrl: mediaUrl,
       mediaStorageId: args.mediaStorageId,
       mediaType: args.mediaType,
-      location: args.location,
-      latitude: hasCoords ? args.latitude : undefined,
-      longitude: hasCoords ? args.longitude : undefined,
-      locationAccuracy: args.locationAccuracy,
-      locationCapturedAt: args.locationCapturedAt ?? (hasCoords ? now : undefined),
-      locationCountry: args.locationCountry,
-      locationState: args.locationState,
-      locationCity: args.locationCity,
-      locationNeighborhood: args.locationNeighborhood,
+      location: storedLocation,
+      latitude: hasCoords && resolvedLocationSource === "gps" ? args.latitude : undefined,
+      longitude: hasCoords && resolvedLocationSource === "gps" ? args.longitude : undefined,
+      locationAccuracy: resolvedLocationSource === "gps" ? args.locationAccuracy : undefined,
+      locationCapturedAt:
+        resolvedLocationSource === "gps" ? (args.locationCapturedAt ?? (hasCoords ? now : undefined)) : undefined,
+      locationCountry: resolvedLocationSource === "none" ? undefined : args.locationCountry,
+      locationState: resolvedLocationSource === "none" ? undefined : args.locationState,
+      locationCity: resolvedLocationSource === "none" ? undefined : args.locationCity,
+      locationNeighborhood: resolvedLocationSource === "none" ? undefined : args.locationNeighborhood,
+      locationSource: resolvedLocationSource,
       locationStatus,
       nearbyEnabled: isNearbyEligible,
       createdAt: now,

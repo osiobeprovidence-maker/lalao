@@ -128,9 +128,19 @@ export const PostItem: React.FC<PostItemProps> = ({ post, rally: directRally, ex
   // Distance from post metadata or rally
   const distanceMeters = post?.distanceMeters;
 
-  // Location & Proximity: only render when valid metadata exists and enabled for this view context
+  // Location & Proximity: only render when valid, verified/selected metadata exists
   const shouldShowLocation = showLocation !== undefined ? showLocation : true;
-  const locationText = (post?.location || linkedRally?.location || '').trim();
+  const rawLocationText = (post?.location || linkedRally?.location || '').trim();
+  const postLocSource = (post as any)?.locationSource as string | undefined;
+  const isUnverifiedLegacyFallback =
+    !postLocSource &&
+    (post as any)?.locationStatus !== 'verified' &&
+    typeof post?.latitude !== 'number' &&
+    rawLocationText.toLowerCase() === 'udu';
+  const locationText =
+    postLocSource === 'unknown' || postLocSource === 'none' || isUnverifiedLegacyFallback
+      ? ''
+      : rawLocationText;
   const hasValidDistance = typeof distanceMeters === 'number' && !isNaN(distanceMeters) && distanceMeters >= 0;
   const formattedDistance = hasValidDistance ? formatDistance(distanceMeters, locationPrivacy?.approximateDistance) : '';
   const proximity = hasValidDistance ? getProximityCategory(distanceMeters) : { label: '', color: '', dotColor: '' };

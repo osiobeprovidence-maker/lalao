@@ -430,13 +430,14 @@ function PostComposerInner({
         }
       }
 
+      const explicitSelectedLocation = (rallyLocation.trim() || attachedLocation.trim());
       let rallyData = undefined;
       if (rallyType) {
         rallyData = {
           type: rallyType,
           title: rallyTitle.trim(),
           description: rallyDescription.trim() || text.trim(),
-          location: rallyLocation.trim() || attachedLocation || location.name || 'Local',
+          location: explicitSelectedLocation || (location.isGpsDetected ? location.name : '') || '',
           eventDate: rallyEventDate.trim(),
           eventTime: rallyEventTime.trim(),
           peopleNeeded: typeof rallyPeopleNeeded === 'number' ? rallyPeopleNeeded : undefined,
@@ -445,7 +446,8 @@ function PostComposerInner({
         };
       }
 
-      const postLocationName = rallyLocation.trim() || attachedLocation || location.name || '';
+      let postLocationName = '';
+      let postLocationSource: 'gps' | 'selected' | 'none' = 'none';
       let postCoords: {
         lat?: number;
         lng?: number;
@@ -459,24 +461,50 @@ function PostComposerInner({
 
       const isNearbyPost = audience === 'nearby';
 
-      // 1. If audience is Nearby, require verified device GPS reading
+      // 1. If audience is Nearby, require verified device GPS reading (never fall back to profile or default location)
       if (isNearbyPost) {
+        let activeGps = location;
         if (
-          !location.isGpsDetected ||
-          typeof location.latitude !== 'number' ||
-          typeof location.longitude !== 'number' ||
-          (location.accuracy && location.accuracy > 100)
+          !activeGps.isGpsDetected ||
+          typeof activeGps.latitude !== 'number' ||
+          typeof activeGps.longitude !== 'number' ||
+          (activeGps.accuracy && activeGps.accuracy > 100)
         ) {
           triggerShareToast('Acquiring fresh device GPS for Nearby distribution...');
           const gpsResult = await detectGpsLocation();
-          if (!gpsResult.success) {
+          if (!gpsResult.success || !gpsResult.location) {
             triggerShareToast(gpsResult.error || 'Verified GPS location required for Nearby');
             setIsSubmitting(false);
             return;
           }
+          activeGps = gpsResult.location;
         }
 
-        // Use the confirmed device GPS coordinates
+        // Use the confirmed fresh device GPS coordinates
+        postLocationName = activeGps.name || '';
+        postLocationSource = 'gps';
+        postCoords = {
+          lat: activeGps.latitude,
+          lng: activeGps.longitude,
+          accuracy: activeGps.accuracy,
+          capturedAt: activeGps.capturedAt || Date.now(),
+          country: activeGps.country,
+          state: activeGps.state,
+          city: activeGps.city,
+          neighborhood: activeGps.neighborhood,
+        };
+      } else if (explicitSelectedLocation) {
+        // 2. Explicitly selected location (location-specific post, clearly marked as selected, not GPS-verified)
+        postLocationName = explicitSelectedLocation;
+        postLocationSource = 'selected';
+      } else if (
+        location.isGpsDetected &&
+        typeof location.latitude === 'number' &&
+        typeof location.longitude === 'number'
+      ) {
+        // 3. For Everyone / general post with active GPS detected
+        postLocationName = location.name || '';
+        postLocationSource = postLocationName ? 'gps' : 'none';
         postCoords = {
           lat: location.latitude,
           lng: location.longitude,
@@ -487,20 +515,6 @@ function PostComposerInner({
           city: location.city,
           neighborhood: location.neighborhood,
         };
-      } else if (postLocationName) {
-        // For general posts, use attached location or GPS if active
-        if (location.isGpsDetected && typeof location.latitude === 'number' && typeof location.longitude === 'number') {
-          postCoords = {
-            lat: location.latitude,
-            lng: location.longitude,
-            accuracy: location.accuracy,
-            capturedAt: location.capturedAt || Date.now(),
-            country: location.country,
-            state: location.state,
-            city: location.city,
-            neighborhood: location.neighborhood,
-          };
-        }
       }
 
       const created = await createPost({
@@ -511,6 +525,7 @@ function PostComposerInner({
         mediaWidth: finalMediaWidth,
         mediaHeight: finalMediaHeight,
         location: postLocationName || undefined,
+        locationSource: postLocationSource,
         latitude: postCoords.lat,
         longitude: postCoords.lng,
         locationAccuracy: postCoords.accuracy,

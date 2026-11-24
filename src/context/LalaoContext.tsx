@@ -392,11 +392,11 @@ interface LalaoContextType {
 const LalaoContext = createContext<LalaoContextType | undefined>(undefined);
 
 const DEFAULT_LOCATION: LocationConfig = {
-  name: 'Udu',
-  subArea: 'Delta State',
+  name: '',
+  subArea: '',
   radiusKm: 5,
-  latitude: 5.8912,
-  longitude: 5.7532,
+  latitude: undefined,
+  longitude: undefined,
   isGpsDetected: false,
 };
 
@@ -727,7 +727,17 @@ const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
   const [location, setLocation] = useState<LocationConfig>(() => {
     try {
       const saved = localStorage.getItem('lalao_location');
-      return saved ? JSON.parse(saved) : DEFAULT_LOCATION;
+      if (!saved) return DEFAULT_LOCATION;
+      const parsed = JSON.parse(saved);
+      // Drop legacy hardcoded Udu fallback if it was never GPS-detected
+      if (
+        !parsed?.isGpsDetected &&
+        parsed?.name === 'Udu' &&
+        (parsed?.latitude === 5.8912 || parsed?.latitude === 5.5039)
+      ) {
+        return DEFAULT_LOCATION;
+      }
+      return parsed;
     } catch {
       return DEFAULT_LOCATION;
     }
@@ -1673,7 +1683,7 @@ const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
   };
 
   // GPS Detection with graceful fallback
-  const detectGpsLocation = async (): Promise<{ success: boolean; error?: string }> => {
+  const detectGpsLocation = async (): Promise<{ success: boolean; error?: string; location?: LocationConfig }> => {
     if (typeof window === 'undefined' || !navigator.geolocation) {
       return { success: false, error: 'Geolocation is not supported by your browser' };
     }
@@ -1765,7 +1775,7 @@ const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
           setLocation(newLoc);
           setIsDetectingGps(false);
           triggerShareToast(`Location detected: ${locName}`);
-          resolve({ success: true });
+          resolve({ success: true, location: newLoc });
         },
         (err) => {
           setIsDetectingGps(false);
@@ -1994,6 +2004,7 @@ const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
         locationState: args.locationState,
         locationCity: args.locationCity,
         locationNeighborhood: args.locationNeighborhood,
+        locationSource: (args as any).locationSource,
         nearbyEnabled: args.nearbyEnabled,
         audience: args.audience as any,
         replyPermission: args.replyPermission as any,
