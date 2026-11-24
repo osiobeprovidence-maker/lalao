@@ -45,12 +45,10 @@ export function getActiveSubscriptionTier(
 ): VerificationTier {
   if (!user) return 'none';
 
-  // 1. Check active subscription entitlement first (e.g. Tier 3/4/5 active subscription)
+  // 1. Trust server-confirmed active subscription entitlement (e.g. Tier 3/4/5 active subscription)
   const subTier = normalizeTier(user.subscription?.tier);
   const subStatus = user.subscription?.status;
-  const subExpiresAt = user.subscription?.nextBillingDate;
-  const isSubExpired = typeof subExpiresAt === 'number' && subExpiresAt > 0 && subExpiresAt <= now;
-  if (subStatus === 'active' && subTier !== 'none' && !isSubExpired) {
+  if (subStatus === 'active' && subTier !== 'none') {
     return subTier;
   }
 
@@ -60,14 +58,18 @@ export function getActiveSubscriptionTier(
     return 'none';
   }
 
-  const expiresAt = user.verificationExpiresAt ?? subExpiresAt;
+  const rawTier = normalizeTier(
+    user.verificationTier ?? user.tier ?? user.creatorTier
+  );
+  if (status === 'active' && rawTier !== 'none') {
+    return rawTier;
+  }
+
+  const expiresAt = user.verificationExpiresAt ?? user.subscription?.nextBillingDate;
   if (typeof expiresAt === 'number' && expiresAt > 0 && expiresAt <= now) {
     return 'none';
   }
 
-  const rawTier = normalizeTier(
-    user.verificationTier ?? user.tier ?? user.creatorTier
-  );
   if (rawTier !== 'none') {
     if (user.isVerified === false || (user.isVerified !== true && status !== 'active')) {
       return 'none';

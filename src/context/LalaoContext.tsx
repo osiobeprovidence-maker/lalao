@@ -1248,8 +1248,7 @@ const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
     const subTier = subscription.tier === 'creator_premium' ? 'creator' : subscription.tier;
     const hasActiveSub =
       subscription.status === 'active' &&
-      Boolean(subTier && subTier !== 'none') &&
-      (!subscription.nextBillingDate || subscription.nextBillingDate > Date.now());
+      Boolean(subTier && subTier !== 'none');
 
     if (hasActiveSub) {
       return {
