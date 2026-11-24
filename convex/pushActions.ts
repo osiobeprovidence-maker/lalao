@@ -195,64 +195,118 @@ export const dispatchPush = internalAction({
     // the same device does not receive a duplicate notification.
     if (webPushDelivered) return;
 
-    // 2. Fallback to legacy FCM if tokens exist
-    // NOTE: the legacy /fcm/send endpoint is deprecated by Google and may be
-    // rejected; migrate to FCM HTTP v1 when service-account credentials exist.
+    // 2. Deliver via Firebase Cloud Messaging HTTP v1 API
     const fcmTokens: any[] = await ctx.runQuery(internal.push.getFcmTokensForUser, {
       userId: recipientId,
     });
 
     if (fcmTokens && fcmTokens.length > 0) {
-      const serverKey = process.env.FIREBASE_SERVER_KEY;
-      if (!serverKey) {
-        // FCM tokens exist, but no server key configured.
+      const serviceAccountRaw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+      if (!serviceAccountRaw) {
+        console.warn("[push] FCM tokens exist, but FIREBASE_SERVICE_ACCOUNT_JSON is not configured on Convex.");
         return;
       }
 
+      let accessToken: string | null = null;
+      let projectId = "uselalaoapp";
+      try {
+        const sa = JSON.parse(serviceAccountRaw) as {
+          project_id?: string;
+          client_email: string;
+          private_key: string;
+        };
+        if (sa.project_id) projectId = sa.project_id;
+
+        const nowSec = Math.floor(Date.now() / 1000);
+        const toBase64Url = (input: string | Buffer) =>
+          Buffer.from(input)
+            .toString("base64")
+            .replace(/\+/g, "-")
+            .replace(/\//g, "_")
+            .replace(/=+$/g, "");
+
+        const header = toBase64Url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+        const claimSet = toBase64Url(
+          JSON.stringify({
+            iss: sa.client_email,
+            scope: "https://www.googleapis.com/auth/firebase.messaging",
+            aud: "https://oauth2.googleapis.com/token",
+            iat: nowSec,
+            exp: nowSec + 3600,
+          })
+        );
+        const unsignedJwt = `${header}.${claimSet}`;
+        const { createSign } = await import("crypto");
+        const signer = createSign("RSA-SHA256");
+        signer.update(unsignedJwt);
+        signer.end();
+        const signature = toBase64Url(signer.sign(sa.private_key));
+        const assertion = `${unsignedJwt}.${signature}`;
+
+        const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+            assertion,
+          }),
+        });
+        const tokenJson = (await tokenRes.json()) as { access_token?: string };
+        accessToken = tokenJson.access_token ?? null;
+      } catch (err) {
+        console.error("[push] Failed to mint FCM HTTP v1 OAuth2 token:", err);
+        return;
+      }
+
+      if (!accessToken) return;
+
       const staleIds: string[] = [];
+      const fcmEndpoint = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
 
       for (const row of fcmTokens) {
         try {
           const payload = {
-            to: row.token,
-            notification: {
-              title,
-              body,
-              icon: icon ?? "/mascot.png",
-              click_action: url ?? "/",
-            },
-            data: {
-              url: url ?? "/",
-            },
-            webpush: {
-              fcm_options: {
-                link: url ?? "/",
+            message: {
+              token: row.token,
+              notification: {
+                title,
+                body,
+              },
+              data: {
+                url: url ?? "/app",
+              },
+              webpush: {
+                notification: {
+                  icon: icon ?? "/icon-192.png",
+                  badge: "/icon-192.png",
+                },
+                fcm_options: {
+                  link: url ?? "/app",
+                },
               },
             },
           };
 
-          const res = await fetch("https://fcm.googleapis.com/fcm/send", {
+          const res = await fetch(fcmEndpoint, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `key=${serverKey}`,
+              Authorization: `Bearer ${accessToken}`,
             },
             body: JSON.stringify(payload),
           });
 
-          const json = await res.json() as any;
-          if (json.failure && json.results) {
-            for (const result of json.results) {
-              if (
-                result.error === "NotRegistered" ||
-                result.error === "InvalidRegistration"
-              ) {
-                staleIds.push(row._id);
-              }
+          if (!res.ok) {
+            const errJson = (await res.json().catch(() => ({}))) as any;
+            const errCode = errJson?.error?.details?.[0]?.errorCode || errJson?.error?.status;
+            if (errCode === "UNREGISTERED" || errCode === "INVALID_ARGUMENT" || res.status === 404) {
+              staleIds.push(row._id);
+            } else {
+              console.error("[push] FCM HTTP v1 send failed:", res.status, errJson);
             }
           }
         } catch (err) {
-          console.error("[push] Error sending push to FCM token", row.token, err);
+          console.error("[push] Error sending FCM HTTP v1 push:", err);
         }
       }
 

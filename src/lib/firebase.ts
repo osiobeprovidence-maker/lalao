@@ -34,7 +34,12 @@ export const uploadFileToStorage = async (file: File, folder: string) => {
   return getDownloadURL(storageRef);
 };
 
-const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY as string | undefined;
+const DEFAULT_FIREBASE_VAPID_KEY =
+  "BLlOLXJS78b8x4VneLVs1iAN5zl1QQhWkWl3YzzzRRjPshoXgmzcp8DG9EgnlnvWSTauqY22NYFF5MwL44BGe0I";
+
+const VAPID_KEY =
+  (import.meta.env.VITE_FIREBASE_VAPID_KEY as string | undefined) ||
+  DEFAULT_FIREBASE_VAPID_KEY;
 
 let _messaging: Messaging | null = null;
 
@@ -79,10 +84,11 @@ export async function getOrRequestFcmToken(): Promise<string | null> {
   }
 
   try {
-    // Register the FCM-compatible service worker
+    // Register the FCM service worker under Firebase's dedicated push scope so it
+    // never conflicts with the root PWA service worker (/sw.js on scope "/").
     const registration = await navigator.serviceWorker.register(
       "/firebase-messaging-sw.js",
-      { scope: "/" }
+      { scope: "/firebase-cloud-messaging-push-scope" }
     );
 
     const messaging = getFirebaseMessaging();
