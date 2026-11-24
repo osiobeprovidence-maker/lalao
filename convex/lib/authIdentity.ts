@@ -10,9 +10,11 @@ export async function getUserByTokenIdentifier(ctx: AuthContext, tokenIdentifier
     .withIndex("by_token_identifier", (q) => q.eq("tokenIdentifier", tokenIdentifier))
     .collect();
 
-  if (mappedIdentity.length > 1) throw new Error("Authentication identity mapping conflict. Contact support for account recovery.");
-
-  if (mappedIdentity.length === 1) {
+  if (mappedIdentity.length > 0) {
+    const distinctUserIds = new Set(mappedIdentity.map((m) => String(m.userId)));
+    if (distinctUserIds.size > 1) {
+      throw new Error("Authentication identity mapping conflict. Contact support for account recovery.");
+    }
     return await ctx.db.get(mappedIdentity[0].userId);
   }
 
@@ -75,7 +77,14 @@ export async function ensureAuthIdentity(ctx: MutationCtx, userId: any, identity
     .withIndex("by_token_identifier", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
     .collect();
 
-  if (existing.length > 1) throw new Error("This sign-in method has conflicting account mappings. Contact support for recovery.");
+  if (existing.length > 1) {
+    const distinctUserIds = new Set(existing.map((m) => String(m.userId)));
+    if (distinctUserIds.size > 1) {
+      throw new Error("This sign-in method has conflicting account mappings. Contact support for recovery.");
+    }
+    if (existing[0].userId === userId) return existing[0]._id;
+    throw new Error("This sign-in method is already linked to another Lalao account.");
+  }
 
   if (existing.length === 1) {
     if (existing[0].userId !== userId) throw new Error("This sign-in method is already linked to another Lalao account.");
