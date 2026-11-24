@@ -169,7 +169,7 @@ export const EggJarVisual: React.FC<EggJarVisualProps> = ({
       </svg>
 
       {/* Numerical Labels for Medium/Large sizes */}
-      {size !== 'sm' && (
+      {size !== 'xs' && size !== 'sm' && (
         <div className="mt-2 text-center">
           <div className="flex items-center justify-center gap-1.5">
             <span className="text-sm font-bold text-theme-primary tracking-wide">
