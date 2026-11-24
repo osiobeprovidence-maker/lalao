@@ -23,7 +23,7 @@ export const EggJarVisual: React.FC<EggJarVisualProps> = ({
 
   // Determine height/widths based on size
   const dimensions = {
-    xs: { width: 14, height: 18, stroke: 2 },
+    xs: { width: 11, height: 14, stroke: 2 },
     sm: { width: 24, height: 31, stroke: 2 },
     md: { width: 110, height: 140, stroke: 3 },
     lg: { width: 160, height: 200, stroke: 4 },
