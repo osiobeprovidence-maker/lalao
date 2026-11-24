@@ -9,6 +9,7 @@ import { canViewProfilePost } from "./lib/profilePostVisibility";
 import { requireAuthenticatedUploadIdentity } from "./lib/uploadSecurity";
 import { CHATROOM_MESSAGE_TTL_MS, getChatroomMessageExpiresAt } from "./lib/chatroomMessageExpiry";
 import { paginationOptsValidator } from "convex/server";
+import { requireMaintenanceOff } from "./internal/maintenance";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    AUTH HELPERS
@@ -155,13 +156,13 @@ export function resolveUserVerification(
   const validTier = tier === "verified" || tier === "priority" || tier === "creator";
   const expiresAt = doc.verificationExpiresAt;
   const isVerified = Boolean(
-    validTier &&
+    (validTier || doc.isVerified === true) &&
     (!status || status === "active") &&
     (typeof expiresAt !== "number" || expiresAt === 0 || expiresAt > now)
   );
   return {
     isVerified,
-    verificationTier: isVerified ? (tier === "creator_premium" ? "creator" : tier) : "none",
+    verificationTier: isVerified ? (validTier ? tier : "verified") : "none",
     ...(isVerified && typeof expiresAt === "number" && expiresAt > 0
       ? { verificationExpiresAt: expiresAt }
       : {}),
@@ -221,6 +222,7 @@ async function resolveAuthor(ctx: any, authorDoc: any, currentUserId: string | n
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireMaintenanceOff(ctx);
     await requireAuthenticatedUploadIdentity(ctx);
     return await ctx.storage.generateUploadUrl();
   },
@@ -1993,6 +1995,7 @@ export const createPost = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     let currentUser = await getAuthedUser(ctx);
     if (!currentUser && (args.authorUserId || args.authorUsername)) {
       if (args.authorUserId) {
@@ -2352,6 +2355,7 @@ export const createPost = mutation({
 export const toggleRepost = mutation({
   args: { postId: v.id("posts") },
   handler: async (ctx, { postId }) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 
@@ -2370,6 +2374,7 @@ export const toggleRepost = mutation({
 export const deletePost = mutation({
   args: { postId: v.id("posts") },
   handler: async (ctx, { postId }) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 
@@ -2447,6 +2452,7 @@ export const deletePost = mutation({
 export const toggleLikePost = mutation({
   args: { postId: v.id("posts") },
   handler: async (ctx, { postId }) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 
@@ -2518,6 +2524,7 @@ export const toggleLikePost = mutation({
 export const toggleLikeComment = mutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, { commentId }) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 
@@ -2575,6 +2582,7 @@ export const toggleLikeComment = mutation({
 export const deleteComment = mutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, { commentId }) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 
@@ -2628,6 +2636,7 @@ export const addCommentToPost = mutation({
     duration: v.optional(v.number()),
   },
   handler: async (ctx, { postId, text, parentCommentId, mediaStorageId, mediaType, duration }) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 
@@ -2882,6 +2891,7 @@ export const getRelationship = query({
 export const toggleFollowUser = mutation({
   args: { targetUserId: v.id("users") },
   handler: async (ctx, { targetUserId }) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
     if (currentUser._id === targetUserId) throw new Error("Cannot follow yourself");
@@ -3425,6 +3435,7 @@ export const getUnreadNotificationCount = query({
 export const markAllNotificationsRead = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 
@@ -3443,6 +3454,7 @@ export const markAllNotificationsRead = mutation({
 export const markNotificationRead = mutation({
   args: { id: v.id("notifications") },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
     const notif = await ctx.db.get(args.id);
@@ -3512,6 +3524,7 @@ export const saveDraft = mutation({
     pageRefId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 
@@ -3573,6 +3586,7 @@ export const saveDraft = mutation({
 export const deleteDraft = mutation({
   args: { draftId: v.id("drafts") },
   handler: async (ctx, { draftId }) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 
@@ -3633,6 +3647,7 @@ export const createGroupChat = mutation({
     creatorUserId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     let currentUser = await getAuthedUser(ctx);
     if (!currentUser && args.creatorUserId) {
       const normId = ctx.db.normalizeId("users", args.creatorUserId);
@@ -3699,6 +3714,7 @@ export const createGroupCycle = mutation({
     creatorUserId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     let currentUser = await getAuthedUser(ctx);
     if (!currentUser && args.creatorUserId) {
       const normId = ctx.db.normalizeId("users", args.creatorUserId);
@@ -3739,6 +3755,7 @@ export const inviteUserToGroupChat = mutation({
     userId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 
@@ -3765,6 +3782,7 @@ export const getOrCreateConversation = mutation({
     otherUserId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 
@@ -3815,6 +3833,7 @@ export const startPageConversation = mutation({
     pageId: v.id("pages"),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 
@@ -3867,6 +3886,7 @@ export const sendMessage = mutation({
     topicId: v.optional(v.id("roomTopics")),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 
@@ -4059,6 +4079,7 @@ export const markConversationRead = mutation({
     conversationId: v.id("conversations"),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 
@@ -4132,6 +4153,7 @@ export const editMessage = mutation({
     text: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 
@@ -4154,6 +4176,7 @@ export const deleteMessage = mutation({
     messageId: v.id("messages"),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 
@@ -4173,6 +4196,7 @@ export const markViewOnceOpened = mutation({
     messageId: v.id("messages"),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 
@@ -4198,6 +4222,7 @@ export const updateDisappearingMessages = mutation({
     customUnit: v.optional(v.string()), // "hours", "days", "weeks", "months"
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new Error("Not authenticated");
 

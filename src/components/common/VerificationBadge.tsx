@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { VerificationTier, User } from '../../types';
 
 export interface VerificationBadgeProps {
   tier?: VerificationTier;
   user?: Partial<User> | null;
+  preview?: boolean;
   size?: 'xs' | 'sm' | 'md' | 'lg';
   showTooltip?: boolean;
   className?: string;
@@ -38,15 +39,11 @@ export function normalizeTier(tier?: string | null): VerificationTier {
 /**
  * Resolve a user's server-confirmed active verification tier.
  */
-export function getActiveSubscriptionTier(user?: Partial<User> | null): VerificationTier {
+export function getActiveSubscriptionTier(
+  user?: Partial<User> | null,
+  now: number = Date.now(),
+): VerificationTier {
   if (!user) return 'none';
-
-  const rawTier = normalizeTier(
-    user.verificationTier ?? user.subscription?.tier ?? user.tier ?? user.creatorTier
-  );
-  if (rawTier === 'none') return 'none';
-
-  if (user.isVerified !== true) return 'none';
 
   const status = user.verificationStatus ?? user.subscription?.status;
   if (status && status !== 'active') {
@@ -54,23 +51,52 @@ export function getActiveSubscriptionTier(user?: Partial<User> | null): Verifica
   }
 
   const expiresAt = user.verificationExpiresAt ?? user.subscription?.nextBillingDate;
-  if (typeof expiresAt === 'number' && expiresAt <= Date.now()) {
+  if (typeof expiresAt === 'number' && expiresAt > 0 && expiresAt <= now) {
     return 'none';
   }
 
-  return rawTier;
+  const rawTier = normalizeTier(
+    user.verificationTier ?? user.subscription?.tier ?? user.tier ?? user.creatorTier
+  );
+  if (rawTier !== 'none') {
+    if (user.isVerified === false || (user.isVerified !== true && status !== 'active')) {
+      return 'none';
+    }
+    return rawTier;
+  }
+
+  // Fallback for verified accounts whose backend record sets isVerified=true without a tier string
+  if (user.isVerified === true) {
+    return 'verified';
+  }
+
+  return 'none';
 }
 
 export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
   tier: propTier,
   user,
+  preview = false,
   size = 'sm',
   showTooltip = true,
   className = '',
 }) => {
-  // Resolve tier: explicit propTier takes precedence if recognized, otherwise derive from user
-  const explicitTier = propTier ? normalizeTier(propTier) : 'none';
-  const resolvedTier: VerificationTier = explicitTier !== 'none' ? explicitTier : getActiveSubscriptionTier(user);
+  const expiresAt = user?.verificationExpiresAt ?? user?.subscription?.nextBillingDate;
+  const [expiryTick, setExpiryTick] = useState(0);
+
+  useEffect(() => {
+    if (typeof expiresAt !== 'number' || expiresAt <= Date.now()) return;
+
+    const timer = window.setTimeout(
+      () => setExpiryTick((tick) => tick + 1),
+      Math.min(expiresAt - Date.now() + 1, 2_147_483_647),
+    );
+    return () => window.clearTimeout(timer);
+  }, [expiresAt, expiryTick]);
+
+  const resolvedTier: VerificationTier = preview
+    ? normalizeTier(propTier)
+    : getActiveSubscriptionTier(user);
   const normalizedTier = normalizeTier(resolvedTier);
 
   if (normalizedTier === 'none') {
@@ -87,6 +113,11 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
     : isPriority
     ? 'Priority Verified\nThis person has priority verification on Lalao.'
     : 'Verified\nThis person has completed Lalao verification.';
+  const ariaLabel = isCreator
+    ? 'Verified account (Creator Premium)'
+    : isPriority
+      ? 'Verified account (Priority)'
+      : 'Verified account';
 
   // Standard verified blue across verified profiles matching the post badge
   const badgeColor = '#1DA1F2';
@@ -119,7 +150,7 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
       title={showTooltip ? tooltipText : undefined}
       className={`inline-flex items-center justify-center shrink-0 align-middle ${box} ${className}`}
       role="img"
-      aria-label="Verified account"
+      aria-label={ariaLabel}
     >
       {svgIcon}
     </span>

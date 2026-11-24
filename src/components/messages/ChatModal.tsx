@@ -1134,7 +1134,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({ backLabel = 'Back to messa
   const isVoiceActive = voiceState !== 'idle';
 
   return (
-    <div id="chat-screen" className="w-full h-full bg-theme-base flex justify-center overflow-hidden animate-in fade-in duration-200">
+    <div id="chat-screen" className="w-full h-full min-h-0 flex-1 bg-theme-base flex justify-center overflow-hidden animate-in fade-in duration-200">
       
       {/* ── VIEW ONCE PLAYER ─────────────────────────────────────────────────── */}
       {activeViewOnceMedia && (

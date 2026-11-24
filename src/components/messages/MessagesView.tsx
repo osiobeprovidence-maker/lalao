@@ -21,8 +21,7 @@ import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
-import { VerificationBadge } from '../common/VerificationBadge';
-import { getPublicIdentityLabel } from '../common/UserIdentity';
+import { UserIdentity } from '../common/UserIdentity';
 import { ChatModal } from './ChatModal';
 import { AddPeopleModal } from './AddPeopleModal';
 
@@ -196,7 +195,7 @@ export const MessagesView: React.FC = () => {
 
   if (activeChatId) {
     return (
-      <div className="min-h-screen bg-theme-base">
+      <div className="flex h-[100dvh] w-full flex-col min-h-0 overflow-hidden bg-theme-base">
         <ChatModal />
       </div>
     );
@@ -568,11 +567,8 @@ export const MessagesView: React.FC = () => {
                   />
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-sm text-theme-primary truncate">
-                        {getPublicIdentityLabel(conv.participant)}
-                      </span>
+                      <UserIdentity user={conv.participant} className="font-bold text-sm text-theme-primary" badgeSize="xs" />
                       {conv.participant?.badge && <Badge type={conv.participant.badge} />}
-                      <VerificationBadge user={conv.participant} size="xs" />
                     </div>
                     {(conv as any).isPageConvo && !(conv as any).amIUserA && (
                       <div className="text-[10px] font-black tracking-wider text-[#5E43F3] bg-[#5E43F3]/10 border border-[#5E43F3]/20 px-1.5 py-0.5 rounded-sm uppercase mt-1 w-fit mb-0.5">
@@ -639,11 +635,8 @@ export const MessagesView: React.FC = () => {
                 />
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-sm text-theme-primary truncate">
-                      {getPublicIdentityLabel(contact)}
-                    </span>
+                    <UserIdentity user={contact} className="font-bold text-sm text-theme-primary" badgeSize="xs" />
                     {contact.badge && <Badge type={contact.badge} />}
-                    <VerificationBadge user={contact} size="xs" />
                   </div>
                   <div className="flex items-center gap-1 text-xs text-theme-tertiary truncate mt-0.5 max-w-[220px]">
                     <span className="truncate">Start a conversation</span>
