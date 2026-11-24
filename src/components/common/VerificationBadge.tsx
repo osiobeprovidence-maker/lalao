@@ -45,18 +45,28 @@ export function getActiveSubscriptionTier(
 ): VerificationTier {
   if (!user) return 'none';
 
-  const status = user.verificationStatus ?? user.subscription?.status;
+  // 1. Check active subscription entitlement first (e.g. Tier 3/4/5 active subscription)
+  const subTier = normalizeTier(user.subscription?.tier);
+  const subStatus = user.subscription?.status;
+  const subExpiresAt = user.subscription?.nextBillingDate;
+  const isSubExpired = typeof subExpiresAt === 'number' && subExpiresAt > 0 && subExpiresAt <= now;
+  if (subStatus === 'active' && subTier !== 'none' && !isSubExpired) {
+    return subTier;
+  }
+
+  // 2. Check user-level verification fields
+  const status = user.verificationStatus ?? subStatus;
   if (status && status !== 'active') {
     return 'none';
   }
 
-  const expiresAt = user.verificationExpiresAt ?? user.subscription?.nextBillingDate;
+  const expiresAt = user.verificationExpiresAt ?? subExpiresAt;
   if (typeof expiresAt === 'number' && expiresAt > 0 && expiresAt <= now) {
     return 'none';
   }
 
   const rawTier = normalizeTier(
-    user.verificationTier ?? user.subscription?.tier ?? user.tier ?? user.creatorTier
+    user.verificationTier ?? user.tier ?? user.creatorTier
   );
   if (rawTier !== 'none') {
     if (user.isVerified === false || (user.isVerified !== true && status !== 'active')) {
@@ -65,7 +75,7 @@ export function getActiveSubscriptionTier(
     return rawTier;
   }
 
-  // Fallback for verified accounts whose backend record sets isVerified=true without a tier string
+  // 3. Fallback for verified accounts whose backend record sets isVerified=true without a tier string
   if (user.isVerified === true) {
     return 'verified';
   }

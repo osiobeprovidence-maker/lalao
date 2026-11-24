@@ -431,11 +431,12 @@ const normalizeConvexUser = (user: Record<string, any> | null | undefined): User
   if (!user) return EMPTY_CURRENT_USER;
 
   const rawTier = user.verificationTier || user.tier || user.creatorTier;
+  const normalizedRawTier = rawTier === 'creator_premium' ? 'creator' : rawTier;
   const status = user.verificationStatus;
   const expiresAt = user.verificationExpiresAt;
-  const hasActiveTier = rawTier && rawTier !== 'none';
+  const hasActiveTier = Boolean(normalizedRawTier && normalizedRawTier !== 'none');
   const isVerified = Boolean(
-    hasActiveTier &&
+    (hasActiveTier || user.isVerified === true) &&
     (!status || status === 'active') &&
     (typeof expiresAt !== 'number' || expiresAt === 0 || expiresAt > Date.now())
   );
@@ -1244,6 +1245,23 @@ const toggleLikePostMutation = useMutation(api.social.toggleLikePost);
 
   // Effective current user enriched with active subscription status
   const effectiveCurrentUser = useMemo<User>(() => {
+    const subTier = subscription.tier === 'creator_premium' ? 'creator' : subscription.tier;
+    const hasActiveSub =
+      subscription.status === 'active' &&
+      Boolean(subTier && subTier !== 'none') &&
+      (!subscription.nextBillingDate || subscription.nextBillingDate > Date.now());
+
+    if (hasActiveSub) {
+      return {
+        ...currentUser,
+        isVerified: true,
+        verificationTier: subTier as VerificationTier,
+        verificationStatus: 'active',
+        verificationExpiresAt: subscription.nextBillingDate ?? currentUser.verificationExpiresAt,
+        subscription,
+      };
+    }
+
     return {
       ...currentUser,
       subscription,
