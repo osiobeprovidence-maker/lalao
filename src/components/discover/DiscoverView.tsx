@@ -95,12 +95,14 @@ export const DiscoverView: React.FC = () => {
       'room-meet-connect',
       'room-entertainment-zone',
       'room-ideas-trending',
+      'room-naija-connect',
     ]);
     const demoNames = new Set([
       'general chat',
       'meet & connect',
       'entertainment zone',
       'ideas & trending',
+      'naija connect',
     ]);
     return rawChatrooms.filter((room: any) => {
       const u = (room.username || '').trim().toLowerCase();
@@ -1015,14 +1017,14 @@ export const DiscoverView: React.FC = () => {
                     <p className="text-xs text-theme-tertiary">Try searching with a different room name or category.</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {chatrooms.map((room: any) => {
                       const roomImage = room.coverImage || room.avatarUrl;
                       return (
                         <div
                           key={room.id}
                           id={`chatroom-card-${room.id}`}
-                          className="group relative overflow-hidden rounded-2xl border border-theme-divider bg-theme-surface shadow-xs"
+                          className="group relative flex flex-col overflow-hidden rounded-2xl border border-theme-divider bg-theme-surface shadow-xs"
                         >
                           {/* Banner Cover */}
                           <div className="relative h-24 w-full bg-gradient-to-r from-neutral-900 via-neutral-950 to-neutral-900 overflow-hidden">
@@ -1042,22 +1044,22 @@ export const DiscoverView: React.FC = () => {
                           </div>
 
                           {/* Content Body */}
-                          <div className="p-3.5 sm:p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex items-center gap-3 min-w-0">
-                                {roomImage && <img src={roomImage} alt="" className="h-11 w-11 rounded-2xl border border-theme-divider object-cover shrink-0 shadow-sm" />}
+                          <div className="p-3.5 sm:p-4 flex flex-col flex-1">
+                            <div className="flex items-start justify-between gap-2.5">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                {roomImage && <img src={roomImage} alt="" className="h-10 w-10 rounded-xl border border-theme-divider object-cover shrink-0 shadow-sm" />}
                                 <div className="min-w-0">
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1.5">
                                     <h3 className="font-black text-sm text-theme-primary truncate">
                                       {room.name}
                                     </h3>
                                     {room.isMember && (
-                                      <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                      <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shrink-0">
                                         JOINED
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-[11px] text-theme-tertiary font-mono">@{room.username}</p>
+                                  <p className="text-[11px] text-theme-tertiary font-mono truncate">@{room.username}</p>
                                 </div>
                               </div>
 
@@ -1067,7 +1069,7 @@ export const DiscoverView: React.FC = () => {
                                     type="button"
                                     onClick={() => void openChatroom(room)}
                                     disabled={joiningChatroomId === room.id}
-                                    className="px-3.5 py-1.5 rounded-full text-xs font-bold text-white bg-theme-surface border border-theme-divider hover:bg-theme-surface-hover transition-colors shrink-0 cursor-pointer shadow-xs disabled:opacity-50"
+                                    className="px-3 py-1.5 rounded-full text-xs font-bold text-theme-primary bg-theme-base border border-theme-divider hover:bg-theme-surface-hover transition-colors shrink-0 cursor-pointer shadow-xs disabled:opacity-50"
                                   >
                                     {joiningChatroomId === room.id ? 'Opening…' : 'View Room'}
                                   </button>
@@ -1076,7 +1078,7 @@ export const DiscoverView: React.FC = () => {
                                     type="button"
                                     onClick={() => void openChatroom(room)}
                                     disabled={joiningChatroomId === room.id}
-                                    className="px-3.5 py-1.5 rounded-full text-xs font-bold text-white bg-[#5E43F3] hover:bg-[#4E34E0] transition-colors shrink-0 cursor-pointer shadow-xs disabled:opacity-50"
+                                    className="px-3 py-1.5 rounded-full text-xs font-bold text-white bg-[#5E43F3] hover:bg-[#4E34E0] transition-colors shrink-0 cursor-pointer shadow-xs disabled:opacity-50"
                                   >
                                     {joiningChatroomId === room.id ? 'Joining…' : 'Join Room'}
                                   </button>
@@ -1091,7 +1093,7 @@ export const DiscoverView: React.FC = () => {
                             )}
 
                             {/* Genuine Member count */}
-                            <div className="flex items-center gap-3 mt-3 pt-2.5 border-t border-theme-divider text-[11px] text-theme-tertiary">
+                            <div className="flex items-center gap-2.5 mt-auto pt-3 border-t border-theme-divider text-[11px] text-theme-tertiary">
                               <div className="flex items-center gap-1.5">
                                 <Users className="w-3.5 h-3.5 text-theme-tertiary" />
                                 <span>
