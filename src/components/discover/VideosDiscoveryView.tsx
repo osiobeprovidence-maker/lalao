@@ -253,7 +253,7 @@ export const VideosDiscoveryView: React.FC = () => {
 
       {sortedPosts.length === 0 ? (
         <div className="rounded-2xl border border-theme-divider bg-theme-surface px-4 py-16 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#5E43F3]/15 text-[#8B79FF]">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#5E43F3]/15 text-[#5E43F3]">
             <VideoIcon className="h-7 w-7" />
           </div>
           <h2 className="text-sm font-bold text-theme-primary">No videos discovered yet</h2>
@@ -271,7 +271,7 @@ export const VideosDiscoveryView: React.FC = () => {
                 type="button"
                 onClick={() => setActiveVideoFeedPostId(post.id)}
                 aria-label={`Play video by ${creatorName}`}
-                className="group relative aspect-[9/15] min-w-0 overflow-hidden rounded-xl border border-theme-divider bg-theme-surface text-left shadow-sm shadow-black/20 transition-all hover:-translate-y-0.5 hover:border-[#5E43F3]/70 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5E43F3]"
+                className="group relative aspect-[9/15] min-w-0 overflow-hidden rounded-xl border border-theme-divider bg-theme-surface text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#5E43F3]/70 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5E43F3]"
               >
                 <VideoPreview post={post} />
                 <span className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col justify-end p-2.5 sm:p-3">
@@ -298,7 +298,7 @@ export const VideosDiscoveryView: React.FC = () => {
           <button
             type="button"
             onClick={() => setCursor(result.nextCursor || undefined)}
-            className="rounded-full border border-[#5E43F3]/50 bg-[#5E43F3]/15 px-5 py-2.5 text-xs font-bold text-white transition-colors hover:bg-[#5E43F3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5E43F3]"
+            className="rounded-full border border-[#5E43F3]/50 bg-[#5E43F3]/15 px-5 py-2.5 text-xs font-bold text-[#5E43F3] transition-colors hover:bg-[#5E43F3] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5E43F3]"
           >
             Load More Videos
           </button>
