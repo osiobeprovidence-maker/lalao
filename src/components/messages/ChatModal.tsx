@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   ArrowLeft,
   Send,
@@ -19,14 +19,14 @@ import {
   PhoneMissed,
   PhoneOff,
   Users,
+  Megaphone,
 } from 'lucide-react';
-import { useMutation } from 'convex/react';
+import { useMutation, usePaginatedQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { useCall } from '../../context/CallContext';
 import { Avatar } from '../common/Avatar';
-import { VerificationBadge } from '../common/VerificationBadge';
-import { getPublicIdentityLabel } from '../common/UserIdentity';
+import { getPublicIdentityLabel, UserIdentity } from '../common/UserIdentity';
 import { DirectMessage, User } from '../../types';
 import { compressImage } from '../../lib/imageCompression';
 import { ChatroomMembersModal, type ChatroomMember } from './ChatroomMembersModal';
@@ -34,6 +34,10 @@ import { useQuery } from 'convex/react';
 import { RoomEggIndicator } from '../rewards/RoomEggIndicator';
 import { LalaoEggDashboardModal } from '../rewards/LalaoEggDashboardModal';
 import { SponsoredPostCard } from '../feed/SponsoredPostCard';
+import { RoomAdPurchaseModal } from '../ads/RoomAdPurchaseModal';
+import { LocalRoomAdDemoCard } from '../ads/LocalRoomAdDemoCard';
+import type { Id } from '../../../convex/_generated/dataModel';
+import { getChatroomMessageExpiresAt } from '../../../convex/lib/chatroomMessageExpiry';
 
 // ─── Receipt Indicator ──────────────────────────────────────────────────────
 
@@ -417,7 +421,13 @@ function formatDateSeparator(createdAt: number): string {
 
 // ─── ChatModal ────────────────────────────────────────────────────────────────
 
-export const ChatModal: React.FC = () => {
+interface ChatModalProps {
+  backLabel?: string;
+  onBack?: () => void;
+  roomHostName?: string;
+}
+
+export const ChatModal: React.FC<ChatModalProps> = ({ backLabel = 'Back to messages', onBack, roomHostName }) => {
   const {
     activeChatId,
     setActiveChatId,
@@ -444,6 +454,10 @@ export const ChatModal: React.FC = () => {
   const [isRoomOptionsOpen, setIsRoomOptionsOpen] = useState(false);
   const [roomMembersView, setRoomMembersView] = useState<'all' | 'online' | null>(null);
   const [isEggDashboardOpen, setIsEggDashboardOpen] = useState(false);
+  const [isRoomAdModalOpen, setIsRoomAdModalOpen] = useState(false);
+  const [isLocalRoomAdDemoEnabled, setIsLocalRoomAdDemoEnabled] = useState(
+    () => import.meta.env.DEV && window.localStorage.getItem('lalao_room_ad_demo') !== 'disabled',
+  );
   const eggStatus = useQuery((api as any).egg?.getMyEggStatus);
   const recordEggHeartbeat = useMutation((api as any).egg?.recordRoomHeartbeat);
 
@@ -484,11 +498,91 @@ export const ChatModal: React.FC = () => {
 
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const prevMessagesRef = useRef<DirectMessage[]>([]);
+  const [newMessagesCount, setNewMessagesCount] = useState(0);
+  const previousMessageCountRef = useRef<number>(0);
+  const olderPageScrollRef = useRef<{ scrollHeight: number; scrollTop: number } | null>(null);
 
   const conv = conversations.find((c) => c.id === activeChatId);
   const roomChat = (conv as any)?.groupChat;
+  const isRoomChat = Boolean(roomChat?.isChatroom);
   const roomId = roomChat?.isChatroom ? String(roomChat._id ?? roomChat.id ?? (conv as any)?.groupChatId ?? '') : '';
-  const roomSponsoredPlacement = useQuery(api.ads.getRoomSponsoredPlacement, roomId ? { roomId: roomId as any } : 'skip');
+  const isBackendConversation = Boolean(activeChatId && !activeChatId.startsWith('conv_') && !activeChatId.startsWith('mock_'));
+  const paginatedMessages = usePaginatedQuery(
+    api.social.getConversationMessages,
+    isBackendConversation && activeChatId
+      ? { conversationId: activeChatId as Id<'conversations'> }
+      : 'skip',
+    { initialNumItems: 50 },
+  );
+  const groupAdPlacement = useQuery(
+    api.ads.getGroupAdPlacement,
+    !import.meta.env.DEV && isRoomChat && conv ? { conversationId: (conv as any).id } : 'skip',
+  );
+  const sortedMessages = useMemo(
+    () => {
+      const source = paginatedMessages.results.length
+        ? paginatedMessages.results as DirectMessage[]
+        : conv?.messages ?? [];
+      return [...source].sort((a, b) => a.createdAt - b.createdAt);
+    },
+    [conv?.messages, paginatedMessages.results],
+  );
+  const [expiryTick, setExpiryTick] = useState(0);
+  const visibleMessages = useMemo(
+    () => isRoomChat
+      ? sortedMessages.filter((message) => getChatroomMessageExpiresAt(message.createdAt || 0, message.expiresAt) > Date.now())
+      : sortedMessages,
+    [isRoomChat, sortedMessages, expiryTick],
+  );
+
+  useEffect(() => {
+    if (!isRoomChat) return;
+    const now = Date.now();
+    const nextExpiry = visibleMessages.reduce<number | null>((nearest, message) => {
+      const expiresAt = getChatroomMessageExpiresAt(message.createdAt || 0, message.expiresAt);
+      return nearest === null || expiresAt < nearest ? expiresAt : nearest;
+    }, null);
+    if (nextExpiry === null) return;
+
+    const timer = window.setTimeout(
+      () => setExpiryTick((tick) => tick + 1),
+      Math.max(0, nextExpiry - now + 25),
+    );
+    return () => window.clearTimeout(timer);
+  }, [isRoomChat, visibleMessages, expiryTick]);
+
+  useEffect(() => {
+    previousMessageCountRef.current = 0;
+    olderPageScrollRef.current = null;
+    prevMessagesRef.current = [];
+    setNewMessagesCount(0);
+  }, [activeChatId]);
+
+  const roomAdSlot = import.meta.env.DEV
+    ? isLocalRoomAdDemoEnabled
+      ? <div className="mx-auto w-full max-w-2xl py-2"><LocalRoomAdDemoCard /></div>
+      : null
+    : groupAdPlacement?.placement ? (
+    <div className="mx-auto w-full max-w-2xl py-2" aria-label="Sponsored room advertisement">
+      <SponsoredPostCard placement={groupAdPlacement.placement} />
+    </div>
+  ) : groupAdPlacement?.opportunity ? (
+    <button
+      type="button"
+      onClick={() => setIsRoomAdModalOpen(true)}
+      className="group mx-auto flex w-full max-w-2xl items-center gap-3 rounded-xl border border-dashed border-[#5E43F3]/30 bg-gradient-to-r from-[#5E43F3]/[0.06] via-theme-surface to-cyan-500/[0.06] px-3.5 py-3 text-left transition-colors hover:border-[#5E43F3]/60 hover:bg-[#5E43F3]/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5E43F3]"
+      aria-label={`Advertise here in ${roomChat?.name || 'this room'}`}
+    >
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#818CF8] to-[#5E43F3] text-white shadow-sm"><Megaphone size={17}/></span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-xs font-extrabold text-theme-primary">Advertise here</span>
+        <span className="mt-0.5 block truncate text-[11px] text-theme-tertiary">Promote your business or reach room members.</span>
+      </span>
+      <span className="shrink-0 rounded-full bg-[#5E43F3]/10 px-2.5 py-1 text-[10px] font-bold text-[#5E43F3] transition-colors group-hover:bg-[#5E43F3] group-hover:text-white">Create</span>
+    </button>
+  ) : null;
+  const groupAdAnchorMessageId = (groupAdPlacement?.placement as any)?.anchorMessageId as string | undefined;
+  const localAdAnchorIndex = Math.floor((visibleMessages.length - 1) / 2);
 
   useEffect(() => {
     if (!roomId || !currentUser?.id) return;
@@ -530,10 +624,58 @@ export const ChatModal: React.FC = () => {
   }, [activeChatId, conv?.messages?.length]);
 
   useEffect(() => {
-    if (chatScrollRef.current) {
-      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    const container = chatScrollRef.current;
+    if (!container) return;
+
+    const scrollToBottom = () => {
+      container.scrollTop = container.scrollHeight;
+    };
+
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 180;
+    const messageCount = visibleMessages.length;
+    const previousCount = previousMessageCountRef.current;
+
+    if (olderPageScrollRef.current) {
+      const anchor = olderPageScrollRef.current;
+      container.scrollTop = anchor.scrollTop + container.scrollHeight - anchor.scrollHeight;
+      olderPageScrollRef.current = null;
+      previousMessageCountRef.current = messageCount;
+      return;
     }
-  }, [activeChatId, conv?.messages?.length]);
+
+    if (!activeChatId) {
+      previousMessageCountRef.current = messageCount;
+      return;
+    }
+
+    if (messageCount > previousCount || isNearBottom) {
+      scrollToBottom();
+      setNewMessagesCount(0);
+    } else if (messageCount > 0 && previousCount > 0 && messageCount !== previousCount) {
+      setNewMessagesCount((count) => count + (messageCount - previousCount));
+    }
+
+    previousMessageCountRef.current = messageCount;
+  }, [activeChatId, visibleMessages.length]);
+
+  const handleScroll = useCallback(() => {
+    const container = chatScrollRef.current;
+    if (!container) return;
+
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 180;
+    if (isNearBottom) {
+      setNewMessagesCount(0);
+    }
+    if (
+      isBackendConversation &&
+      container.scrollTop < 80 &&
+      paginatedMessages.status === 'CanLoadMore' &&
+      !olderPageScrollRef.current
+    ) {
+      olderPageScrollRef.current = { scrollHeight: container.scrollHeight, scrollTop: container.scrollTop };
+      paginatedMessages.loadMore(50);
+    }
+  }, [isBackendConversation, paginatedMessages.status, paginatedMessages.loadMore]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -556,7 +698,6 @@ export const ChatModal: React.FC = () => {
   }, [conv?.messages]);
 
   if (!activeChatId || !conv) return null;
-  const isRoomChat = Boolean(roomChat?.isChatroom);
   const roomImage = roomChat?.avatarUrl || roomChat?.coverImage || conv.participant.avatar;
   const roomMemberCount = Number(roomChat?.memberCount ?? conv.participant.followersCount ?? 0);
   const roomOnlineMemberCount = Number(roomChat?.onlineMemberCount ?? 0);
@@ -903,6 +1044,7 @@ export const ChatModal: React.FC = () => {
       userType: senderData?.userType || 'person',
       isVerified: msg.senderIsVerified ?? senderData?.isVerified,
       verificationTier: msg.senderVerificationTier ?? senderData?.verificationTier,
+      verificationExpiresAt: msg.senderVerificationExpiresAt ?? senderData?.verificationExpiresAt,
     };
 
     setActiveUserProfile(senderProfile);
@@ -992,7 +1134,7 @@ export const ChatModal: React.FC = () => {
   const isVoiceActive = voiceState !== 'idle';
 
   return (
-    <div id="chat-screen" className="w-full min-h-screen bg-theme-base flex justify-center overflow-hidden animate-in fade-in duration-200">
+    <div id="chat-screen" className="w-full h-full bg-theme-base flex justify-center overflow-hidden animate-in fade-in duration-200">
       
       {/* ── VIEW ONCE PLAYER ─────────────────────────────────────────────────── */}
       {activeViewOnceMedia && (
@@ -1026,31 +1168,38 @@ export const ChatModal: React.FC = () => {
         </div>
       )}
 
-      <div className="w-full min-h-screen bg-theme-base flex flex-col border-x border-black/[0.04] dark:border-white/[0.06]">
+      <div className="w-full h-full bg-theme-base flex flex-col border-x border-black/[0.04] dark:border-white/[0.06] min-h-0 overflow-hidden">
 
         {/* Header */}
-        <header className="shrink-0 border-b border-black/[0.04] dark:border-white/[0.06] bg-theme-base/95 backdrop-blur-md px-3 sm:px-4 py-2.5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-2.5">
+        <header className="sticky top-0 z-20 shrink-0 border-b border-theme-divider/70 bg-theme-base/95 shadow-2xs backdrop-blur-md px-3 sm:px-4 py-2.5">
+          <div className="flex items-center justify-between gap-2 sm:gap-3">
+            <div className="flex min-w-0 flex-1 items-center gap-2.5">
               <button
                 id="btn-chat-back"
                 type="button"
-                onClick={() => setActiveChatId(null)}
-                className="p-1.5 -ml-1 rounded-full text-theme-secondary hover:text-theme-primary hover:bg-theme-surface-hover active:scale-95 transition-all cursor-pointer"
-                aria-label="Back to messages"
+                onClick={() => onBack ? onBack() : setActiveChatId(null)}
+                className="p-1.5 -ml-1 shrink-0 rounded-full text-theme-secondary hover:text-theme-primary hover:bg-theme-surface-hover active:scale-95 transition-all cursor-pointer"
+                aria-label={backLabel}
               >
                 <ArrowLeft className="w-5 h-5 stroke-[2.2]" />
               </button>
 
               {isRoomChat ? (
-                <div className="flex min-w-0 items-center gap-2.5 text-left">
+                <div className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
                   <Avatar src={roomImage || undefined} alt={roomChat.name || 'Room'} size="sm" className="h-9 w-9 shrink-0 rounded-xl" />
-                  <div className="min-w-0">
-                    <span className="block truncate text-sm font-bold text-theme-primary">{roomChat.name || conv.participant.name}</span>
-                    <div className="flex min-w-0 flex-wrap items-center gap-x-1 text-[11px] leading-tight text-theme-tertiary">
-                      <span>{roomMemberCount} {roomMemberCount === 1 ? 'member' : 'members'}</span>
+                  <div className="min-w-0 flex-1">
+                    <h1 className="truncate text-sm sm:text-[15px] font-bold leading-tight text-theme-primary">
+                      {roomChat.name || conv.participant.name}
+                    </h1>
+                    <div className="mt-0.5 flex min-w-0 items-center gap-1.5 truncate text-[11px] leading-tight text-theme-tertiary">
+                      <span className="truncate">
+                        {roomMemberCount} {roomMemberCount === 1 ? 'member' : 'members'}
+                      </span>
                       <span aria-hidden="true">·</span>
-                      <span>{roomOnlineMemberCount} online</span>
+                      <span className="inline-flex shrink-0 items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        {roomOnlineMemberCount} online
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1066,12 +1215,11 @@ export const ChatModal: React.FC = () => {
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="truncate text-sm font-bold text-theme-primary">{getPublicIdentityLabel(conv.participant)}</span>
-                    <VerificationBadge user={conv.participant} size="xs" />
+                    <UserIdentity user={conv.participant} className="text-sm font-bold text-theme-primary" badgeSize="xs" />
                   </div>
                   {(conv as any).isGroupChat && (
                     <span className="block truncate text-[11px] text-theme-tertiary">
-                      {`${conv.participant.followersCount || 1} members • ${(conv as any).groupChat?.isChatroom ? 'Public Chatroom' : 'Private Group'}`}
+                      {`${conv.participant.followersCount || 1} members`}
                     </span>
                   )}
                 </div>
@@ -1143,6 +1291,22 @@ export const ChatModal: React.FC = () => {
                       <button type="button" role="menuitem" onClick={() => { setRoomMembersView('online'); setIsRoomOptionsOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-theme-primary hover:bg-theme-surface-hover">
                         <span className="h-2 w-2 rounded-full bg-emerald-500" /> View online members
                       </button>
+                      {import.meta.env.DEV && (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          aria-pressed={isLocalRoomAdDemoEnabled}
+                          onClick={() => {
+                            const enabled = !isLocalRoomAdDemoEnabled;
+                            setIsLocalRoomAdDemoEnabled(enabled);
+                            window.localStorage.setItem('lalao_room_ad_demo', enabled ? 'enabled' : 'disabled');
+                            setIsRoomOptionsOpen(false);
+                          }}
+                          className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-theme-primary hover:bg-theme-surface-hover"
+                        >
+                          <Megaphone size={15} /> Local ad demo: {isLocalRoomAdDemoEnabled ? 'On' : 'Off'}
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1160,8 +1324,15 @@ export const ChatModal: React.FC = () => {
         </header>
 
         {/* Messages */}
-        <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 space-y-3 bg-theme-base min-h-0">
-          {[...conv.messages].sort((a, b) => a.createdAt - b.createdAt).map((msg: DirectMessage, index: number, arr: DirectMessage[]) => {
+        <div
+          ref={chatScrollRef}
+          onScroll={handleScroll}
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 py-4 space-y-3 bg-theme-base [scrollbar-gutter:stable]"
+        >
+          {paginatedMessages.status === 'LoadingMore' && (
+            <div className="text-center text-[11px] text-theme-tertiary">Loading older messages…</div>
+          )}
+          {visibleMessages.map((msg: DirectMessage, index: number, arr: DirectMessage[]) => {
             const prevMsg = index > 0 ? arr[index - 1] : null;
             
             let showSeparator = false;
@@ -1199,7 +1370,6 @@ export const ChatModal: React.FC = () => {
                   </div>
                 )}
                 
-                {isRoomChat && roomSponsoredPlacement && index === Math.floor(arr.length / 2) && <div className="mx-auto w-full max-w-2xl py-2"><SponsoredPostCard placement={roomSponsoredPlacement as any} /></div>}
                 <div
                   id={`chat-msg-${msg.id}`}
                   className="flex flex-col items-start animate-in zoom-in-95 duration-150 relative"
@@ -1212,17 +1382,27 @@ export const ChatModal: React.FC = () => {
                         className="min-w-0 max-w-[65vw] truncate text-left text-xs font-bold tracking-wide transition-colors hover:text-[#5E43F3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5E43F3] focus-visible:ring-offset-2 focus-visible:ring-offset-theme-base sm:max-w-xs"
                         aria-label={`View ${senderLabel}'s profile`}
                       >
-                        {senderLabel}
+                        <UserIdentity
+                          user={{
+                            name: senderLabel,
+                            isVerified: msg.senderIsVerified,
+                            verificationTier: msg.senderVerificationTier,
+                            verificationExpiresAt: msg.senderVerificationExpiresAt,
+                          }}
+                          className="text-xs font-bold tracking-wide"
+                          badgeSize="xs"
+                        />
                       </button>
                     ) : (
-                      <span className="min-w-0 max-w-[65vw] truncate text-xs font-bold tracking-wide sm:max-w-xs">
-                        {senderLabel}
-                      </span>
-                    )}
-                    {msg.senderIsVerified && (
-                      <VerificationBadge
-                        user={{ isVerified: true, verificationTier: msg.senderVerificationTier }}
-                        size="xs"
+                      <UserIdentity
+                        user={{
+                          name: senderLabel,
+                          isVerified: msg.senderIsVerified,
+                          verificationTier: msg.senderVerificationTier,
+                          verificationExpiresAt: msg.senderVerificationExpiresAt,
+                        }}
+                        className="min-w-0 max-w-[65vw] text-xs font-bold tracking-wide sm:max-w-xs"
+                        badgeSize="xs"
                       />
                     )}
                     <span className="shrink-0 text-[10px] opacity-70">{timeString}</span>
@@ -1394,20 +1574,21 @@ export const ChatModal: React.FC = () => {
                   )}
                 </div>
               </div>
+                {isRoomChat && (import.meta.env.DEV
+                  ? isLocalRoomAdDemoEnabled && index === localAdAnchorIndex
+                  : groupAdPlacement?.placement && msg.id === groupAdAnchorMessageId) && roomAdSlot}
             </React.Fragment>
           );
         })}
+          {isRoomChat && visibleMessages.length === 0 && roomAdSlot}
       </div>
 
-        {/* Composer */}
-        <div className="border-t border-theme-divider/80 bg-theme-base p-3 shrink-0 flex flex-col gap-2">
-
-          {/* Reply / Edit banner */}
+        <footer className="sticky bottom-0 z-20 shrink-0 border-t border-black/[0.04] dark:border-white/[0.06] bg-theme-base/95 backdrop-blur-md px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-2.5 sm:px-4">
           {(replyingTo || editingMsg) && (
-            <div className="flex items-center justify-between px-3 py-1.5 bg-theme-surface rounded-lg border border-theme-divider">
-              <div className="flex items-center gap-2 overflow-hidden">
-                <div className="w-0.5 h-4 bg-[#5E43F3] rounded-full" />
-                <span className="text-xs text-theme-secondary truncate">
+            <div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-theme-divider bg-theme-surface px-3 py-1.5">
+              <div className="flex min-w-0 items-center gap-2 overflow-hidden">
+                <div className="h-4 w-0.5 rounded-full bg-[#5E43F3]" />
+                <span className="truncate text-[11px] text-theme-secondary">
                   {replyingTo ? 'Replying: ' : 'Editing: '}
                   <span className="text-theme-primary">{replyingTo?.text || editingMsg?.text}</span>
                 </span>
@@ -1415,50 +1596,53 @@ export const ChatModal: React.FC = () => {
               <button
                 type="button"
                 onClick={() => { setReplyingTo(null); setEditingMsg(null); setInputMessage(''); }}
-                className="p-1 text-theme-tertiary hover:text-theme-primary"
+                className="rounded-full p-1 text-theme-tertiary hover:bg-theme-surface-hover hover:text-theme-primary"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
           )}
 
-          {/* Mic error banner */}
           {micError && (
-            <div className="flex items-center justify-between px-3 py-2 bg-rose-500/10 border border-rose-500/30 rounded-xl">
-              <span className="text-xs text-rose-400 flex-1">{micError}</span>
-              <button onClick={() => setMicError(null)} className="ml-2 text-rose-400 hover:text-rose-300">
-                <X className="w-3.5 h-3.5" />
+            <div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2">
+              <span className="flex-1 text-xs text-rose-400">{micError}</span>
+              <button onClick={() => setMicError(null)} className="text-rose-400 hover:text-rose-300">
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
           )}
 
-          {/* ── RECORDING STATE ─────────────────────────────────────── */}
+          {newMessagesCount > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                const container = chatScrollRef.current;
+                if (!container) return;
+                container.scrollTop = container.scrollHeight;
+                setNewMessagesCount(0);
+              }}
+              className="mb-2 flex w-full items-center justify-center gap-2 rounded-full border border-[#5E43F3]/30 bg-[#5E43F3]/10 px-3 py-1.5 text-[11px] font-semibold text-[#5E43F3] shadow-sm transition-colors hover:bg-[#5E43F3]/15"
+            >
+              {newMessagesCount} new message{newMessagesCount > 1 ? 's' : ''}
+            </button>
+          )}
+
           {voiceState === 'recording' && (
-            <div className="flex flex-col gap-2 px-3 py-2.5 rounded-2xl border border-rose-500/40 bg-rose-500/5">
-              <div className="flex items-center justify-between">
+            <div className="mb-2 flex flex-col gap-2 rounded-2xl border border-rose-500/40 bg-rose-500/5 px-3 py-2.5">
+              <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                  <span className="text-[11px] font-bold text-rose-500 uppercase tracking-wider">Recording</span>
-                  <span className="text-sm font-mono text-rose-400 tabular-nums">
+                  <div className="h-2 w-2 animate-pulse rounded-full bg-rose-500" />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-rose-500">Recording</span>
+                  <span className="font-mono text-sm text-rose-400 tabular-nums">
                     {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={cancelRecording}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-theme-surface-hover text-theme-secondary hover:text-theme-primary text-xs font-medium transition-colors cursor-pointer"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                    Cancel
+                  <button type="button" onClick={cancelRecording} className="flex items-center gap-1 rounded-full bg-theme-surface-hover px-2.5 py-1 text-xs font-medium text-theme-secondary hover:text-theme-primary">
+                    <Trash2 className="h-3 w-3" /> Cancel
                   </button>
-                  <button
-                    type="button"
-                    onClick={stopRecording}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-500 text-white text-xs font-bold hover:bg-rose-600 active:scale-95 transition-all cursor-pointer shadow-md shadow-rose-500/25"
-                  >
-                    <Square className="w-3 h-3 fill-white" />
-                    Stop
+                  <button type="button" onClick={stopRecording} className="flex items-center gap-1.5 rounded-full bg-rose-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-600">
+                    <Square className="h-3 w-3 fill-white" /> Stop
                   </button>
                 </div>
               </div>
@@ -1466,97 +1650,15 @@ export const ChatModal: React.FC = () => {
             </div>
           )}
 
-          {/* ── PREVIEW / PLAYING / PAUSED / SENDING STATE ──────────── */}
-          {(voiceState === 'preview' || voiceState === 'playing' || voiceState === 'paused' || voiceState === 'sending') && (
-            <div className="flex flex-col gap-2.5 px-3 py-2.5 rounded-2xl border border-[#5E43F3]/30 bg-[#5E43F3]/5">
-              {/* Waveform + playback controls row */}
-              <div className="flex items-center gap-2.5">
-                {/* Play / Pause */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (voiceState === 'preview') playPreview();
-                    else if (voiceState === 'playing') pausePreview();
-                    else if (voiceState === 'paused') resumePreview();
-                  }}
-                  disabled={voiceState === 'sending'}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-[#5E43F3] text-white hover:bg-[#4E34E0] active:scale-95 transition-all shrink-0 disabled:opacity-50"
-                >
-                  {voiceState === 'playing'
-                    ? <Pause className="w-3.5 h-3.5" />
-                    : <Play className="w-3.5 h-3.5 ml-0.5" />
-                  }
-                </button>
-
-                {/* Waveform */}
-                <StaticWaveform
-                  bars={previewBars.length ? previewBars : Array.from({ length: 32 }, (_, i) => 25 + Math.abs(Math.sin(i * 0.6)) * 55)}
-                  progress={playbackProgress}
-                  onSeek={seekPreview}
-                  activeColor="#5E43F3"
-                  inactiveColor="rgba(94,67,243,0.25)"
-                />
-
-                {/* Duration */}
-                <span className="text-[10px] font-mono text-theme-tertiary shrink-0 min-w-[30px] text-right tabular-nums">
-                  {formatDur(previewDuration)}
-                </span>
-              </div>
-
-              {/* Action row */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsViewOnce(!isViewOnce)}
-                    className={`flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold border transition-colors ${isViewOnce ? 'bg-[#5E43F3] border-[#5E43F3] text-white' : 'border-theme-divider-strong text-theme-tertiary hover:bg-theme-surface-hover'}`}
-                    title="View once"
-                  >
-                    1
-                  </button>
-                  <button
-                    type="button"
-                    onClick={discardPreview}
-                    disabled={voiceState === 'sending'}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-theme-surface-hover text-rose-500 hover:bg-rose-500/10 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-40"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                    Delete
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={sendVoiceNote}
-                  disabled={voiceState === 'sending'}
-                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#5E43F3] text-white text-xs font-bold hover:bg-[#4E34E0] active:scale-95 transition-all cursor-pointer disabled:opacity-60 shadow-md shadow-[#5E43F3]/25"
-                >
-                  {voiceState === 'sending' ? (
-                    <span className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Sending…
-                    </span>
-                  ) : (
-                    <>
-                      <Send className="w-3 h-3" />
-                      Send
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── MEDIA PREVIEW: overrides idle composer ─────────────────── */}
           {mediaPreviewUrl && (
-            <div className="flex flex-col gap-2 p-3 bg-theme-surface rounded-xl border border-theme-divider">
+            <div className="mb-2 flex flex-col gap-2 rounded-xl border border-theme-divider bg-theme-surface p-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-theme-primary">{mediaType === 'video' ? 'Video Preview' : 'Image Preview'}</span>
-                <button type="button" onClick={cancelMediaPreview} className="p-1 rounded-full text-theme-secondary hover:bg-theme-surface-hover">
-                  <X className="w-5 h-5" />
+                <button type="button" onClick={cancelMediaPreview} className="rounded-full p-1 text-theme-secondary hover:bg-theme-surface-hover">
+                  <X className="h-5 w-5" />
                 </button>
               </div>
-              <div className="flex justify-center bg-black/20 rounded-md overflow-hidden max-h-[200px]">
+              <div className="flex max-h-[200px] justify-center overflow-hidden rounded-md bg-black/20">
                 {mediaType === 'video' ? (
                   <video src={mediaPreviewUrl} controls className="max-h-[200px] object-contain" />
                 ) : (
@@ -1570,67 +1672,60 @@ export const ChatModal: React.FC = () => {
                 placeholder="Add a caption (optional)"
                 className="w-full rounded-md border border-theme-divider bg-theme-base px-3 py-2 text-sm text-theme-primary outline-none focus:border-[#5E43F3]"
               />
-              <div className="flex justify-between items-center mt-1">
-                <button
-                  type="button"
-                  onClick={() => setIsViewOnce(!isViewOnce)}
-                  className={`flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold border transition-colors ${isViewOnce ? 'bg-[#5E43F3] border-[#5E43F3] text-white' : 'border-theme-divider-strong text-theme-tertiary hover:bg-theme-surface-hover'}`}
-                  title="View once"
-                >
+              <div className="mt-1 flex items-center justify-between">
+                <button type="button" onClick={() => setIsViewOnce(!isViewOnce)} className={`flex h-6 w-6 items-center justify-center rounded-full border text-[10px] font-bold ${isViewOnce ? 'border-[#5E43F3] bg-[#5E43F3] text-white' : 'border-theme-divider-strong text-theme-tertiary hover:bg-theme-surface-hover'}`}>
                   1
                 </button>
-                <div className="flex justify-end gap-2">
-                  <button type="button" onClick={cancelMediaPreview} className="px-4 py-2 text-sm font-medium text-theme-secondary hover:bg-theme-surface-hover rounded-md">
+                <div className="flex gap-2">
+                  <button type="button" onClick={cancelMediaPreview} className="rounded-md px-4 py-2 text-sm font-medium text-theme-secondary hover:bg-theme-surface-hover">
                     Cancel
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleSendMedia}
-                    disabled={isUploadingMedia}
-                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-[#5E43F3] text-white hover:bg-[#4E34E0] rounded-md disabled:opacity-50"
-                  >
+                  <button type="button" onClick={handleSendMedia} disabled={isUploadingMedia} className="flex items-center gap-1.5 rounded-md bg-[#5E43F3] px-4 py-2 text-sm font-medium text-white hover:bg-[#4E34E0] disabled:opacity-50">
                     {isUploadingMedia ? 'Sending...' : 'Send'}
-                    <Send className="w-3.5 h-3.5" />
+                    <Send className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ── IDLE: normal text composer ──────────────────────────── */}
           {voiceState === 'idle' && !mediaPreviewUrl && (
-            <form onSubmit={handleSend} className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <input
+            <form onSubmit={handleSend} className="flex items-end gap-2">
+              <div className="relative flex flex-1 items-end rounded-2xl border border-theme-divider bg-theme-surface transition-all focus-within:border-[#5E43F3] focus-within:ring-2 focus-within:ring-[#5E43F3]/15">
+                <textarea
                   id="input-direct-message"
-                  type="text"
+                  rows={1}
                   value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
+                  onChange={(e) => {
+                    setInputMessage(e.target.value);
+                    e.target.style.height = 'auto';
+                    e.target.style.height = `${Math.min(e.target.scrollHeight, 112)}px`;
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (inputMessage.trim()) {
+                        void handleSend(e as unknown as React.FormEvent);
+                        e.currentTarget.style.height = 'auto';
+                      }
+                    }
+                  }}
                   placeholder="Message"
-                  className="w-full rounded-full border border-black/[0.06] dark:border-white/[0.06] bg-theme-surface dark:bg-[#141414] pl-4 pr-16 py-3 text-sm text-theme-primary placeholder:text-theme-tertiary outline-none transition-all focus:border-[#5E43F3] focus:ring-2 focus:ring-[#5E43F3]/15"
+                  className="max-h-28 min-h-[44px] w-full resize-none bg-transparent py-2.5 pl-4 pr-28 text-sm leading-5 text-theme-primary placeholder:text-theme-tertiary outline-none"
                   autoFocus
                 />
 
-                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-theme-tertiary">
-                  {/* Gallery: pick existing images or videos from device */}
-                  <label className="rounded-full p-1.5 text-theme-tertiary hover:bg-theme-surface-hover hover:text-theme-secondary transition-colors cursor-pointer" title="Attach photo or video">
-                    <ImageIcon className="w-4 h-4" />
+                <div className="absolute bottom-1.5 right-2 flex items-center gap-0.5 text-theme-tertiary">
+                  <label className="cursor-pointer rounded-full p-1.5 text-theme-tertiary transition-colors hover:bg-theme-surface-hover hover:text-theme-secondary" title="Attach photo or video">
+                    <ImageIcon className="h-4 w-4" />
                     <input type="file" accept="image/*,video/*" className="hidden" onChange={handleMediaSelect} />
                   </label>
-
-                  {/* Camera: capture a new photo only — no gallery access */}
-                  <label className="rounded-full p-1.5 text-theme-tertiary hover:bg-theme-surface-hover hover:text-theme-secondary transition-colors cursor-pointer" title="Take a photo">
-                    <Camera className="w-4 h-4" />
+                  <label className="cursor-pointer rounded-full p-1.5 text-theme-tertiary transition-colors hover:bg-theme-surface-hover hover:text-theme-secondary" title="Take a photo">
+                    <Camera className="h-4 w-4" />
                     <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleMediaSelect} />
                   </label>
-
-                  <button
-                    type="button"
-                    onClick={handleMicClick}
-                    className="rounded-full p-1.5 transition-all cursor-pointer text-theme-tertiary hover:bg-theme-surface-hover hover:text-theme-secondary"
-                    title="Voice Note"
-                  >
-                    <Mic className="w-4 h-4" />
+                  <button type="button" onClick={handleMicClick} className="cursor-pointer rounded-full p-1.5 text-theme-tertiary transition-colors hover:bg-theme-surface-hover hover:text-theme-secondary" title="Voice Note">
+                    <Mic className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -1639,20 +1734,38 @@ export const ChatModal: React.FC = () => {
                 id="btn-send-message"
                 type="submit"
                 disabled={!inputMessage.trim()}
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all cursor-pointer ${
-                  inputMessage.trim()
-                    ? 'bg-[#5E43F3] text-white hover:bg-[#4E34E0] active:scale-95 shadow-md shadow-[#5E43F3]/20'
-                    : 'bg-theme-surface-active text-theme-tertiary'
-                }`}
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all ${inputMessage.trim() ? 'bg-[#5E43F3] text-white shadow-md shadow-[#5E43F3]/20 hover:bg-[#4E34E0] active:scale-95 cursor-pointer' : 'bg-theme-surface-active text-theme-tertiary'}`}
                 title="Send message"
               >
-                <Send className="w-4 h-4" />
+                <Send className="h-4 w-4" />
               </button>
             </form>
           )}
 
-          <div className="mx-auto mt-2.5 h-1 w-24 rounded-full bg-black/[0.06] dark:bg-white/[0.06]" />
-        </div>
+          {(voiceState === 'preview' || voiceState === 'playing' || voiceState === 'paused' || voiceState === 'sending') && (
+            <div className="flex flex-col gap-2.5 rounded-2xl border border-[#5E43F3]/30 bg-[#5E43F3]/5 px-3 py-2.5">
+              <div className="flex items-center gap-2.5">
+                <button type="button" onClick={() => { if (voiceState === 'preview') playPreview(); else if (voiceState === 'playing') pausePreview(); else if (voiceState === 'paused') resumePreview(); }} disabled={voiceState === 'sending'} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#5E43F3] text-white hover:bg-[#4E34E0] disabled:opacity-50">
+                  {voiceState === 'playing' ? <Pause className="h-3.5 w-3.5" /> : <Play className="ml-0.5 h-3.5 w-3.5" />}
+                </button>
+                <StaticWaveform bars={previewBars.length ? previewBars : Array.from({ length: 32 }, (_, i) => 25 + Math.abs(Math.sin(i * 0.6)) * 55)} progress={playbackProgress} onSeek={seekPreview} activeColor="#5E43F3" inactiveColor="rgba(94,67,243,0.25)" />
+                <span className="min-w-[30px] shrink-0 text-right font-mono text-[10px] text-theme-tertiary tabular-nums">{formatDur(previewDuration)}</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={() => setIsViewOnce(!isViewOnce)} className={`flex h-6 w-6 items-center justify-center rounded-full border text-[10px] font-bold ${isViewOnce ? 'border-[#5E43F3] bg-[#5E43F3] text-white' : 'border-theme-divider-strong text-theme-tertiary hover:bg-theme-surface-hover'}`} title="View once">1</button>
+                  <button type="button" onClick={discardPreview} disabled={voiceState === 'sending'} className="flex items-center gap-1.5 rounded-full bg-theme-surface-hover px-2.5 py-1.5 text-xs font-semibold text-rose-500 hover:bg-rose-500/10 disabled:opacity-40">
+                    <Trash2 className="h-3 w-3" /> Delete
+                  </button>
+                </div>
+                <button type="button" onClick={sendVoiceNote} disabled={voiceState === 'sending'} className="flex items-center gap-1.5 rounded-full bg-[#5E43F3] px-4 py-1.5 text-xs font-bold text-white hover:bg-[#4E34E0] disabled:opacity-60">
+                  {voiceState === 'sending' ? <span className="flex items-center gap-1.5"><div className="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white" /> Sending…</span> : <><Send className="h-3 w-3" /> Send</>}
+                </button>
+              </div>
+            </div>
+          )}
+        </footer>
       </div>
       {isEggDashboardOpen && (
         <LalaoEggDashboardModal
@@ -1660,6 +1773,13 @@ export const ChatModal: React.FC = () => {
           onClose={() => setIsEggDashboardOpen(false)}
           roomId={roomId}
           roomName={roomChat?.name || conv?.participant?.name}
+        />
+      )}
+      {isRoomAdModalOpen && isRoomChat && roomId && (
+        <RoomAdPurchaseModal
+          roomId={roomId as Id<'groupChats'>}
+          roomName={roomChat?.name || conv.participant.name || 'this room'}
+          onClose={() => setIsRoomAdModalOpen(false)}
         />
       )}
       {roomMembersView && isRoomChat && roomId && (

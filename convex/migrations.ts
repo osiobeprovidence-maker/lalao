@@ -77,6 +77,7 @@ export const migrateHistoricalPostsNearbyStatus = internalMutation({
 
 import { mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { requireMaintenanceOff } from "./internal/maintenance";
 
 /**
  * Migration helper to insert documents into target tables while preserving original IDs
@@ -87,6 +88,7 @@ export const insertTableBatch = mutation({
     documents: v.array(v.any()),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     let inserted = 0;
     const idMap: Record<string, string> = {};
     const errors: string[] = [];
@@ -117,6 +119,7 @@ export const mergeAndSetMainAccount = mutation({
     secondaryUsername: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const mainUser = await ctx.db
       .query("users")
       .withIndex("by_username", (q) => q.eq("username", args.mainUsername))
@@ -216,80 +219,7 @@ export const seedDemoChatrooms = internalMutation({
       }
     }
 
-    const demoRooms = [
-      {
-        name: "General Chat",
-        username: "room-general-chat",
-        category: "General",
-        description: "Talk about anything, introduce yourself, ask questions and meet new people.",
-        roomIcon: "Users",
-        coverImage: "https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=1200&auto=format&fit=crop&q=80",
-        avatarUrl: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&auto=format&fit=crop&q=80",
-        rules: [
-          "Be kind and welcoming to everyone.",
-          "Keep discussions clean and family-friendly.",
-          "No spam, excessive links, or unsolicited advertising.",
-          "Respect diverse viewpoints and privacy."
-        ],
-      },
-      {
-        name: "Meet & Connect",
-        username: "room-meet-connect",
-        category: "Social",
-        description: "Make new friends, discover shared interests and build meaningful friendships.",
-        roomIcon: "UserPlus",
-        coverImage: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1200&auto=format&fit=crop&q=80",
-        avatarUrl: "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=400&auto=format&fit=crop&q=80",
-        rules: [
-          "Introduce yourself genuinely.",
-          "Respect boundaries and personal space.",
-          "Harassment and unsolicited private solicitation are strictly prohibited.",
-          "Support and encourage your peers."
-        ],
-      },
-      {
-        name: "Entertainment Zone",
-        username: "room-entertainment-zone",
-        category: "Entertainment",
-        description: "Discuss games, anime, music, movies and entertainment.",
-        roomIcon: "Gamepad2",
-        coverImage: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=1200&auto=format&fit=crop&q=80",
-        avatarUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&auto=format&fit=crop&q=80",
-        rules: [
-          "Use spoiler alerts when discussing recent plotlines or releases.",
-          "Constructive debate about games, shows, and music is welcome.",
-          "No piracy or unauthorized download links."
-        ],
-      },
-      {
-        name: "Ideas & Trending",
-        username: "room-ideas-trending",
-        category: "Discussion",
-        description: "Share opinions, discuss interesting topics, technology and trending conversations.",
-        roomIcon: "Lightbulb",
-        coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&auto=format&fit=crop&q=80",
-        avatarUrl: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&auto=format&fit=crop&q=80",
-        rules: [
-          "Ground arguments with factual insights and respect.",
-          "Encourage innovation, technology, and visionary projects.",
-          "Stay on-topic and avoid bad-faith debate."
-        ],
-      },
-      {
-        name: "Naija Connect",
-        username: "room-naija-connect",
-        category: "Nigeria",
-        description: "Discuss Nigerian culture, everyday life, opportunities and local happenings.",
-        roomIcon: "MapPin",
-        coverImage: "https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=1200&auto=format&fit=crop&q=80",
-        avatarUrl: "https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?w=400&auto=format&fit=crop&q=80",
-        rules: [
-          "Celebrate Nigerian culture, languages, innovation, and unity.",
-          "Keep conversations respectful and constructive.",
-          "No tribalism, hate speech, or defamatory conduct."
-        ],
-      },
-    ];
+    const demoRooms: Array<any> = [];
 
     const results = [];
     const now = Date.now();

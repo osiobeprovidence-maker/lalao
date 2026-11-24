@@ -1,4 +1,5 @@
 import React from 'react';
+import { useQuery } from 'convex/react';
 import {
   Plus,
   ShoppingBag,
@@ -17,6 +18,7 @@ import {
 import { useLalao } from '../../context/LalaoContext';
 import { usePWA } from '../../hooks/usePWA';
 import { AppIcon } from '../common/AppIcon';
+import { api } from '../../../convex/_generated/api';
 
 interface MobileDrawerProps {
   isOpen: boolean;
@@ -50,7 +52,6 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
     { id: 'following', label: 'Following', icon: Users },
     { id: 'saved', label: 'Saved', icon: Bookmark },
     { id: 'liked', label: 'Liked', icon: Heart },
-    { id: 'rooms', label: 'Live Rooms', icon: MessagesSquare },
     { id: 'recent-searches', label: 'Recent Searches', icon: History },
   ] as const;
 

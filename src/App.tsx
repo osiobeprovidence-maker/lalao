@@ -7,7 +7,6 @@ import { BottomNav } from './components/navigation/BottomNav';
 import { DesktopSidebar } from './components/navigation/DesktopSidebar';
 import { HomeFeed } from './components/feed/HomeFeed';
 import { DiscoverView } from './components/discover/DiscoverView';
-import { LiveRoomsView } from './components/discover/LiveRoomsView';
 import { MessagesView } from './components/messages/MessagesView';
 import { NotificationsView } from './components/notifications/NotificationsView';
 import { CreatePageView } from './components/pages/CreatePageView';
@@ -311,9 +310,7 @@ const LalaoAppContent: React.FC = () => {
   }, [location.pathname, isCreatorPremiumActive, navigate]);
 
   useEffect(() => {
-    if (location.pathname === '/rooms' || location.pathname === '/live-rooms' || location.pathname === '/app/rooms') {
-      setActiveTab('rooms');
-    } else if (location.pathname === '/beta-tester' || location.pathname === '/app/beta-tester') {
+    if (location.pathname === '/beta-tester' || location.pathname === '/app/beta-tester') {
       setActiveTab('beta-tester');
     } else if (location.pathname.startsWith('/sounds/')) {
       const sId = location.pathname.split('/sounds/')[1];
@@ -486,11 +483,6 @@ const LalaoAppContent: React.FC = () => {
             {activeTab === 'discover' && (
               <div key="tab-discover" className="animate-in fade-in duration-200 w-full bg-transparent">
                 <DiscoverView />
-              </div>
-            )}
-            {activeTab === 'rooms' && (
-              <div key="tab-rooms" className="animate-in fade-in duration-200 w-full bg-transparent pb-24">
-                <LiveRoomsView />
               </div>
             )}
             {activeTab === 'recent-searches' && isAuthenticated && (
@@ -735,8 +727,6 @@ export default function App() {
       <Route path="/manga/:username" element={<LalaoApp />} />
       <Route path="/app" element={<LalaoApp />} />
       <Route path="/app/*" element={<LalaoApp />} />
-      <Route path="/rooms" element={<LalaoApp />} />
-      <Route path="/live-rooms" element={<LalaoApp />} />
       <Route path="/rewards" element={<LalaoApp />}>
         <Route index element={<RewardsPage />} />
       </Route>

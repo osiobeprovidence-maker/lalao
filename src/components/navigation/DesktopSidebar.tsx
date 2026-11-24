@@ -22,6 +22,8 @@ import {
   MessagesSquare,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { useLalao } from '../../context/LalaoContext';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../common/Avatar';
@@ -49,10 +51,6 @@ export const DesktopSidebar: React.FC = () => {
     isCreatorPremiumActive,
   } = useLalao();
 
-  const isVerified = Boolean(
-    (currentUser?.verificationTier && currentUser.verificationTier !== 'none' && (!currentUser.verificationExpiresAt || currentUser.verificationExpiresAt > Date.now())) ||
-    currentUser?.isVerified
-  );
   const { logout, isAuthenticated } = useAuth();
   const { isInstalled, setIsInstallModalOpen } = usePWA();
 
@@ -165,7 +163,6 @@ export const DesktopSidebar: React.FC = () => {
     { id: 'following', label: 'Following', icon: Users },
     { id: 'saved', label: 'Saved', icon: Bookmark },
     { id: 'liked', label: 'Liked', icon: Heart },
-    { id: 'rooms', label: 'Live Rooms', icon: MessagesSquare },
     { id: 'recent-searches', label: 'Recent Searches', icon: History },
   ] as const;
 
@@ -177,7 +174,7 @@ export const DesktopSidebar: React.FC = () => {
   ] as const;
 
   const isMenuItemActive = (id: string) =>
-    ['following', 'saved', 'liked', 'recent-searches', 'rooms'].includes(id) && activeTab === id;
+    ['following', 'saved', 'liked', 'recent-searches'].includes(id) && activeTab === id;
 
   return (
     <aside

@@ -82,12 +82,32 @@ export const DiscoverView: React.FC = () => {
   const [isPlumMenuOpen, setIsPlumMenuOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Chatrooms query from backend
-  const chatrooms = useQuery(api.groups.listDiscoverableGroups, {
+  // Chatrooms query from backend (exclude obsolete dummy/demo rooms)
+  const rawChatrooms = useQuery(api.groups.listDiscoverableGroups, {
     isChatroom: true,
     search: debouncedQuery || undefined,
     category: chatroomCategory !== 'All' ? chatroomCategory : undefined,
   });
+  const chatrooms = useMemo(() => {
+    if (!rawChatrooms) return rawChatrooms;
+    const demoUsernames = new Set([
+      'room-general-chat',
+      'room-meet-connect',
+      'room-entertainment-zone',
+      'room-ideas-trending',
+    ]);
+    const demoNames = new Set([
+      'general chat',
+      'meet & connect',
+      'entertainment zone',
+      'ideas & trending',
+    ]);
+    return rawChatrooms.filter((room: any) => {
+      const u = (room.username || '').trim().toLowerCase();
+      const n = (room.name || '').trim().toLowerCase();
+      return !demoUsernames.has(u) && !demoNames.has(n);
+    });
+  }, [rawChatrooms]);
 
   // Plum Page Discovery Preference ("I'm not interested" / "Hide this page")
   const plumHiddenPref = useQuery(api.plum.getPageDiscoveryPreference, { pageSlugOrId: 'plum' });

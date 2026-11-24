@@ -10,10 +10,11 @@ import {
 import { getChatroomMessageExpiresAt } from "./lib/chatroomMessageExpiry";
 import { canAccessGroupChat, isAvailableChatroom } from "./groupAccess";
 import { requireAdmin } from "./admin";
+import { requireMaintenanceOff } from "./internal/maintenance";
 
-/* ─────────────────────────────────────────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    HELPERS
-   ───────────────────────────────────────────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 export async function resolveGroupContext(
   ctx: any,
@@ -100,9 +101,9 @@ export async function resolveGroupContext(
   };
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    QUERIES
-   ───────────────────────────────────────────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 /**
  * Get sanitized group profile according to viewer permissions & group visibility mode.
@@ -426,7 +427,25 @@ export const listDiscoverableGroups = query({
       ? await ctx.db.query("groupChats").withIndex("by_is_chatroom", (q) => q.eq("isChatroom", true)).collect()
       : await ctx.db.query("groupChats").collect();
 
+    const DEMO_ROOM_USERNAMES = new Set([
+      "room-general-chat",
+      "room-meet-connect",
+      "room-entertainment-zone",
+      "room-ideas-trending",
+    ]);
+    const DEMO_ROOM_NAMES = new Set([
+      "general chat",
+      "meet & connect",
+      "entertainment zone",
+      "ideas & trending",
+    ]);
+
     const filtered = groups.filter((g) => {
+      const normalizedUsername = (g.username ?? "").trim().toLowerCase();
+      const normalizedName = (g.name ?? "").trim().toLowerCase();
+      if (DEMO_ROOM_USERNAMES.has(normalizedUsername) || DEMO_ROOM_NAMES.has(normalizedName)) {
+        return false;
+      }
       // Filter by isChatroom if specified
       if (args.isChatroom !== undefined) {
         const matchesRoom = !!g.isChatroom === !!args.isChatroom;
@@ -636,6 +655,7 @@ export const setChatroomPresence = mutation({
     isOnline: v.boolean(),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new ConvexError("Sign in to use chatroom presence");
 
@@ -842,9 +862,9 @@ export const getGroupRallies = query({
   },
 });
 
-/* ─────────────────────────────────────────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    MUTATIONS
-   ───────────────────────────────────────────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 /**
  * Unified Group Creation.
@@ -893,6 +913,7 @@ export const createGroup = mutation({
     requiresJoinApproval: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     let currentUser = await getAuthedUser(ctx);
     if (!currentUser && args.creatorUserId) {
       const normId = ctx.db.normalizeId("users", args.creatorUserId);
@@ -1016,6 +1037,7 @@ export const updateGroupProfile = mutation({
     rules: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     const resolved = await resolveGroupContext(ctx, args.groupId, currentUser);
     if (!resolved || !resolved.isAdmin) {
@@ -1051,6 +1073,7 @@ export const updateGroupPrivacy = mutation({
     confirmTransition: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     const resolved = await resolveGroupContext(ctx, args.groupId, currentUser);
     if (!resolved || !resolved.isOwner) {
@@ -1095,6 +1118,7 @@ export const updateCommunitySettings = mutation({
     }),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     const resolved = await resolveGroupContext(ctx, args.groupId, currentUser);
     if (!resolved || !resolved.isAdmin) {
@@ -1121,6 +1145,7 @@ export const requestToJoin = mutation({
     message: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new ConvexError("Sign in to join this group");
 
@@ -1229,6 +1254,7 @@ export const reviewJoinRequest = mutation({
     action: v.union(v.literal("approve"), v.literal("reject")),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new ConvexError("Not authenticated");
 
@@ -1298,6 +1324,7 @@ export const inviteMember = mutation({
     userId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new ConvexError("Unauthenticated");
     const resolved = await resolveGroupContext(ctx, args.groupId, currentUser);
@@ -1348,6 +1375,7 @@ export const updateMemberRole = mutation({
     newRole: v.union(v.literal("admin"), v.literal("moderator"), v.literal("member")),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new ConvexError("Unauthenticated");
     const resolved = await resolveGroupContext(ctx, args.groupId, currentUser);
@@ -1392,6 +1420,7 @@ export const transferOwnership = mutation({
     newOwnerUserId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new ConvexError("Unauthenticated");
     const resolved = await resolveGroupContext(ctx, args.groupId, currentUser);
@@ -1457,6 +1486,7 @@ export const removeMember = mutation({
     userId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     const resolved = await resolveGroupContext(ctx, args.groupId, currentUser);
     if (!resolved || !resolved.isAdmin) {
@@ -1499,6 +1529,7 @@ export const removeMember = mutation({
 export const leaveGroup = mutation({
   args: { groupId: v.string() },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new ConvexError("Not authenticated");
 
@@ -1541,6 +1572,7 @@ export const leaveGroup = mutation({
 export const toggleFollow = mutation({
   args: { groupId: v.string() },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const currentUser = await getAuthedUser(ctx);
     if (!currentUser) throw new ConvexError("Sign in to follow this group");
 
@@ -1592,6 +1624,7 @@ export const listChatroomsForAdmin = query({
 export const generateChatroomBannerUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireMaintenanceOff(ctx);
     await requireAdmin(ctx, ["super_admin", "admin"]);
     return await ctx.storage.generateUploadUrl();
   },
@@ -1608,6 +1641,7 @@ export const resolveChatroomBannerStorageUrl = mutation({
 export const ensureDefaultChatroomForAdmin = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireMaintenanceOff(ctx);
     const admin = await requireAdmin(ctx, ["super_admin", "admin"]);
     const username = "room-lalao-general";
     const existing = await ctx.db.query("groupChats").withIndex("by_username", (q: any) => q.eq("username", username)).first();
@@ -1641,6 +1675,7 @@ export const createChatroomForAdmin = mutation({
     requiresJoinApproval: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     const admin = await requireAdmin(ctx, ["super_admin", "admin"]);
     const name = args.name.trim();
     if (!name || !args.description.trim() || !args.coverImage.trim()) throw new ConvexError("Name, description, and banner are required");
@@ -1672,6 +1707,7 @@ export const updateChatroomForAdmin = mutation({
     roomIcon: v.optional(v.string()), welcomeMessage: v.optional(v.string()), requiresJoinApproval: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     await requireAdmin(ctx, ["super_admin", "admin"]);
     const groupId = ctx.db.normalizeId("groupChats", args.groupId);
     const room = groupId ? await ctx.db.get(groupId) : null;
@@ -1693,6 +1729,7 @@ export const updateChatroomForAdmin = mutation({
 export const setChatroomMemberRoleForAdmin = mutation({
   args: { groupId: v.string(), userId: v.string(), role: v.union(v.literal("admin"), v.literal("moderator"), v.literal("member"))   },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     await requireAdmin(ctx, ["super_admin", "admin"]);
     const groupId = ctx.db.normalizeId("groupChats", args.groupId);
     const userId = ctx.db.normalizeId("users", args.userId);
@@ -1733,6 +1770,7 @@ export const getChatroomMembersForAdmin = query({
 export const removeChatroomMemberForAdmin = mutation({
   args: { groupId: v.string(), userId: v.string() },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     await requireAdmin(ctx, ["super_admin", "admin"]);
     const groupId = ctx.db.normalizeId("groupChats", args.groupId);
     const userId = ctx.db.normalizeId("users", args.userId);
@@ -1749,6 +1787,7 @@ export const removeChatroomMemberForAdmin = mutation({
 export const archiveChatroomForAdmin = mutation({
   args: { groupId: v.string() },
   handler: async (ctx, args) => {
+    await requireMaintenanceOff(ctx);
     await requireAdmin(ctx, ["super_admin", "admin"]);
     const groupId = ctx.db.normalizeId("groupChats", args.groupId);
     const room = groupId ? await ctx.db.get(groupId) : null;
